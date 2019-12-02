@@ -120,8 +120,10 @@ impl Frame {
     pub const CHAR_BEGIN: u8 = b'\n';
     pub const CHAR_END: u8 = b'\r';
 
-    const CRC_POLY: u16 = 0xA001;
+    const CRC_POLY: u16 = 0x8005;
     const CRC_INITIAL: u16 = 0xFFFF;
+    const CRC_FINAL_XOR: u16 = 0x0000;
+    const CRC_CALC: crc::CalcType = crc::CalcType::Reverse;
 
     const CHAR_DIRECTION_NORMAL_IN: u8 = b'<';
     const CHAR_DIRECTION_NORMAL_OUT: u8 = b'>';
@@ -139,13 +141,18 @@ impl Frame {
             &Self::CHAR_DIRECTION_NORMAL_OUT
         };
 
-        let mut crc16 = Digest::new_with_initial(Self::CRC_POLY, Self::CRC_INITIAL);
-        Hasher16::write(&mut crc16, slice::from_ref(&char_direction));
-        Hasher16::write(&mut crc16, address.device_type.as_slice());
-        Hasher16::write(&mut crc16, address.serial.as_slice());
-        Hasher16::write(&mut crc16, payload.as_slice());
-        let crc16 = Hasher16::sum16(&crc16);
-        let crc16 = hex::encode_upper(crc16.to_le_bytes());
+        let mut crc16 = Digest::new_custom(
+            Self::CRC_POLY,
+            Self::CRC_INITIAL,
+            Self::CRC_FINAL_XOR,
+            Self::CRC_CALC,
+        );
+        crc16.write(slice::from_ref(&char_direction));
+        crc16.write(address.device_type.as_slice());
+        crc16.write(address.serial.as_slice());
+        crc16.write(payload.as_slice());
+        let crc16 = crc16.sum16();
+        let crc16 = hex::encode_upper(crc16.to_be_bytes());
         let crc16 = crc16.as_bytes();
 
         let frame = [
@@ -196,7 +203,7 @@ impl Frame {
             return Err(err_msg("Invalid character in crc16"));
         }
         let crc16_received = hex::decode(crc16_received)?;
-        let crc16_received = u16::from_le_bytes((&crc16_received[..]).try_into().unwrap());
+        let crc16_received = u16::from_be_bytes((&crc16_received[..]).try_into().unwrap());
 
         let payload = Payload::new(Box::from(&frame[2 + 4..frame.len() - 1]))?;
 
@@ -204,7 +211,12 @@ impl Frame {
             return Err(err_msg("Invalid end character"));
         }
 
-        let mut crc16_expected = Digest::new_with_initial(Self::CRC_POLY, Self::CRC_INITIAL);
+        let mut crc16_expected = Digest::new_custom(
+            Self::CRC_POLY,
+            Self::CRC_INITIAL,
+            Self::CRC_FINAL_XOR,
+            Self::CRC_CALC,
+        );
         Hasher16::write(&mut crc16_expected, slice::from_ref(&frame[1]));
         Hasher16::write(&mut crc16_expected, address.device_type.as_slice());
         Hasher16::write(&mut crc16_expected, address.serial.as_slice());
@@ -238,10 +250,24 @@ mod test_frame {
                 &Payload::new(Box::from(*b"ChujDupaKamieniKupa")).unwrap(),
             )
             .as_ref(),
-            &b"\n>00019876543212F0ChujDupaKamieniKupa\r"[..]
+            &b"\n>000198765432BF20ChujDupaKamieniKupa\r"[..]
         );
     }
-
+    #[test]
+    fn out_build_2() {
+        assert_eq!(
+            Frame::out_build(
+                true,
+                &Address::new(
+                    AddressDeviceType::new(*b"0006").unwrap(),
+                    AddressSerial::new(*b"90083461").unwrap(),
+                ),
+                &Payload::new(Box::from(*b"#")).unwrap(),
+            )
+            .as_ref(),
+            &b"\n}000690083461A17F#\r"[..]
+        )
+    }
     #[test]
     fn in_parse_1() {
         let frame = Frame::in_parse(
@@ -254,12 +280,11 @@ mod test_frame {
         );
         assert!(frame.is_err());
     }
-
     #[test]
     fn in_parse_2() {
         assert_eq!(
             Frame::in_parse(
-                b"\n<FB6CChujDupaKamieniKupa\r",
+                b"\n<A721ChujDupaKamieniKupa\r",
                 false,
                 &Address::new(
                     AddressDeviceType::new(*b"0001").unwrap(),

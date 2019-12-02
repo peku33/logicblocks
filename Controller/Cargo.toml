@@ -8,7 +8,7 @@ default-run = "logicblocks-controller"
 
 [dependencies]
 bytes = "0.4.12"
-crc = "1.8.1"
+crc = { git = "https://github.com/mrhooray/crc-rs" } # FIXME: Until version > 1.9 is available for new_custom
 digest_auth = "0.2.1"
 env_logger = "0.7.1"
 failure = "0.1.6"
