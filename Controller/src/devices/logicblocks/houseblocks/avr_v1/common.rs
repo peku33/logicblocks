@@ -1,0 +1,273 @@
+use crc::crc16::{Digest, Hasher16};
+use failure::{err_msg, format_err, Error};
+use std::convert::TryInto;
+use std::slice;
+
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+pub struct AddressDeviceType([u8; Self::LENGTH]);
+impl AddressDeviceType {
+    pub const LENGTH: usize = 4;
+    pub fn new(device_type: [u8; Self::LENGTH]) -> Result<Self, Error> {
+        if !device_type.iter().all(|item| item.is_ascii_digit()) {
+            return Err(err_msg("Invalid characters in device_type"));
+        }
+        return Ok(Self(device_type));
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        return self.0.as_ref();
+    }
+}
+#[cfg(test)]
+mod test_address_device_type {
+    use super::*;
+
+    #[test]
+    fn new_1() {
+        let address = AddressDeviceType::new(*b"000A");
+        assert!(address.is_err());
+    }
+
+    #[test]
+    fn new_2() {
+        let address = AddressDeviceType::new(*b"0001");
+        assert!(address.is_ok());
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+pub struct AddressSerial([u8; Self::LENGTH]);
+impl AddressSerial {
+    pub const LENGTH: usize = 8;
+    pub fn new(serial: [u8; Self::LENGTH]) -> Result<Self, Error> {
+        if !serial.iter().all(|item| item.is_ascii_digit()) {
+            return Err(err_msg("Invalid characters in serial"));
+        }
+        return Ok(Self(serial));
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        return self.0.as_ref();
+    }
+}
+#[cfg(test)]
+mod test_address_serial {
+    use super::*;
+
+    #[test]
+    fn new_1() {
+        let address = AddressSerial::new(*b"0000000A");
+        assert!(address.is_err());
+    }
+
+    #[test]
+    fn new_2() {
+        let address = AddressSerial::new(*b"00000001");
+        assert!(address.is_ok());
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+pub struct Address {
+    device_type: AddressDeviceType,
+    serial: AddressSerial,
+}
+impl Address {
+    pub fn new(
+        device_type: AddressDeviceType,
+        serial: AddressSerial,
+    ) -> Self {
+        return Self {
+            device_type,
+            serial,
+        };
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub struct Payload(Box<[u8]>);
+impl Payload {
+    pub fn new(data: Box<[u8]>) -> Result<Self, Error> {
+        if !data.iter().all(|item| item.is_ascii_graphic()) {
+            return Err(err_msg("Invalid characters in payload"));
+        }
+        return Ok(Self(data));
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        return self.0.as_ref();
+    }
+}
+#[cfg(test)]
+mod test_payload {
+    use super::*;
+
+    #[test]
+    fn new_1() {
+        let payload = Payload::new(Box::from(*b"aaa\n"));
+        assert!(payload.is_err());
+    }
+
+    #[test]
+    fn new_2() {
+        let payload = Payload::new(Box::from(*b"aA09"));
+        assert!(payload.is_ok());
+    }
+}
+
+pub struct Frame {}
+impl Frame {
+    pub const CHAR_BEGIN: u8 = b'\n';
+    pub const CHAR_END: u8 = b'\r';
+
+    const CRC_POLY: u16 = 0xA001;
+    const CRC_INITIAL: u16 = 0xFFFF;
+
+    const CHAR_DIRECTION_NORMAL_IN: u8 = b'<';
+    const CHAR_DIRECTION_NORMAL_OUT: u8 = b'>';
+    const CHAR_DIRECTION_SERVICE_IN: u8 = b'{';
+    const CHAR_DIRECTION_SERVICE_OUT: u8 = b'}';
+
+    pub fn out_build(
+        service_mode: bool,
+        address: &Address,
+        payload: &Payload,
+    ) -> Box<[u8]> {
+        let char_direction = if service_mode {
+            &Self::CHAR_DIRECTION_SERVICE_OUT
+        } else {
+            &Self::CHAR_DIRECTION_NORMAL_OUT
+        };
+
+        let mut crc16 = Digest::new_with_initial(Self::CRC_POLY, Self::CRC_INITIAL);
+        Hasher16::write(&mut crc16, slice::from_ref(&char_direction));
+        Hasher16::write(&mut crc16, address.device_type.as_slice());
+        Hasher16::write(&mut crc16, address.serial.as_slice());
+        Hasher16::write(&mut crc16, payload.as_slice());
+        let crc16 = Hasher16::sum16(&crc16);
+        let crc16 = hex::encode_upper(crc16.to_le_bytes());
+        let crc16 = crc16.as_bytes();
+
+        let frame = [
+            slice::from_ref(&Self::CHAR_BEGIN),
+            slice::from_ref(&char_direction),
+            address.device_type.as_slice(),
+            address.serial.as_slice(),
+            &crc16,
+            payload.as_slice(),
+            slice::from_ref(&Self::CHAR_END),
+        ]
+        .concat();
+
+        return Box::from(frame);
+    }
+
+    pub fn in_parse(
+        frame: &[u8],
+
+        service_mode: bool,
+        address: &Address,
+    ) -> Result<Payload, Error> {
+        pub const FRAME_LENGTH_MIN: usize = 1 + 1 + 4 + 0 + 1;
+
+        if frame.len() < FRAME_LENGTH_MIN {
+            return Err(err_msg("Frame too short"));
+        }
+
+        if frame[0] != Self::CHAR_BEGIN {
+            return Err(err_msg("Invalid begin character"));
+        }
+
+        if frame[1]
+            != (if service_mode {
+                Self::CHAR_DIRECTION_SERVICE_IN
+            } else {
+                Self::CHAR_DIRECTION_NORMAL_IN
+            })
+        {
+            return Err(err_msg("Invalid service_mode character"));
+        }
+
+        let crc16_received = &frame[2..2 + 4];
+        if !crc16_received
+            .iter()
+            .all(|item| item.is_ascii_uppercase() || item.is_ascii_digit())
+        {
+            return Err(err_msg("Invalid character in crc16"));
+        }
+        let crc16_received = hex::decode(crc16_received)?;
+        let crc16_received = u16::from_le_bytes((&crc16_received[..]).try_into().unwrap());
+
+        let payload = Payload::new(Box::from(&frame[2 + 4..frame.len() - 1]))?;
+
+        if frame[frame.len() - 1] != Frame::CHAR_END {
+            return Err(err_msg("Invalid end character"));
+        }
+
+        let mut crc16_expected = Digest::new_with_initial(Self::CRC_POLY, Self::CRC_INITIAL);
+        Hasher16::write(&mut crc16_expected, slice::from_ref(&frame[1]));
+        Hasher16::write(&mut crc16_expected, address.device_type.as_slice());
+        Hasher16::write(&mut crc16_expected, address.serial.as_slice());
+        Hasher16::write(&mut crc16_expected, payload.as_slice());
+        let crc16_expected = Hasher16::sum16(&crc16_expected);
+
+        if crc16_expected != crc16_received {
+            return Err(format_err!(
+                "Invalid CRC16, expected: {:04X}, received: {:04X}",
+                crc16_expected,
+                crc16_received,
+            ));
+        }
+
+        return Ok(payload);
+    }
+}
+#[cfg(test)]
+mod test_frame {
+    use super::*;
+
+    #[test]
+    fn out_build_1() {
+        assert_eq!(
+            Frame::out_build(
+                false,
+                &Address::new(
+                    AddressDeviceType::new(*b"0001").unwrap(),
+                    AddressSerial::new(*b"98765432").unwrap(),
+                ),
+                &Payload::new(Box::from(*b"ChujDupaKamieniKupa")).unwrap(),
+            )
+            .as_ref(),
+            &b"\n>00019876543212F0ChujDupaKamieniKupa\r"[..]
+        );
+    }
+
+    #[test]
+    fn in_parse_1() {
+        let frame = Frame::in_parse(
+            b"",
+            false,
+            &Address::new(
+                AddressDeviceType::new(*b"0001").unwrap(),
+                AddressSerial::new(*b"98765432").unwrap(),
+            ),
+        );
+        assert!(frame.is_err());
+    }
+
+    #[test]
+    fn in_parse_2() {
+        assert_eq!(
+            Frame::in_parse(
+                b"\n<FB6CChujDupaKamieniKupa\r",
+                false,
+                &Address::new(
+                    AddressDeviceType::new(*b"0001").unwrap(),
+                    AddressSerial::new(*b"98765432").unwrap(),
+                ),
+            )
+            .unwrap(),
+            Payload::new(Box::from(*b"ChujDupaKamieniKupa")).unwrap(),
+        );
+    }
+}
