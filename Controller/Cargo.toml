@@ -7,9 +7,11 @@ publish = false
 
 [dependencies]
 bytes = "0.4.12"
+crc = "1.8.1"
 digest_auth = "0.2.1"
 failure = "0.1.6"
 futures-preview = { version = "0.3.0-alpha.19", features = ["async-await"] }
+hex = "0.4.0"
 http = "0.1.21"
 hyper = { version = "0.13.0-alpha.4", features = ["runtime", "unstable-stream"] } # TODO: Most likely runtime may be removed
 image = "0.22.3"
