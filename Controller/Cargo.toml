@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Paweł Kubrak <peku33@gmail.com>"]
 edition = "2018"
 publish = false
+default-run = "logicblocks-controller"
 
 [dependencies]
 bytes = "0.4.12"
