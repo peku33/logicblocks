@@ -1,0 +1,3 @@
+edition = "2018"
+fn_args_layout = "Vertical"
+empty_item_single_line = false
