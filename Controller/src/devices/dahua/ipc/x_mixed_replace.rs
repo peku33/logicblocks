@@ -1,6 +1,7 @@
+use failure::{err_msg, Error};
 use regex::{Regex, RegexBuilder};
 
-pub fn frame_to_message(frame: &str) -> Result<&str, Box<dyn std::error::Error>> {
+pub fn frame_to_message(frame: &str) -> Result<&str, Error> {
     lazy_static::lazy_static! {
         static ref CODE_REGEX: Regex = RegexBuilder::new("^\\s*Content-Type: text/plain\\s*Content-Length:(\\d+)\\s*(.*)\\s*$")
             .dot_matches_new_line(true)
@@ -8,11 +9,11 @@ pub fn frame_to_message(frame: &str) -> Result<&str, Box<dyn std::error::Error>>
     }
     let captures = CODE_REGEX
         .captures(frame)
-        .ok_or("frame does not match required pattern")?;
+        .ok_or(err_msg("frame does not match required pattern"))?;
     let content_length = usize::from_str_radix(captures.get(1).unwrap().as_str(), 10)?;
     let content = captures.get(2).unwrap().as_str();
     if content_length != content.len() {
-        return Err("content_length does not match content.len()".into());
+        return Err(err_msg("content_length does not match content.len()"));
     }
     return Ok(content);
 }
