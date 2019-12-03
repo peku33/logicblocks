@@ -2,7 +2,7 @@
 
 use super::common::{Address, AddressDeviceType, AddressSerial, Frame, Payload};
 use failure::{err_msg, format_err, Error};
-use fmt::Display;
+use fmt::{Debug, Display};
 use futures::channel::oneshot;
 use scopeguard::defer;
 use std::cell::RefCell;
@@ -231,7 +231,6 @@ struct FtdiContextWrapper(*mut libftdi1_sys::ftdi_context);
 unsafe impl Send for FtdiContextWrapper {
 }
 
-#[derive(Debug)]
 pub struct Master {
     master_descriptor: MasterDescriptor,
 
@@ -668,6 +667,17 @@ impl Display for Master {
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         return write!(f, "Master({})", self.master_descriptor);
+    }
+}
+impl Debug for Master {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter,
+    ) -> fmt::Result {
+        return f
+            .debug_struct("Master")
+            .field("master_descriptor", &self.master_descriptor)
+            .finish();
     }
 }
 impl Drop for Master {
