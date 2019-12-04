@@ -208,7 +208,7 @@ impl Handler for Device {
                     .get_stream_rtsp_uri(&Stream::Sub2, &self.shared_user_password)
                     .into_string();
 
-                return async move {
+                async move {
                     return Response::from_json(json!({
                         "deviceName": device_name,
                         "state": state,
@@ -221,7 +221,7 @@ impl Handler for Device {
                         },
                     }));
                 }
-                .boxed();
+                .boxed()
             }
             ("snapshot", Some(uri_cursor)) => self
                 .api_client_and_dependencies

@@ -132,7 +132,7 @@ impl Handler for Pool {
                     })
                     .collect::<Vec<_>>();
 
-                return async move {
+                async move {
                     return Response::from_json(
                         devices
                             .iter()
@@ -145,7 +145,7 @@ impl Handler for Pool {
                             .collect(),
                     );
                 }
-                .boxed();
+                .boxed()
             }
             ("event_stream", None) => {
                 return ready(Response::from_sse_stream(self.get_sse_response_stream())).boxed();
