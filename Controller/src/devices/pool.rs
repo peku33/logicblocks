@@ -22,15 +22,17 @@ pub struct EventStreamItem {
     device_event: device_event_stream::Item,
 }
 
-pub struct Pool {
+pub struct Pool<'d> {
     device_id: DeviceId,
-    devices:
-        HashMap<DeviceId, OwningHandle<Box<dyn DeviceTrait>, Box<dyn RunObjectTrait<'static>>>>,
+    devices: HashMap<
+        DeviceId,
+        OwningHandle<Box<dyn DeviceTrait + 'd>, Box<dyn RunObjectTrait<'d> + 'd>>,
+    >,
 
     event_stream_sender: RefCell<bus2::Sender<EventStreamItem>>,
     event_stream_receiver_factory: bus2::ReceiverFactory<EventStreamItem>,
 }
-impl Pool {
+impl<'d> Pool<'d> {
     pub fn new() -> Self {
         let (event_stream_sender, event_stream_receiver_factory) = bus2::channel();
         let event_stream_sender = RefCell::new(event_stream_sender);
@@ -45,7 +47,7 @@ impl Pool {
     }
     pub fn add(
         &mut self,
-        device: Box<dyn DeviceTrait>,
+        device: Box<dyn DeviceTrait + 'd>,
     ) -> DeviceId {
         let device_owning_handle =
             OwningHandle::new_with_fn(device, unsafe { |device_ptr| (*device_ptr).device_run() });
@@ -117,7 +119,7 @@ impl Pool {
         });
     }
 }
-impl Handler for Pool {
+impl<'d> Handler for Pool<'d> {
     fn handle(
         &self,
         request: &Request,
