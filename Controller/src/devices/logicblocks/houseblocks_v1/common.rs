@@ -1,9 +1,11 @@
 use crc::crc16::{Digest, Hasher16};
 use failure::{err_msg, format_err, Error};
 use std::convert::TryInto;
+use std::fmt;
+use std::ops::Deref;
 use std::slice;
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone)]
 pub struct AddressDeviceType([u8; Self::LENGTH]);
 impl AddressDeviceType {
     pub const LENGTH: usize = 4;
@@ -13,9 +15,19 @@ impl AddressDeviceType {
         }
         return Ok(Self(device_type));
     }
-
-    pub fn as_slice(&self) -> &[u8] {
+}
+impl Deref for AddressDeviceType {
+    type Target = [u8];
+    fn deref(&self) -> &Self::Target {
         return self.0.as_ref();
+    }
+}
+impl fmt::Debug for AddressDeviceType {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter,
+    ) -> fmt::Result {
+        return f.write_str(std::str::from_utf8(self).unwrap());
     }
 }
 #[cfg(test)]
@@ -35,7 +47,7 @@ mod test_address_device_type {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone)]
 pub struct AddressSerial([u8; Self::LENGTH]);
 impl AddressSerial {
     pub const LENGTH: usize = 8;
@@ -45,9 +57,19 @@ impl AddressSerial {
         }
         return Ok(Self(serial));
     }
-
-    pub fn as_slice(&self) -> &[u8] {
+}
+impl Deref for AddressSerial {
+    type Target = [u8];
+    fn deref(&self) -> &Self::Target {
         return self.0.as_ref();
+    }
+}
+impl fmt::Debug for AddressSerial {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter,
+    ) -> fmt::Result {
+        return f.write_str(std::str::from_utf8(self).unwrap());
     }
 }
 #[cfg(test)]
@@ -93,8 +115,10 @@ impl Payload {
         }
         return Ok(Self(data));
     }
-
-    pub fn as_slice(&self) -> &[u8] {
+}
+impl Deref for Payload {
+    type Target = [u8];
+    fn deref(&self) -> &Self::Target {
         return self.0.as_ref();
     }
 }
@@ -148,9 +172,9 @@ impl Frame {
             Self::CRC_CALC,
         );
         crc16.write(slice::from_ref(&char_direction));
-        crc16.write(address.device_type.as_slice());
-        crc16.write(address.serial.as_slice());
-        crc16.write(payload.as_slice());
+        crc16.write(&address.device_type);
+        crc16.write(&address.serial);
+        crc16.write(payload);
         let crc16 = crc16.sum16();
         let crc16 = hex::encode_upper(crc16.to_be_bytes());
         let crc16 = crc16.as_bytes();
@@ -158,10 +182,10 @@ impl Frame {
         let frame = [
             slice::from_ref(&Self::CHAR_BEGIN),
             slice::from_ref(&char_direction),
-            address.device_type.as_slice(),
-            address.serial.as_slice(),
+            &address.device_type,
+            &address.serial,
             &crc16,
-            payload.as_slice(),
+            &payload,
             slice::from_ref(&Self::CHAR_END),
         ]
         .concat();
@@ -218,9 +242,9 @@ impl Frame {
             Self::CRC_CALC,
         );
         Hasher16::write(&mut crc16_expected, slice::from_ref(&frame[1]));
-        Hasher16::write(&mut crc16_expected, address.device_type.as_slice());
-        Hasher16::write(&mut crc16_expected, address.serial.as_slice());
-        Hasher16::write(&mut crc16_expected, payload.as_slice());
+        Hasher16::write(&mut crc16_expected, &address.device_type);
+        Hasher16::write(&mut crc16_expected, &address.serial);
+        Hasher16::write(&mut crc16_expected, &payload);
         let crc16_expected = Hasher16::sum16(&crc16_expected);
 
         if crc16_expected != crc16_received {
