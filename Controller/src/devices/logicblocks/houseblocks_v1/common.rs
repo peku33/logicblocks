@@ -15,6 +15,10 @@ impl AddressDeviceType {
         }
         return Ok(Self(device_type));
     }
+    pub fn new_from_ordinal(ordinal: usize) -> Result<Self, Error> {
+        let device_type_string = format!("{:0>4}", ordinal);
+        return Ok(Self(device_type_string.as_bytes()[..].try_into()?));
+    }
 }
 impl Deref for AddressDeviceType {
     type Target = [u8];
