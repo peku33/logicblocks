@@ -4,10 +4,9 @@ use logicblocks_controller::devices::logicblocks::houseblocks_v1::master::{Maste
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
-use std::time::Duration;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+pub async fn main() -> Result<(), Box<dyn Error>> {
     let master_context = MasterContext::new()?;
     let master_descriptors_by_serial_number = master_context
         .find_master_descriptors()?
@@ -15,7 +14,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .map(|master_descriptor| {
             (
                 master_descriptor
-                    .get_serial_number()
+                    .serial_number
                     .clone()
                     .into_string()
                     .unwrap(),
@@ -43,9 +42,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let mut master = Master::new(master_descriptor)?;
-    let transaction = master.transaction_device_discovery(Duration::from_secs(1));
-    let transaction_result = transaction.await;
-    println!("transaction_result: {:#?}", transaction_result);
+    let transaction = master.transaction_device_discovery();
+    let address = transaction.await;
+    println!("address: {:?}", address);
 
     return Ok(());
 }

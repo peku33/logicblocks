@@ -30,7 +30,6 @@ enum MasterTransaction {
         sender: oneshot::Sender<Result<Payload, Error>>,
     },
     DeviceDiscovery {
-        in_timeout: Duration,
         sender: oneshot::Sender<Result<Address, Error>>,
     },
 }
@@ -203,14 +202,9 @@ impl Drop for MasterContext {
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct MasterDescriptor {
-    vid: u16,
-    pid: u16,
-    serial_number: ffi::CString,
-}
-impl MasterDescriptor {
-    pub fn get_serial_number(&self) -> &ffi::CString {
-        return &self.serial_number;
-    }
+    pub vid: u16,
+    pub pid: u16,
+    pub serial_number: ffi::CString,
 }
 impl Display for MasterDescriptor {
     fn fmt(
@@ -392,16 +386,13 @@ impl Master {
         return receiver.await?;
     }
 
-    pub async fn transaction_device_discovery(
-        &mut self,
-        in_timeout: Duration,
-    ) -> Result<Address, Error> {
+    pub async fn transaction_device_discovery(&mut self) -> Result<Address, Error> {
         let (sender, receiver) = oneshot::channel();
 
         self.worker_thread_sender
             .as_mut()
             .unwrap()
-            .send(MasterTransaction::DeviceDiscovery { in_timeout, sender })
+            .send(MasterTransaction::DeviceDiscovery { sender })
             .unwrap();
 
         return receiver.await?;
@@ -443,10 +434,10 @@ impl Master {
                     ))
                     .map_err(|e| e.map(|_| ())),
 
-                MasterTransaction::DeviceDiscovery { in_timeout, sender } => sender
+                MasterTransaction::DeviceDiscovery { sender } => sender
                     .send(Self::handle_transaction_device_discovery(
                         ftdi_context,
-                        &in_timeout,
+                        &Duration::from_millis(250),
                     ))
                     .map_err(|e| e.map(|_| ())),
             };
