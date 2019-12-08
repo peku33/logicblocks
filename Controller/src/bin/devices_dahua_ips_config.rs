@@ -1,10 +1,10 @@
 extern crate logicblocks_controller;
 
+use failure::Error;
 use logicblocks_controller::devices::dahua::ipc::api::{Client, SaneDefaultsConfig};
-use std::error::Error;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), Error> {
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Info)
         .filter_module("logicblocks_controller", log::LevelFilter::Trace)
@@ -29,7 +29,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let client = Client::new(host, admin_password);
 
-    println!("Starting config...");
     client
         .sane_defaults(&SaneDefaultsConfig {
             device_name,
@@ -37,7 +36,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             video_overlay,
         })
         .await?;
-    println!("Finishing config...");
 
     return Ok(());
 }
