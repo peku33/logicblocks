@@ -24,7 +24,7 @@ impl<'r> WebHandler for Root<'r> {
         &self,
         request: &Request,
     ) -> BoxFuture<'static, Response> {
-        let path = request.hyper_request.uri().path();
+        let path = request.http_parts.uri.path();
         if path.len() <= 0 || path.chars().next().unwrap() != '/' {
             return ready(Response::error(StatusCode::BAD_REQUEST)).boxed();
         }

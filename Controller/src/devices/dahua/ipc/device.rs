@@ -181,8 +181,8 @@ impl Handler for Device {
         request: &Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
-        return match uri_cursor.next_item() {
-            ("", None) => {
+        return match (request.method(), uri_cursor.next_item()) {
+            (&http::Method::GET, ("", None)) => {
                 let device_name = self.device_name.clone();
                 let state = *self.state.borrow();
                 let snapshot_available =
@@ -209,7 +209,7 @@ impl Handler for Device {
                     .into_string();
 
                 async move {
-                    return Response::from_json(json!({
+                    return Response::ok_json(json!({
                         "deviceName": device_name,
                         "state": state,
                         "snapshotAvailable": snapshot_available,
@@ -223,7 +223,7 @@ impl Handler for Device {
                 }
                 .boxed()
             }
-            ("snapshot", Some(uri_cursor)) => self
+            (_, ("snapshot", Some(uri_cursor))) => self
                 .api_client_and_dependencies
                 .snapshot_driver
                 .handle(request, uri_cursor),

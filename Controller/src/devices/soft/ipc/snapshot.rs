@@ -125,7 +125,7 @@ impl Handler for Driver<'_> {
                 .write_to(&mut body, image::ImageOutputFormat::JPEG(quality))
                 .unwrap();
 
-            return Response::from_body_content_type(body, "image/jpeg");
+            return Response::ok_content_type_body(body, "image/jpeg");
         }
         .boxed();
     }

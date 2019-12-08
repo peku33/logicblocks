@@ -1,5 +1,6 @@
 use super::{HandlerThreaded, Request};
 use failure::{err_msg, Error};
+use futures::stream::TryStreamExt;
 use std::net::SocketAddr;
 
 pub async fn run_server(
@@ -17,8 +18,10 @@ pub async fn run_server(
             let remote_address = socket.remote_addr();
             return async move {
                 return Ok::<_, hyper::Error>(hyper::service::service_fn(
-                    async move |hyper_request| {
-                        let handler_request = Request::new(remote_address, hyper_request);
+                    async move |hyper_request: hyper::Request<hyper::Body>| {
+                        let (http_fields, body) = hyper_request.into_parts();
+                        let body = body.map_ok(|chunk| chunk.into_bytes()).try_concat().await?; // FIXME: Possible future exit
+                        let handler_request = Request::new(remote_address, http_fields, body);
 
                         let handler_response =
                             handler_static.handle(Box::new(handler_request)).await;

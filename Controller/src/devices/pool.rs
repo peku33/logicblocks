@@ -60,6 +60,10 @@ impl Pool {
         return self.device_id;
     }
     pub async fn run(&self) -> Error {
+        if self.devices.is_empty() {
+            return pending().await;
+        }
+
         let (device_id, error) = self
             .devices
             .iter()
@@ -119,8 +123,8 @@ impl Handler for Pool {
         request: &Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
-        match uri_cursor.next_item() {
-            ("", None) => {
+        match (request.method(), uri_cursor.next_item()) {
+            (&http::Method::GET, ("", None)) => {
                 let devices = self
                     .devices
                     .iter()
@@ -133,7 +137,7 @@ impl Handler for Pool {
                     .collect::<Vec<_>>();
 
                 async move {
-                    return Response::from_json(
+                    return Response::ok_json(
                         devices
                             .iter()
                             .map(|(device_id, device_class)| {
@@ -142,15 +146,15 @@ impl Handler for Pool {
                                     "deviceClass": device_class,
                                 })
                             })
-                            .collect(),
+                            .collect::<Vec<_>>(),
                     );
                 }
                 .boxed()
             }
-            ("event_stream", None) => {
-                return ready(Response::from_sse_stream(self.get_sse_response_stream())).boxed();
+            (&http::Method::GET, ("event_stream", None)) => {
+                return ready(Response::ok_sse_stream(self.get_sse_response_stream())).boxed();
             }
-            (device_id, uri_cursor) => {
+            (_, (device_id, uri_cursor)) => {
                 let uri_cursor = match uri_cursor {
                     Some(uri_cursor) => uri_cursor,
                     None => return ready(Response::error_404()).boxed(),

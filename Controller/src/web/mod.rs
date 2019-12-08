@@ -2,30 +2,53 @@ pub mod router;
 pub mod server;
 pub mod sse;
 
-use failure::{err_msg, Error};
+use bytes::Bytes;
+use failure::{err_msg, format_err, Error};
 use futures::future::{ready, BoxFuture, FutureExt};
 use futures::stream::{Stream, StreamExt};
 use http::{header, Method, StatusCode};
-use serde_json::Value as JsonValue;
+use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
 #[derive(Debug)]
 pub struct Request {
     remote_address: SocketAddr,
-    hyper_request: hyper::Request<hyper::Body>,
+    http_parts: http::request::Parts,
+    body: Bytes,
 }
 impl Request {
     pub fn new(
         remote_address: SocketAddr,
-        hyper_request: hyper::Request<hyper::Body>,
+        http_parts: http::request::Parts,
+        body: Bytes,
     ) -> Self {
         return Self {
             remote_address,
-            hyper_request,
+            http_parts,
+            body,
         };
     }
     pub fn method(&self) -> &Method {
-        return self.hyper_request.method();
+        return &self.http_parts.method;
+    }
+
+    pub fn body_parse_json<'a, T: Deserialize<'a>>(&'a self) -> Result<T, Error> {
+        let content_type = self
+            .http_parts
+            .headers
+            .get(http::header::CONTENT_TYPE)
+            .and_then(|header| header.to_str().ok());
+
+        if content_type != Some("application/json") {
+            return Err(format_err!(
+                "expected content type application/json, got: {:?}",
+                content_type,
+            ));
+        }
+
+        let json = serde_json::from_slice(&self.body)?;
+
+        return Ok(json);
     }
 }
 
@@ -38,7 +61,14 @@ impl Response {
         return self.hyper_response;
     }
 
-    pub fn from_body_content_type<B>(
+    pub fn ok_empty() -> Response {
+        let hyper_response = hyper::Response::builder()
+            .body(hyper::Body::default())
+            .unwrap();
+
+        return Response { hyper_response };
+    }
+    pub fn ok_content_type_body<B>(
         body: B,
         content_type: &str,
     ) -> Response
@@ -52,8 +82,7 @@ impl Response {
 
         return Response { hyper_response };
     }
-
-    pub fn from_json(value: JsonValue) -> Response {
+    pub fn ok_json<T: Serialize>(value: T) -> Response {
         let hyper_response = hyper::Response::builder()
             .header(header::CONTENT_TYPE, "application/json")
             .body(serde_json::to_vec(&value).unwrap().into())
@@ -61,8 +90,7 @@ impl Response {
 
         return Response { hyper_response };
     }
-
-    pub fn from_sse_stream<S: Stream<Item = sse::Event> + Sync + Send + 'static>(
+    pub fn ok_sse_stream<S: Stream<Item = sse::Event> + Sync + Send + 'static>(
         sse_stream: S
     ) -> Response {
         let hyper_body = hyper::Body::wrap_stream(sse_stream.map(|event| {
@@ -81,6 +109,13 @@ impl Response {
             .body(hyper::Body::default())
             .unwrap();
 
+        return Response { hyper_response };
+    }
+    pub fn error_400_from_error(error: &Error) -> Response {
+        let hyper_response = hyper::Response::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .body(hyper::Body::from(error.to_string()))
+            .unwrap();
         return Response { hyper_response };
     }
     pub fn error_404() -> Response {
@@ -144,7 +179,7 @@ impl HandlerThreaded for HandlerAsyncSender {
     ) -> BoxFuture<'static, Response> {
         let (sender, receiver) = tokio::sync::oneshot::channel();
         let handler_async_receiver_item = HandlerAsyncItem {
-            request: request,
+            request,
             response_channel: sender,
         };
         let send_result = self
