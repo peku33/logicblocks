@@ -1,0 +1,23 @@
+{
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    {
+      "language": "typescript",
+      "autoFix": true
+    },
+    {
+      "language": "typescriptreact",
+      "autoFix": true
+    }
+  ],
+  "editor.tabSize": 2,
+  "cSpell.words": [
+    "Dahua",
+    "realmonitor",
+    "rtsp",
+    "stackable"
+  ],
+  "editor.formatOnSave": true,
+  "files.insertFinalNewline": true
+}
