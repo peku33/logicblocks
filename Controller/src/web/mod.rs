@@ -50,6 +50,15 @@ impl Request {
 
         return Ok(json);
     }
+
+    pub fn body_parse_json_validate<'a, T: Deserialize<'a>, F: FnOnce(T) -> Result<T, Error>>(
+        &'a self,
+        f: F,
+    ) -> Result<T, Error> {
+        let value = self.body_parse_json()?;
+        let value = f(value)?;
+        return Ok(value);
+    }
 }
 
 #[derive(Debug)]
