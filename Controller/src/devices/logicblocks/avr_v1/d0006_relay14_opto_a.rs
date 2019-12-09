@@ -6,7 +6,7 @@ use crate::devices::device_event_stream;
 use crate::util::bus2;
 use crate::web::router::uri_cursor::{Handler, UriCursor};
 use crate::web::{Request, Response};
-use failure::{format_err, Error};
+use failure::{err_msg, format_err, Error};
 use futures::future::{BoxFuture, FutureExt, LocalBoxFuture};
 use futures::select;
 use futures::stream::StreamExt;
@@ -16,15 +16,17 @@ use std::cell::RefCell;
 use std::slice;
 use std::time::Duration;
 
+pub const RELAYS: usize = 14;
+
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
 #[serde(transparent)]
 pub struct RelayStates {
-    values: [bool; 14],
+    values: [bool; RELAYS],
 }
 impl Default for RelayStates {
     fn default() -> Self {
         return Self {
-            values: [false; 14],
+            values: [false; RELAYS],
         };
     }
 }
@@ -213,16 +215,39 @@ impl<'m> Handler for Device<'m> {
                 }
                 .boxed()
             }
-            (&http::Method::POST, ("desiredRelayStates", None)) => {
-                let relay_states = match request.body_parse_json() {
-                    Ok(relay_states) => relay_states,
+            (&http::Method::POST, ("relay_state_transition", None)) => {
+                #[derive(Deserialize, Copy, Clone, Debug)]
+                pub struct RelayStateTransition {
+                    id: usize,
+                    state: bool,
+                }
+
+                let relay_state_transition = match request.body_parse_json_validate(
+                    |relay_state_transition: RelayStateTransition| {
+                        if
+                        /* relay_state_transition.id < 0 || */
+                        relay_state_transition.id >= RELAYS {
+                            return Err(err_msg("id out of bounds"));
+                        }
+                        return Ok(relay_state_transition);
+                    },
+                ) {
+                    Ok(relay_state_transition) => relay_state_transition,
                     Err(error) => {
                         return async move { Response::error_400_from_error(&error) }.boxed()
                     }
                 };
 
-                self.desired_relay_states.replace(relay_states);
-                self.desired_relay_states_changed_sender.send(());
+                let mut desired_relay_states = self.desired_relay_states.borrow_mut();
+                let mut desired_relay_states: &mut RelayStates = &mut desired_relay_states;
+
+                if desired_relay_states.values[relay_state_transition.id]
+                    != relay_state_transition.state
+                {
+                    desired_relay_states.values[relay_state_transition.id] =
+                        relay_state_transition.state;
+                    self.desired_relay_states_changed_sender.send(());
+                }
 
                 async move { Response::ok_empty() }.boxed()
             }
