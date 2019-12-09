@@ -10,6 +10,7 @@ export function getComponentClassForDevice(
   deviceClass: string,
 ): DeviceComponent {
   switch (deviceClass) {
+    case "dahua/ipc": return DahuaIpc;
     default: return Unknown;
   }
 }
