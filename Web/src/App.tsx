@@ -3,7 +3,11 @@ import { BrowserRouter } from "react-router-dom";
 import Body from "./root/Body";
 
 const App: React.FC = () => {
-  return (<p>App</p>);
+  return (
+    <BrowserRouter>
+      <Body />
+    </BrowserRouter>
+  );
 };
 
 export default App;
