@@ -17,11 +17,11 @@ function eventToString(event: Event): string {
 }
 
 interface State {
-  deviceName: string;
+  device_name: string;
   state: string;
-  snapshotAvailable: boolean;
+  snapshot_available: boolean;
   events: Event[];
-  rtspStreams: {
+  rtsp_streams: {
     [name: string]: string,
   };
 }
@@ -64,9 +64,9 @@ const Ipc: React.FC<{
 
   if (!state) { return <Loader active />; }
   return (<div>
-    <Header as="h1">{state.deviceName}</Header>
+    <Header as="h1">{state.device_name}</Header>
     <Divider />
-    {state.snapshotAvailable ? (
+    {state.snapshot_available ? (
       <Image
         src={props.deviceContext.urlBuild(`/snapshot/small?timestamp=${snapshotLastUpdate.getTime()}`)}
         centered fluid
@@ -99,7 +99,7 @@ const Ipc: React.FC<{
       )}
     <Divider />
     <Container textAlign="center">
-      {Object.entries(state.rtspStreams).map(([key, url]) => (
+      {Object.entries(state.rtsp_streams).map(([key, url]) => (
         <Button key={key} as="a" href={url}>
           {(STREAM_NAMES as any)[key] || key}
         </Button>

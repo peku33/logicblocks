@@ -144,8 +144,8 @@ impl<'d> Handler for Pool<'d> {
                             .iter()
                             .map(|(device_id, device_class)| {
                                 json!({
-                                    "deviceId": device_id,
-                                    "deviceClass": device_class,
+                                    "device_id": device_id,
+                                    "device_class": device_class,
                                 })
                             })
                             .collect::<Vec<_>>(),

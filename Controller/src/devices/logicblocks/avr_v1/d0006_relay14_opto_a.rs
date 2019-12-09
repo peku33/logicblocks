@@ -209,8 +209,8 @@ impl<'m> Handler for Device<'m> {
 
                 async move {
                     return Response::ok_json(json!({
-                        "deviceState": state,
-                        "desiredRelayStates": desired_relay_states,
+                        "state": state,
+                        "desired_relay_states": desired_relay_states,
                     }));
                 }
                 .boxed()

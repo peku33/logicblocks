@@ -210,11 +210,11 @@ impl Handler for Device {
 
                 async move {
                     return Response::ok_json(json!({
-                        "deviceName": device_name,
+                        "device_name": device_name,
                         "state": state,
-                        "snapshotAvailable": snapshot_available,
+                        "snapshot_available": snapshot_available,
                         "events": events,
-                        "rtspStreams": {
+                        "rtsp_streams": {
                             "main": rtsp_stream_main,
                             "sub1": rtsp_stream_sub1,
                             "sub2": rtsp_stream_sub2,

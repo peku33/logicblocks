@@ -49,8 +49,8 @@ export class DevicePoolListener {
 }
 
 export interface DeviceListItem {
-  deviceId: number;
-  deviceClass: string;
+  device_id: number;
+  device_class: string;
 }
 export type DeviceListItems = DeviceListItem[];
 export class DeviceListManager extends SubscriptionStateManager<DeviceListItems> {
