@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { Fragment, useEffect, useState } from "react";
 import { Button, Container, Divider, Header, Icon, Image, Label, Loader } from "semantic-ui-react";
 import { DeviceEventsManager, DeviceStateManager } from "../../../services/DevicePool";
 import DeviceContext from "../DeviceContext";
@@ -32,14 +32,6 @@ const STREAM_NAMES = {
   sub2: "Low",
 };
 
-const STATE_ICONS = {
-  Initializing: "setting",
-  Configuring: "setting",
-  Running: "play",
-  Error: "x",
-};
-const STATE_ICON_UNKNOWN = "question";
-
 const STATE_COLORS = {
   Initializing: "yellow",
   Configuring: "yellow",
@@ -48,11 +40,19 @@ const STATE_COLORS = {
 };
 const STATE_COLORS_UNKNOWN = "orange";
 
+const STATE_ICONS = {
+  Initializing: "setting",
+  Configuring: "setting",
+  Running: "play",
+  Error: "x",
+};
+const STATE_ICON_UNKNOWN = "question";
+
 const Ipc: React.FC<{
   deviceContext: DeviceContext,
 }> = (props) => {
-  const [state, setState] = useState<State>();
-  useEffect(() => (new DeviceStateManager<State>(props.deviceContext.deviceId)).reactHook(setState), [props.deviceContext.deviceId]);
+  const [deviceState, setDeviceState] = useState<State>();
+  useEffect(() => (new DeviceStateManager<State>(props.deviceContext.deviceId)).reactHook(setDeviceState), [props.deviceContext.deviceId]);
 
   const [snapshotLastUpdate, setSnapshotLastUpdate] = useState(new Date());
   useEffect(() => (new DeviceEventsManager(props.deviceContext.deviceId).reactHook((event) => {
@@ -62,50 +62,52 @@ const Ipc: React.FC<{
     }
   })), [props.deviceContext.deviceId]);
 
-  if (!state) { return <Loader active />; }
-  return (<div>
-    <Header as="h1">{state.device_name}</Header>
-    <Divider />
-    {state.snapshot_available ? (
-      <Image
-        src={props.deviceContext.urlBuild(`/snapshot/small?timestamp=${snapshotLastUpdate.getTime()}`)}
-        centered fluid
-        href={props.deviceContext.urlBuild("/snapshot/")}
-      />
-    ) : (
-        <Loader active inline="centered" />
-      )}
-    <Divider />
-    <Label color={(STATE_COLORS as any)[state.state] || STATE_COLORS_UNKNOWN}>
-      <Icon name={(STATE_ICONS as any)[state.state] || STATE_ICON_UNKNOWN} />
-      {state.state}
-    </Label>
-    <Divider />
-    {state.events.length ? (
-      state.events.map((event) => {
-        const eventString = eventToString(event);
-        return (
-          <Label key={eventString} color="orange">
-            <Icon name="exclamation" />
-            {eventString}
-          </Label>
-        );
-      })
-    ) : (
-        <Label color="green">
-          <Icon name="check" />
-          No events
+  if (!deviceState) { return <Loader active />; }
+  return (
+    <Fragment>
+      <Header as="h1">{deviceState.device_name}</Header>
+      <Divider />
+      {deviceState.snapshot_available ? (
+        <Image
+          src={props.deviceContext.urlBuild(`/snapshot/small?timestamp=${snapshotLastUpdate.getTime()}`)}
+          centered fluid
+          href={props.deviceContext.urlBuild("/snapshot/")}
+        />
+      ) : (
+          <Loader active inline="centered" />
+        )}
+      <Divider />
+      <Label color={(STATE_COLORS as any)[deviceState.state] || STATE_COLORS_UNKNOWN}>
+        <Icon name={(STATE_ICONS as any)[deviceState.state] || STATE_ICON_UNKNOWN} />
+        {deviceState.state}
       </Label>
-      )}
-    <Divider />
-    <Container textAlign="center">
-      {Object.entries(state.rtsp_streams).map(([key, url]) => (
-        <Button key={key} as="a" href={url}>
-          {(STREAM_NAMES as any)[key] || key}
-        </Button>
-      ))}
-    </Container>
-  </div>);
+      <Divider />
+      {deviceState.events.length ? (
+        deviceState.events.map((event) => {
+          const eventString = eventToString(event);
+          return (
+            <Label key={eventString} color="orange">
+              <Icon name="exclamation" />
+              {eventString}
+            </Label>
+          );
+        })
+      ) : (
+          <Label color="green">
+            <Icon name="check" />
+            No events
+      </Label>
+        )}
+      <Divider />
+      <Container textAlign="center">
+        {Object.entries(deviceState.rtsp_streams).map(([key, url]) => (
+          <Button key={key} as="a" href={url}>
+            {(STREAM_NAMES as any)[key] || key}
+          </Button>
+        ))}
+      </Container>
+    </Fragment>
+  );
 };
 
 export default Ipc;
