@@ -32,6 +32,7 @@ impl Default for RelayStates {
 }
 
 #[derive(Serialize, Clone, Copy, Debug)]
+#[serde(tag = "state")]
 pub enum State {
     Initializing,
     Running { relay_states: RelayStates },
@@ -147,6 +148,7 @@ impl<'m> Device<'m> {
                     if *current_relay_states != desired_relay_states {
                         Self::relay_states_push(&desired_relay_states, &application_mode_driver).await?;
                         *current_relay_states = desired_relay_states;
+                        device_event_stream_sender.send_empty();
                     }
                 },
             }
