@@ -20,17 +20,35 @@ pub async fn run_server(
                 return Ok::<_, hyper::Error>(hyper::service::service_fn(
                     async move |hyper_request: hyper::Request<hyper::Body>| {
                         let (http_fields, body) = hyper_request.into_parts();
-                        let body = body.map_ok(|chunk| chunk.into_bytes()).try_concat().await?; // FIXME: Possible future exit
-                        let handler_request = Request::new(remote_address, http_fields, body);
 
-                        let handler_response =
-                            handler_static.handle(Box::new(handler_request)).await;
-                        let mut hyper_response = handler_response.into_hyper_response();
+                        let mut hyper_response = match http_fields.method {
+                            http::Method::OPTIONS => hyper::Response::builder()
+                                .body(hyper::Body::default())
+                                .unwrap(),
+                            _ => match body.map_ok(|chunk| chunk.into_bytes()).try_concat().await {
+                                Ok(body) => {
+                                    let handler_request =
+                                        Request::new(remote_address, http_fields, body);
+                                    let handler_response =
+                                        handler_static.handle(Box::new(handler_request)).await;
+                                    handler_response.into_hyper_response()
+                                }
+                                Err(_) => hyper::Response::builder()
+                                    .status(http::StatusCode::BAD_REQUEST)
+                                    .body(hyper::Body::default())
+                                    .unwrap(),
+                            },
+                        };
 
                         if let Some(cors) = cors.as_ref() {
-                            hyper_response.headers_mut().append(
+                            let headers = hyper_response.headers_mut();
+                            headers.append(
                                 http::header::ACCESS_CONTROL_ALLOW_ORIGIN,
                                 cors.parse().unwrap(),
+                            );
+                            headers.append(
+                                http::header::ACCESS_CONTROL_ALLOW_HEADERS,
+                                "Content-Type".parse().unwrap(),
                             );
                         }
 
