@@ -1,4 +1,4 @@
-import { get } from "./Api";
+import { getJson } from "./Api";
 import { SSEListener } from "./SSEListener";
 import { SubscriptionEventsManager, SubscriptionManagerInterface, SubscriptionStateManager } from "./SubscriptionManager";
 
@@ -67,7 +67,7 @@ export class DeviceListManager extends SubscriptionStateManager<DeviceListItems>
   }
 
   protected load(): Promise<DeviceListItems> {
-    return get("/device_pool/");
+    return getJson("/device_pool/");
   }
 }
 
@@ -79,7 +79,7 @@ export class DeviceStateManager<DeviceState> extends SubscriptionStateManager<De
   }
 
   protected load(): Promise<DeviceState> {
-    return get(`/device_pool/${this.deviceId}/`);
+    return getJson(`/device_pool/${this.deviceId}/`);
   }
 }
 export class DeviceEventsManager extends SubscriptionEventsManager {

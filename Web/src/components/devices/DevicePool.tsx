@@ -14,8 +14,8 @@ const DevicePool: React.FC = () => {
 
   useEffect(() => DeviceListManager.getInstance().reactHook((newDeviceListItems) => {
     setDeviceListItems(newDeviceListItems.map((newDeviceListItem) => ({
-      deviceComponent: getComponentClassForDevice(newDeviceListItem.deviceClass),
-      deviceContext: new DeviceContext(newDeviceListItem.deviceId),
+      deviceComponent: getComponentClassForDevice(newDeviceListItem.device_class),
+      deviceContext: new DeviceContext(newDeviceListItem.device_id),
     })));
   }), []);
 
