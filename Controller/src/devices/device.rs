@@ -11,6 +11,15 @@ pub trait DeviceTrait {
     }
 }
 
+pub trait AsDeviceTrait {
+    fn as_device_trait(&self) -> &dyn DeviceTrait;
+}
+impl<T: DeviceTrait> AsDeviceTrait for T {
+    fn as_device_trait(&self) -> &dyn DeviceTrait {
+        return self;
+    }
+}
+
 pub trait RunObjectTrait<'d> {
     fn get_run_future(&self) -> &RefCell<LocalBoxFuture<'d, ()>>;
     fn event_stream_subscribe(&self) -> Option<device_event_stream::Receiver>;

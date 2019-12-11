@@ -1,4 +1,4 @@
-use super::device::{DeviceTrait, RunObjectTrait};
+use super::device::{AsDeviceTrait, RunObjectTrait};
 use super::device_event_stream;
 use crate::util::bus2;
 use crate::util::ref_mut_async::FutureWrapper;
@@ -26,7 +26,7 @@ pub struct Pool<'d> {
     device_id: DeviceId,
     devices: HashMap<
         DeviceId,
-        OwningHandle<Box<dyn DeviceTrait + 'd>, Box<dyn RunObjectTrait<'d> + 'd>>,
+        OwningHandle<Box<dyn AsDeviceTrait + 'd>, Box<dyn RunObjectTrait<'d> + 'd>>,
     >,
 
     event_stream_sender: RefCell<bus2::Sender<EventStreamItem>>,
@@ -47,10 +47,11 @@ impl<'d> Pool<'d> {
     }
     pub fn add(
         &mut self,
-        device: Box<dyn DeviceTrait + 'd>,
+        device: Box<dyn AsDeviceTrait + 'd>,
     ) -> DeviceId {
-        let device_owning_handle =
-            OwningHandle::new_with_fn(device, unsafe { |device_ptr| (*device_ptr).device_run() });
+        let device_owning_handle = OwningHandle::new_with_fn(device, unsafe {
+            |device_ptr| (*device_ptr).as_device_trait().device_run()
+        });
         self.device_id += 1;
         let devices_insert_result = self
             .devices
@@ -133,7 +134,10 @@ impl<'d> Handler for Pool<'d> {
                     .map(|(device_id, device_owning_handle)| {
                         return (
                             *device_id,
-                            device_owning_handle.as_owner().device_class_get(),
+                            device_owning_handle
+                                .as_owner()
+                                .as_device_trait()
+                                .device_class_get(),
                         );
                     })
                     .collect::<Vec<_>>();
@@ -173,12 +177,13 @@ impl<'d> Handler for Pool<'d> {
                         return ready(Response::error_404()).boxed();
                     }
                 };
-                let device_routed_handler = match device.device_as_routed_handler() {
-                    Some(device_routed_handler) => device_routed_handler,
-                    None => {
-                        return ready(Response::error_404()).boxed();
-                    }
-                };
+                let device_routed_handler =
+                    match device.as_device_trait().device_as_routed_handler() {
+                        Some(device_routed_handler) => device_routed_handler,
+                        None => {
+                            return ready(Response::error_404()).boxed();
+                        }
+                    };
                 return device_routed_handler.handle(request, uri_cursor);
             }
         }

@@ -33,8 +33,9 @@ const STATE_ICONS = {
 };
 const STATE_ICON_UNKNOWN = "question";
 
-const Device0006Relay14OptoA: React.FC<{
+const Relay14Common: React.FC<{
   deviceContext: DeviceContext,
+  deviceClass: string,
 }> = (props) => {
   const [deviceState, setDeviceState] = useState<State>();
   useEffect(() => (new DeviceStateManager<State>(props.deviceContext.deviceId)).reactHook(setDeviceState), [props.deviceContext.deviceId]);
@@ -56,7 +57,7 @@ const Device0006Relay14OptoA: React.FC<{
 
   return (
     <Fragment>
-      <Header as="h5">logicblocks/avr_v1/0006_relay14_opto_a</Header>
+      <Header as="h5">{props.deviceClass}</Header>
       <Divider />
       <Label color={(STATE_COLORS as any)[deviceState.state.state] || STATE_COLORS_UNKNOWN}>
         <Icon name={(STATE_ICONS as any)[deviceState.state.state] || STATE_ICON_UNKNOWN} />
@@ -101,4 +102,4 @@ const Device0006Relay14OptoA: React.FC<{
   );
 };
 
-export default Device0006Relay14OptoA;
+export default Relay14Common;
