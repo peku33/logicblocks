@@ -350,8 +350,7 @@ impl EventStream {
         loop {
             if let Some(item) = self.x_mixed_replace_buffer.try_extract_frame() {
                 let item: Result<EventTransition, Error> = try {
-                    let item = super::x_mixed_replace::frame_to_message(&item)?;
-                    let item = EventTransition::from_item(item)?;
+                    let item = EventTransition::from_item(&item)?;
                     item
                 };
                 match item {

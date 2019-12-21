@@ -1,104 +1,72 @@
-use failure::{err_msg, Error};
 use regex::{Regex, RegexBuilder};
-
-pub fn frame_to_message(frame: &str) -> Result<&str, Error> {
-    lazy_static::lazy_static! {
-        static ref CODE_REGEX: Regex = RegexBuilder::new("^\\s*Content-Type: text/plain\\s*Content-Length:(\\d+)\\s*(.*)\\s*$")
-            .dot_matches_new_line(true)
-            .build().unwrap();
-    }
-    let captures = CODE_REGEX
-        .captures(frame)
-        .ok_or(err_msg("frame does not match required pattern"))?;
-    let content_length = usize::from_str_radix(captures.get(1).unwrap().as_str(), 10)?;
-    let content = captures.get(2).unwrap().as_str();
-    if content_length != content.len() {
-        return Err(err_msg("content_length does not match content.len()"));
-    }
-    return Ok(content);
-}
 
 #[derive(Debug)]
 pub struct Buffer {
-    boundary: String,
     buffer: String,
+    frame_regex: Regex,
 }
 impl Buffer {
     pub fn new(boundary: String) -> Self {
+        let frame_regex = RegexBuilder::new(&format!(
+            r"--{}(\r\n)Content-Type: text/plain(\r\n)Content-Length:(\d+)(\r\n){{1,2}}(.+?)(\r\n\r\n)",
+            boundary
+        ))
+        .dot_matches_new_line(true)
+        .build()
+        .unwrap();
+
         return Self {
-            boundary,
             buffer: String::new(),
+            frame_regex,
         };
     }
-
     pub fn try_extract_frame(&mut self) -> Option<String> {
-        let prefix = format!("--{}", self.boundary);
-        let suffix = "\r\n\r\n";
+        let captures = self.frame_regex.captures(&self.buffer)?;
 
-        if self.buffer.len() < prefix.len() + suffix.len() {
-            return None;
+        // Match frame boundaries
+        let match_all = captures.get(0).unwrap();
+        if match_all.start() != 0 {
+            log::warn!(
+                "detected offset ({}) in frame, probably wrongly formatted data",
+                match_all.start()
+            );
         }
 
-        if let Some(prefix_position) = self.buffer.find(&prefix) {
-            if prefix_position > 0 {
-                log::warn!(
-                    "Prefix found but not on the beginning ({}), truncating",
-                    prefix_position
-                );
-                self.buffer = self.buffer[prefix_position..].to_owned();
+        // Match content length
+        let content_length = usize::from_str_radix(captures.get(3).unwrap().as_str(), 10);
+
+        // Extract frame contents
+        let content = captures.get(5).unwrap().as_str().to_owned();
+
+        // Cut frame
+        self.buffer = self.buffer[match_all.end()..].to_owned();
+
+        // Final checks
+        let content_length = match content_length {
+            Ok(content_length) => content_length,
+            Err(error) => {
+                log::warn!("Cannot decode content_length: {}", error);
+                return None;
             }
-        } else {
-            log::warn!("Buffer too large with no prefix, clearing");
-            let skip_bytes = self.buffer.len() - prefix.len();
-            self.buffer = self.buffer[skip_bytes..].to_owned();
+        };
+
+        if content_length != content.len() {
+            log::warn!(
+                "Mismatched content_length ({}) and content.len() ({})",
+                content_length,
+                content.len()
+            );
             return None;
         }
 
-        // self.buffer starts with prefix
-        if let Some(suffix_position) = self.buffer[prefix.len()..].find(suffix) {
-            let item = self.buffer[prefix.len()..suffix_position + prefix.len()].to_owned();
-            self.buffer = self.buffer[prefix.len() + suffix_position + suffix.len()..].to_owned();
-            return Some(item);
-        } else {
-            // FIXME: Possible infinite buffer increment
-            return None;
-        }
+        return Some(content.to_owned());
     }
-
     pub fn append(
         &mut self,
         input: &str,
     ) -> () {
         self.buffer.push_str(input);
         return ();
-    }
-}
-
-#[cfg(test)]
-mod tests_frame_to_message {
-    use super::frame_to_message;
-
-    #[test]
-    fn test_ok_1() {
-        let result = frame_to_message(
-            "Content-Type: text/plain\r\nContent-Length:36\r\nCode=VideoBlind;action=Start;index=0",
-        )
-        .unwrap();
-        assert_eq!(result, "Code=VideoBlind;action=Start;index=0");
-    }
-
-    #[test]
-    fn test_ok_2() {
-        let result = frame_to_message("Content-Type: text/plain\r\nContent-Length:0\r\n").unwrap();
-        assert_eq!(result, "");
-    }
-
-    #[test]
-    fn test_invalid_length_1() {
-        frame_to_message(
-            "Content-Type: text/plain\r\nContent-Length:37\r\nCode=VideoBlind;action=Start;index=0",
-        )
-        .unwrap_err();
     }
 }
 
@@ -113,44 +81,40 @@ mod tests_buffer {
     }
 
     #[test]
-    fn test_ok_1() {
+    fn test_1() {
         let mut buffer = Buffer::new("myboundary".to_owned());
-        buffer.append("--myboundary\r\n\r\n");
-        assert_eq!(buffer.try_extract_frame(), Some("".to_owned()));
+        assert_eq!(buffer.try_extract_frame(), None);
+        buffer.append("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
+        assert_eq!(
+            buffer.try_extract_frame(),
+            Some("Code=AudioMutation;action=Start;index=0".to_owned())
+        );
         assert_eq!(buffer.try_extract_frame(), None);
     }
-
     #[test]
-    fn test_ok_2a() {
+    fn test_2() {
         let mut buffer = Buffer::new("myboundary".to_owned());
-        buffer.append("--myboundary1\r\n\r\n");
-        buffer.append("--myboundary2\r\n\r\n");
-        assert_eq!(buffer.try_extract_frame(), Some("1".to_owned()));
-        assert_eq!(buffer.try_extract_frame(), Some("2".to_owned()));
+        assert_eq!(buffer.try_extract_frame(), None);
+        buffer.append("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
+        assert_eq!(
+            buffer.try_extract_frame(),
+            Some("Code=AudioMutation;action=Start;index=0".to_owned())
+        );
         assert_eq!(buffer.try_extract_frame(), None);
     }
-
     #[test]
-    fn test_ok_2b() {
+    fn test_3() {
         let mut buffer = Buffer::new("myboundary".to_owned());
-        buffer.append("--myboundary1\r\n\r\n");
-        assert_eq!(buffer.try_extract_frame(), Some("1".to_owned()));
-        assert_eq!(buffer.try_extract_frame(), None);
-        buffer.append("--myboundary2\r\n\r\n");
-        assert_eq!(buffer.try_extract_frame(), Some("2".to_owned()));
-        assert_eq!(buffer.try_extract_frame(), None);
-    }
-
-    #[test]
-    fn test_carray() {
-        let mut buffer = Buffer::new("myboundary".to_owned());
-        buffer.append("--myboundary1\r\n\r\n--myboundary");
-        assert_eq!(buffer.try_extract_frame(), Some("1".to_owned()));
-        assert_eq!(buffer.try_extract_frame(), None);
-        buffer.append("2");
-        assert_eq!(buffer.try_extract_frame(), None);
-        buffer.append("\r\n\r\n");
-        assert_eq!(buffer.try_extract_frame(), Some("2".to_owned()));
+        buffer.append("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
+        buffer.append("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:38\r\nCode=AudioMutation;action=Stop;index=0\r\n\r\n");
+        assert_eq!(
+            buffer.try_extract_frame(),
+            Some("Code=AudioMutation;action=Start;index=0".to_owned())
+        );
+        assert_eq!(
+            buffer.try_extract_frame(),
+            Some("Code=AudioMutation;action=Stop;index=0".to_owned())
+        );
         assert_eq!(buffer.try_extract_frame(), None);
     }
 }
