@@ -117,4 +117,19 @@ mod tests_buffer {
         );
         assert_eq!(buffer.try_extract_frame(), None);
     }
+    #[test]
+    fn test_4() {
+        let mut buffer = Buffer::new("myboundary".to_owned());
+        buffer.append("someshittttt--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\nsomeshit2");
+        buffer.append("moreshitheeere--myboundary\r\nContent-Type: text/plain\r\nContent-Length:38\r\n\r\nCode=AudioMutation;action=Stop;index=0\r\n\r\nandhere");
+        assert_eq!(
+            buffer.try_extract_frame(),
+            Some("Code=AudioMutation;action=Start;index=0".to_owned())
+        );
+        assert_eq!(
+            buffer.try_extract_frame(),
+            Some("Code=AudioMutation;action=Stop;index=0".to_owned())
+        );
+        assert_eq!(buffer.try_extract_frame(), None);
+    }
 }
