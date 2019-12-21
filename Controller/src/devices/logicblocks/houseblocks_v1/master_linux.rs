@@ -340,7 +340,7 @@ impl Master {
     }
 
     pub async fn transaction_out(
-        &mut self,
+        &self,
 
         service_mode: bool,
         address: Address,
@@ -349,8 +349,9 @@ impl Master {
         let (sender, receiver) = oneshot::channel();
 
         self.worker_thread_sender
-            .as_mut()
+            .as_ref()
             .unwrap()
+            .clone()
             .send(MasterTransaction::FrameOut {
                 service_mode,
                 address,
@@ -363,7 +364,7 @@ impl Master {
     }
 
     pub async fn transaction_out_in(
-        &mut self,
+        &self,
 
         service_mode: bool,
         address: Address,
@@ -373,8 +374,9 @@ impl Master {
         let (sender, receiver) = oneshot::channel();
 
         self.worker_thread_sender
-            .as_mut()
+            .as_ref()
             .unwrap()
+            .clone()
             .send(MasterTransaction::FrameOutIn {
                 service_mode,
                 address,
@@ -386,12 +388,13 @@ impl Master {
         return receiver.await?;
     }
 
-    pub async fn transaction_device_discovery(&mut self) -> Result<Address, Error> {
+    pub async fn transaction_device_discovery(&self) -> Result<Address, Error> {
         let (sender, receiver) = oneshot::channel();
 
         self.worker_thread_sender
-            .as_mut()
+            .as_ref()
             .unwrap()
+            .clone()
             .send(MasterTransaction::DeviceDiscovery { sender })
             .unwrap();
 
@@ -452,7 +455,6 @@ impl Master {
         address: &Address,
         out_payload: &Payload,
     ) -> Result<(), Error> {
-        Self::purge_phase(ftdi_context)?;
         Self::out_frame_phase(ftdi_context, service_mode, &address, &out_payload)?;
         return Ok(());
     }
@@ -464,7 +466,6 @@ impl Master {
         out_payload: &Payload,
         in_timeout: &Duration,
     ) -> Result<Payload, Error> {
-        Self::purge_phase(ftdi_context)?;
         Self::out_frame_phase(ftdi_context, service_mode, &address, &out_payload)?;
         let in_frame = Self::in_frame_phase(ftdi_context, service_mode, &address, &in_timeout)?;
         return Ok(in_frame);
@@ -474,26 +475,12 @@ impl Master {
         ftdi_context: *mut libftdi1_sys::ftdi_context,
         in_timeout: &Duration,
     ) -> Result<Address, Error> {
-        Self::purge_phase(ftdi_context)?;
         Self::out_device_discovery_phase(ftdi_context)?;
         let address = Self::in_device_discovery_phase(ftdi_context, in_timeout)?;
         return Ok(address);
     }
 
     // Generic helpers
-    fn purge_phase(ftdi_context: *mut libftdi1_sys::ftdi_context) -> Result<(), Error> {
-        let ftdi_usb_purge_buffers_result =
-            unsafe { libftdi1_sys::ftdi_usb_purge_buffers(ftdi_context) };
-        if ftdi_usb_purge_buffers_result != 0 {
-            return Err(format_err!(
-                "ftdi_usb_purge_buffers() failed with code {}",
-                ftdi_usb_purge_buffers_result,
-            ));
-        }
-
-        return Ok(());
-    }
-
     fn out_phase(
         ftdi_context: *mut libftdi1_sys::ftdi_context,
         data: Box<[u8]>,

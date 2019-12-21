@@ -41,7 +41,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let mut master = Master::new(master_descriptor)?;
+    let master = Master::new(master_descriptor)?;
     let transaction = master.transaction_device_discovery();
     let address = transaction.await;
     println!("address: {:?}", address);

@@ -41,7 +41,7 @@ impl<'m> Driver<'m> {
     ) -> Result<(), Error> {
         let result = self
             .master
-            .borrow_mut()
+            .borrow()
             .transaction_out(service_mode, self.address, payload)
             .await?;
 
@@ -56,7 +56,7 @@ impl<'m> Driver<'m> {
     ) -> Result<Payload, Error> {
         let result = self
             .master
-            .borrow_mut()
+            .borrow()
             .transaction_out_in(service_mode, self.address, payload, timeout)
             .await?;
 

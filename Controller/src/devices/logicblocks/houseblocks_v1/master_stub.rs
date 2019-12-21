@@ -8,7 +8,7 @@ use std::time::Duration;
 pub struct Master {}
 impl Master {
     pub async fn transaction_out(
-        &mut self,
+        &self,
 
         _service_mode: bool,
         _address: Address,
@@ -18,7 +18,7 @@ impl Master {
     }
 
     pub async fn transaction_out_in(
-        &mut self,
+        &self,
 
         _service_mode: bool,
         _address: Address,
