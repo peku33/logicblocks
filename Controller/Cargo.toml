@@ -7,32 +7,31 @@ publish = false
 default-run = "logicblocks-controller"
 
 [dependencies]
-bytes = "0.4.12"
+bytes = "0.5.3"
 crc = { git = "https://github.com/mrhooray/crc-rs" } # FIXME: Until version > 1.9 is available for new_custom
-digest_auth = "0.2.1"
+digest_auth = "0.2.3"
 env_logger = "0.7.1"
 failure = "0.1.6"
-futures-preview = { version = "0.3.0-alpha.19", features = ["async-await"] }
+futures = "0.3.1"
 hex = "0.4.0"
-http = "0.1.21"
-hyper = { version = "0.13.0-alpha.4", features = ["runtime", "unstable-stream"] } # TODO: Most likely runtime may be removed
-image = "0.22.3"
+http = "0.2.0"
+hyper = { version = "0.13.1", features = ["stream"] }
+image = "0.23.0-preview.0"
 lazy_static = "1.4.0"
 log = "0.4.8"
 owning_ref = "0.4.0"
 percent-encoding = "2.1.0"
 regex = "1.3.1"
-reqwest = "0.10.0-alpha.2"
+reqwest = { git = "https://github.com/seanmonstar/reqwest" } # Waiting for version 0.10 stable available, with non-preview features
 scopeguard = "1.0.0"
-serde = { version = "1.0.102", features = ["derive"] }
-serde_json = "1.0.41"
-tokio = "0.2.0-alpha.6"
-tokio-net = { version = "0.2.0-alpha.6", features = ["process"] }
-tokio-timer = "0.3.0-alpha.6"
+serde = { version = "1.0.104", features = ["derive"] }
+serde_json = "1.0.44"
+tokio = { version = "0.2.6", features = ["full"] }
 url = "2.1.0"
 
 
+
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2.65"
+libc = "0.2.66"
 libftdi1-sys = "0.1.0"
 libusb-sys = "0.2.3"

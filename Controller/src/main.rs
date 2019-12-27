@@ -10,13 +10,13 @@ fn main() {
         .filter_module("logicblocks_controller", log::LevelFilter::Trace)
         .init();
 
-    let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+    let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
     #[cfg(target_os = "linux")]
-    runtime.spawn(main_async());
+    runtime.spawn_local(main_async());
 
     log::info!("logicblocks_controller starting");
-    let ctrlc = tokio_net::signal::ctrl_c().unwrap().into_future();
+    let ctrlc = tokio::signal::ctrl_c();
     let _ = runtime.block_on(ctrlc);
     log::info!("logicblocks_controller closed");
 }
@@ -43,6 +43,12 @@ async fn main_async_result() -> Result<(), failure::Error> {
     let mut device_pool = logicblocks_controller::devices::pool::Pool::new();
 
     // HouseBlocks v1 devices
+    device_pool.add(Box::new(
+        logicblocks_controller::devices::logicblocks::avr_v1::d0007_relay14_ssr_a_v2::Device::new(
+            houseblocks_v1_masters_by_serial.get("DN014CBH").unwrap(),
+            logicblocks_controller::devices::logicblocks::houseblocks_v1::common::AddressSerial::new(*b"13710437").unwrap(),
+        )
+    ));
 
     // Web server
     let mut web_router_map_items = std::collections::HashMap::<

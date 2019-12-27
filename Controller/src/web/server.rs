@@ -1,5 +1,7 @@
 use super::{HandlerThreaded, Request};
+use bytes::BytesMut;
 use failure::{err_msg, Error};
+use futures::future::TryFutureExt;
 use futures::stream::TryStreamExt;
 use std::net::SocketAddr;
 
@@ -25,7 +27,14 @@ pub async fn run_server(
                             http::Method::OPTIONS => hyper::Response::builder()
                                 .body(hyper::Body::default())
                                 .unwrap(),
-                            _ => match body.map_ok(|chunk| chunk.into_bytes()).try_concat().await {
+                            _ => match body
+                                .try_fold(BytesMut::new(), |mut buffer, chunk| {
+                                    buffer.extend_from_slice(&chunk);
+                                    async move { Ok(buffer) }
+                                })
+                                .map_ok(|buffer| buffer.freeze())
+                                .await
+                            {
                                 Ok(body) => {
                                     let handler_request =
                                         Request::new(remote_address, http_fields, body);

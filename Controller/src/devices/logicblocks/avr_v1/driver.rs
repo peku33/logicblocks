@@ -90,7 +90,7 @@ impl<'m> Driver<'m> {
         self.transaction_out(service_mode, Payload::new(Box::from(*b"!")).unwrap())
             .await?;
 
-        tokio_timer::delay_for(Duration::from_millis(250)).await;
+        tokio::time::delay_for(Duration::from_millis(250)).await;
         return Ok(());
     }
 
@@ -178,7 +178,7 @@ impl<'m> Driver<'m> {
         self.transaction_out(true, Payload::new(Box::from(*b"R")).unwrap())
             .await?;
 
-        tokio_timer::delay_for(Duration::from_millis(250)).await;
+        tokio::time::delay_for(Duration::from_millis(250)).await;
         return Ok(());
     }
 

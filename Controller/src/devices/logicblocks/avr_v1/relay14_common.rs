@@ -127,7 +127,7 @@ impl<'m> Device<'m> {
             self.desired_relay_states_receiver_factory.receiver().fuse();
 
         loop {
-            let mut ping_timer = tokio_timer::delay_for(Duration::from_secs(5)).fuse();
+            let mut ping_timer = tokio::time::delay_for(Duration::from_secs(5)).fuse();
 
             select! {
                 _ = ping_timer => {
@@ -171,7 +171,7 @@ impl<'m> Device<'m> {
             device_event_stream_sender.send_empty();
 
             // Wait and restart
-            tokio_timer::delay_for(Duration::from_secs(30)).await;
+            tokio::time::delay_for(Duration::from_secs(30)).await;
         }
     }
 }

@@ -77,7 +77,7 @@ impl<'p> Driver<'p> {
     pub fn run<'s>(&'s self) -> impl Stream<Item = ()> + Captures<'p> + Captures<'s> {
         return unfold(true, async move |first| {
             if !first {
-                tokio::timer::delay_for(self.interval).await;
+                tokio::time::delay_for(self.interval).await;
             }
 
             let snapshot_result = (self.provider)().await;
@@ -122,7 +122,7 @@ impl Handler for Driver<'_> {
         return async move {
             let mut body = Vec::new();
             image
-                .write_to(&mut body, image::ImageOutputFormat::JPEG(quality))
+                .write_to(&mut body, image::ImageOutputFormat::Jpeg(quality))
                 .unwrap();
 
             return Response::ok_content_type_body(body, "image/jpeg");

@@ -153,7 +153,7 @@ impl Client {
             if self.healthcheck().await.is_err() {
                 return Ok(retry_id);
             }
-            tokio::timer::delay_for(std::time::Duration::from_secs(1)).await;
+            tokio::time::delay_for(std::time::Duration::from_secs(1)).await;
         }
         return Err(err_msg("Device didn't went away in designated time"));
     }
@@ -162,7 +162,7 @@ impl Client {
             if self.healthcheck().await.is_ok() {
                 return Ok(retry_id);
             }
-            tokio::timer::delay_for(std::time::Duration::from_secs(1)).await;
+            tokio::time::delay_for(std::time::Duration::from_secs(1)).await;
         }
         // TODO: Return last failure
         return Err(err_msg("Device didn't went up in designated time"));

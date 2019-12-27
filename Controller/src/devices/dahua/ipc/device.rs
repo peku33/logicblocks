@@ -150,7 +150,7 @@ impl Device {
             self.events_tracker.borrow_mut().clear();
             device_event_stream_sender.send_empty();
 
-            tokio::timer::delay_for(Duration::from_secs(60)).await;
+            tokio::time::delay_for(Duration::from_secs(60)).await;
         }
     }
 }

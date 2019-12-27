@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use failure::{err_msg, format_err, Error};
 use futures::task::{Context, Poll};
 use futures::Stream;
@@ -325,24 +326,24 @@ impl EventStreamBuilder {
     }
 
     pub async fn get_event_stream(&self) -> Result<EventStream, Error> {
-        let (chunks_stream, boundary) = self.request().await?;
-        return Ok(EventStream::new(chunks_stream, boundary));
+        let (body, boundary) = self.request().await?;
+        return Ok(EventStream::new(body, boundary));
     }
 }
 
 // Main event stream, yielding event items
 #[derive(Debug)]
 pub struct EventStream {
-    chunks_stream: hyper::Body,
+    body: hyper::Body,
     x_mixed_replace_buffer: super::x_mixed_replace::Buffer,
 }
 impl EventStream {
     fn new(
-        chunks_stream: hyper::Body,
+        body: hyper::Body,
         boundary: String,
     ) -> Self {
         return EventStream {
-            chunks_stream,
+            body,
             x_mixed_replace_buffer: super::x_mixed_replace::Buffer::new(boundary),
         };
     }
@@ -365,11 +366,11 @@ impl EventStream {
     }
     fn x_mixed_replace_buffer_append_yield_one(
         &mut self,
-        item: Result<hyper::Chunk, hyper::error::Error>,
+        item: Result<Bytes, hyper::error::Error>,
     ) -> () {
         let item: Result<(), Error> = try {
             let item = item?;
-            let item = String::from_utf8(item.into_bytes().to_vec())?;
+            let item = String::from_utf8(item.to_vec())?;
             self.x_mixed_replace_buffer.append(&item);
             ()
         };
@@ -392,7 +393,7 @@ impl Stream for EventStream {
             return Poll::Ready(Some(item));
         }
 
-        if let Poll::Ready(item) = Pin::new(&mut self_.chunks_stream).poll_next(cx) {
+        if let Poll::Ready(item) = Pin::new(&mut self_.body).poll_next(cx) {
             if let Some(item) = item {
                 self_.x_mixed_replace_buffer_append_yield_one(item);
                 if let Some(item) = self_.x_mixed_replace_buffer_yield_one() {
