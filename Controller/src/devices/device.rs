@@ -1,5 +1,5 @@
 use super::device_event_stream;
-use crate::web::router::uri_cursor::Handler;
+use crate::util::web::router::uri_cursor::Handler;
 use futures::future::LocalBoxFuture;
 use std::cell::RefCell;
 

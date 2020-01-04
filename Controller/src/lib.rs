@@ -9,4 +9,3 @@
 
 pub mod devices;
 pub mod util;
-pub mod web;

@@ -1,4 +1,4 @@
-use crate::web::{Handler as WebHandler, Request, Response};
+use crate::util::web::{Handler as WebHandler, Request, Response};
 use futures::future::{ready, BoxFuture, FutureExt};
 use http::StatusCode;
 use std::collections::HashMap;

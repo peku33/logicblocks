@@ -1,6 +1,6 @@
+use crate::util::web::router::uri_cursor::{Handler, UriCursor};
+use crate::util::web::{Request, Response};
 use crate::util::Captures;
-use crate::web::router::uri_cursor::{Handler, UriCursor};
-use crate::web::{Request, Response};
 use failure::Error;
 use futures::future::{ready, BoxFuture, FutureExt, LocalBoxFuture};
 use futures::stream::{unfold, Stream};
