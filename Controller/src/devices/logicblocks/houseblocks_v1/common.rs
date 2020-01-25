@@ -203,7 +203,7 @@ impl Frame {
         service_mode: bool,
         address: &Address,
     ) -> Result<Payload, Error> {
-        pub const FRAME_LENGTH_MIN: usize = 1 + 1 + 4 + 0 + 1;
+        pub const FRAME_LENGTH_MIN: usize = 1 + 1 + 4 /* + 0 */ + 1;
 
         if frame.len() < FRAME_LENGTH_MIN {
             return Err(err_msg("Frame too short"));

@@ -8,7 +8,7 @@ pub struct NextItemMap<'a> {
     inner: HashMap<String, &'a (dyn Handler + Sync + Send)>,
 }
 impl<'a> NextItemMap<'a> {
-    pub fn default() -> Self {
+    pub fn new() -> Self {
         Self {
             inner: HashMap::new(),
         }

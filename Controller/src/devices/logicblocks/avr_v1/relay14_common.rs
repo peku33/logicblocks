@@ -127,10 +127,10 @@ impl<'m> Device<'m> {
             self.desired_relay_states_receiver_factory.receiver().fuse();
 
         loop {
-            let mut ping_timer = tokio::time::delay_for(Duration::from_secs(5)).fuse();
+            let ping_timer = tokio::time::delay_for(Duration::from_secs(5));
 
             select! {
-                _ = ping_timer => {
+                _ = ping_timer.fuse() => {
                     application_mode_driver.healthcheck().await?;
                 },
                 _ = desired_relay_states_receiver.next() => {

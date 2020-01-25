@@ -71,9 +71,9 @@ impl Client {
                     response
                         .headers()
                         .get(http::header::WWW_AUTHENTICATE)
-                        .ok_or(err_msg(
-                            "WWW_AUTHENTICATE header missing during initial phase",
-                        ))?
+                        .ok_or_else(|| {
+                            err_msg("WWW_AUTHENTICATE header missing during initial phase")
+                        })?
                         .to_str()?,
                 )?
                 .respond(&digest_auth::AuthContext::new(
@@ -134,8 +134,14 @@ impl Client {
                 None => return Err(format_err!("Line {} didn't match table pattern", line)),
             };
 
-            let key = c.get(1).ok_or(err_msg("Missing capture group 1"))?.as_str();
-            let value = c.get(2).ok_or(err_msg("Missing capture group 2"))?.as_str();
+            let key = c
+                .get(1)
+                .ok_or_else(|| err_msg("Missing capture group 1"))?
+                .as_str();
+            let value = c
+                .get(2)
+                .ok_or_else(|| err_msg("Missing capture group 2"))?
+                .as_str();
 
             Ok((key, value))
         }
@@ -175,7 +181,7 @@ impl Client {
 
     pub fn get_stream_rtsp_uri(
         &self,
-        stream: &Stream,
+        stream: Stream,
         shared_user_password: &str,
     ) -> url::Url {
         format!(
@@ -189,7 +195,7 @@ impl Client {
                 percent_encoding::NON_ALPHANUMERIC
             ),
             &self.host,
-            *stream as usize
+            stream as usize
         )
         .parse()
         .unwrap()

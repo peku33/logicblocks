@@ -32,7 +32,7 @@ async fn main_async() -> failure::Error {
 
     // API Handler
     let mut api_handler =
-        logicblocks_controller::web::uri_cursor::next_item_map::NextItemMap::default();
+        logicblocks_controller::web::uri_cursor::next_item_map::NextItemMap::new();
 
     // API Routes
     api_handler.set("device_pool".to_owned(), &device_pool_api_bridge_sender);

@@ -140,7 +140,7 @@ impl Device {
     async fn run_loop(
         &self,
         device_event_stream_sender: &device_event_stream::Sender,
-    )  {
+    ) {
         loop {
             let error: Error = self.run_once(device_event_stream_sender).await;
             log::error!("error: {:?}", error);
@@ -193,19 +193,19 @@ impl Handler for Device {
                 let rtsp_stream_main = self
                     .api_client_and_dependencies
                     .as_owner()
-                    .get_stream_rtsp_uri(&Stream::Main, &self.shared_user_password)
+                    .get_stream_rtsp_uri(Stream::Main, &self.shared_user_password)
                     .into_string();
 
                 let rtsp_stream_sub1 = self
                     .api_client_and_dependencies
                     .as_owner()
-                    .get_stream_rtsp_uri(&Stream::Sub1, &self.shared_user_password)
+                    .get_stream_rtsp_uri(Stream::Sub1, &self.shared_user_password)
                     .into_string();
 
                 let rtsp_stream_sub2 = self
                     .api_client_and_dependencies
                     .as_owner()
-                    .get_stream_rtsp_uri(&Stream::Sub2, &self.shared_user_password)
+                    .get_stream_rtsp_uri(Stream::Sub2, &self.shared_user_password)
                     .into_string();
 
                 async move {

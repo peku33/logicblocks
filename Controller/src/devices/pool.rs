@@ -115,7 +115,7 @@ impl<'d> Pool<'d> {
             .map(|event_stream_item| sse::Event {
                 id: Some(Cow::from(event_stream_item.device_id.to_string())),
                 data: event_stream_item.device_event,
-                ..sse::Event::default()
+                // ..sse::Event::default()
             })
     }
 }
