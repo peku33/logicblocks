@@ -3,7 +3,7 @@ use super::events::{EventSource, EventStreamBuilder, EventsTracker};
 use crate::devices::device::{DeviceTrait, RunObjectTrait};
 use crate::devices::device_event_stream;
 use crate::devices::soft::ipc::snapshot::Driver as SnapshotDriver;
-use crate::web::router::uri_cursor::{Handler, UriCursor};
+use crate::web::uri_cursor::{Handler, UriCursor};
 use crate::web::{Request, Response};
 use failure::{err_msg, Error};
 use futures::future::{ready, BoxFuture, FutureExt, LocalBoxFuture};
@@ -178,7 +178,7 @@ impl DeviceTrait for Device {
 impl Handler for Device {
     fn handle(
         &self,
-        request: &Request,
+        request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
         return match (request.method(), uri_cursor.next_item()) {

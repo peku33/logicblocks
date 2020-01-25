@@ -1,5 +1,5 @@
 use crate::util::Captures;
-use crate::web::router::uri_cursor::{Handler, UriCursor};
+use crate::web::uri_cursor::{Handler, UriCursor};
 use crate::web::{Request, Response};
 use failure::Error;
 use futures::future::{ready, BoxFuture, FutureExt, LocalBoxFuture};
@@ -97,7 +97,7 @@ impl<'p> Driver<'p> {
 impl Handler for Driver<'_> {
     fn handle(
         &self,
-        request: &Request,
+        request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
         let image_quality = match (request.method(), uri_cursor.rest()) {

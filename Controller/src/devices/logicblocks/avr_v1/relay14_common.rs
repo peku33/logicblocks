@@ -4,7 +4,7 @@ use super::driver::{ApplicationModeDriver, Driver};
 use crate::devices::device::{DeviceTrait, RunObjectTrait};
 use crate::devices::device_event_stream;
 use crate::util::bus2;
-use crate::web::router::uri_cursor::{Handler, UriCursor};
+use crate::web::uri_cursor::{Handler, UriCursor};
 use crate::web::{Request, Response};
 use failure::{err_msg, format_err, Error};
 use futures::future::{BoxFuture, FutureExt, LocalBoxFuture};
@@ -200,7 +200,7 @@ impl<'m> DeviceTrait for Device<'m> {
 impl<'m> Handler for Device<'m> {
     fn handle(
         &self,
-        request: &Request,
+        request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
         return match (request.method(), uri_cursor.next_item()) {
@@ -235,7 +235,7 @@ impl<'m> Handler for Device<'m> {
                 ) {
                     Ok(relay_state_transition) => relay_state_transition,
                     Err(error) => {
-                        return async move { Response::error_400_from_error(&error) }.boxed()
+                        return async move { Response::error_400_from_error(error) }.boxed()
                     }
                 };
 

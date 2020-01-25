@@ -1,76 +1,51 @@
-use super::{HandlerThreaded, Request};
-use bytes::BytesMut;
+use super::hyper_body_variant::HttpBodyVariant;
+use super::{Handler, Request, Response};
 use failure::{err_msg, Error};
-use futures::future::TryFutureExt;
-use futures::stream::TryStreamExt;
+use hyper::server::conn::AddrStream;
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, Request as HyperRequest, Response as HyperResponse, Server};
+use std::convert::Infallible;
 use std::net::SocketAddr;
 
-pub async fn run_server(
+async fn respond(
+    handler: &'static (dyn Handler + Sync + Send),
+    remote_address: SocketAddr,
+    hyper_request: HyperRequest<Body>,
+) -> HyperResponse<HttpBodyVariant> {
+    let (parts, body) = hyper_request.into_parts();
+    let body = match hyper::body::to_bytes(body).await {
+        Ok(body) => body,
+        Err(error) => return Response::error_400_from_error(error).into_hyper_response(),
+    };
+
+    let request = Request::new(remote_address, parts, body);
+    let response = handler.handle(request).await;
+    response.into_hyper_response()
+}
+
+pub async fn serve(
     bind: SocketAddr,
-    handler: &(dyn HandlerThreaded),
-    cors: Option<&'static str>,
+    handler: &(dyn Handler + Sync + Send),
 ) -> Error {
-    // FIXME: https://github.com/hyperium/hyper/issues/1669
-    let handler_static = unsafe {
-        std::mem::transmute::<&(dyn HandlerThreaded), &'static (dyn HandlerThreaded)>(handler)
-    };
+    let handler_unsafe =
+        unsafe { std::mem::transmute::<_, &'static (dyn Handler + Sync + Send)>(handler) };
 
-    let make_service =
-        hyper::service::make_service_fn(|socket: &hyper::server::conn::AddrStream| {
-            let remote_address = socket.remote_addr();
-            return async move {
-                return Ok::<_, hyper::Error>(hyper::service::service_fn(
-                    async move |hyper_request: hyper::Request<hyper::Body>| {
-                        let (http_fields, body) = hyper_request.into_parts();
+    let make_service = make_service_fn(|connection: &AddrStream| {
+        let remote_address = connection.remote_addr();
+        async move {
+            Ok::<_, Infallible>(service_fn(
+                move |hyper_request: HyperRequest<Body>| async move {
+                    let hyper_response =
+                        respond(handler_unsafe, remote_address, hyper_request).await;
+                    Ok::<_, Infallible>(hyper_response)
+                },
+            ))
+        }
+    });
 
-                        let mut hyper_response = match http_fields.method {
-                            http::Method::OPTIONS => hyper::Response::builder()
-                                .body(hyper::Body::default())
-                                .unwrap(),
-                            _ => match body
-                                .try_fold(BytesMut::new(), |mut buffer, chunk| {
-                                    buffer.extend_from_slice(&chunk);
-                                    async move { Ok(buffer) }
-                                })
-                                .map_ok(|buffer| buffer.freeze())
-                                .await
-                            {
-                                Ok(body) => {
-                                    let handler_request =
-                                        Request::new(remote_address, http_fields, body);
-                                    let handler_response =
-                                        handler_static.handle(Box::new(handler_request)).await;
-                                    handler_response.into_hyper_response()
-                                }
-                                Err(_) => hyper::Response::builder()
-                                    .status(http::StatusCode::BAD_REQUEST)
-                                    .body(hyper::Body::default())
-                                    .unwrap(),
-                            },
-                        };
-
-                        if let Some(cors) = cors.as_ref() {
-                            let headers = hyper_response.headers_mut();
-                            headers.append(
-                                http::header::ACCESS_CONTROL_ALLOW_ORIGIN,
-                                cors.parse().unwrap(),
-                            );
-                            headers.append(
-                                http::header::ACCESS_CONTROL_ALLOW_HEADERS,
-                                "Content-Type".parse().unwrap(),
-                            );
-                        }
-
-                        return Ok::<_, hyper::Error>(hyper_response);
-                    },
-                ));
-            };
-        });
-
-    let server = hyper::Server::bind(&bind).serve(make_service);
-
-    return match server.await {
-        Ok(()) => err_msg("Server exited with ()"),
-        Err(e) => e.into(),
-    };
+    let server = Server::bind(&bind).serve(make_service);
+    match server.await {
+        Ok(()) => err_msg("Server returned with no error"),
+        Err(error) => error.into(),
+    }
 }

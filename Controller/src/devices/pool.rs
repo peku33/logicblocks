@@ -2,8 +2,8 @@ use super::device::{AsDeviceTrait, RunObjectTrait};
 use super::device_event_stream;
 use crate::util::bus2;
 use crate::util::ref_mut_async::FutureWrapper;
-use crate::web::router::uri_cursor::{Handler, UriCursor};
 use crate::web::sse;
+use crate::web::uri_cursor::{Handler, UriCursor};
 use crate::web::{Request, Response};
 use failure::{err_msg, format_err, Error};
 use futures::future::{pending, ready, BoxFuture, FutureExt};
@@ -123,7 +123,7 @@ impl<'d> Pool<'d> {
 impl<'d> Handler for Pool<'d> {
     fn handle(
         &self,
-        request: &Request,
+        request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
         match (request.method(), uri_cursor.next_item()) {

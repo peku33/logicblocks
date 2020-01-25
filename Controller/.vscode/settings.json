@@ -4,6 +4,7 @@
         "Lechange",
         "NTSC",
         "clippy",
+        "concat",
         "dahua",
         "ffmpeg",
         "healthcheck",
