@@ -1,83 +1,53 @@
-extern crate logicblocks_controller;
+use futures::FutureExt;
 
-use futures::future::FutureExt;
-use futures::select;
-use futures::stream::StreamExt;
-
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Info)
         .filter_module("logicblocks_controller", log::LevelFilter::Trace)
         .init();
 
-    let mut runtime = tokio::runtime::Runtime::new().unwrap();
-
-    #[cfg(target_os = "linux")]
-    runtime.spawn_local(main_async());
-
-    log::info!("logicblocks_controller starting");
-    let ctrlc = tokio::signal::ctrl_c();
-    let _ = runtime.block_on(ctrlc);
-    log::info!("logicblocks_controller closed");
+    futures::select! {
+        _ = tokio::signal::ctrl_c().fuse() => (),
+        main_error = main_async().fuse() => panic!("{}", main_error),
+    }
 }
-
-#[cfg(target_os = "linux")]
-async fn main_async() -> () {
-    main_async_result().await.unwrap();
-    return ();
-}
-#[cfg(target_os = "linux")]
-async fn main_async_result() -> Result<(), failure::Error> {
-    // HouseBlocks v1
-    let houseblocks_v1_master_context =
-        logicblocks_controller::devices::logicblocks::houseblocks_v1::master::MasterContext::new()?;
-    let houseblocks_v1_masters_by_serial = houseblocks_v1_master_context.find_master_descriptors()?.iter().map(|master_descriptor| (
-        master_descriptor.serial_number.clone().into_string().unwrap(),
-        std::cell::RefCell::new(logicblocks_controller::devices::logicblocks::houseblocks_v1::master::Master::new(master_descriptor.clone()).unwrap()),
-    )).collect::<std::collections::HashMap<
-        String,
-        std::cell::RefCell<logicblocks_controller::devices::logicblocks::houseblocks_v1::master::Master
-    >>>();
-
+async fn main_async() -> failure::Error {
     // Device Pool
-    let mut device_pool = logicblocks_controller::devices::pool::Pool::new();
+    let (device_pool_api_bridge_sender, device_pool_api_bridge_receiver) =
+        logicblocks_controller::web::uri_cursor::local_bridge::channel();
+    let device_pool_local_set = tokio::task::LocalSet::new();
+    let device_pool_local_set_future = device_pool_local_set.run_until(async move {
+        let device_pool = logicblocks_controller::devices::pool::Pool::new();
 
-    // HouseBlocks v1 devices
-    device_pool.add(Box::new(
-        logicblocks_controller::devices::logicblocks::avr_v1::d0007_relay14_ssr_a_v2::Device::new(
-            houseblocks_v1_masters_by_serial.get("DN014CBH").unwrap(),
-            logicblocks_controller::devices::logicblocks::houseblocks_v1::common::AddressSerial::new(*b"13710437").unwrap(),
-        )
-    ));
+        let device_pool_api_bridge_receiver_future =
+            device_pool_api_bridge_receiver.attach_run(&device_pool);
+        let device_pool_future = device_pool.run();
+
+        futures::select! {
+            _ = device_pool_api_bridge_receiver_future.fuse() => failure::err_msg("device_pool_api_bridge_receiver_future exited"),
+            device_pool_future_error = device_pool_future.fuse() => device_pool_future_error,
+        }
+    });
+
+    // API Handler
+    let mut api_handler =
+        logicblocks_controller::web::uri_cursor::next_item_map::NextItemMap::default();
+
+    // API Routes
+    api_handler.set("device_pool".to_owned(), &device_pool_api_bridge_sender);
 
     // Web server
-    let mut web_router_map_items = std::collections::HashMap::<
-        &str,
-        &dyn logicblocks_controller::web::router::uri_cursor::Handler,
-    >::new();
-    web_router_map_items.insert("device_pool", &device_pool);
-
-    let web_router_map =
-        logicblocks_controller::web::router::uri_cursor::Map::new(web_router_map_items);
-
-    let web_router_root =
-        logicblocks_controller::web::router::uri_cursor::Root::new(&web_router_map);
-
-    let (web_handler_async_sender, web_handler_async_receiver) =
-        logicblocks_controller::web::handler_async(&web_router_root);
-
-    let web_server_error_future = logicblocks_controller::web::server::run_server(
+    let web_root_service =
+        logicblocks_controller::web::root_service::RootService::new(&api_handler);
+    let server_future = logicblocks_controller::web::server::serve(
         std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), 8080),
-        &web_handler_async_sender,
-        Some("*"),
+        &web_root_service,
     );
 
-    // Global error
-    let error = select! {
-        device_pool_error = device_pool.run().boxed_local().fuse() => device_pool_error,
-        web_handler_async_receiver_error = web_handler_async_receiver.run().boxed_local().fuse() => web_handler_async_receiver_error,
-        web_server_error = web_server_error_future.boxed().fuse() => web_server_error,
-    };
-
-    return Err(error);
+    // Global runner
+    futures::select! {
+        device_pool_local_set_future_error = device_pool_local_set_future.fuse() => device_pool_local_set_future_error,
+        server_future_error = server_future.fuse() => server_future_error,
+    }
 }

@@ -8,6 +8,7 @@ pub struct Event {
 impl Event {
     pub fn serialize(&self) -> String {
         let mut buffer = String::new();
+
         if let Some(id) = self.id.as_ref() {
             if id.is_empty() {
                 buffer.push_str("id: \r\n");
@@ -29,6 +30,7 @@ impl Event {
             }
         }
         buffer.push_str("\r\n");
-        return buffer;
+
+        buffer
     }
 }
