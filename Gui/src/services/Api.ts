@@ -1,6 +1,5 @@
 export function urlBuild(endpoint: string): string {
-  // return `http://${document.location.hostname}:8080${endpoint}`;
-  return `http://10.0.2.105:8080${endpoint}`;
+  return `http://${document.location.hostname}/api${endpoint}`;
 }
 
 export async function getJson(endpoint: string): Promise<any> {
