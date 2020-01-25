@@ -30,7 +30,7 @@ impl<'m> Driver<'m> {
         master: &'m RefCell<Master>,
         address: Address,
     ) -> Self {
-        return Self { master, address };
+        Self { master, address }
     }
 
     // Transactions
@@ -39,13 +39,12 @@ impl<'m> Driver<'m> {
         service_mode: bool,
         payload: Payload,
     ) -> Result<(), Error> {
-        let result = self
-            .master
+        self.master
             .borrow()
             .transaction_out(service_mode, self.address, payload)
             .await?;
 
-        return Ok(result);
+        Ok(())
     }
 
     async fn transaction_out_in(
@@ -60,7 +59,7 @@ impl<'m> Driver<'m> {
             .transaction_out_in(service_mode, self.address, payload, timeout)
             .await?;
 
-        return Ok(result);
+        Ok(result)
     }
 
     // Routines
@@ -80,7 +79,7 @@ impl<'m> Driver<'m> {
         if response.deref() != &b""[..] {
             return Err(err_msg("invalid healthcheck response"));
         }
-        return Ok(());
+        Ok(())
     }
 
     async fn reboot(
@@ -91,7 +90,7 @@ impl<'m> Driver<'m> {
             .await?;
 
         tokio::time::delay_for(Duration::from_millis(250)).await;
-        return Ok(());
+        Ok(())
     }
 
     async fn read_clear_power_flags(
@@ -113,12 +112,12 @@ impl<'m> Driver<'m> {
             ));
         }
 
-        return Ok(PowerFlags {
+        Ok(PowerFlags {
             wdt: flag10_to_bool(response[0])?,
             bod: flag10_to_bool(response[1])?,
             ext_reset: flag10_to_bool(response[2])?,
             pon: flag10_to_bool(response[3])?,
-        });
+        })
     }
 
     async fn read_application_version(
@@ -146,10 +145,10 @@ impl<'m> Driver<'m> {
         let application = hex::decode(&response[4..8])?;
         let application = u16::from_be_bytes((&application[..]).try_into().unwrap());
 
-        return Ok(Version {
+        Ok(Version {
             avr_v1,
             application,
-        });
+        })
     }
 
     // Service mode routines
@@ -172,14 +171,14 @@ impl<'m> Driver<'m> {
         let checksum = hex::decode(&response.as_ref())?;
         let checksum = u16::from_be_bytes((&checksum[..]).try_into().unwrap());
 
-        return Ok(checksum);
+        Ok(checksum)
     }
     async fn service_mode_jump_to_application_mode(&self) -> Result<(), Error> {
         self.transaction_out(true, Payload::new(Box::from(*b"R")).unwrap())
             .await?;
 
         tokio::time::delay_for(Duration::from_millis(250)).await;
-        return Ok(());
+        Ok(())
     }
 
     // Procedures
@@ -205,16 +204,16 @@ impl<'m> Driver<'m> {
         // Check life in application section
         self.healthcheck(false).await?;
 
-        return Ok(ApplicationModeDriver::new(self));
+        Ok(ApplicationModeDriver::new(self))
     }
 }
 
 fn flag10_to_bool(value: u8) -> Result<bool, Error> {
-    return match value {
+    match value {
         b'0' => Ok(false),
         b'1' => Ok(true),
         _ => Err(err_msg("invalid bool flag value")),
-    };
+    }
 }
 
 pub struct ApplicationModeDriver<'m, 'd> {
@@ -222,7 +221,7 @@ pub struct ApplicationModeDriver<'m, 'd> {
 }
 impl<'m, 'd> ApplicationModeDriver<'m, 'd> {
     fn new(driver: &'d Driver<'m>) -> Self {
-        return Self { driver };
+        Self { driver }
     }
 
     // Transactions
@@ -230,7 +229,7 @@ impl<'m, 'd> ApplicationModeDriver<'m, 'd> {
         &self,
         payload: Payload,
     ) -> Result<(), Error> {
-        return self.driver.transaction_out(false, payload).await;
+        self.driver.transaction_out(false, payload).await
     }
 
     pub async fn transaction_out_in(
@@ -238,26 +237,25 @@ impl<'m, 'd> ApplicationModeDriver<'m, 'd> {
         payload: Payload,
         timeout: Duration,
     ) -> Result<Payload, Error> {
-        return self
-            .driver
+        self.driver
             .transaction_out_in(false, payload, timeout)
-            .await;
+            .await
     }
 
     // Routines
     pub async fn healthcheck(&self) -> Result<(), Error> {
-        return self.driver.healthcheck(false).await;
+        self.driver.healthcheck(false).await
     }
 
     pub async fn reboot(&self) -> Result<(), Error> {
-        return self.driver.reboot(false).await;
+        self.driver.reboot(false).await
     }
 
     pub async fn read_clear_power_flags(&self) -> Result<PowerFlags, Error> {
-        return self.driver.read_clear_power_flags(false).await;
+        self.driver.read_clear_power_flags(false).await
     }
 
     pub async fn read_application_version(&self) -> Result<Version, Error> {
-        return self.driver.read_application_version(false).await;
+        self.driver.read_application_version(false).await
     }
 }

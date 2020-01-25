@@ -26,35 +26,29 @@ impl EventSource {
         data: Option<JsonValue>,
     ) -> Result<Self, Error> {
         match code {
-            "AudioMutation" => {
-                return Ok(Self::AudioMutation);
-            }
+            "AudioMutation" => Ok(Self::AudioMutation),
             "CrossLineDetection" => {
                 let (rule_id, direction) = Self::extract_ivs_rule_id_direction(data)?;
-                return Ok(Self::CrossLineDetection { rule_id, direction });
+                Ok(Self::CrossLineDetection { rule_id, direction })
             }
             "CrossRegionDetection" => {
                 let (rule_id, direction) = Self::extract_ivs_rule_id_direction(data)?;
-                return Ok(Self::CrossRegionDetection { rule_id, direction });
+                Ok(Self::CrossRegionDetection { rule_id, direction })
             }
-            "SceneChange" => {
-                return Ok(Self::SceneChange);
-            }
-            "VideoBlind" => {
-                return Ok(Self::VideoBlind);
-            }
+            "SceneChange" => Ok(Self::SceneChange),
+            "VideoBlind" => Ok(Self::VideoBlind),
             "VideoMotion" => {
                 let data_object = data
                     .as_ref()
-                    .ok_or(err_msg("Missing data for event"))?
+                    .ok_or_else(|| err_msg("Missing data for event"))?
                     .as_object()
-                    .ok_or(err_msg("data for event is not object"))?;
+                    .ok_or_else(|| err_msg("data for event is not object"))?;
 
                 let regions_array = data_object
                     .get("RegionName")
-                    .ok_or(err_msg("Missing RegionName"))?
+                    .ok_or_else(|| err_msg("Missing RegionName"))?
                     .as_array()
-                    .ok_or(err_msg("RegionName is not array"))?;
+                    .ok_or_else(|| err_msg("RegionName is not array"))?;
 
                 if regions_array.len() != 1 {
                     return Err(err_msg("Regions array size must be 1"));
@@ -63,36 +57,36 @@ impl EventSource {
                     .get(0)
                     .unwrap()
                     .as_str()
-                    .ok_or(err_msg("Region must be string"))?
+                    .ok_or_else(|| err_msg("Region must be string"))?
                     .to_owned();
 
-                return Ok(EventSource::VideoMotion { region });
+                Ok(EventSource::VideoMotion { region })
             }
-            _ => return Err(format_err!("Unrecognized event: {}", code)),
+            _ => Err(format_err!("Unrecognized event: {}", code)),
         }
     }
 
     fn extract_ivs_rule_id_direction(data: Option<JsonValue>) -> Result<(u64, String), Error> {
         let data_object = data
             .as_ref()
-            .ok_or(err_msg("Missing data for event"))?
+            .ok_or_else(|| err_msg("Missing data for event"))?
             .as_object()
-            .ok_or(err_msg("data for event is not object"))?;
+            .ok_or_else(|| err_msg("data for event is not object"))?;
 
         let rule_id = data_object
             .get("RuleId")
-            .ok_or(err_msg("Missing RuleId"))?
+            .ok_or_else(|| err_msg("Missing RuleId"))?
             .as_u64()
-            .ok_or(err_msg("RuleId is not int"))?;
+            .ok_or_else(|| err_msg("RuleId is not int"))?;
 
         let direction = data_object
             .get("Direction")
-            .ok_or(err_msg("Missing Direction"))?
+            .ok_or_else(|| err_msg("Missing Direction"))?
             .as_str()
-            .ok_or(err_msg("Direction is not int"))?
+            .ok_or_else(|| err_msg("Direction is not int"))?
             .to_owned();
 
-        return Ok((rule_id, direction));
+        Ok((rule_id, direction))
     }
 }
 
@@ -105,9 +99,9 @@ pub enum EventTransitionDirection {
 impl EventTransitionDirection {
     fn from_str(direction: &str) -> Result<Self, Error> {
         match direction {
-            "Start" => return Ok(EventTransitionDirection::START),
-            "Stop" => return Ok(EventTransitionDirection::STOP),
-            _ => return Err(format_err!("Unrecognized direction: {}", direction)),
+            "Start" => Ok(EventTransitionDirection::START),
+            "Stop" => Ok(EventTransitionDirection::STOP),
+            _ => Err(format_err!("Unrecognized direction: {}", direction)),
         }
     }
 }
@@ -130,7 +124,7 @@ impl EventTransition {
 
         let captures = EVENT_TRANSITION_DETAILS_REGEX
             .captures(item)
-            .ok_or(err_msg("Event item does not match required pattern"))?;
+            .ok_or_else(|| err_msg("Event item does not match required pattern"))?;
 
         let code = captures.get(1).unwrap().as_str();
         let direction = captures.get(2).unwrap().as_str();
@@ -142,7 +136,7 @@ impl EventTransition {
         let source = EventSource::from_code_data(code, data)?;
         let direction = EventTransitionDirection::from_str(direction)?;
 
-        return Ok(Self { source, direction });
+        Ok(Self { source, direction })
     }
 }
 
@@ -152,32 +146,28 @@ pub struct EventsTracker {
 }
 impl EventsTracker {
     pub fn new() -> Self {
-        return Self {
+        Self {
             active: HashSet::new(),
-        };
+        }
     }
 
-    pub fn clear(&mut self) -> () {
+    pub fn clear(&mut self) {
         self.active.clear();
     }
 
     pub fn consume_event_transition(
         &mut self,
         event_transition: EventTransition,
-    ) -> () {
+    ) {
         match event_transition.direction {
             EventTransitionDirection::START => {
                 if let Some(event_transition_source) = self.active.replace(event_transition.source)
                 {
                     log::warn!("Duplicated active event: {:?}", event_transition_source);
-                } else {
-                    return ();
                 }
             }
             EventTransitionDirection::STOP => {
-                if self.active.remove(&event_transition.source) {
-                    return ();
-                } else {
+                if !self.active.remove(&event_transition.source) {
                     log::warn!("Missing active event: {:?}", event_transition.source);
                 }
             }
@@ -185,7 +175,7 @@ impl EventsTracker {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &EventSource> {
-        return self.active.iter();
+        self.active.iter()
     }
 }
 
@@ -203,17 +193,17 @@ impl EventStreamBuilder {
         login: String,
         password: String,
     ) -> Self {
-        return EventStreamBuilder {
+        EventStreamBuilder {
             host,
             login,
             password,
 
             client: hyper::Client::new(),
-        };
+        }
     }
 
     fn uri_build(&self) -> http::uri::Uri {
-        return http::uri::Builder::new()
+        http::uri::Builder::new()
             .scheme(http::uri::Scheme::HTTP)
             .authority(self.host.clone())
             .path_and_query(
@@ -229,7 +219,7 @@ impl EventStreamBuilder {
                  ",
             )
             .build()
-            .unwrap();
+            .unwrap()
     }
     fn request_build(
         &self,
@@ -248,7 +238,7 @@ impl EventStreamBuilder {
             );
         }
 
-        return request;
+        request
     }
 
     async fn request(&self) -> Result<(hyper::Body, String), Error> {
@@ -256,7 +246,7 @@ impl EventStreamBuilder {
             let content_type = response
                 .headers()
                 .get(http::header::CONTENT_TYPE)
-                .ok_or(err_msg("Missing CONTENT_TYPE"))?
+                .ok_or_else(|| err_msg("Missing CONTENT_TYPE"))?
                 .to_str()?;
 
             lazy_static! {
@@ -265,19 +255,19 @@ impl EventStreamBuilder {
             }
             let captures = BOUNDARY_FROM_CONTEXT_TYPE
                 .captures(content_type)
-                .ok_or(err_msg("Unable to extract boundary from CONTENT_TYPE"))?;
+                .ok_or_else(|| err_msg("Unable to extract boundary from CONTENT_TYPE"))?;
             let boundary = captures.get(1).unwrap().as_str();
-            if boundary.len() <= 0 {
+            if boundary.is_empty() {
                 return Err(err_msg("returned boundary is empty"));
             }
 
-            return Ok(boundary.to_owned());
+            Ok(boundary.to_owned())
         }
         fn extract_result(
             response: hyper::Response<hyper::Body>
         ) -> Result<(hyper::Body, String), Error> {
             let boundary = extract_boundary(&response)?;
-            return Ok((response.into_body(), boundary));
+            Ok((response.into_body(), boundary))
         }
 
         // Sometimes cameras passes the traffic based on last api calls without authorization, I called this "implicit auth"
@@ -301,7 +291,7 @@ impl EventStreamBuilder {
         let www_authenticate = implicit_response
             .headers()
             .get(http::header::WWW_AUTHENTICATE)
-            .ok_or(err_msg("Missing WWW_AUTHENTICATE header for UNAUTHORIZED"))?
+            .ok_or_else(|| err_msg("Missing WWW_AUTHENTICATE header for UNAUTHORIZED"))?
             .to_str()?;
 
         let authorization = digest_auth::parse(www_authenticate)?
@@ -322,12 +312,12 @@ impl EventStreamBuilder {
             ));
         }
 
-        return Ok(extract_result(explicit_response)?);
+        Ok(extract_result(explicit_response)?)
     }
 
     pub async fn get_event_stream(&self) -> Result<EventStream, Error> {
         let (body, boundary) = self.request().await?;
-        return Ok(EventStream::new(body, boundary));
+        Ok(EventStream::new(body, boundary))
     }
 }
 
@@ -342,41 +332,31 @@ impl EventStream {
         body: hyper::Body,
         boundary: String,
     ) -> Self {
-        return EventStream {
+        EventStream {
             body,
             x_mixed_replace_buffer: super::x_mixed_replace::Buffer::new(boundary),
-        };
+        }
     }
     fn x_mixed_replace_buffer_yield_one(&mut self) -> Option<EventTransition> {
-        loop {
-            if let Some(item) = self.x_mixed_replace_buffer.try_extract_frame() {
-                let item: Result<EventTransition, Error> = try {
-                    let item = EventTransition::from_item(&item)?;
-                    item
-                };
-                match item {
-                    Ok(item) => return Some(item),
-                    Err(e) => log::warn!("Error during frame extraction: {}", e),
-                }
-            } else {
-                break;
+        while let Some(item) = self.x_mixed_replace_buffer.try_extract_frame() {
+            match EventTransition::from_item(&item) {
+                Ok(item) => return Some(item),
+                Err(e) => log::warn!("Error during frame extraction: {}", e),
             }
         }
-        return None;
+        None
     }
-    fn x_mixed_replace_buffer_append_yield_one(
+    fn x_mixed_replace_buffer_append(
         &mut self,
         item: Result<Bytes, hyper::error::Error>,
-    ) -> () {
+    ) {
         let item: Result<(), Error> = try {
             let item = item?;
             let item = String::from_utf8(item.to_vec())?;
             self.x_mixed_replace_buffer.append(&item);
-            ()
         };
-        match item {
-            Err(e) => log::warn!("Error during frame appending: {}", e),
-            _ => (),
+        if let Err(error) = item {
+            log::warn!("Error during frame appending: {}", error);
         }
     }
 }
@@ -395,18 +375,18 @@ impl Stream for EventStream {
 
         if let Poll::Ready(item) = Pin::new(&mut self_.body).poll_next(cx) {
             if let Some(item) = item {
-                self_.x_mixed_replace_buffer_append_yield_one(item);
+                self_.x_mixed_replace_buffer_append(item);
                 if let Some(item) = self_.x_mixed_replace_buffer_yield_one() {
-                    return Poll::Ready(Some(item));
+                    Poll::Ready(Some(item))
                 } else {
                     cx.waker().wake_by_ref();
-                    return Poll::Pending;
+                    Poll::Pending
                 }
             } else {
-                return Poll::Ready(None);
+                Poll::Ready(None)
             }
         } else {
-            return Poll::Pending;
+            Poll::Pending
         }
     }
 }

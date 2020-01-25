@@ -15,10 +15,10 @@ impl Buffer {
         .build()
         .unwrap();
 
-        return Self {
+        Self {
             buffer: String::new(),
             frame_regex,
-        };
+        }
     }
     pub fn try_extract_frame(&mut self) -> Option<String> {
         let captures = self.frame_regex.captures(&self.buffer)?;
@@ -59,14 +59,13 @@ impl Buffer {
             return None;
         }
 
-        return Some(content.to_owned());
+        Some(content)
     }
     pub fn append(
         &mut self,
         input: &str,
-    ) -> () {
+    ) {
         self.buffer.push_str(input);
-        return ();
     }
 }
 

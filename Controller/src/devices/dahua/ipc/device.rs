@@ -57,13 +57,13 @@ impl Device {
             });
 
         let event_stream_builder =
-            EventStreamBuilder::new(host.clone(), "admin".to_owned(), admin_password.clone());
+            EventStreamBuilder::new(host, "admin".to_owned(), admin_password);
 
         let state = RefCell::new(State::Initializing);
 
         let events_tracker = RefCell::new(EventsTracker::new());
 
-        return Self {
+        Self {
             shared_user_password,
             device_name,
 
@@ -72,7 +72,7 @@ impl Device {
 
             state,
             events_tracker,
-        };
+        }
     }
     async fn run_once(
         &self,
@@ -109,7 +109,7 @@ impl Device {
             .run()
             .for_each(|()| {
                 device_event_stream_sender.send_str("snapshot");
-                return ready(());
+                ready(())
             });
         pin_mut!(snapshot_driver_future);
 
@@ -123,7 +123,7 @@ impl Device {
                 .borrow_mut()
                 .consume_event_transition(event_transition);
             device_event_stream_sender.send_empty();
-            return ready(());
+            ready(())
         });
         pin_mut!(device_event_stream);
 
@@ -140,7 +140,7 @@ impl Device {
     async fn run_loop(
         &self,
         device_event_stream_sender: &device_event_stream::Sender,
-    ) -> () {
+    ) {
         loop {
             let error: Error = self.run_once(device_event_stream_sender).await;
             log::error!("error: {:?}", error);
@@ -156,12 +156,12 @@ impl Device {
 }
 impl DeviceTrait for Device {
     fn device_class_get(&self) -> &'static str {
-        return Device::DEVICE_CLASS;
+        Device::DEVICE_CLASS
     }
     fn device_run<'s>(&'s self) -> Box<dyn RunObjectTrait<'s> + 's> {
         let (device_event_stream_sender, device_event_stream_receiver_factory) =
             device_event_stream::channel();
-        return Box::new(RunObject {
+        Box::new(RunObject {
             run_future: RefCell::new(
                 async move {
                     return self.run_loop(&device_event_stream_sender).await;
@@ -169,10 +169,10 @@ impl DeviceTrait for Device {
                 .boxed_local(),
             ),
             device_event_stream_receiver_factory,
-        });
+        })
     }
     fn device_as_routed_handler(&self) -> Option<&dyn Handler> {
-        return Some(self);
+        Some(self)
     }
 }
 impl Handler for Device {
@@ -181,7 +181,7 @@ impl Handler for Device {
         request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
-        return match (request.method(), uri_cursor.next_item()) {
+        match (request.method(), uri_cursor.next_item()) {
             (&http::Method::GET, ("", None)) => {
                 let device_name = self.device_name.clone();
                 let state = *self.state.borrow();
@@ -193,19 +193,19 @@ impl Handler for Device {
                 let rtsp_stream_main = self
                     .api_client_and_dependencies
                     .as_owner()
-                    .get_stream_rtsp_uri(&Stream::Main, &self.shared_user_password)
+                    .get_stream_rtsp_uri(Stream::Main, &self.shared_user_password)
                     .into_string();
 
                 let rtsp_stream_sub1 = self
                     .api_client_and_dependencies
                     .as_owner()
-                    .get_stream_rtsp_uri(&Stream::Sub1, &self.shared_user_password)
+                    .get_stream_rtsp_uri(Stream::Sub1, &self.shared_user_password)
                     .into_string();
 
                 let rtsp_stream_sub2 = self
                     .api_client_and_dependencies
                     .as_owner()
-                    .get_stream_rtsp_uri(&Stream::Sub2, &self.shared_user_password)
+                    .get_stream_rtsp_uri(Stream::Sub2, &self.shared_user_password)
                     .into_string();
 
                 async move {
@@ -228,7 +228,7 @@ impl Handler for Device {
                 .snapshot_driver
                 .handle(request, uri_cursor),
             _ => ready(Response::error_404()).boxed(),
-        };
+        }
     }
 }
 
@@ -238,9 +238,9 @@ pub struct RunObject<'d> {
 }
 impl<'d> RunObjectTrait<'d> for RunObject<'d> {
     fn get_run_future(&self) -> &RefCell<LocalBoxFuture<'d, ()>> {
-        return &self.run_future;
+        &self.run_future
     }
     fn event_stream_subscribe(&self) -> Option<device_event_stream::Receiver> {
-        return Some(self.device_event_stream_receiver_factory.receiver());
+        Some(self.device_event_stream_receiver_factory.receiver())
     }
 }

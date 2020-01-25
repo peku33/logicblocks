@@ -1,14 +1,15 @@
 #![cfg(target_os = "linux")]
 
 use super::common::{Address, AddressDeviceType, AddressSerial, Frame, Payload};
+use super::master::MasterDescriptor;
 use failure::{err_msg, format_err, Error};
-use fmt::{Debug, Display};
 use futures::channel::oneshot;
 use scopeguard::defer;
 use std::cell::RefCell;
 use std::convert::TryInto;
 use std::ffi;
 use std::fmt;
+use std::fmt::{Debug, Display};
 use std::mem::MaybeUninit;
 use std::ptr;
 use std::sync::mpsc;
@@ -54,9 +55,9 @@ impl MasterContext {
             return Err(err_msg("ftdi_new() failed"));
         }
 
-        return Ok(Self {
+        Ok(Self {
             ftdi_context: ftdi_context_rc.replace(ptr::null_mut()),
-        });
+        })
     }
 
     pub fn find_master_descriptors(&self) -> Result<Vec<MasterDescriptor>, Error> {
@@ -191,33 +192,12 @@ impl MasterContext {
             };
             master_descriptors.push(master_descriptor);
         }
-        return Ok(master_descriptors);
+        Ok(master_descriptors)
     }
 }
 impl Drop for MasterContext {
-    fn drop(&mut self) -> () {
+    fn drop(&mut self) {
         unsafe { libftdi1_sys::ftdi_free(self.ftdi_context) }
-    }
-}
-
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct MasterDescriptor {
-    pub vid: u16,
-    pub pid: u16,
-    pub serial_number: ffi::CString,
-}
-impl Display for MasterDescriptor {
-    fn fmt(
-        &self,
-        f: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        return write!(
-            f,
-            "{:04X}:{:04X}:{}",
-            self.vid,
-            self.pid,
-            self.serial_number.to_string_lossy()
-        );
     }
 }
 
@@ -267,7 +247,7 @@ impl Master {
         }
 
         let ftdi_set_baudrate_result =
-            unsafe { libftdi1_sys::ftdi_set_baudrate(ftdi_context, 115200) };
+            unsafe { libftdi1_sys::ftdi_set_baudrate(ftdi_context, 115_200) };
         if ftdi_set_baudrate_result != 0 {
             return Err(format_err!(
                 "ftdi_set_baudrate() failed with code {}",
@@ -327,16 +307,15 @@ impl Master {
             ))
             .spawn(move || {
                 Self::thread_main(ftdi_context_wrapper.0, channel_receiver);
-                return ();
             })
             .unwrap();
 
-        return Ok(Self {
+        Ok(Self {
             master_descriptor,
             ftdi_context: ftdi_context_rc.replace(ptr::null_mut()),
             worker_thread: Some(worker_thread),
             worker_thread_sender: Some(channel_sender),
-        });
+        })
     }
 
     pub async fn transaction_out(
@@ -360,7 +339,7 @@ impl Master {
             })
             .unwrap();
 
-        return receiver.await?;
+        receiver.await?
     }
 
     pub async fn transaction_out_in(
@@ -385,7 +364,7 @@ impl Master {
                 sender,
             })
             .unwrap();
-        return receiver.await?;
+        receiver.await?
     }
 
     pub async fn transaction_device_discovery(&self) -> Result<Address, Error> {
@@ -398,13 +377,13 @@ impl Master {
             .send(MasterTransaction::DeviceDiscovery { sender })
             .unwrap();
 
-        return receiver.await?;
+        receiver.await?
     }
 
     fn thread_main(
         ftdi_context: *mut libftdi1_sys::ftdi_context,
         receiver: mpsc::Receiver<MasterTransaction>,
-    ) -> () {
+    ) {
         for master_transaction in receiver.iter() {
             let send_result = match master_transaction {
                 MasterTransaction::FrameOut {
@@ -456,7 +435,7 @@ impl Master {
         out_payload: &Payload,
     ) -> Result<(), Error> {
         Self::out_frame_phase(ftdi_context, service_mode, &address, &out_payload)?;
-        return Ok(());
+        Ok(())
     }
 
     fn handle_transaction_frame_out_in(
@@ -468,7 +447,7 @@ impl Master {
     ) -> Result<Payload, Error> {
         Self::out_frame_phase(ftdi_context, service_mode, &address, &out_payload)?;
         let in_frame = Self::in_frame_phase(ftdi_context, service_mode, &address, &in_timeout)?;
-        return Ok(in_frame);
+        Ok(in_frame)
     }
 
     fn handle_transaction_device_discovery(
@@ -477,13 +456,13 @@ impl Master {
     ) -> Result<Address, Error> {
         Self::out_device_discovery_phase(ftdi_context)?;
         let address = Self::in_device_discovery_phase(ftdi_context, in_timeout)?;
-        return Ok(address);
+        Ok(address)
     }
 
     // Generic helpers
     fn out_phase(
         ftdi_context: *mut libftdi1_sys::ftdi_context,
-        data: Box<[u8]>,
+        data: &[u8],
     ) -> Result<(), Error> {
         let ftdi_write_data_submit_result = unsafe {
             libftdi1_sys::ftdi_write_data_submit(
@@ -505,7 +484,7 @@ impl Master {
             ));
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn in_some_phase(
@@ -550,7 +529,7 @@ impl Master {
         payload: &Payload,
     ) -> Result<(), Error> {
         let frame = Frame::out_build(service_mode, address, payload);
-        return Self::out_phase(ftdi_context, frame);
+        Self::out_phase(ftdi_context, &frame)
     }
 
     fn in_frame_phase(
@@ -585,7 +564,7 @@ impl Master {
             let char_end_position = match frame_buffer[char_begin_position..]
                 .iter()
                 .position(|item| *item == Frame::CHAR_END)
-                .and_then(|position| Some(position + char_begin_position))
+                .map(|position| position + char_begin_position)
             {
                 Some(char_end_position) => char_end_position,
                 None => continue,
@@ -607,8 +586,7 @@ impl Master {
     fn out_device_discovery_phase(
         ftdi_context: *mut libftdi1_sys::ftdi_context
     ) -> Result<(), Error> {
-        let data = Box::from(*b"\x07");
-        return Self::out_phase(ftdi_context, data);
+        Self::out_phase(ftdi_context, b"\x07")
     }
 
     fn in_device_discovery_phase(
@@ -652,14 +630,13 @@ impl Debug for Master {
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        return f
-            .debug_struct("Master")
+        f.debug_struct("Master")
             .field("master_descriptor", &self.master_descriptor)
-            .finish();
+            .finish()
     }
 }
 impl Drop for Master {
-    fn drop(&mut self) -> () {
+    fn drop(&mut self) {
         self.worker_thread_sender.take(); // Closes the pipe, effectively telling thread to stop
         self.worker_thread.take().unwrap().join().unwrap(); // Close the thread
 

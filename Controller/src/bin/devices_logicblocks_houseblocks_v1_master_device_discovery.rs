@@ -27,7 +27,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     let master_descriptor = match serial_number {
         Some(serial_number) => master_descriptors_by_serial_number
             .get(&serial_number)
-            .map(|master_descriptor| master_descriptor.clone()),
+            .cloned(),
         None => None,
     };
     let master_descriptor = match master_descriptor {

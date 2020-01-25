@@ -12,18 +12,18 @@ impl<'m> Device<'m> {
         master: &'m RefCell<Master>,
         address_serial: AddressSerial,
     ) -> Self {
-        return Self {
+        Self {
             common_device: CommonDevice::new(
                 master,
                 AddressDeviceType::new_from_ordinal(6).unwrap(),
                 address_serial,
                 "logicblocks/avr_v1/0006_relay14_opto_a_v1",
             ),
-        };
+        }
     }
 }
 impl<'m> AsDeviceTrait for Device<'m> {
     fn as_device_trait(&self) -> &dyn DeviceTrait {
-        return &self.common_device;
+        &self.common_device
     }
 }

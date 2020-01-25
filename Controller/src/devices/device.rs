@@ -7,7 +7,7 @@ pub trait DeviceTrait {
     fn device_class_get(&self) -> &'static str;
     fn device_run<'s>(&'s self) -> Box<dyn RunObjectTrait<'s> + 's>;
     fn device_as_routed_handler(&self) -> Option<&dyn Handler> {
-        return None;
+        None
     }
 }
 
@@ -16,7 +16,7 @@ pub trait AsDeviceTrait {
 }
 impl<T: DeviceTrait> AsDeviceTrait for T {
     fn as_device_trait(&self) -> &dyn DeviceTrait {
-        return self;
+        self
     }
 }
 
