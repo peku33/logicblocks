@@ -13,17 +13,17 @@ impl AddressDeviceType {
         if !device_type.iter().all(|item| item.is_ascii_digit()) {
             return Err(err_msg("Invalid characters in device_type"));
         }
-        return Ok(Self(device_type));
+        Ok(Self(device_type))
     }
     pub fn new_from_ordinal(ordinal: usize) -> Result<Self, Error> {
         let device_type_string = format!("{:0>4}", ordinal);
-        return Ok(Self(device_type_string.as_bytes()[..].try_into()?));
+        Ok(Self(device_type_string.as_bytes()[..].try_into()?))
     }
 }
 impl Deref for AddressDeviceType {
     type Target = [u8];
     fn deref(&self) -> &Self::Target {
-        return self.0.as_ref();
+        self.0.as_ref()
     }
 }
 impl fmt::Debug for AddressDeviceType {
@@ -31,7 +31,7 @@ impl fmt::Debug for AddressDeviceType {
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        return f.write_str(std::str::from_utf8(self).unwrap());
+        f.write_str(std::str::from_utf8(self).unwrap())
     }
 }
 #[cfg(test)]
@@ -59,13 +59,13 @@ impl AddressSerial {
         if !serial.iter().all(|item| item.is_ascii_digit()) {
             return Err(err_msg("Invalid characters in serial"));
         }
-        return Ok(Self(serial));
+        Ok(Self(serial))
     }
 }
 impl Deref for AddressSerial {
     type Target = [u8];
     fn deref(&self) -> &Self::Target {
-        return self.0.as_ref();
+        self.0.as_ref()
     }
 }
 impl fmt::Debug for AddressSerial {
@@ -73,7 +73,7 @@ impl fmt::Debug for AddressSerial {
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        return f.write_str(std::str::from_utf8(self).unwrap());
+        f.write_str(std::str::from_utf8(self).unwrap())
     }
 }
 #[cfg(test)]
@@ -103,10 +103,10 @@ impl Address {
         device_type: AddressDeviceType,
         serial: AddressSerial,
     ) -> Self {
-        return Self {
+        Self {
             device_type,
             serial,
-        };
+        }
     }
 }
 
@@ -117,13 +117,13 @@ impl Payload {
         if !data.iter().all(|item| item.is_ascii_graphic()) {
             return Err(err_msg("Invalid characters in payload"));
         }
-        return Ok(Self(data));
+        Ok(Self(data))
     }
 }
 impl Deref for Payload {
     type Target = [u8];
     fn deref(&self) -> &Self::Target {
-        return self.0.as_ref();
+        self.0.as_ref()
     }
 }
 #[cfg(test)]
@@ -194,7 +194,7 @@ impl Frame {
         ]
         .concat();
 
-        return Box::from(frame);
+        Box::from(frame)
     }
 
     pub fn in_parse(
@@ -259,7 +259,7 @@ impl Frame {
             ));
         }
 
-        return Ok(payload);
+        Ok(payload)
     }
 }
 #[cfg(test)]

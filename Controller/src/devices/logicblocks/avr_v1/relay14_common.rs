@@ -25,9 +25,9 @@ pub struct RelayStates {
 }
 impl Default for RelayStates {
     fn default() -> Self {
-        return Self {
+        Self {
             values: [false; RELAYS],
-        };
+        }
     }
 }
 
@@ -59,7 +59,7 @@ impl<'m> Device<'m> {
         let (desired_relay_states_changed_sender, desired_relay_states_receiver_factory) =
             bus2::channel();
 
-        return Self {
+        Self {
             driver: Driver::new(master, Address::new(address_device_type, address_serial)),
             device_class,
 
@@ -68,7 +68,7 @@ impl<'m> Device<'m> {
             desired_relay_states: RefCell::new(RelayStates::default()),
             desired_relay_states_changed_sender,
             desired_relay_states_receiver_factory,
-        };
+        }
     }
 
     fn relay_states_serialize(relay_states: &RelayStates) -> Payload {
@@ -77,10 +77,10 @@ impl<'m> Device<'m> {
             state_u16 |= if *v { 1 } else { 0 } << i;
         }
         let state_hex = hex::encode_upper(state_u16.to_be_bytes());
-        return Payload::new(Box::from(
+        Payload::new(Box::from(
             [slice::from_ref(&b'H'), state_hex.as_bytes()].concat(),
         ))
-        .unwrap();
+        .unwrap()
     }
     async fn relay_states_push<'f>(
         desired_relay_states: &RelayStates,
@@ -100,7 +100,7 @@ impl<'m> Device<'m> {
             ));
         }
 
-        return Ok(());
+        Ok(())
     }
 
     async fn run_once(
@@ -157,7 +157,7 @@ impl<'m> Device<'m> {
     async fn run_loop(
         &self,
         device_event_stream_sender: &device_event_stream::Sender,
-    ) -> () {
+    ) {
         loop {
             // Run once
             let error = match self.run_once(device_event_stream_sender).await {
@@ -177,13 +177,13 @@ impl<'m> Device<'m> {
 }
 impl<'m> DeviceTrait for Device<'m> {
     fn device_class_get(&self) -> &'static str {
-        return self.device_class;
+        self.device_class
     }
     fn device_run<'s>(&'s self) -> Box<dyn RunObjectTrait<'s> + 's> {
         let (device_event_stream_sender, device_event_stream_receiver_factory) =
             device_event_stream::channel();
 
-        return Box::new(RunObject {
+        Box::new(RunObject {
             run_future: RefCell::new(
                 async move {
                     return self.run_loop(&device_event_stream_sender).await;
@@ -191,10 +191,10 @@ impl<'m> DeviceTrait for Device<'m> {
                 .boxed_local(),
             ),
             device_event_stream_receiver_factory,
-        });
+        })
     }
     fn device_as_routed_handler(&self) -> Option<&dyn Handler> {
-        return Some(self);
+        Some(self)
     }
 }
 impl<'m> Handler for Device<'m> {
@@ -203,7 +203,7 @@ impl<'m> Handler for Device<'m> {
         request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
-        return match (request.method(), uri_cursor.next_item()) {
+        match (request.method(), uri_cursor.next_item()) {
             (&http::Method::GET, ("", None)) => {
                 let state = *self.state.borrow();
                 let desired_relay_states = *self.desired_relay_states.borrow();
@@ -230,7 +230,7 @@ impl<'m> Handler for Device<'m> {
                         relay_state_transition.id >= RELAYS {
                             return Err(err_msg("id out of bounds"));
                         }
-                        return Ok(relay_state_transition);
+                        Ok(relay_state_transition)
                     },
                 ) {
                     Ok(relay_state_transition) => relay_state_transition,
@@ -256,7 +256,7 @@ impl<'m> Handler for Device<'m> {
                 return Response::error_404();
             }
             .boxed(),
-        };
+        }
     }
 }
 
@@ -266,9 +266,9 @@ struct RunObject<'d> {
 }
 impl<'d> RunObjectTrait<'d> for RunObject<'d> {
     fn get_run_future(&self) -> &RefCell<LocalBoxFuture<'d, ()>> {
-        return &self.run_future;
+        &self.run_future
     }
     fn event_stream_subscribe(&self) -> Option<device_event_stream::Receiver> {
-        return Some(self.device_event_stream_receiver_factory.receiver());
+        Some(self.device_event_stream_receiver_factory.receiver())
     }
 }

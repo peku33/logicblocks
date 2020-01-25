@@ -26,23 +26,17 @@ impl EventSource {
         data: Option<JsonValue>,
     ) -> Result<Self, Error> {
         match code {
-            "AudioMutation" => {
-                return Ok(Self::AudioMutation);
-            }
+            "AudioMutation" => Ok(Self::AudioMutation),
             "CrossLineDetection" => {
                 let (rule_id, direction) = Self::extract_ivs_rule_id_direction(data)?;
-                return Ok(Self::CrossLineDetection { rule_id, direction });
+                Ok(Self::CrossLineDetection { rule_id, direction })
             }
             "CrossRegionDetection" => {
                 let (rule_id, direction) = Self::extract_ivs_rule_id_direction(data)?;
-                return Ok(Self::CrossRegionDetection { rule_id, direction });
+                Ok(Self::CrossRegionDetection { rule_id, direction })
             }
-            "SceneChange" => {
-                return Ok(Self::SceneChange);
-            }
-            "VideoBlind" => {
-                return Ok(Self::VideoBlind);
-            }
+            "SceneChange" => Ok(Self::SceneChange),
+            "VideoBlind" => Ok(Self::VideoBlind),
             "VideoMotion" => {
                 let data_object = data
                     .as_ref()
@@ -66,9 +60,9 @@ impl EventSource {
                     .ok_or(err_msg("Region must be string"))?
                     .to_owned();
 
-                return Ok(EventSource::VideoMotion { region });
+                Ok(EventSource::VideoMotion { region })
             }
-            _ => return Err(format_err!("Unrecognized event: {}", code)),
+            _ => Err(format_err!("Unrecognized event: {}", code)),
         }
     }
 
@@ -92,7 +86,7 @@ impl EventSource {
             .ok_or(err_msg("Direction is not int"))?
             .to_owned();
 
-        return Ok((rule_id, direction));
+        Ok((rule_id, direction))
     }
 }
 
@@ -105,9 +99,9 @@ pub enum EventTransitionDirection {
 impl EventTransitionDirection {
     fn from_str(direction: &str) -> Result<Self, Error> {
         match direction {
-            "Start" => return Ok(EventTransitionDirection::START),
-            "Stop" => return Ok(EventTransitionDirection::STOP),
-            _ => return Err(format_err!("Unrecognized direction: {}", direction)),
+            "Start" => Ok(EventTransitionDirection::START),
+            "Stop" => Ok(EventTransitionDirection::STOP),
+            _ => Err(format_err!("Unrecognized direction: {}", direction)),
         }
     }
 }
@@ -142,7 +136,7 @@ impl EventTransition {
         let source = EventSource::from_code_data(code, data)?;
         let direction = EventTransitionDirection::from_str(direction)?;
 
-        return Ok(Self { source, direction });
+        Ok(Self { source, direction })
     }
 }
 
@@ -152,31 +146,29 @@ pub struct EventsTracker {
 }
 impl EventsTracker {
     pub fn new() -> Self {
-        return Self {
+        Self {
             active: HashSet::new(),
-        };
+        }
     }
 
-    pub fn clear(&mut self) -> () {
+    pub fn clear(&mut self) {
         self.active.clear();
     }
 
     pub fn consume_event_transition(
         &mut self,
         event_transition: EventTransition,
-    ) -> () {
+    ) {
         match event_transition.direction {
             EventTransitionDirection::START => {
                 if let Some(event_transition_source) = self.active.replace(event_transition.source)
                 {
                     log::warn!("Duplicated active event: {:?}", event_transition_source);
                 } else {
-                    return ();
                 }
             }
             EventTransitionDirection::STOP => {
                 if self.active.remove(&event_transition.source) {
-                    return ();
                 } else {
                     log::warn!("Missing active event: {:?}", event_transition.source);
                 }
@@ -185,7 +177,7 @@ impl EventsTracker {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &EventSource> {
-        return self.active.iter();
+        self.active.iter()
     }
 }
 
@@ -203,17 +195,17 @@ impl EventStreamBuilder {
         login: String,
         password: String,
     ) -> Self {
-        return EventStreamBuilder {
+        EventStreamBuilder {
             host,
             login,
             password,
 
             client: hyper::Client::new(),
-        };
+        }
     }
 
     fn uri_build(&self) -> http::uri::Uri {
-        return http::uri::Builder::new()
+        http::uri::Builder::new()
             .scheme(http::uri::Scheme::HTTP)
             .authority(self.host.clone())
             .path_and_query(
@@ -229,7 +221,7 @@ impl EventStreamBuilder {
                  ",
             )
             .build()
-            .unwrap();
+            .unwrap()
     }
     fn request_build(
         &self,
@@ -248,7 +240,7 @@ impl EventStreamBuilder {
             );
         }
 
-        return request;
+        request
     }
 
     async fn request(&self) -> Result<(hyper::Body, String), Error> {
@@ -271,13 +263,13 @@ impl EventStreamBuilder {
                 return Err(err_msg("returned boundary is empty"));
             }
 
-            return Ok(boundary.to_owned());
+            Ok(boundary.to_owned())
         }
         fn extract_result(
             response: hyper::Response<hyper::Body>
         ) -> Result<(hyper::Body, String), Error> {
             let boundary = extract_boundary(&response)?;
-            return Ok((response.into_body(), boundary));
+            Ok((response.into_body(), boundary))
         }
 
         // Sometimes cameras passes the traffic based on last api calls without authorization, I called this "implicit auth"
@@ -322,12 +314,12 @@ impl EventStreamBuilder {
             ));
         }
 
-        return Ok(extract_result(explicit_response)?);
+        Ok(extract_result(explicit_response)?)
     }
 
     pub async fn get_event_stream(&self) -> Result<EventStream, Error> {
         let (body, boundary) = self.request().await?;
-        return Ok(EventStream::new(body, boundary));
+        Ok(EventStream::new(body, boundary))
     }
 }
 
@@ -342,10 +334,10 @@ impl EventStream {
         body: hyper::Body,
         boundary: String,
     ) -> Self {
-        return EventStream {
+        EventStream {
             body,
             x_mixed_replace_buffer: super::x_mixed_replace::Buffer::new(boundary),
-        };
+        }
     }
     fn x_mixed_replace_buffer_yield_one(&mut self) -> Option<EventTransition> {
         loop {
@@ -362,17 +354,16 @@ impl EventStream {
                 break;
             }
         }
-        return None;
+        None
     }
     fn x_mixed_replace_buffer_append_yield_one(
         &mut self,
         item: Result<Bytes, hyper::error::Error>,
-    ) -> () {
+    ) {
         let item: Result<(), Error> = try {
             let item = item?;
             let item = String::from_utf8(item.to_vec())?;
             self.x_mixed_replace_buffer.append(&item);
-            ()
         };
         match item {
             Err(e) => log::warn!("Error during frame appending: {}", e),
@@ -397,16 +388,16 @@ impl Stream for EventStream {
             if let Some(item) = item {
                 self_.x_mixed_replace_buffer_append_yield_one(item);
                 if let Some(item) = self_.x_mixed_replace_buffer_yield_one() {
-                    return Poll::Ready(Some(item));
+                    Poll::Ready(Some(item))
                 } else {
                     cx.waker().wake_by_ref();
-                    return Poll::Pending;
+                    Poll::Pending
                 }
             } else {
-                return Poll::Ready(None);
+                Poll::Ready(None)
             }
         } else {
-            return Poll::Pending;
+            Poll::Pending
         }
     }
 }

@@ -20,7 +20,7 @@ pub struct State {
 }
 impl State {
     pub fn image_full(&self) -> Option<&Image> {
-        return self.image_full_cache.as_ref();
+        self.image_full_cache.as_ref()
     }
     pub fn image_thumbnail_small(&mut self) -> Option<&Image> {
         if self.image_thumbnail_small_cache.is_none() && self.image_full_cache.is_some() {
@@ -32,13 +32,13 @@ impl State {
             self.image_thumbnail_small_cache
                 .replace(image_thumbnail_small_cache);
         }
-        return self.image_thumbnail_small_cache.as_ref();
+        self.image_thumbnail_small_cache.as_ref()
     }
 
     pub fn set_image_full(
         &mut self,
         image: Image,
-    ) -> () {
+    ) {
         self.image_full_cache.replace(image);
         self.image_thumbnail_small_cache = None;
     }
@@ -60,22 +60,22 @@ impl<'p> Driver<'p> {
         provider: Box<ProviderClosure<'p>>,
         interval: Duration,
     ) -> Self {
-        return Self {
+        Self {
             provider,
             interval,
             state: RefCell::default(),
-        };
+        }
     }
 
     pub fn has_image(&self) -> bool {
-        return self.state.borrow().image_full_cache.is_some();
+        self.state.borrow().image_full_cache.is_some()
     }
-    pub fn reset(&self) -> () {
+    pub fn reset(&self) {
         self.state.borrow_mut().clear();
     }
 
     pub fn run<'s>(&'s self) -> impl Stream<Item = ()> + Captures<'p> + Captures<'s> {
-        return unfold(true, async move |first| {
+        unfold(true, async move |first| {
             if !first {
                 tokio::time::delay_for(self.interval).await;
             }
@@ -90,8 +90,8 @@ impl<'p> Driver<'p> {
                     self.state.borrow_mut().clear();
                 }
             }
-            return Some(((), false));
-        });
+            Some(((), false))
+        })
     }
 }
 impl Handler for Driver<'_> {
@@ -119,7 +119,7 @@ impl Handler for Driver<'_> {
             None => return ready(Response::error(http::StatusCode::SERVICE_UNAVAILABLE)).boxed(),
         };
 
-        return async move {
+        async move {
             let mut body = Vec::new();
             image
                 .write_to(&mut body, image::ImageOutputFormat::Jpeg(quality))
@@ -127,6 +127,6 @@ impl Handler for Driver<'_> {
 
             return Response::ok_content_type_body(body, "image/jpeg");
         }
-        .boxed();
+        .boxed()
     }
 }

@@ -10,7 +10,7 @@ pub struct FutureWrapper<'a, 'b, T> {
 }
 impl<'a, 'b, T> FutureWrapper<'a, 'b, T> {
     pub fn new(inner: FutureInner<'a, 'b, T>) -> Self {
-        return Self { inner };
+        Self { inner }
     }
 }
 impl<'a, 'b, T> Future for FutureWrapper<'a, 'b, T> {
@@ -19,7 +19,7 @@ impl<'a, 'b, T> Future for FutureWrapper<'a, 'b, T> {
         self: Pin<&mut Self>,
         cx: &mut Context,
     ) -> Poll<Self::Output> {
-        return self.get_mut().inner.as_mut().poll(cx);
+        self.get_mut().inner.as_mut().poll(cx)
     }
 }
 
@@ -29,7 +29,7 @@ pub struct StreamWrapper<'a, 'b, T> {
 }
 impl<'a, 'b, T> StreamWrapper<'a, 'b, T> {
     pub fn new(inner: StreamInner<'a, 'b, T>) -> Self {
-        return Self { inner };
+        Self { inner }
     }
 }
 impl<'a, 'b, T> Stream for StreamWrapper<'a, 'b, T> {
@@ -38,6 +38,6 @@ impl<'a, 'b, T> Stream for StreamWrapper<'a, 'b, T> {
         self: Pin<&mut Self>,
         cx: &mut Context,
     ) -> Poll<Option<Self::Item>> {
-        return self.get_mut().inner.as_mut().poll_next(cx);
+        self.get_mut().inner.as_mut().poll_next(cx)
     }
 }

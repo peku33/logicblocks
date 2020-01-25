@@ -32,12 +32,12 @@ impl Client {
         host: http::uri::Authority,
         admin_password: String,
     ) -> Self {
-        return Self {
+        Self {
             host,
             admin_password,
 
             reqwest_client: reqwest::Client::new(),
-        };
+        }
     }
     async fn _request(
         &self,
@@ -87,7 +87,7 @@ impl Client {
             .await?
             .error_for_status()?;
 
-        return Ok(response);
+        Ok(response)
     }
     async fn _request_text(
         &self,
@@ -95,7 +95,7 @@ impl Client {
     ) -> Result<String, Error> {
         let response_text = self._request(endpoint).await?.text().await?;
 
-        return Ok(response_text);
+        Ok(response_text)
     }
     async fn _request_bytes(
         &self,
@@ -103,7 +103,7 @@ impl Client {
     ) -> Result<Bytes, Error> {
         let response_bytes = self._request(endpoint).await?.bytes().await?;
 
-        return Ok(response_bytes);
+        Ok(response_bytes)
     }
     async fn _request_text_ok(
         &self,
@@ -117,7 +117,7 @@ impl Client {
             ));
         }
 
-        return Ok(());
+        Ok(())
     }
     async fn _request_text_parse_table(
         &self,
@@ -137,15 +137,14 @@ impl Client {
             let key = c.get(1).ok_or(err_msg("Missing capture group 1"))?.as_str();
             let value = c.get(2).ok_or(err_msg("Missing capture group 2"))?.as_str();
 
-            return Ok((key, value));
+            Ok((key, value))
         }
 
-        return self
-            ._request_text(endpoint)
+        self._request_text(endpoint)
             .await?
             .lines()
             .map(|line| _map_table_line(line).map(|(key, value)| (key.into(), value.into())))
-            .collect();
+            .collect()
     }
 
     async fn _wait_for_power_down(&self) -> Result<usize, Error> {
@@ -155,7 +154,7 @@ impl Client {
             }
             tokio::time::delay_for(std::time::Duration::from_secs(1)).await;
         }
-        return Err(err_msg("Device didn't went away in designated time"));
+        Err(err_msg("Device didn't went away in designated time"))
     }
     async fn _wait_for_power_up(&self) -> Result<usize, Error> {
         for retry_id in 0..60 {
@@ -165,13 +164,13 @@ impl Client {
             tokio::time::delay_for(std::time::Duration::from_secs(1)).await;
         }
         // TODO: Return last failure
-        return Err(err_msg("Device didn't went up in designated time"));
+        Err(err_msg("Device didn't went up in designated time"))
     }
     async fn _wait_for_power_down_up(&self) -> Result<(), Error> {
         self._wait_for_power_down().await?;
         self._wait_for_power_up().await?;
 
-        return Ok(());
+        Ok(())
     }
 
     pub fn get_stream_rtsp_uri(
@@ -179,7 +178,7 @@ impl Client {
         stream: &Stream,
         shared_user_password: &str,
     ) -> url::Url {
-        return format!(
+        format!(
             "rtsp://{}:{}@{}/cam/realmonitor?channel=1&subtype={}",
             percent_encoding::utf8_percent_encode(
                 SHARED_USER_NAME,
@@ -193,7 +192,7 @@ impl Client {
             *stream as usize
         )
         .parse()
-        .unwrap();
+        .unwrap()
     }
 
     pub async fn healthcheck(&self) -> Result<(), Error> {
@@ -204,7 +203,7 @@ impl Client {
         )
         .await?;
 
-        return Ok(());
+        Ok(())
     }
     pub async fn snapshot(&self) -> Result<image::DynamicImage, Error> {
         let data = self
@@ -213,7 +212,7 @@ impl Client {
 
         let snapshot_image = image::load_from_memory(&data)?;
 
-        return Ok(snapshot_image);
+        Ok(snapshot_image)
     }
     pub async fn defaults_except_network(&self) -> Result<(), Error> {
         self._request_text_ok(
@@ -223,19 +222,19 @@ impl Client {
         )
         .await?;
 
-        return Ok(());
+        Ok(())
     }
     pub async fn reboot(&self) -> Result<(), Error> {
         self._request_text_ok("/cgi-bin/magicBox.cgi?action=reboot".parse().unwrap())
             .await?;
 
-        return Ok(());
+        Ok(())
     }
     pub async fn reboot_wait_for_ready(&self) -> Result<(), Error> {
         self.reboot().await?;
         self._wait_for_power_down_up().await?;
 
-        return Ok(());
+        Ok(())
     }
 
     pub async fn sane_defaults(
@@ -648,6 +647,6 @@ impl Client {
 
         log::info!("{:?}: Configuration complete", self.host);
 
-        return Ok(());
+        Ok(())
     }
 }

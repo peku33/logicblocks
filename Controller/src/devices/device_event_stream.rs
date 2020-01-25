@@ -13,28 +13,28 @@ pub struct Sender {
 }
 impl Sender {
     fn new(inner: bus2::Sender<Item>) -> Self {
-        return Self { inner };
+        Self { inner }
     }
     pub fn send_str(
         &self,
         item: &'static str,
-    ) -> () {
-        return self.inner.send(Cow::from(item));
+    ) {
+        self.inner.send(Cow::from(item))
     }
     pub fn send_string(
         &self,
         item: String,
-    ) -> () {
-        return self.inner.send(Cow::from(item));
+    ) {
+        self.inner.send(Cow::from(item))
     }
-    pub fn send_empty(&self) -> () {
-        return self.send_str("");
+    pub fn send_empty(&self) {
+        self.send_str("")
     }
     pub fn send_json<T: Serialize>(
         &self,
         item: &T,
-    ) -> () {
-        return self.send_string(serde_json::to_string(item).unwrap());
+    ) {
+        self.send_string(serde_json::to_string(item).unwrap())
     }
 }
 
@@ -43,10 +43,10 @@ pub struct ReceiverFactory {
 }
 impl ReceiverFactory {
     fn new(inner: bus2::ReceiverFactory<Item>) -> Self {
-        return Self { inner };
+        Self { inner }
     }
     pub fn receiver(&self) -> Receiver {
-        return Receiver::new(self.inner.receiver());
+        Receiver::new(self.inner.receiver())
     }
 }
 
@@ -55,7 +55,7 @@ pub struct Receiver {
 }
 impl Receiver {
     fn new(inner: bus2::Receiver<Item>) -> Self {
-        return Self { inner };
+        Self { inner }
     }
 }
 impl Stream for Receiver {
@@ -67,7 +67,7 @@ impl Stream for Receiver {
         let self_ = self.get_mut();
         let inner = &mut self_.inner;
         pin_mut!(inner);
-        return inner.poll_next(cx);
+        inner.poll_next(cx)
     }
 }
 
@@ -75,5 +75,5 @@ pub fn channel() -> (Sender, ReceiverFactory) {
     let (sender, receiver_factory) = bus2::channel();
     let sender = Sender::new(sender);
     let receiver_factory = ReceiverFactory::new(receiver_factory);
-    return (sender, receiver_factory);
+    (sender, receiver_factory)
 }

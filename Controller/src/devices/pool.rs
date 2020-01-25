@@ -37,13 +37,13 @@ impl<'d> Pool<'d> {
         let (event_stream_sender, event_stream_receiver_factory) = bus2::channel();
         let event_stream_sender = RefCell::new(event_stream_sender);
 
-        return Self {
+        Self {
             device_id: 0,
             devices: HashMap::new(),
 
             event_stream_sender,
             event_stream_receiver_factory,
-        };
+        }
     }
     pub fn add(
         &mut self,
@@ -60,7 +60,7 @@ impl<'d> Pool<'d> {
         if !devices_insert_result {
             panic!("Duplicated device");
         }
-        return self.device_id;
+        self.device_id
     }
     pub async fn run(&self) -> Error {
         if self.devices.is_empty() {
@@ -71,7 +71,7 @@ impl<'d> Pool<'d> {
             .devices
             .iter()
             .map(|(device_id, device_owning_handle)| {
-                return async move {
+                async move {
                     let run_future =
                         FutureWrapper::new(device_owning_handle.get_run_future().borrow_mut());
                     let event_stream_forward_future =
@@ -83,7 +83,7 @@ impl<'d> Pool<'d> {
                                         device_event,
                                     };
                                     self.event_stream_sender.borrow_mut().send(event_stream_item);
-                                    return ready(());
+                                    ready(())
                                 })
                                 .boxed_local(),
                             None => pending().boxed_local(),
@@ -94,7 +94,7 @@ impl<'d> Pool<'d> {
                         event_stream_forward_future_error = event_stream_forward_future.fuse() => err_msg("event_stream_forward_future"),
                     );
                     return (device_id, error);
-                };
+                }
             })
             .collect::<futures::stream::FuturesUnordered<_>>()
             .next()
@@ -108,16 +108,15 @@ impl<'d> Pool<'d> {
         );
     }
     pub fn get_event_stream_receiver(&self) -> impl Stream<Item = EventStreamItem> {
-        return self.event_stream_receiver_factory.receiver();
+        self.event_stream_receiver_factory.receiver()
     }
     fn get_sse_response_stream(&self) -> impl Stream<Item = sse::Event> {
-        return self.get_event_stream_receiver().map(|event_stream_item| {
-            return sse::Event {
+        self.get_event_stream_receiver()
+            .map(|event_stream_item| sse::Event {
                 id: Some(Cow::from(event_stream_item.device_id.to_string())),
                 data: event_stream_item.device_event,
                 ..sse::Event::default()
-            };
-        });
+            })
     }
 }
 impl<'d> Handler for Pool<'d> {
@@ -132,13 +131,13 @@ impl<'d> Handler for Pool<'d> {
                     .devices
                     .iter()
                     .map(|(device_id, device_owning_handle)| {
-                        return (
+                        (
                             *device_id,
                             device_owning_handle
                                 .as_owner()
                                 .as_device_trait()
                                 .device_class_get(),
-                        );
+                        )
                     })
                     .collect::<Vec<_>>();
 
@@ -158,7 +157,7 @@ impl<'d> Handler for Pool<'d> {
                 .boxed()
             }
             (&http::Method::GET, ("event_stream", None)) => {
-                return ready(Response::ok_sse_stream(self.get_sse_response_stream())).boxed();
+                ready(Response::ok_sse_stream(self.get_sse_response_stream())).boxed()
             }
             (_, (device_id, uri_cursor)) => {
                 let uri_cursor = match uri_cursor {
@@ -184,7 +183,7 @@ impl<'d> Handler for Pool<'d> {
                             return ready(Response::error_404()).boxed();
                         }
                     };
-                return device_routed_handler.handle(request, uri_cursor);
+                device_routed_handler.handle(request, uri_cursor)
             }
         }
     }
