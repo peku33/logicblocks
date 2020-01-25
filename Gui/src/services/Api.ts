@@ -1,5 +1,5 @@
 export function urlBuild(endpoint: string): string {
-  return `http://${document.location.hostname}/api${endpoint}`;
+  return `/api${endpoint}`;
 }
 
 export async function getJson(endpoint: string): Promise<any> {
