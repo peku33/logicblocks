@@ -6,7 +6,7 @@
 #![feature(try_blocks)]
 #![feature(drain_filter)]
 #![feature(poll_map)]
-// #![warn(clippy::all)]
+#![warn(clippy::all)]
 
 pub mod devices;
 pub mod util;
