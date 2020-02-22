@@ -123,7 +123,7 @@ impl ModulePool {
         let type_id = TypeId::of::<T>();
 
         // Modules locked scope
-        {
+        let boxed_trait_object = {
             let mut modules = self.modules.lock().unwrap();
 
             // This method is used from the module internally, so the module entry must exist and must be initialized
@@ -138,12 +138,27 @@ impl ModulePool {
             // Decrement reference count
             *reference_count -= 1;
 
-            // If reference count is zero, drop the value
-            if *reference_count == 0 {
-                log::trace!("Module {:?} - deinitializing", type_name::<T>());
-                modules.remove(&type_id).unwrap();
-                log::trace!("Module {:?} - deinitialized", type_name::<T>());
+            match reference_count {
+                0 => match modules.remove(&type_id) {
+                    None => panic!("Calling dec() on missing module?"),
+                    Some(module_state) => match module_state {
+                        ModuleState::Initializing { .. } => {
+                            panic!("Calling dec() on initializing module?")
+                        }
+                        ModuleState::Initialized {
+                            boxed_trait_object, ..
+                        } => Some(boxed_trait_object),
+                    },
+                },
+                _ => None,
             }
+        };
+
+        // If object is initialized - drop it here
+        if let Some(boxed_trait_object) = boxed_trait_object {
+            log::trace!("Module {:?} - deinitializing", type_name::<T>());
+            drop(boxed_trait_object);
+            log::trace!("Module {:?} - deinitialized", type_name::<T>());
         }
     }
 }
