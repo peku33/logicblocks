@@ -14,7 +14,9 @@
         "oneshot",
         "realmonitor",
         "reqwest",
-        "rtsp"
+        "rtsp",
+        "rusqlite",
+        "sqlite"
     ],
     "editor.formatOnSave": true
 }
