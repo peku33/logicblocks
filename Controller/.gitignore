@@ -1,3 +1,6 @@
 /target
 **/*.rs.bk
 config.secure.toml
+
+/data
+/storage
