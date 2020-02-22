@@ -1,14 +1,33 @@
-use super::fs::FsModule;
-use super::{ModuleFactory, ModuleFactoryTrait, ModuleTrait};
+use super::fs::Fs;
 use crate::util::sqlite_async::SqliteAsync;
 use failure::Error;
-use futures::future::{BoxFuture, Future, FutureExt};
+use futures::future::Future;
 use rusqlite::{Connection, Transaction};
 
-pub struct SqliteModule {
+pub struct Sqlite {
     sqlite_async: SqliteAsync,
 }
-impl SqliteModule {
+impl Sqlite {
+    pub fn new(fs: &Fs) -> Self {
+        let sqlite_file = fs.persistent_data_directory().join("LogicBlocks.sqlite");
+
+        let sqlite_connection = rusqlite::Connection::open(sqlite_file).unwrap();
+        sqlite_connection
+            .pragma_update(None, "auto_vacuum", &"INCREMENTAL")
+            .unwrap();
+        sqlite_connection
+            .pragma_update(None, "foreign_keys", &true)
+            .unwrap();
+        sqlite_connection
+            .pragma_update(None, "journal_mode", &"WAL")
+            .unwrap();
+        sqlite_connection
+            .pragma_update(None, "synchronous", &"NORMAL")
+            .unwrap();
+        let sqlite_async = SqliteAsync::new(sqlite_connection, "Sqlite".to_owned());
+        Self { sqlite_async }
+    }
+
     pub fn query<F, R>(
         &self,
         f: F,
@@ -29,34 +48,5 @@ impl SqliteModule {
         R: Send + 'static,
     {
         self.sqlite_async.transaction(f)
-    }
-}
-impl ModuleTrait for SqliteModule {}
-impl ModuleFactoryTrait for SqliteModule {
-    fn spawn<'mf>(module_factory: &'mf ModuleFactory) -> BoxFuture<'mf, Self> {
-        async move {
-            let fs_module = module_factory.get::<FsModule>().await;
-
-            let sqlite_file = fs_module
-                .persistent_data_directory()
-                .join("LogicBlocks.sqlite");
-
-            let sqlite_connection = rusqlite::Connection::open(sqlite_file).unwrap();
-            sqlite_connection
-                .pragma_update(None, "auto_vacuum", &"INCREMENTAL")
-                .unwrap();
-            sqlite_connection
-                .pragma_update(None, "foreign_keys", &true)
-                .unwrap();
-            sqlite_connection
-                .pragma_update(None, "journal_mode", &"WAL")
-                .unwrap();
-            sqlite_connection
-                .pragma_update(None, "synchronous", &"NORMAL")
-                .unwrap();
-            let sqlite_async = SqliteAsync::new(sqlite_connection, "SqliteModule".to_owned());
-            Self { sqlite_async }
-        }
-        .boxed()
     }
 }
