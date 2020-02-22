@@ -11,7 +11,7 @@
 #![allow(clippy::new_without_default)]
 #![allow(clippy::type_complexity)]
 
-pub mod application;
 pub mod devices;
+pub mod modules;
 pub mod util;
 pub mod web;
