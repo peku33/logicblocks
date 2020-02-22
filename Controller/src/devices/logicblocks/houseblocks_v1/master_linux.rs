@@ -202,8 +202,7 @@ impl Drop for MasterContext {
 }
 
 struct FtdiContextWrapper(*mut libftdi1_sys::ftdi_context);
-unsafe impl Send for FtdiContextWrapper {
-}
+unsafe impl Send for FtdiContextWrapper {}
 
 pub struct Master {
     master_descriptor: MasterDescriptor,
