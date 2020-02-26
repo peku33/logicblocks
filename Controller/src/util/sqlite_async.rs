@@ -66,7 +66,6 @@ impl SqliteAsync {
         self.async_operation_sender
             .as_ref()
             .unwrap()
-            .clone()
             .send(executable)
             .unwrap();
         result_receiver.map(|r| r.unwrap())
@@ -96,7 +95,6 @@ impl SqliteAsync {
         self.async_operation_sender
             .as_ref()
             .unwrap()
-            .clone()
             .send(executable)
             .unwrap();
         result_receiver.map(|r| r.unwrap())

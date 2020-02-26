@@ -12,7 +12,6 @@ use std::fmt;
 use std::fmt::{Debug, Display};
 use std::mem::MaybeUninit;
 use std::ptr;
-use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
@@ -209,7 +208,7 @@ pub struct Master {
 
     ftdi_context: *mut libftdi1_sys::ftdi_context,
     worker_thread: Option<thread::JoinHandle<()>>, // Option to allow manual dropping
-    worker_thread_sender: Option<mpsc::Sender<MasterTransaction>>, // Option to allow manual dropping
+    worker_thread_sender: Option<crossbeam_channel::Sender<MasterTransaction>>, // Option to allow manual dropping
 }
 impl Master {
     pub fn new(master_descriptor: MasterDescriptor) -> Result<Self, Error> {
@@ -297,7 +296,7 @@ impl Master {
         }
 
         let ftdi_context_wrapper = FtdiContextWrapper(ftdi_context);
-        let (channel_sender, channel_receiver) = mpsc::channel::<MasterTransaction>();
+        let (channel_sender, channel_receiver) = crossbeam_channel::unbounded();
 
         let worker_thread = thread::Builder::new()
             .name(format!(
@@ -329,7 +328,6 @@ impl Master {
         self.worker_thread_sender
             .as_ref()
             .unwrap()
-            .clone()
             .send(MasterTransaction::FrameOut {
                 service_mode,
                 address,
@@ -354,7 +352,6 @@ impl Master {
         self.worker_thread_sender
             .as_ref()
             .unwrap()
-            .clone()
             .send(MasterTransaction::FrameOutIn {
                 service_mode,
                 address,
@@ -372,7 +369,6 @@ impl Master {
         self.worker_thread_sender
             .as_ref()
             .unwrap()
-            .clone()
             .send(MasterTransaction::DeviceDiscovery { sender })
             .unwrap();
 
@@ -381,7 +377,7 @@ impl Master {
 
     fn thread_main(
         ftdi_context: *mut libftdi1_sys::ftdi_context,
-        receiver: mpsc::Receiver<MasterTransaction>,
+        receiver: crossbeam_channel::Receiver<MasterTransaction>,
     ) {
         for master_transaction in receiver.iter() {
             let send_result = match master_transaction {
