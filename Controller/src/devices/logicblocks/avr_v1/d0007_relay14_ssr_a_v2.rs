@@ -3,6 +3,7 @@ use super::super::houseblocks_v1::master::Master;
 use super::relay14_common::Device as CommonDevice;
 use crate::devices::device::{AsDeviceTrait, DeviceTrait};
 use std::cell::RefCell;
+use std::ops::Deref;
 
 pub struct Device<'m> {
     common_device: CommonDevice<'m>,
@@ -20,6 +21,12 @@ impl<'m> Device<'m> {
                 "logicblocks/avr_v1/0007_relay14_ssr_a_v2",
             ),
         }
+    }
+}
+impl<'m> Deref for Device<'m> {
+    type Target = CommonDevice<'m>;
+    fn deref(&self) -> &Self::Target {
+        &self.common_device
     }
 }
 impl<'m> AsDeviceTrait for Device<'m> {
