@@ -6,6 +6,7 @@
         "clippy",
         "concat",
         "dahua",
+        "dialoguer",
         "ffmpeg",
         "healthcheck",
         "houseblocks",
