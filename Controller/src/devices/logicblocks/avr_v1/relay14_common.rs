@@ -21,7 +21,7 @@ pub const RELAYS: usize = 14;
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
 #[serde(transparent)]
 pub struct RelayStates {
-    values: [bool; RELAYS],
+    pub values: [bool; RELAYS],
 }
 impl Default for RelayStates {
     fn default() -> Self {
@@ -71,6 +71,18 @@ impl<'m> Device<'m> {
         }
     }
 
+    pub fn relay_states_set(
+        &self,
+        desired_relay_states: RelayStates,
+    ) {
+        if *self.desired_relay_states.borrow() == desired_relay_states {
+            return;
+        }
+
+        self.desired_relay_states.replace(desired_relay_states);
+        self.desired_relay_states_changed_sender.send(());
+    }
+
     fn relay_states_serialize(relay_states: &RelayStates) -> Payload {
         let mut state_u16: u16 = 0;
         for (i, v) in relay_states.values.iter().enumerate() {
@@ -82,6 +94,7 @@ impl<'m> Device<'m> {
         ))
         .unwrap()
     }
+
     async fn relay_states_push<'f>(
         desired_relay_states: &RelayStates,
         application_mode_driver: &'f ApplicationModeDriver<'m, 'f>,
@@ -127,10 +140,10 @@ impl<'m> Device<'m> {
             self.desired_relay_states_receiver_factory.receiver().fuse();
 
         loop {
-            let ping_timer = tokio::time::delay_for(Duration::from_secs(5));
+            let mut ping_timer = tokio::time::delay_for(Duration::from_secs(5)).fuse();
 
             select! {
-                _ = ping_timer.fuse() => {
+                _ = ping_timer => {
                     application_mode_driver.healthcheck().await?;
                 },
                 _ = desired_relay_states_receiver.next() => {
@@ -153,7 +166,6 @@ impl<'m> Device<'m> {
             }
         }
     }
-
     async fn run_loop(
         &self,
         device_event_stream_sender: &device_event_stream::Sender,
@@ -239,16 +251,11 @@ impl<'m> Handler for Device<'m> {
                     }
                 };
 
-                let mut desired_relay_states = self.desired_relay_states.borrow_mut();
-                let mut desired_relay_states: &mut RelayStates = &mut desired_relay_states;
+                let mut new_desired_relay_states = *self.desired_relay_states.borrow();
+                new_desired_relay_states.values[relay_state_transition.id] =
+                    relay_state_transition.state;
 
-                if desired_relay_states.values[relay_state_transition.id]
-                    != relay_state_transition.state
-                {
-                    desired_relay_states.values[relay_state_transition.id] =
-                        relay_state_transition.state;
-                    self.desired_relay_states_changed_sender.send(());
-                }
+                self.relay_states_set(new_desired_relay_states);
 
                 async move { Response::ok_empty() }.boxed()
             }
