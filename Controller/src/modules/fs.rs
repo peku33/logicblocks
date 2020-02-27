@@ -1,3 +1,4 @@
+use super::{Context, Module, ModuleFactory};
 use std::env::current_dir;
 use std::fs::{create_dir_all, remove_dir_all};
 use std::path::{Path, PathBuf};
@@ -9,12 +10,18 @@ pub struct Fs {
 }
 impl Fs {
     pub fn new() -> Self {
-        let persistent_root = current_dir().unwrap().join(Path::new("data")); // FIXME
+        // TODO: Make this instance dependant
+        let persistent_root = current_dir().unwrap().join(Path::new("data"));
         create_dir_all(&persistent_root).unwrap();
 
-        let temporary_root = Path::new("/dev/shm/LogicBlocks"); // FIXME
+        // TODO: Make this instance dependant
+        let temporary_root = if cfg!(unix) {
+            Path::new("/dev/shm/LogicBlocks").to_path_buf()
+        } else {
+            current_dir().unwrap().join(Path::new("temporary"))
+        };
         if temporary_root.exists() {
-            remove_dir_all(temporary_root).unwrap();
+            remove_dir_all(&temporary_root).unwrap();
         }
         create_dir_all(&temporary_root).unwrap();
 
@@ -41,5 +48,11 @@ impl Fs {
     }
     pub fn temporary_storage_directory(&self) -> &Path {
         &self.temporary_storage_directory
+    }
+}
+impl Module for Fs {}
+impl ModuleFactory for Fs {
+    fn spawn(_context: &Context) -> Self {
+        Self::new()
     }
 }
