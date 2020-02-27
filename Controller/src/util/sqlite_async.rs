@@ -7,14 +7,14 @@ use std::thread;
 
 type AsyncOperation = Box<dyn FnOnce(&mut Connection) -> () + Send + 'static>;
 
-pub struct SqliteAsync {
+pub struct SQLiteAsync {
     // None after drop
     async_operation_sender: Option<Sender<AsyncOperation>>,
 
     // None after join
     operation_thread: Option<thread::JoinHandle<()>>,
 }
-impl SqliteAsync {
+impl SQLiteAsync {
     pub fn new(
         connection: Connection,
         thread_name: String,
@@ -100,7 +100,7 @@ impl SqliteAsync {
         result_receiver.map(|r| r.unwrap())
     }
 }
-impl Drop for SqliteAsync {
+impl Drop for SQLiteAsync {
     fn drop(&mut self) {
         self.async_operation_sender.take().unwrap();
         let _ = self.operation_thread.take().unwrap().join();

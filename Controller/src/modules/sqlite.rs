@@ -1,14 +1,14 @@
 use super::fs::Fs;
 use super::{Context, Module, ModuleFactory};
-use crate::util::sqlite_async::SqliteAsync;
+use crate::util::sqlite_async::SQLiteAsync;
 use failure::Error;
 use futures::future::Future;
 use rusqlite::{Connection, Transaction};
 
-pub struct Sqlite {
-    sqlite_async: SqliteAsync,
+pub struct SQLite {
+    sqlite_async: SQLiteAsync,
 }
-impl Sqlite {
+impl SQLite {
     pub fn new(fs: &Fs) -> Self {
         let sqlite_file = fs.persistent_data_directory().join("LogicBlocks.sqlite");
 
@@ -25,7 +25,7 @@ impl Sqlite {
         sqlite_connection
             .pragma_update(None, "synchronous", &"NORMAL")
             .unwrap();
-        let sqlite_async = SqliteAsync::new(sqlite_connection, "Sqlite".to_owned());
+        let sqlite_async = SQLiteAsync::new(sqlite_connection, "SQLite".to_owned());
         Self { sqlite_async }
     }
 
@@ -51,8 +51,8 @@ impl Sqlite {
         self.sqlite_async.transaction(f)
     }
 }
-impl Module for Sqlite {}
-impl ModuleFactory for Sqlite {
+impl Module for SQLite {}
+impl ModuleFactory for SQLite {
     fn spawn(context: &Context) -> Self {
         let fs = context.get::<Fs>();
         Self::new(&fs)
