@@ -1,4 +1,5 @@
 use super::fs::Fs;
+use super::{Context, Module, ModuleFactory};
 use crate::util::sqlite_async::SqliteAsync;
 use failure::Error;
 use futures::future::Future;
@@ -48,5 +49,12 @@ impl Sqlite {
         R: Send + 'static,
     {
         self.sqlite_async.transaction(f)
+    }
+}
+impl Module for Sqlite {}
+impl ModuleFactory for Sqlite {
+    fn spawn(context: &Context) -> Self {
+        let fs = context.get::<Fs>();
+        Self::new(&fs)
     }
 }
