@@ -174,42 +174,45 @@ impl Context {
     {
         let type_id = TypeId::of::<T>();
 
-        // Reentrant lock
-        let modules = self.modules.lock();
-
-        // Extract trait object if it should be dropped (zero refs remaining)
-        // Borrow context
+        // Modules lock is scoped, so when drop is called, its released
+        // Modules may be release from other threads, so deadlock will occur
         let trait_object = {
-            let mut modules = modules.borrow_mut();
+            // Reentrant lock
+            let modules = self.modules.lock();
 
-            // Check if object should be removed
-            if match modules.get_mut(&type_id) {
-                Some(ContextModulesModule::Initialized {
-                    reference_count, ..
-                }) => {
-                    *reference_count -= 1;
+            // Extract trait object if it should be dropped (zero refs remaining)
+            // Borrow context
+            {
+                let mut modules = modules.borrow_mut();
 
-                    // Return true if remaining reference count is zero
-                    *reference_count == 0
-                }
-                _ => panic!("Calling dec() on missing / initializing?"),
-            } {
-                // Yes, so remove it, returning object in Some(...)
-                Some(match modules.remove(&type_id) {
+                // Check if object should be removed
+                if match modules.get_mut(&type_id) {
                     Some(ContextModulesModule::Initialized {
-                        reference_count: 0,
-                        trait_object,
-                    }) => trait_object,
-                    _ => panic!("Calling dec() on missing / initializing / non-zero?"),
-                })
-            } else {
-                // No, return None
-                None
+                        reference_count, ..
+                    }) => {
+                        *reference_count -= 1;
+
+                        // Return true if remaining reference count is zero
+                        *reference_count == 0
+                    }
+                    _ => panic!("Calling dec() on missing / initializing?"),
+                } {
+                    // Yes, so remove it, returning object in Some(...)
+                    Some(match modules.remove(&type_id) {
+                        Some(ContextModulesModule::Initialized {
+                            reference_count: 0,
+                            trait_object,
+                        }) => trait_object,
+                        _ => panic!("Calling dec() on missing / initializing / non-zero?"),
+                    })
+                } else {
+                    // No, return None
+                    None
+                }
             }
         };
 
-        // Modules are kept locked here (is reentrant)
-        // However borrow is released
+        // Drops Option<T>, this can recursively call self
         drop(trait_object);
     }
 }
