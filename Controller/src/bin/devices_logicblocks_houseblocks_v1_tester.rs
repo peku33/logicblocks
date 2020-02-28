@@ -1,10 +1,12 @@
-use failure::Error;
+use failure::{err_msg, Error};
 use futures::future::{Future, FutureExt};
 use futures::select;
 use futures::stream::StreamExt;
 use logicblocks_controller::devices::device::DeviceTrait;
 use logicblocks_controller::devices::logicblocks::avr_v1;
-use logicblocks_controller::devices::logicblocks::houseblocks_v1::common::AddressSerial;
+use logicblocks_controller::devices::logicblocks::houseblocks_v1::common::{
+    Address, AddressDeviceType, AddressSerial,
+};
 use logicblocks_controller::devices::logicblocks::houseblocks_v1::master::{
     Master, MasterContext, MasterDescriptor,
 };
@@ -91,16 +93,18 @@ fn menu_master_context(
     }
     Ok(())
 }
-fn menu_master_device_discovery(master: &RefCell<Master>) -> Result<(), Error> {
+fn master_device_discovery(master: &RefCell<Master>) -> Result<Address, Error> {
     let master = master.borrow();
     execute_on_tokio(async move {
         let transaction = master.transaction_device_discovery();
-        let address = transaction.await;
-        match address {
-            Ok(address) => log::info!("Address: {:?}", address),
-            Err(error) => log::error!("Error: {}", error),
-        };
-    });
+        transaction.await
+    })
+}
+fn menu_master_device_discovery(master: &RefCell<Master>) -> Result<(), Error> {
+    match master_device_discovery(master) {
+        Ok(address) => log::info!("Address: {:?}", address),
+        Err(error) => log::error!("Error: {}", error),
+    };
     Ok(())
 }
 fn menu_master_avr_v1(master: &RefCell<Master>) -> Result<(), Error> {
@@ -120,31 +124,39 @@ fn menu_master_avr_v1(master: &RefCell<Master>) -> Result<(), Error> {
 
     Ok(())
 }
-fn ask_device_serial() -> Result<Option<AddressSerial>, Error> {
+fn ask_device_serial(
+    master: &RefCell<Master>,
+    address_device_type: &AddressDeviceType,
+) -> Result<AddressSerial, Error> {
     let mut input = dialoguer::Input::<String>::new();
-    let input = input.with_prompt("Serial");
+    let input = input
+        .with_prompt("Serial (empty for auto-discovery)")
+        .allow_empty(true);
 
     let address_serial = input.interact()?;
     if address_serial.is_empty() {
-        return Ok(None);
+        let address = master_device_discovery(master)?;
+        if address.device_type() != address_device_type {
+            return Err(err_msg(
+                "Resolved device type does not match requested device type",
+            ));
+        }
+        Ok(*address.serial())
+    } else {
+        let address_serial = AddressSerial::new(address_serial.as_bytes().try_into()?)?;
+        Ok(address_serial)
     }
-    let address_serial = AddressSerial::new(address_serial.as_bytes().try_into()?)?;
-    Ok(Some(address_serial))
 }
 fn menu_master_avr_v1_d0006_relay14_opto_a_v1(master: &RefCell<Master>) -> Result<(), Error> {
-    let address_serial = match ask_device_serial()? {
-        Some(serial) => serial,
-        None => return Ok(()),
-    };
+    let address_serial =
+        ask_device_serial(master, &AddressDeviceType::new_from_ordinal(6).unwrap())?;
     let device = avr_v1::d0006_relay14_opto_a_v1::Device::new(master, address_serial);
     menu_master_avr_v1_relay14_common(&device)?;
     Ok(())
 }
 fn menu_master_avr_v1_d0007_relay14_ssr_a_v2(master: &RefCell<Master>) -> Result<(), Error> {
-    let address_serial = match ask_device_serial()? {
-        Some(serial) => serial,
-        None => return Ok(()),
-    };
+    let address_serial =
+        ask_device_serial(master, &AddressDeviceType::new_from_ordinal(7).unwrap())?;
     let device = avr_v1::d0007_relay14_ssr_a_v2::Device::new(master, address_serial);
     menu_master_avr_v1_relay14_common(&device)?;
     Ok(())
