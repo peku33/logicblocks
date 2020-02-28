@@ -108,6 +108,13 @@ impl Address {
             serial,
         }
     }
+
+    pub fn device_type(&self) -> &AddressDeviceType {
+        &self.device_type
+    }
+    pub fn serial(&self) -> &AddressSerial {
+        &self.serial
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
