@@ -449,12 +449,24 @@ impl Master {
         ftdi_context: *mut libftdi1_sys::ftdi_context,
         in_timeout: &Duration,
     ) -> Result<Address, Error> {
+        Self::purge_phase(ftdi_context)?;
         Self::out_device_discovery_phase(ftdi_context)?;
         let address = Self::in_device_discovery_phase(ftdi_context, in_timeout)?;
         Ok(address)
     }
 
     // Generic helpers
+    fn purge_phase(ftdi_context: *mut libftdi1_sys::ftdi_context) -> Result<(), Error> {
+        let ftdi_usb_purge_buffers_result =
+            unsafe { libftdi1_sys::ftdi_usb_purge_buffers(ftdi_context) };
+        if ftdi_usb_purge_buffers_result != 0 {
+            return Err(format_err!(
+                "ftdi_usb_purge_buffers() failed with code {}",
+                ftdi_usb_purge_buffers_result,
+            ));
+        }
+        Ok(())
+    }
     fn out_phase(
         ftdi_context: *mut libftdi1_sys::ftdi_context,
         data: &[u8],
