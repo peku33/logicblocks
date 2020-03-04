@@ -11,7 +11,7 @@ impl AddressDeviceType {
     pub const LENGTH: usize = 4;
     pub fn new(device_type: [u8; Self::LENGTH]) -> Result<Self, Error> {
         if !device_type.iter().all(|item| item.is_ascii_digit()) {
-            return Err(err_msg("Invalid characters in device_type"));
+            return Err(err_msg("invalid characters in device_type"));
         }
         Ok(Self(device_type))
     }
@@ -57,7 +57,7 @@ impl AddressSerial {
     pub const LENGTH: usize = 8;
     pub fn new(serial: [u8; Self::LENGTH]) -> Result<Self, Error> {
         if !serial.iter().all(|item| item.is_ascii_digit()) {
-            return Err(err_msg("Invalid characters in serial"));
+            return Err(err_msg("invalid characters in serial"));
         }
         Ok(Self(serial))
     }
@@ -122,7 +122,7 @@ pub struct Payload(Box<[u8]>);
 impl Payload {
     pub fn new(data: Box<[u8]>) -> Result<Self, Error> {
         if !data.iter().all(|item| item.is_ascii_graphic()) {
-            return Err(err_msg("Invalid characters in payload"));
+            return Err(err_msg("invalid characters in payload"));
         }
         Ok(Self(data))
     }
@@ -213,11 +213,11 @@ impl Frame {
         pub const FRAME_LENGTH_MIN: usize = 1 + 1 + 4 /* + 0 */ + 1;
 
         if frame.len() < FRAME_LENGTH_MIN {
-            return Err(err_msg("Frame too short"));
+            return Err(err_msg("frame too short"));
         }
 
         if frame[0] != Self::CHAR_BEGIN {
-            return Err(err_msg("Invalid begin character"));
+            return Err(err_msg("invalid begin character"));
         }
 
         if frame[1]
@@ -227,7 +227,7 @@ impl Frame {
                 Self::CHAR_DIRECTION_NORMAL_IN
             })
         {
-            return Err(err_msg("Invalid service_mode character"));
+            return Err(err_msg("invalid service_mode character"));
         }
 
         let crc16_received = &frame[2..2 + 4];
@@ -235,7 +235,7 @@ impl Frame {
             .iter()
             .all(|item| item.is_ascii_uppercase() || item.is_ascii_digit())
         {
-            return Err(err_msg("Invalid character in crc16"));
+            return Err(err_msg("invalid character in crc16"));
         }
         let crc16_received = hex::decode(crc16_received)?;
         let crc16_received = u16::from_be_bytes((&crc16_received[..]).try_into().unwrap());
@@ -243,7 +243,7 @@ impl Frame {
         let payload = Payload::new(Box::from(&frame[2 + 4..frame.len() - 1]))?;
 
         if frame[frame.len() - 1] != Frame::CHAR_END {
-            return Err(err_msg("Invalid end character"));
+            return Err(err_msg("invalid end character"));
         }
 
         let mut crc16_expected = Digest::new_custom(
@@ -260,7 +260,7 @@ impl Frame {
 
         if crc16_expected != crc16_received {
             return Err(format_err!(
-                "Invalid CRC16, expected: {:04X}, received: {:04X}",
+                "invalid CRC16, expected: {:04X}, received: {:04X}",
                 crc16_expected,
                 crc16_received,
             ));

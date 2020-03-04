@@ -108,7 +108,7 @@ impl<'m> Device<'m> {
 
         if response.len() != 0 {
             return Err(format_err!(
-                "Expected empty response, received: {:?}",
+                "expected empty response, received: {:?}",
                 response
             ));
         }
@@ -174,9 +174,9 @@ impl<'m> Device<'m> {
             // Run once
             let error = match self.run_once(device_event_stream_sender).await {
                 Ok(_) => panic!("run_once() exited without error"),
-                Err(e) => e,
+                Err(error) => error,
             };
-            log::error!("error: {:?}", error);
+            log::error!("run_once error: {:?}", error);
 
             // Set error state
             self.state.replace(State::Error);

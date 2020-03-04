@@ -113,7 +113,7 @@ impl MasterContext {
             // Check descriptors
             if libusb_device_descriptor.iSerialNumber == 0 {
                 log::warn!(
-                    "Missing iSerialNumber descriptor for device {:?} ({}:{})",
+                    "missing iSerialNumber descriptor for device {:?} ({}:{})",
                     libusb_device_ptr,
                     libusb_device_descriptor.idVendor,
                     libusb_device_descriptor.idProduct,
@@ -157,7 +157,7 @@ impl MasterContext {
             };
             if libusb_get_string_descriptor_ascii_serial_number_result <= 0 {
                 log::warn!(
-                    "Failed reading serial number for device {:?} ({}:{}) with status code {}",
+                    "failed reading serial number for device {:?} ({}:{}) with status code {}",
                     libusb_device_ptr,
                     libusb_device_descriptor.idVendor,
                     libusb_device_descriptor.idProduct,
@@ -171,13 +171,13 @@ impl MasterContext {
             );
             let serial_number = match serial_number {
                 Ok(serial_number) => serial_number,
-                Err(e) => {
+                Err(error) => {
                     log::warn!(
-                        "Failed decomposing serial number for device {:?} ({}:{}): {}",
+                        "failed decomposing serial number for device {:?} ({}:{}): {}",
                         libusb_device_ptr,
                         libusb_device_descriptor.idVendor,
                         libusb_device_descriptor.idProduct,
-                        e,
+                        error,
                     );
                     continue;
                 }
@@ -418,7 +418,7 @@ impl Master {
                     ))
                     .map_err(|e| e.map(|_| ())),
             };
-            send_result.unwrap_or_else(|error| log::warn!("Error while sending: {:?}", error));
+            send_result.unwrap_or_else(|error| log::error!("error while sending: {:?}", error));
         }
     }
 
@@ -518,7 +518,7 @@ impl Master {
                 // 1ms is the timeout of ftdi read op
                 match timeout_left.checked_sub(Duration::from_millis(1)) {
                     Some(timeout_left_next) => *timeout_left = timeout_left_next,
-                    None => return Err(err_msg("Timeout expired")),
+                    None => return Err(err_msg("timeout expired")),
                 };
             } else {
                 return Ok(Box::from(

@@ -85,8 +85,8 @@ impl<'p> Driver<'p> {
                 Ok(snapshot) => {
                     self.state.borrow_mut().set_image_full(snapshot);
                 }
-                Err(e) => {
-                    log::warn!("Error while obtaining snapshot: {:?}", e);
+                Err(error) => {
+                    log::error!("error while obtaining snapshot: {:?}", error);
                     self.state.borrow_mut().clear();
                 }
             }

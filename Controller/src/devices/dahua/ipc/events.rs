@@ -40,48 +40,48 @@ impl EventSource {
             "VideoMotion" => {
                 let data_object = data
                     .as_ref()
-                    .ok_or_else(|| err_msg("Missing data for event"))?
+                    .ok_or_else(|| err_msg("missing data for event"))?
                     .as_object()
                     .ok_or_else(|| err_msg("data for event is not object"))?;
 
                 let regions_array = data_object
                     .get("RegionName")
-                    .ok_or_else(|| err_msg("Missing RegionName"))?
+                    .ok_or_else(|| err_msg("missing RegionName"))?
                     .as_array()
                     .ok_or_else(|| err_msg("RegionName is not array"))?;
 
                 if regions_array.len() != 1 {
-                    return Err(err_msg("Regions array size must be 1"));
+                    return Err(err_msg("regions array size must be 1"));
                 }
                 let region = regions_array
                     .get(0)
                     .unwrap()
                     .as_str()
-                    .ok_or_else(|| err_msg("Region must be string"))?
+                    .ok_or_else(|| err_msg("region must be string"))?
                     .to_owned();
 
                 Ok(EventSource::VideoMotion { region })
             }
-            _ => Err(format_err!("Unrecognized event: {}", code)),
+            _ => Err(format_err!("unrecognized event: {}", code)),
         }
     }
 
     fn extract_ivs_rule_id_direction(data: Option<JsonValue>) -> Result<(u64, String), Error> {
         let data_object = data
             .as_ref()
-            .ok_or_else(|| err_msg("Missing data for event"))?
+            .ok_or_else(|| err_msg("missing data for event"))?
             .as_object()
             .ok_or_else(|| err_msg("data for event is not object"))?;
 
         let rule_id = data_object
             .get("RuleId")
-            .ok_or_else(|| err_msg("Missing RuleId"))?
+            .ok_or_else(|| err_msg("missing RuleId"))?
             .as_u64()
             .ok_or_else(|| err_msg("RuleId is not int"))?;
 
         let direction = data_object
             .get("Direction")
-            .ok_or_else(|| err_msg("Missing Direction"))?
+            .ok_or_else(|| err_msg("missing Direction"))?
             .as_str()
             .ok_or_else(|| err_msg("Direction is not int"))?
             .to_owned();
@@ -101,7 +101,7 @@ impl EventTransitionDirection {
         match direction {
             "Start" => Ok(EventTransitionDirection::START),
             "Stop" => Ok(EventTransitionDirection::STOP),
-            _ => Err(format_err!("Unrecognized direction: {}", direction)),
+            _ => Err(format_err!("unrecognized direction: {}", direction)),
         }
     }
 }
@@ -124,7 +124,7 @@ impl EventTransition {
 
         let captures = EVENT_TRANSITION_DETAILS_REGEX
             .captures(item)
-            .ok_or_else(|| err_msg("Event item does not match required pattern"))?;
+            .ok_or_else(|| err_msg("event item does not match required pattern"))?;
 
         let code = captures.get(1).unwrap().as_str();
         let direction = captures.get(2).unwrap().as_str();
@@ -163,12 +163,12 @@ impl EventsTracker {
             EventTransitionDirection::START => {
                 if let Some(event_transition_source) = self.active.replace(event_transition.source)
                 {
-                    log::warn!("Duplicated active event: {:?}", event_transition_source);
+                    log::warn!("duplicated active event: {:?}", event_transition_source);
                 }
             }
             EventTransitionDirection::STOP => {
                 if !self.active.remove(&event_transition.source) {
-                    log::warn!("Missing active event: {:?}", event_transition.source);
+                    log::warn!("missing active event: {:?}", event_transition.source);
                 }
             }
         }
@@ -246,7 +246,7 @@ impl EventStreamBuilder {
             let content_type = response
                 .headers()
                 .get(http::header::CONTENT_TYPE)
-                .ok_or_else(|| err_msg("Missing CONTENT_TYPE"))?
+                .ok_or_else(|| err_msg("missing CONTENT_TYPE"))?
                 .to_str()?;
 
             lazy_static! {
@@ -255,7 +255,7 @@ impl EventStreamBuilder {
             }
             let captures = BOUNDARY_FROM_CONTEXT_TYPE
                 .captures(content_type)
-                .ok_or_else(|| err_msg("Unable to extract boundary from CONTENT_TYPE"))?;
+                .ok_or_else(|| err_msg("unable to extract boundary from CONTENT_TYPE"))?;
             let boundary = captures.get(1).unwrap().as_str();
             if boundary.is_empty() {
                 return Err(err_msg("returned boundary is empty"));
@@ -282,7 +282,7 @@ impl EventStreamBuilder {
         }
         if http::StatusCode::UNAUTHORIZED != implicit_status {
             return Err(format_err!(
-                "No-auth request failed with status: {}",
+                "no-auth request failed with status: {}",
                 implicit_status
             ));
         }
@@ -291,7 +291,7 @@ impl EventStreamBuilder {
         let www_authenticate = implicit_response
             .headers()
             .get(http::header::WWW_AUTHENTICATE)
-            .ok_or_else(|| err_msg("Missing WWW_AUTHENTICATE header for UNAUTHORIZED"))?
+            .ok_or_else(|| err_msg("missing WWW_AUTHENTICATE header for UNAUTHORIZED"))?
             .to_str()?;
 
         let authorization = digest_auth::parse(www_authenticate)?
@@ -307,7 +307,7 @@ impl EventStreamBuilder {
         let explicit_status = explicit_response.status();
         if http::StatusCode::OK != explicit_status {
             return Err(format_err!(
-                "Authed request failed with status: {}",
+                "authed request failed with status: {}",
                 explicit_status
             ));
         }
@@ -341,7 +341,7 @@ impl EventStream {
         while let Some(item) = self.x_mixed_replace_buffer.try_extract_frame() {
             match EventTransition::from_item(&item) {
                 Ok(item) => return Some(item),
-                Err(e) => log::warn!("Error during frame extraction: {}", e),
+                Err(error) => log::error!("error during frame extraction: {}", error),
             }
         }
         None
@@ -356,7 +356,7 @@ impl EventStream {
             self.x_mixed_replace_buffer.append(&item);
         };
         if let Err(error) = item {
-            log::warn!("Error during frame appending: {}", error);
+            log::error!("error during frame appending: {}", error);
         }
     }
 }

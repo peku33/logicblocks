@@ -58,7 +58,7 @@ impl<'d> Pool<'d> {
             .insert(self.device_id, device_owning_handle)
             .is_none();
         if !devices_insert_result {
-            panic!("Duplicated device");
+            panic!("duplicated device");
         }
         self.device_id
     }

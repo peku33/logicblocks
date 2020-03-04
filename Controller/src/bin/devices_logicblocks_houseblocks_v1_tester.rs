@@ -102,8 +102,8 @@ fn master_device_discovery(master: &RefCell<Master>) -> Result<Address, Error> {
 }
 fn menu_master_device_discovery(master: &RefCell<Master>) -> Result<(), Error> {
     match master_device_discovery(master) {
-        Ok(address) => log::info!("Address: {:?}", address),
-        Err(error) => log::error!("Error: {}", error),
+        Ok(address) => println!("address: {:?}", address),
+        Err(error) => println!("error: {}", error),
     };
     Ok(())
 }
@@ -138,7 +138,7 @@ fn ask_device_serial(
         let address = master_device_discovery(master)?;
         if address.device_type() != address_device_type {
             return Err(err_msg(
-                "Resolved device type does not match requested device type",
+                "resolved device type does not match requested device type",
             ));
         }
         Ok(*address.serial())
@@ -179,7 +179,7 @@ fn menu_master_avr_v1_relay14_common(device: &avr_v1::relay14_common::Device) ->
                     let mut relay_states = avr_v1::relay14_common::RelayStates::default();
                     relay_states.values[relay_id] = true;
 
-                    log::info!("Setting relay states: {:?}", relay_states);
+                    println!("setting relay states: {:?}", relay_states);
                     device.relay_states_set(relay_states);
 
                     relay_id += 1;

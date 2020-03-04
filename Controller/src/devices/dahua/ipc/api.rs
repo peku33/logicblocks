@@ -112,7 +112,7 @@ impl Client {
         let response = self._request_text(endpoint).await?;
         if response != "OK\r\n" {
             return Err(format_err!(
-                "Invalid response: '{}', expecting 'OK'",
+                "invalid response: '{}', expecting 'OK'",
                 response
             ));
         }
@@ -131,16 +131,16 @@ impl Client {
             let c = R.captures(line);
             let c = match c {
                 Some(c) => c,
-                None => return Err(format_err!("Line {} didn't match table pattern", line)),
+                None => return Err(format_err!("line {} didn't match table pattern", line)),
             };
 
             let key = c
                 .get(1)
-                .ok_or_else(|| err_msg("Missing capture group 1"))?
+                .ok_or_else(|| err_msg("missing capture group 1"))?
                 .as_str();
             let value = c
                 .get(2)
-                .ok_or_else(|| err_msg("Missing capture group 2"))?
+                .ok_or_else(|| err_msg("missing capture group 2"))?
                 .as_str();
 
             Ok((key, value))
@@ -160,7 +160,7 @@ impl Client {
             }
             tokio::time::delay_for(std::time::Duration::from_secs(1)).await;
         }
-        Err(err_msg("Device didn't went away in designated time"))
+        Err(err_msg("device didn't went away in designated time"))
     }
     async fn _wait_for_power_up(&self) -> Result<usize, Error> {
         for retry_id in 0..60 {
@@ -170,7 +170,7 @@ impl Client {
             tokio::time::delay_for(std::time::Duration::from_secs(1)).await;
         }
         // TODO: Return last failure
-        Err(err_msg("Device didn't went up in designated time"))
+        Err(err_msg("device didn't went up in designated time"))
     }
     async fn _wait_for_power_down_up(&self) -> Result<(), Error> {
         self._wait_for_power_down().await?;
@@ -248,16 +248,16 @@ impl Client {
 
         sane_defaults_config: &SaneDefaultsConfig,
     ) -> Result<(), Error> {
-        log::trace!("{:?}: Checking device", self.host);
+        log::trace!("{:?}: checking device", self.host);
         self.healthcheck().await?;
 
         log::trace!(
-            "{:?}: Restore factory settings (Except networking)",
+            "{:?}: restore factory settings (Except networking)",
             self.host
         );
         if let Err(error) = self.defaults_except_network().await {
             log::warn!(
-                "{:?}: Error while resetting to factory settings, this is likely false positive (device bug): {:?}",
+                "{:?}: error while resetting to factory settings, this is likely false positive (device bug): {:?}",
                 self.host,
                 error
             );
@@ -265,13 +265,13 @@ impl Client {
 
         if let Err(error) = self._wait_for_power_down_up().await {
             log::warn!(
-                "{:?}: Error while waiting for reboot: {:?}",
+                "{:?}: error while waiting for reboot: {:?}",
                 self.host,
                 error
             );
         }
 
-        log::trace!("{:?}: Set device name", self.host);
+        log::trace!("{:?}: set device name", self.host);
         self._request_text_ok(
             format!(
                 "\
@@ -288,7 +288,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Set TCP/IP hostname", self.host);
+        log::trace!("{:?}: set TCP/IP hostname", self.host);
         self._request_text_ok(
             format!(
                 "\
@@ -305,7 +305,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Set GMT+0 timezone, NTP", self.host);
+        log::trace!("{:?}: set GMT+0 timezone, NTP", self.host);
         // Fucks up in case of combined requests
         self._request_text_ok(
             "\
@@ -344,7 +344,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Disable multicast", self.host);
+        log::trace!("{:?}: disable multicast", self.host);
         // Fails if pushed together
         self._request_text_ok(
             "\
@@ -374,7 +374,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Disable Easy4Ip", self.host);
+        log::trace!("{:?}: disable Easy4Ip", self.host);
         self._request_text_ok(
             "\
              /cgi-bin/configManager.cgi?action=setConfig&\
@@ -385,7 +385,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Disable Bonjour", self.host);
+        log::trace!("{:?}: disable Bonjour", self.host);
         self._request_text_ok(
             "\
              /cgi-bin/configManager.cgi?action=setConfig&\
@@ -396,7 +396,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Disable Lechange Pro", self.host);
+        log::trace!("{:?}: disable Lechange Pro", self.host);
         self._request_text_ok(
             "\
              /cgi-bin/configManager.cgi?action=setConfig&\
@@ -407,7 +407,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Set up shared user", self.host);
+        log::trace!("{:?}: set up shared user", self.host);
         // This call may fail if user does not exist
         let _ = self
             ._request_text_ok(
@@ -451,7 +451,7 @@ impl Client {
         .await?;
 
         // FIXME: Breaks audio mutation
-        // log::trace!("{:?}: Disable storage", self.host);
+        // log::trace!("{:?}: disable storage", self.host);
         // self._request_text_ok(
         //     "\
         //      /cgi-bin/configManager.cgi?action=setConfig&\
@@ -475,7 +475,7 @@ impl Client {
         // )
         // .await?;
 
-        log::trace!("{:?}: Disable automatic recording", self.host);
+        log::trace!("{:?}: disable automatic recording", self.host);
         self._request_text_ok(
             "\
              /cgi-bin/configManager.cgi?action=setConfig&\
@@ -486,7 +486,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Set image mode to NTSC (for IVS)", self.host);
+        log::trace!("{:?}: set image mode to NTSC (for IVS)", self.host);
         self._request_text_ok(
             "/cgi-bin/configManager.cgi?action=setConfig&VideoStandard=NTSC"
                 .parse()
@@ -495,13 +495,13 @@ impl Client {
         .await?;
         if let Err(error) = self._wait_for_power_down_up().await {
             log::warn!(
-                "{:?}: Error while waiting for reboot: {:?}",
+                "{:?}: error while waiting for reboot: {:?}",
                 self.host,
                 error
             );
         }
 
-        log::trace!("{:?}: Set Main Stream MAX settings", self.host);
+        log::trace!("{:?}: set Main Stream MAX settings", self.host);
         self._request_text_ok(
             "\
              /cgi-bin/configManager.cgi?action=setConfig&\
@@ -517,7 +517,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Set Sub Stream 1 medium settings", self.host);
+        log::trace!("{:?}: set Sub Stream 1 medium settings", self.host);
         self._request_text_ok(
             "\
              /cgi-bin/configManager.cgi?action=setConfig&\
@@ -533,7 +533,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Set Sub Stream 2 low settings", self.host);
+        log::trace!("{:?}: set Sub Stream 2 low settings", self.host);
         self._request_text_ok(
             "\
              /cgi-bin/configManager.cgi?action=setConfig&\
@@ -547,7 +547,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Disable video watermark", self.host);
+        log::trace!("{:?}: disable video watermark", self.host);
         self._request_text_ok(
             "\
              /cgi-bin/configManager.cgi?action=setConfig&\
@@ -558,7 +558,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Set channel name overlay", self.host);
+        log::trace!("{:?}: set channel name overlay", self.host);
         if let Some(video_overlay) = &sane_defaults_config.video_overlay {
             self._request_text_ok(
                 format!(
@@ -589,7 +589,7 @@ impl Client {
             .await?;
         }
 
-        log::trace!("{:?}: Set profile manager to Normal", self.host);
+        log::trace!("{:?}: set profile manager to Normal", self.host);
         self._request_text_ok(
             "/cgi-bin/configManager.cgi?action=setConfig&VideoInMode[0].Config[0]=2"
                 .parse()
@@ -597,7 +597,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Enable and configure motion detection", self.host);
+        log::trace!("{:?}: enable and configure motion detection", self.host);
         self._request_text_ok(
             "/cgi-bin/configManager.cgi?action=setConfig&MotionDetect[0].Enable=true"
                 .parse()
@@ -606,7 +606,7 @@ impl Client {
         .await?;
 
         log::trace!(
-            "{:?}: Enable and configure video tampering detection",
+            "{:?}: enable and configure video tampering detection",
             self.host
         );
         self._request_text_ok(
@@ -617,7 +617,7 @@ impl Client {
         .await?;
 
         log::trace!(
-            "{:?}: Enable and configure video scene change detection",
+            "{:?}: enable and configure video scene change detection",
             self.host
         );
         self._request_text_ok(
@@ -627,7 +627,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Enable and configure audio detection", self.host);
+        log::trace!("{:?}: enable and configure audio detection", self.host);
         self._request_text_ok(
             "\
              /cgi-bin/configManager.cgi?action=setConfig&\
@@ -640,7 +640,7 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Set auto old files cleanup", self.host);
+        log::trace!("{:?}: set auto old files cleanup", self.host);
         self._request_text_ok(
             "/cgi-bin/configManager.cgi?action=setConfig&StorageGlobal.FileHoldTime=1"
                 .parse()
@@ -648,10 +648,10 @@ impl Client {
         )
         .await?;
 
-        log::trace!("{:?}: Reboot and wait for device to be ready", self.host);
+        log::trace!("{:?}: reboot and wait for device to be ready", self.host);
         self.reboot_wait_for_ready().await?;
 
-        log::info!("{:?}: Configuration complete", self.host);
+        log::info!("{:?}: configuration complete", self.host);
 
         Ok(())
     }

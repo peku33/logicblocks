@@ -186,7 +186,7 @@ impl<'m> Driver<'m> {
         // Driver may be already initialized, check it.
         let healthcheck_result = self.healthcheck(false).await;
         if healthcheck_result.is_ok() {
-            log::info!("{:?}: Driver was already initialized, rebooting", self);
+            log::info!("{:?}: driver was already initialized, rebooting", self);
             self.reboot(false).await?;
         }
 
@@ -195,7 +195,7 @@ impl<'m> Driver<'m> {
 
         // Check application up to date
         let application_checksum = self.service_mode_read_application_checksum().await?;
-        log::debug!("{:?}: application_checksum: {}", self, application_checksum);
+        log::trace!("{:?}: application_checksum: {}", self, application_checksum);
         // TODO: Push new firmware
 
         // Reboot to application section

@@ -91,13 +91,13 @@ impl Device {
         //     shared_user_password: self.shared_user_password.clone(),
         //     video_overlay: Some(self.device_name.clone()),
         // };
-        // if let Err(e) = self
+        // if let Err(error) = self
         //     .api_client_and_dependencies
         //     .as_owner()
         //     .sane_defaults(&sane_defaults_config)
         //     .await
         // {
-        //     return e;
+        //     return error;
         // }
 
         // TODO: Recorder
@@ -116,7 +116,7 @@ impl Device {
         // Events Tracker
         let device_event_stream = match self.event_stream_builder.get_event_stream().await {
             Ok(device_event_stream) => device_event_stream,
-            Err(e) => return e,
+            Err(error) => return error,
         }
         .for_each(|event_transition| {
             self.events_tracker
@@ -143,7 +143,7 @@ impl Device {
     ) {
         loop {
             let error: Error = self.run_once(device_event_stream_sender).await;
-            log::error!("error: {:?}", error);
+            log::error!("run_once error: {}", error);
 
             self.state.replace(State::Error);
             self.api_client_and_dependencies.snapshot_driver.reset();

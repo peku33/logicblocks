@@ -27,7 +27,7 @@ impl Handler for Sender {
         };
 
         if let Err(error) = self.channel.unbounded_send(item) {
-            log::warn!("Error while sending item: {}", error);
+            log::error!("error while sending item: {}", error);
             return async move { Response::error_500() }.boxed();
         }
 
@@ -35,7 +35,7 @@ impl Handler for Sender {
             match result_receiver.await {
                 Ok(response) => response.await,
                 Err(error) => {
-                    log::warn!("Error while receiving item: {}", error);
+                    log::error!("error while receiving item: {}", error);
                     Response::error_500()
                 }
             }
@@ -57,7 +57,7 @@ impl Receiver {
                 let result = handler.handle(item.request, item.uri_cursor);
                 if let Err(_error) = item.result_sender.send(result) {
                     // TODO: Response needs Debug
-                    log::warn!("Error while sending result")
+                    log::error!("error while sending result")
                 }
             })
             .await;

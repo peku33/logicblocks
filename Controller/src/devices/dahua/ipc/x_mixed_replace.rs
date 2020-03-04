@@ -45,14 +45,14 @@ impl Buffer {
         let content_length = match content_length {
             Ok(content_length) => content_length,
             Err(error) => {
-                log::warn!("Cannot decode content_length: {}", error);
+                log::error!("cannot decode content_length: {}", error);
                 return None;
             }
         };
 
         if content_length != content.len() {
-            log::warn!(
-                "Mismatched content_length ({}) and content.len() ({})",
+            log::error!(
+                "mismatched content_length ({}) and content.len() ({})",
                 content_length,
                 content.len()
             );

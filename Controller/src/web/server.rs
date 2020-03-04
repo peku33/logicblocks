@@ -45,7 +45,7 @@ pub async fn serve(
 
     let server = Server::bind(&bind).serve(make_service);
     match server.await {
-        Ok(()) => err_msg("Server returned with no error"),
+        Ok(()) => err_msg("server returned with no error"),
         Err(error) => error.into(),
     }
 }
