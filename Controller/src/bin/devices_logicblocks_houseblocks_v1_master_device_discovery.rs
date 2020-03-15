@@ -1,5 +1,3 @@
-extern crate logicblocks_controller;
-
 use logicblocks_controller::devices::logicblocks::houseblocks_v1::master::{Master, MasterContext};
 use std::collections::HashMap;
 use std::env;

@@ -1,6 +1,6 @@
 use super::{Context, Module, ModuleFactory};
 use std::env::current_dir;
-use std::fs::{create_dir_all, remove_dir_all};
+use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
 pub struct Fs {
@@ -20,9 +20,6 @@ impl Fs {
         } else {
             current_dir().unwrap().join(Path::new("temporary"))
         };
-        if temporary_root.exists() {
-            remove_dir_all(&temporary_root).unwrap();
-        }
         create_dir_all(&temporary_root).unwrap();
 
         let persistent_data_directory = persistent_root.join(Path::new("data"));
