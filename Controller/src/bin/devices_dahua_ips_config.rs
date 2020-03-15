@@ -1,5 +1,3 @@
-extern crate logicblocks_controller;
-
 use failure::Error;
 use logicblocks_controller::devices::dahua::ipc::api::{Client, SaneDefaultsConfig};
 
