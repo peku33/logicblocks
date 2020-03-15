@@ -10,8 +10,10 @@
 #![warn(clippy::all)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::type_complexity)]
+#![recursion_limit = "256"]
 
 pub mod devices;
 pub mod modules;
+pub mod stubs;
 pub mod util;
 pub mod web;
