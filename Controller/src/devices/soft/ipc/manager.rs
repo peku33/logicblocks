@@ -39,7 +39,6 @@ struct RecorderSegment {
 type RecorderRunFuture = BoxFuture<'static, Error>;
 type RecorderRunObject = OwningHandle<Box<Recorder>, Box<Mutex<RecorderRunFuture>>>;
 
-// TODO: Mutex for add/cleanup/fix ops
 struct Worker {
     sqlite: Handle<SQLite>,
     fs: Handle<Fs>,
@@ -403,11 +402,6 @@ impl Worker {
         Ok(())
     }
 
-    async fn recordings_fix(&self) -> Result<(), Error> {
-        // TODO:
-        Ok(())
-    }
-
     async fn run_once(&self) -> Error {
         if let Err(error) = self.prepare().await {
             return error;
@@ -416,7 +410,6 @@ impl Worker {
         let mut recorders_reload_receiver = self.recorders_reload_receiver.try_lock().unwrap();
         let mut recorder_segment_receiver = self.recorder_segment_receiver.try_lock().unwrap();
         let mut recordings_cleanup_timer = tokio::time::interval(Duration::from_secs(60)).fuse();
-        let mut recordings_fix_timer = tokio::time::interval(Duration::from_secs(60 * 60)).fuse();
 
         // Initial load
         if let Err(error) = self
@@ -448,13 +441,6 @@ impl Worker {
                 recordings_cleanup = recordings_cleanup_timer.next() => {
                     if recordings_cleanup.is_some() {
                         if let Err(error) = self.recordings_cleanup().await {
-                            return error;
-                        }
-                    }
-                },
-                recordings_fix = recordings_fix_timer.next() => {
-                    if recordings_fix.is_some() {
-                        if let Err(error) = self.recordings_fix().await {
                             return error;
                         }
                     }
