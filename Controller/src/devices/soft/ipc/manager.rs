@@ -1,0 +1,410 @@
+use super::recorder::{Recorder, Segment};
+use crate::modules::fs::Fs;
+use crate::modules::sqlite::SQLite;
+use crate::modules::{Context, Handle, Module, ModuleFactory};
+use crate::util::borrowed_async::DerefAsyncFuture;
+use crate::util::select_all_empty::select_all_empty;
+use crate::util::tokio_cancelable::ThreadedInfiniteToError;
+use chrono::{Datelike, NaiveDateTime, Timelike};
+use failure::Error;
+use futures::channel::mpsc;
+use futures::future::{BoxFuture, FutureExt};
+use futures::lock::Mutex;
+use futures::select;
+use futures::sink::SinkExt;
+use futures::stream::StreamExt;
+use indoc::indoc;
+use owning_ref::OwningHandle;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+use tokio::fs;
+use url::Url;
+
+const SEGMENT_TIME: Duration = Duration::from_secs(60);
+
+#[derive(Eq, PartialEq, Hash, Debug)]
+struct RecorderChannelKey {
+    channel_id: usize,
+    rtsp_url: Url,
+}
+
+struct RecorderSegment {
+    channel_id: usize,
+    segment: Segment,
+}
+
+type RecorderRunFuture = BoxFuture<'static, Error>;
+type RecorderRunObject = OwningHandle<Box<Recorder>, Box<Mutex<RecorderRunFuture>>>;
+
+struct Worker {
+    sqlite: Handle<SQLite>,
+    fs: Handle<Fs>,
+
+    recorders_reload_receiver: Mutex<mpsc::UnboundedReceiver<()>>,
+    recorder_run_object_by_recorder_channel_key:
+        Mutex<HashMap<RecorderChannelKey, RecorderRunObject>>,
+
+    recorder_segment_sender: mpsc::UnboundedSender<RecorderSegment>,
+    recorder_segment_receiver: Mutex<mpsc::UnboundedReceiver<RecorderSegment>>,
+}
+impl Worker {
+    pub fn new(
+        sqlite: Handle<SQLite>,
+        fs: Handle<Fs>,
+        recorders_reload_receiver: mpsc::UnboundedReceiver<()>,
+    ) -> Self {
+        let recorders_reload_receiver = Mutex::new(recorders_reload_receiver);
+
+        let recorder_run_object_by_recorder_channel_key = Mutex::new(HashMap::new());
+
+        let (recorder_segment_sender, recorder_segment_receiver) = mpsc::unbounded();
+        let recorder_segment_receiver = Mutex::new(recorder_segment_receiver);
+
+        Self {
+            sqlite,
+            fs,
+
+            recorders_reload_receiver,
+            recorder_run_object_by_recorder_channel_key,
+
+            recorder_segment_sender,
+            recorder_segment_receiver,
+        }
+    }
+
+    async fn prepare(&self) -> Result<(), Error> {
+        self
+            .sqlite
+            .query(|connection| -> Result<(), Error> {
+                connection.execute_batch(
+                    indoc!(
+                        "
+                        CREATE TABLE IF NOT EXISTS devices_soft_ipc_manager_storage_groups (
+                            storage_group_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            name TEXT NOT NULL,
+                            size_bytes_max INTEGER NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS devices_soft_ipc_manager_channels (
+                            channel_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            name TEXT NOT NULL,
+                            rtsp_url TEXT NOT NULL,
+                            storage_group_id REFERENCES devices_soft_ipc_manager_storage_groups(storage_group_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+                            enabled INTEGER NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS devices_soft_ipc_manager_recordings (
+                            recording_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            channel_id REFERENCES devices_soft_ipc_manager_channels(channel_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+                            path TEXT NOT NULL,
+                            size_bytes INTEGER NOT NULL,
+                            timestamp_start INTEGER NOT NULL,
+                            timestamp_end INTEGER NOT NULL
+                        );
+                        CREATE INDEX IF NOT EXISTS devices_soft_ipc_manager_recordings__timestamp_end ON devices_soft_ipc_manager_recordings (timestamp_end);
+                    "
+                    ),
+                )?;
+
+                Ok(())
+            })
+            .await?;
+
+        Ok(())
+    }
+
+    async fn recorder_run_object_by_recorder_channel_key_reload(&self) -> Result<(), Error> {
+        let mut recorder_channel_keys = self
+            .sqlite
+            .query(|connection| -> Result<Vec<RecorderChannelKey>, Error> {
+                let recorder_channel_keys = connection
+                    .prepare_cached(indoc!(
+                        "
+                            SELECT channel_id, rtsp_url
+                            FROM devices_soft_ipc_manager_channels
+                            WHERE enabled
+                        "
+                    ))?
+                    .query_and_then(rusqlite::NO_PARAMS, |row| {
+                        let recorder_channel_key = RecorderChannelKey {
+                            channel_id: row.get_raw_checked(0)?.as_i64()? as usize,
+                            rtsp_url: row.get_raw_checked(1)?.as_str()?.parse()?,
+                        };
+                        Ok(recorder_channel_key)
+                    })?
+                    .collect::<Result<_, Error>>()?;
+
+                Ok(recorder_channel_keys)
+            })
+            .await?;
+
+        let mut recorder_run_object_by_recorder_channel_key = self
+            .recorder_run_object_by_recorder_channel_key
+            .try_lock()
+            .unwrap();
+
+        // Remove channels not in a list
+        recorder_run_object_by_recorder_channel_key
+            .retain(|recorder_channel_key, _| recorder_channel_keys.contains(recorder_channel_key));
+
+        // Keep only channels to add
+        recorder_channel_keys.retain(|recorder_channel_key| {
+            !recorder_run_object_by_recorder_channel_key.contains_key(recorder_channel_key)
+        });
+
+        // Add missing channels
+        for recorder_channel_key in recorder_channel_keys {
+            let temporary_storage_directory = self
+                .fs
+                .temporary_storage_directory()
+                .join("devices_soft_ipc_manager")
+                .join(recorder_channel_key.channel_id.to_string());
+
+            let channel_id = recorder_channel_key.channel_id;
+            let segment_sender = Box::pin(self.recorder_segment_sender.clone().with(
+                async move |segment| {
+                    Ok(RecorderSegment {
+                        channel_id,
+                        segment,
+                    })
+                },
+            ));
+
+            let recorder = Recorder::new(
+                recorder_channel_key.rtsp_url.clone(),
+                SEGMENT_TIME,
+                temporary_storage_directory,
+                segment_sender,
+            );
+
+            let recorder_run_object = OwningHandle::new_with_fn(Box::new(recorder), unsafe {
+                |recorder_ptr| {
+                    let recorder_run_future = (*recorder_ptr).run().boxed();
+                    Box::new(Mutex::new(recorder_run_future))
+                }
+            });
+
+            let insert_result = recorder_run_object_by_recorder_channel_key
+                .insert(recorder_channel_key, recorder_run_object);
+            assert!(insert_result.is_none());
+        }
+
+        Ok(())
+    }
+    async fn recorder_run_object_by_recorder_channel_key_run(&self) -> (Error, usize) {
+        let recorder_run_object_by_recorder_channel_key = self
+            .recorder_run_object_by_recorder_channel_key
+            .try_lock()
+            .unwrap();
+
+        let select_all_empty_future =
+            select_all_empty(recorder_run_object_by_recorder_channel_key.values().map(
+                |recorder_owned_run| DerefAsyncFuture::new(recorder_owned_run.try_lock().unwrap()),
+            ));
+
+        select_all_empty_future.await
+    }
+
+    pub async fn recorder_segment_handle(
+        &self,
+        recorder_segment: RecorderSegment,
+    ) -> Result<usize, Error> {
+        // Build target file path
+        let storage_relative_path = Self::build_storage_relative_path(
+            recorder_segment.channel_id,
+            recorder_segment.segment.time_start_utc,
+        );
+        let storage_path = self
+            .fs
+            .persistent_storage_directory()
+            .join("devices_soft_ipc_manager")
+            .join(storage_relative_path);
+
+        // Create target directory
+        fs::create_dir_all(storage_path.parent().unwrap()).await?;
+
+        // Move the file to target directory
+        Self::move_file(&recorder_segment.segment.path, &storage_path).await?;
+
+        // Store file information in database
+        let recording_id = self
+            .sqlite
+            .query(move |connection| -> Result<usize, Error> {
+                connection
+                    .prepare_cached(indoc!(
+                        "
+                            INSERT INTO devices_soft_ipc_manager_recordings (channel_id, timestamp_start, timestamp_end, path, size_bytes)
+                            VALUES (?, ?, ?, ?, ?)
+                        "
+                    ))?
+                    .execute(rusqlite::params![
+                        recorder_segment.channel_id as i64,
+                        recorder_segment.segment.time_start_utc.timestamp(),
+                        recorder_segment.segment.time_end_utc.timestamp(),
+                        storage_path.to_str().unwrap(),
+                        recorder_segment.segment.metadata.len() as i64,
+                    ])?;
+
+                Ok(connection.last_insert_rowid() as usize)
+            })
+            .await?;
+
+        Ok(recording_id)
+    }
+
+    async fn recordings_cleanup(&self) -> Result<(), Error> {
+        // TODO:
+        Ok(())
+    }
+    async fn recordings_fix(&self) -> Result<(), Error> {
+        // TODO:
+        Ok(())
+    }
+
+    async fn run_once(&self) -> Error {
+        if let Err(error) = self.prepare().await {
+            return error;
+        }
+
+        let mut recorders_reload_receiver = self.recorders_reload_receiver.try_lock().unwrap();
+        let mut recorder_segment_receiver = self.recorder_segment_receiver.try_lock().unwrap();
+        let mut recordings_cleanup_timer = tokio::time::interval(Duration::from_secs(60)).fuse();
+        let mut recordings_fix_timer = tokio::time::interval(Duration::from_secs(60 * 60)).fuse();
+
+        // Initial load
+        if let Err(error) = self
+            .recorder_run_object_by_recorder_channel_key_reload()
+            .await
+        {
+            return error;
+        }
+
+        loop {
+            select! {
+                recorders_reload = recorders_reload_receiver.next() => {
+                    if recorders_reload.is_some() {
+                        if let Err(error) = self.recorder_run_object_by_recorder_channel_key_reload().await {
+                            return error;
+                        }
+                    }
+                },
+                (channel_error, _) = self.recorder_run_object_by_recorder_channel_key_run().fuse() => {
+                    return channel_error;
+                },
+                recorder_segment = recorder_segment_receiver.next() => {
+                    if let Some(recorder_segment) = recorder_segment {
+                        if let Err(error) = self.recorder_segment_handle(recorder_segment).await {
+                            return error;
+                        }
+                    }
+                },
+                recordings_cleanup = recordings_cleanup_timer.next() => {
+                    if recordings_cleanup.is_some() {
+                        if let Err(error) = self. recordings_cleanup().await {
+                            return error;
+                        }
+                    }
+                },
+                recordings_fix = recordings_fix_timer.next() => {
+                    if recordings_fix.is_some() {
+                        if let Err(error) = self. recordings_fix().await {
+                            return error;
+                        }
+                    }
+                },
+            }
+        }
+    }
+    pub async fn run(&self) -> Error {
+        let error_delay = Duration::from_secs(5);
+        loop {
+            let error = self.run_once().await;
+            log::error!("run_once error: {}", error);
+            tokio::time::delay_for(error_delay).await;
+        }
+    }
+
+    fn build_storage_relative_path(
+        channel_id: usize,
+        time_start_utc: NaiveDateTime,
+    ) -> PathBuf {
+        let mut path_buf = PathBuf::new();
+        path_buf.push(format!("{:0>3}", channel_id));
+        path_buf.push(format!("{:0>2}", time_start_utc.year()));
+        path_buf.push(format!("{:0>2}", time_start_utc.month()));
+        path_buf.push(format!("{:0>2}", time_start_utc.day()));
+        path_buf.push(format!(
+            "{:0>2}_{:0>2}_{:0>2}.mp4",
+            time_start_utc.hour(),
+            time_start_utc.minute(),
+            time_start_utc.second(),
+        ));
+        path_buf
+    }
+
+    // rename does not work across mount-point boundary
+    // this tries to move the file and if it fails, does copy + delete
+    async fn move_file(
+        from: impl AsRef<Path>,
+        to: impl AsRef<Path>,
+    ) -> Result<(), Error> {
+        if let Ok(()) = fs::rename(&from, &to).await {
+            return Ok(());
+        }
+
+        fs::copy(&from, &to).await?;
+        fs::remove_file(&from).await?;
+
+        Ok(())
+    }
+}
+#[cfg(test)]
+mod tests_worker {
+    use super::Worker;
+
+    use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+
+    #[test]
+    fn test_build_storage_relative_path_1() {
+        let storage_relative_path = Worker::build_storage_relative_path(
+            1234,
+            NaiveDateTime::new(
+                NaiveDate::from_ymd(2020, 3, 4),
+                NaiveTime::from_hms(5, 6, 7),
+            ),
+        );
+        assert_eq!(
+            storage_relative_path.to_str().unwrap(),
+            "1234/2020/03/04/05_06_07.mp4"
+        )
+    }
+}
+
+pub struct Manager {
+    recorders_reload_sender: mpsc::UnboundedSender<()>,
+    run_handle: ThreadedInfiniteToError,
+}
+impl Manager {
+    pub fn new(
+        sqlite: Handle<SQLite>,
+        fs: Handle<Fs>,
+    ) -> Self {
+        let (recorders_reload_sender, recorders_reload_receiver) = mpsc::unbounded();
+        let run_handle =
+            ThreadedInfiniteToError::new("Manager (ipc.soft.devices)".to_owned(), async move {
+                let worker = Worker::new(sqlite, fs, recorders_reload_receiver);
+                worker.run().await
+            });
+        Self {
+            recorders_reload_sender,
+            run_handle,
+        }
+    }
+}
+impl Module for Manager {}
+impl ModuleFactory for Manager {
+    fn spawn(context: &Context) -> Self {
+        Self::new(context.get(), context.get())
+    }
+}

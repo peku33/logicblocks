@@ -1,4 +1,3 @@
-pub mod organizer;
+pub mod manager;
 pub mod recorder;
-pub mod recorder_organizer;
 pub mod snapshot;
