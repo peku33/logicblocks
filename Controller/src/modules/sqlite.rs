@@ -25,7 +25,7 @@ impl SQLite {
         sqlite_connection
             .pragma_update(None, "synchronous", &"NORMAL")
             .unwrap();
-        let sqlite_async = SQLiteAsync::new(sqlite_connection, "SQLite".to_owned());
+        let sqlite_async = SQLiteAsync::new(sqlite_connection, "SQLite (modules)".to_owned());
         Self { sqlite_async }
     }
 
