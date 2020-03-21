@@ -22,6 +22,7 @@ use tokio::fs;
 use url::Url;
 
 const SEGMENT_TIME: Duration = Duration::from_secs(60);
+const CLEANUP_INTERVAL: Duration = Duration::from_secs(60 * 10);
 const CLEANUP_SIZE_BYTES_TOTAL_MAX_RATIO: f64 = 0.9;
 const CLEANUP_CHUNK_SIZE: usize = 32;
 
@@ -425,7 +426,7 @@ impl Worker {
 
         let mut recorders_reload_receiver = self.recorders_reload_receiver.try_lock().unwrap();
         let mut recorder_segment_receiver = self.recorder_segment_receiver.try_lock().unwrap();
-        let mut recordings_cleanup_timer = tokio::time::interval(Duration::from_secs(60)).fuse();
+        let mut recordings_cleanup_timer = tokio::time::interval(CLEANUP_INTERVAL).fuse();
 
         // Initial load
         if let Err(error) = self
