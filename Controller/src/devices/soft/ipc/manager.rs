@@ -6,7 +6,7 @@ use crate::util::borrowed_async::DerefAsyncFuture;
 use crate::util::select_all_empty::select_all_empty;
 use crate::util::tokio_cancelable::ThreadedInfiniteToError;
 use chrono::{Datelike, NaiveDateTime, Timelike};
-use failure::{format_err, Error};
+use failure::{err_msg, format_err, Error};
 use futures::channel::mpsc;
 use futures::future::{BoxFuture, FutureExt};
 use futures::lock::Mutex;
@@ -31,6 +31,7 @@ struct RecorderChannelKey {
     rtsp_url: Url,
 }
 
+#[derive(Debug)]
 struct RecorderSegment {
     channel_id: usize,
     segment: Segment,
@@ -358,7 +359,13 @@ impl Worker {
                 // Remove picked files
                 for deletion_candidate in deletion_candidates {
                     // Remove file
-                    fs::remove_file(&deletion_candidate.path).await?;
+                    if let Err(error) = fs::remove_file(&deletion_candidate.path).await {
+                        log::error!(
+                            "failed to remove file {:?} during cleanup: {}",
+                            deletion_candidate.path,
+                            error
+                        );
+                    }
 
                     // Remove file from DB
                     let recording_id = deletion_candidate.recording_id;
@@ -386,11 +393,20 @@ impl Worker {
                     size_bytes_total_estimated -= deletion_candidate.size_bytes;
 
                     // Remove empty directories
-                    Self::remove_empty_dir(
-                        &storage_root_path,
-                        deletion_candidate.path.parent().unwrap(),
-                    )
-                    .await?;
+                    let deletion_candidate_directory = deletion_candidate
+                        .path
+                        .parent()
+                        .ok_or_else(|| err_msg("missing root"))?;
+                    if let Err(error) =
+                        Self::remove_empty_dir(&storage_root_path, deletion_candidate_directory)
+                            .await
+                    {
+                        log::error!(
+                            "failed to remove directory {:?} during cleanup: {}",
+                            deletion_candidate_directory,
+                            error
+                        );
+                    }
 
                     if size_bytes_total_estimated < size_bytes_total_desired {
                         break;
@@ -423,9 +439,11 @@ impl Worker {
             select! {
                 recorders_reload = recorders_reload_receiver.next() => {
                     if recorders_reload.is_some() {
+                        log::trace!("recorders_reload: begin");
                         if let Err(error) = self.recorder_run_object_by_recorder_channel_key_reload().await {
                             return error;
                         }
+                        log::trace!("recorders_reload: end");
                     }
                 },
                 (channel_error, _) = self.recorder_run_object_by_recorder_channel_key_run().fuse() => {
@@ -433,16 +451,20 @@ impl Worker {
                 },
                 recorder_segment = recorder_segment_receiver.next() => {
                     if let Some(recorder_segment) = recorder_segment {
+                        log::trace!("recorder_segment_handle: begin: {:?}", recorder_segment);
                         if let Err(error) = self.recorder_segment_handle(recorder_segment).await {
                             return error;
                         }
+                        log::trace!("recorder_segment_handle: end");
                     }
                 },
                 recordings_cleanup = recordings_cleanup_timer.next() => {
                     if recordings_cleanup.is_some() {
+                        log::trace!("recordings_cleanup: begin");
                         if let Err(error) = self.recordings_cleanup().await {
                             return error;
                         }
+                        log::trace!("recordings_cleanup: end");
                     }
                 },
             }
