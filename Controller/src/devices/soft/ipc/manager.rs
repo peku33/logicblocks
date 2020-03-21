@@ -16,9 +16,9 @@ use futures::stream::StreamExt;
 use indoc::indoc;
 use owning_ref::OwningHandle;
 use std::collections::HashMap;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use tokio::fs;
 use url::Url;
 
 const SEGMENT_TIME: Duration = Duration::from_secs(60);
@@ -222,7 +222,7 @@ impl Worker {
         let storage_path = self.get_storage_root_path().join(storage_relative_path);
 
         // Create target directory
-        fs::create_dir_all(storage_path.parent().unwrap()).await?;
+        fs::create_dir_all(storage_path.parent().unwrap())?;
 
         // Move the file to target directory
         Self::move_file(&recorder_segment.segment.path, &storage_path).await?;
@@ -360,7 +360,7 @@ impl Worker {
                 // Remove picked files
                 for deletion_candidate in deletion_candidates {
                     // Remove file
-                    if let Err(error) = fs::remove_file(&deletion_candidate.path).await {
+                    if let Err(error) = fs::remove_file(&deletion_candidate.path) {
                         log::error!(
                             "failed to remove file {:?} during cleanup: {}",
                             deletion_candidate.path,
@@ -439,7 +439,7 @@ impl Worker {
         loop {
             select! {
                 recorders_reload = recorders_reload_receiver.next() => {
-                    if recorders_reload.is_some() {
+                    if let Some(()) = recorders_reload {
                         log::trace!("recorders_reload: begin");
                         if let Err(error) = self.recorder_run_object_by_recorder_channel_key_reload().await {
                             return error;
@@ -460,7 +460,7 @@ impl Worker {
                     }
                 },
                 recordings_cleanup = recordings_cleanup_timer.next() => {
-                    if recordings_cleanup.is_some() {
+                    if let Some(()) = recordings_cleanup {
                         log::trace!("recordings_cleanup: begin");
                         if let Err(error) = self.recordings_cleanup().await {
                             return error;
@@ -509,12 +509,12 @@ impl Worker {
         from: impl AsRef<Path>,
         to: impl AsRef<Path>,
     ) -> Result<(), Error> {
-        if let Ok(()) = fs::rename(&from, &to).await {
+        if let Ok(()) = fs::rename(&from, &to) {
             return Ok(());
         }
 
-        fs::copy(&from, &to).await?;
-        fs::remove_file(&from).await?;
+        fs::copy(&from, &to)?;
+        fs::remove_file(&from)?;
 
         Ok(())
     }
@@ -527,7 +527,7 @@ impl Worker {
     ) -> Result<(), Error> {
         let mut remove_dir: PathBuf = remove_dir.strip_prefix(root_dir)?.into();
         loop {
-            if fs::remove_dir(root_dir.join(&remove_dir)).await.is_err() {
+            if fs::remove_dir(root_dir.join(&remove_dir)).is_err() {
                 break;
             }
             if remove_dir.pop() {

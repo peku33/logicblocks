@@ -6,12 +6,12 @@ use futures::lock::Mutex;
 use futures::select;
 use futures::stream::StreamExt;
 use futures::{Sink, SinkExt};
+use std::fs;
 use std::fs::Metadata;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::process::Stdio;
 use std::time::{Duration, SystemTime};
-use tokio::fs;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use url::Url;
@@ -141,7 +141,7 @@ impl Recorder {
             .parse()?;
         let time_start_utc = NaiveDateTime::from_timestamp(file_stem_int, 0);
 
-        let metadata = fs::metadata(&path).await?;
+        let metadata = fs::metadata(&path)?;
         let time_end_utc = DateTime::<Utc>::from(metadata.modified()?)
             .naive_utc()
             .with_nanosecond(0)
@@ -221,7 +221,7 @@ impl Recorder {
 
         let path = self.temporary_storage_directory.join(dir_entry.file_name());
 
-        let metadata = dir_entry.metadata().await?;
+        let metadata = dir_entry.metadata()?;
         if !metadata.is_file() {
             log::warn!(
                 "non-file entry found in fixer_handle_directory_entry: {:?}",
@@ -259,14 +259,11 @@ impl Recorder {
         Ok(())
     }
     async fn fixer_run_once(&self) -> Result<(), Error> {
-        fs::read_dir(&self.temporary_storage_directory)
-            .await?
-            .for_each(async move |entry| {
-                if let Err(error) = self.fixer_handle_directory_entry(entry).await {
-                    log::error!("error in fixer_handle_directory_entry: {}", error);
-                }
-            })
-            .await;
+        for entry in fs::read_dir(&self.temporary_storage_directory)? {
+            if let Err(error) = self.fixer_handle_directory_entry(entry).await {
+                log::error!("error in fixer_handle_directory_entry: {}", error);
+            }
+        }
 
         Ok(())
     }
@@ -282,11 +279,10 @@ impl Recorder {
 
     async fn init(&self) -> Result<(), Error> {
         if !self.temporary_storage_directory.exists() {
-            fs::create_dir_all(&self.temporary_storage_directory).await?;
+            fs::create_dir_all(&self.temporary_storage_directory)?;
         }
 
-        let temporary_storage_directory_metadata =
-            fs::metadata(&self.temporary_storage_directory).await?;
+        let temporary_storage_directory_metadata = fs::metadata(&self.temporary_storage_directory)?;
 
         if !temporary_storage_directory_metadata.is_dir() {
             return Err(err_msg("temporary_storage_directory is not a directory"));
