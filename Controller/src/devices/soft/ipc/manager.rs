@@ -6,7 +6,7 @@ use crate::util::borrowed_async::DerefAsyncFuture;
 use crate::util::select_all_empty::select_all_empty;
 use crate::util::tokio_cancelable::ThreadedInfiniteToError;
 use chrono::{Datelike, NaiveDateTime, Timelike};
-use failure::Error;
+use failure::{format_err, Error};
 use futures::channel::mpsc;
 use futures::future::{BoxFuture, FutureExt};
 use futures::lock::Mutex;
@@ -22,6 +22,8 @@ use tokio::fs;
 use url::Url;
 
 const SEGMENT_TIME: Duration = Duration::from_secs(60);
+const CLEANUP_SIZE_BYTES_TOTAL_MAX_RATIO: f64 = 0.9;
+const CLEANUP_CHUNK_SIZE: usize = 32;
 
 #[derive(Eq, PartialEq, Hash, Debug)]
 struct RecorderChannelKey {
@@ -37,6 +39,7 @@ struct RecorderSegment {
 type RecorderRunFuture = BoxFuture<'static, Error>;
 type RecorderRunObject = OwningHandle<Box<Recorder>, Box<Mutex<RecorderRunFuture>>>;
 
+// TODO: Mutex for add/cleanup/fix ops
 struct Worker {
     sqlite: Handle<SQLite>,
     fs: Handle<Fs>,
@@ -206,7 +209,7 @@ impl Worker {
         select_all_empty_future.await
     }
 
-    pub async fn recorder_segment_handle(
+    async fn recorder_segment_handle(
         &self,
         recorder_segment: RecorderSegment,
     ) -> Result<usize, Error> {
@@ -215,11 +218,7 @@ impl Worker {
             recorder_segment.channel_id,
             recorder_segment.segment.time_start_utc,
         );
-        let storage_path = self
-            .fs
-            .persistent_storage_directory()
-            .join("devices_soft_ipc_manager")
-            .join(storage_relative_path);
+        let storage_path = self.get_storage_root_path().join(storage_relative_path);
 
         // Create target directory
         fs::create_dir_all(storage_path.parent().unwrap()).await?;
@@ -254,9 +253,156 @@ impl Worker {
     }
 
     async fn recordings_cleanup(&self) -> Result<(), Error> {
-        // TODO:
+        #[derive(Debug)]
+        struct StorageGroupStat {
+            storage_group_id: usize,
+            size_bytes_total: usize,
+            size_bytes_max: usize,
+        }
+
+        #[derive(Debug)]
+        struct DeletionCandidate {
+            recording_id: usize,
+            path: PathBuf,
+            size_bytes: usize,
+        }
+
+        let storage_root_path = self.get_storage_root_path();
+
+        let storage_group_stats = self
+            .sqlite
+            .query(|connection| -> Result<Vec<StorageGroupStat>, Error> {
+                let storage_group_stats = connection
+                    .prepare_cached(indoc!(
+                        "
+                            SELECT storage_group_id, size_bytes_total, size_bytes_max
+                            FROM devices_soft_ipc_manager_storage_groups
+                            JOIN (
+                                SELECT storage_group_id, SUM(size_bytes) AS size_bytes_total
+                                FROM devices_soft_ipc_manager_recordings
+                                JOIN devices_soft_ipc_manager_channels USING(channel_id)
+                                GROUP BY storage_group_id
+                            ) USING (storage_group_id)
+                        "
+                    ))?
+                    .query_and_then(rusqlite::NO_PARAMS, |row| {
+                        let storage_group_stat = StorageGroupStat {
+                            storage_group_id: row.get_raw_checked(0)?.as_i64()? as usize,
+                            size_bytes_total: row.get_raw_checked(1)?.as_i64()? as usize,
+                            size_bytes_max: row.get_raw_checked(2)?.as_i64()? as usize,
+                        };
+                        Ok(storage_group_stat)
+                    })?
+                    .collect::<Result<_, Error>>()?;
+
+                Ok(storage_group_stats)
+            })
+            .await?;
+
+        for storage_group_stat in storage_group_stats {
+            // Skip if size is OK
+            if storage_group_stat.size_bytes_total <= storage_group_stat.size_bytes_max {
+                continue;
+            }
+
+            // Calculate desired size
+            let size_bytes_total_desired = (CLEANUP_SIZE_BYTES_TOTAL_MAX_RATIO
+                * storage_group_stat.size_bytes_max as f64)
+                as usize;
+
+            // This will be decreased after each removed file
+            let mut size_bytes_total_estimated = storage_group_stat.size_bytes_total;
+
+            // Loop until size is OK
+            let storage_group_id = storage_group_stat.storage_group_id;
+            while size_bytes_total_estimated >= size_bytes_total_desired {
+                // Pick deletion candidates
+                let deletion_candidates = self
+                    .sqlite
+                    .query(move |connection| -> Result<Vec<DeletionCandidate>, Error> {
+                        let deletion_candidates = connection
+                            .prepare_cached(indoc!(
+                                "
+                                    SELECT recording_id, path, size_bytes
+                                    FROM devices_soft_ipc_manager_recordings
+                                    JOIN devices_soft_ipc_manager_channels USING (channel_id)
+                                    WHERE storage_group_id = ?
+                                    ORDER BY timestamp_end ASC
+                                    LIMIT ?
+                                "
+                            ))?
+                            .query_and_then(
+                                rusqlite::params![
+                                    storage_group_id as i64,
+                                    CLEANUP_CHUNK_SIZE as i64,
+                                ],
+                                |row| {
+                                    let deletion_candidate = DeletionCandidate {
+                                        recording_id: row.get_raw_checked(0)?.as_i64()? as usize,
+                                        path: row.get_raw_checked(1)?.as_str()?.into(),
+                                        size_bytes: row.get_raw_checked(2)?.as_i64()? as usize,
+                                    };
+                                    Ok(deletion_candidate)
+                                },
+                            )?
+                            .collect::<Result<_, Error>>()?;
+                        Ok(deletion_candidates)
+                    })
+                    .await?;
+
+                // This means we want to remove some files but no candidates exist
+                if deletion_candidates.is_empty() {
+                    log::warn!("Unable to find deletion_candidates");
+                    break;
+                }
+
+                // Remove picked files
+                for deletion_candidate in deletion_candidates {
+                    // Remove file
+                    fs::remove_file(&deletion_candidate.path).await?;
+
+                    // Remove file from DB
+                    let recording_id = deletion_candidate.recording_id;
+                    self.sqlite
+                        .query(move |connection| -> Result<(), Error> {
+                            let rows = connection
+                                .prepare_cached(indoc!(
+                                    "
+                                    DELETE FROM
+                                        devices_soft_ipc_manager_recordings
+                                    WHERE
+                                        recording_id = ?
+                                "
+                                ))?
+                                .execute(rusqlite::params![recording_id as i64])?;
+
+                            match rows {
+                                1 => Ok(()),
+                                _ => Err(format_err!("Invalid removed rows count: {}", rows)),
+                            }
+                        })
+                        .await?;
+
+                    // Decrease size
+                    size_bytes_total_estimated -= deletion_candidate.size_bytes;
+
+                    // Remove empty directories
+                    Self::remove_empty_dir(
+                        &storage_root_path,
+                        deletion_candidate.path.parent().unwrap(),
+                    )
+                    .await?;
+
+                    if size_bytes_total_estimated < size_bytes_total_desired {
+                        break;
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
+
     async fn recordings_fix(&self) -> Result<(), Error> {
         // TODO:
         Ok(())
@@ -301,14 +447,14 @@ impl Worker {
                 },
                 recordings_cleanup = recordings_cleanup_timer.next() => {
                     if recordings_cleanup.is_some() {
-                        if let Err(error) = self. recordings_cleanup().await {
+                        if let Err(error) = self.recordings_cleanup().await {
                             return error;
                         }
                     }
                 },
                 recordings_fix = recordings_fix_timer.next() => {
                     if recordings_fix.is_some() {
-                        if let Err(error) = self. recordings_fix().await {
+                        if let Err(error) = self.recordings_fix().await {
                             return error;
                         }
                     }
@@ -325,6 +471,11 @@ impl Worker {
         }
     }
 
+    fn get_storage_root_path(&self) -> PathBuf {
+        self.fs
+            .persistent_storage_directory()
+            .join("devices_soft_ipc_manager")
+    }
     fn build_storage_relative_path(
         channel_id: usize,
         time_start_utc: NaiveDateTime,
@@ -356,6 +507,24 @@ impl Worker {
         fs::copy(&from, &to).await?;
         fs::remove_file(&from).await?;
 
+        Ok(())
+    }
+
+    // removed all directories from remove_dir up to root_dir if they are empty
+    // root_dir must be a parent of remove_dir
+    async fn remove_empty_dir(
+        root_dir: &Path,
+        remove_dir: &Path,
+    ) -> Result<(), Error> {
+        let mut remove_dir: PathBuf = remove_dir.strip_prefix(root_dir)?.into();
+        loop {
+            if fs::remove_dir(root_dir.join(&remove_dir)).await.is_err() {
+                break;
+            }
+            if remove_dir.pop() {
+                break;
+            }
+        }
         Ok(())
     }
 }
