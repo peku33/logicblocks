@@ -460,7 +460,7 @@ impl Worker {
                     }
                 },
                 recordings_cleanup = recordings_cleanup_timer.next() => {
-                    if let Some(()) = recordings_cleanup {
+                    if let Some(_) = recordings_cleanup {
                         log::trace!("recordings_cleanup: begin");
                         if let Err(error) = self.recordings_cleanup().await {
                             return error;
