@@ -6,8 +6,10 @@ pub mod uri_cursor;
 
 use bytes::Bytes;
 use failure::{format_err, Error};
-use futures::future::BoxFuture;
-use futures::stream::{Stream, StreamExt};
+use futures::{
+    future::BoxFuture,
+    stream::{Stream, StreamExt},
+};
 use http::{header, HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use hyper_body_variant::HttpBodyVariant;
 use serde::{Deserialize, Serialize};
@@ -74,6 +76,9 @@ pub struct Response {
     hyper_response: hyper::Response<HttpBodyVariant>,
 }
 impl Response {
+    pub fn status_code(&self) -> StatusCode {
+        self.hyper_response.status()
+    }
     pub fn into_hyper_response(self) -> hyper::Response<HttpBodyVariant> {
         self.hyper_response
     }

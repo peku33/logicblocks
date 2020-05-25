@@ -1,7 +1,11 @@
-use super::uri_cursor::{Handler as UriCursorHandler, UriCursor};
-use super::{Handler, Request, Response};
-use futures::future::{ready, BoxFuture};
-use futures::FutureExt;
+use super::{
+    uri_cursor::{Handler as UriCursorHandler, UriCursor},
+    Handler, Request, Response,
+};
+use futures::{
+    future::{ready, BoxFuture},
+    FutureExt,
+};
 
 #[cfg(feature = "ci-packed-gui")]
 use owning_ref::OwningHandle;
@@ -11,13 +15,13 @@ use web_static_pack::hyper_loader::Responder;
 use web_static_pack::loader::Loader;
 
 pub struct RootService<'a> {
-    api_handler: &'a (dyn UriCursorHandler + Sync + Send),
+    api_handler: &'a (dyn UriCursorHandler + Sync),
 
     #[cfg(feature = "ci-packed-gui")]
     gui_responder: OwningHandle<Box<Loader>, Box<Responder<'static>>>,
 }
 impl<'a> RootService<'a> {
-    pub fn new(api_handler: &'a (dyn UriCursorHandler + Sync + Send)) -> Self {
+    pub fn new(api_handler: &'a (dyn UriCursorHandler + Sync)) -> Self {
         #[cfg(feature = "ci-packed-gui")]
         let gui_responder = OwningHandle::new_with_fn(
             Box::new(

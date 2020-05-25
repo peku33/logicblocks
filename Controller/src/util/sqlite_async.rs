@@ -1,4 +1,4 @@
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam::channel::{unbounded, Receiver, Sender};
 use failure::Error;
 use futures::channel::oneshot;
 use futures::{Future, FutureExt};

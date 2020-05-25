@@ -1,9 +1,11 @@
-use futures::future::Future;
-use std::ops::DerefMut;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use futures::{
+    future::{FusedFuture, Future},
+    stream::{FusedStream, Stream},
+    task::{Context, Poll},
+};
+use std::{ops::DerefMut, pin::Pin};
 
-pub struct DerefAsyncFuture<D>
+pub struct DerefFuture<D>
 where
     D: DerefMut,
     D::Target: Future,
@@ -11,7 +13,7 @@ where
 {
     inner: D,
 }
-impl<D> DerefAsyncFuture<D>
+impl<D> DerefFuture<D>
 where
     D: DerefMut,
     D::Target: Future,
@@ -21,7 +23,7 @@ where
         Self { inner }
     }
 }
-impl<D> Future for DerefAsyncFuture<D>
+impl<D> Future for DerefFuture<D>
 where
     D: DerefMut,
     D::Target: Future,
@@ -34,5 +36,16 @@ where
     ) -> Poll<Self::Output> {
         let inner_pin = unsafe { self.map_unchecked_mut(|self_| self_.inner.deref_mut()) };
         inner_pin.poll(cx)
+    }
+}
+impl<D> FusedFuture for DerefFuture<D>
+where
+    D: DerefMut,
+    D::Target: Future,
+    D::Target: FusedFuture,
+    <D::Target as Future>::Output: Send + 'static,
+{
+    fn is_terminated(&self) -> bool {
+        self.inner.deref().is_terminated()
     }
 }

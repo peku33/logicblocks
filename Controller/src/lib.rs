@@ -7,12 +7,15 @@
 #![feature(drain_filter)]
 #![feature(poll_map)]
 #![feature(raw)]
+#![feature(option_unwrap_none)]
+#![feature(never_type)]
 #![warn(clippy::all)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::type_complexity)]
 #![recursion_limit = "256"]
 
 pub mod devices;
+pub mod logic;
 pub mod modules;
 pub mod stubs;
 pub mod util;

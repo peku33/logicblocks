@@ -10,7 +10,7 @@ use logicblocks_controller::devices::logicblocks::houseblocks_v1::common::{
 use logicblocks_controller::devices::logicblocks::houseblocks_v1::master::{
     Master, MasterContext, MasterDescriptor,
 };
-use logicblocks_controller::util::borrowed_async::DerefAsyncFuture;
+use logicblocks_controller::util::borrowed_async::DerefFuture;
 use std::cell::RefCell;
 use std::convert::TryInto;
 use std::time::Duration;
@@ -165,7 +165,7 @@ fn menu_master_avr_v1_relay14_common(device: &avr_v1::relay14_common::Device) ->
     execute_on_tokio(async move {
         let device_run_object = device.device_run();
         let mut future_wrapper =
-            DerefAsyncFuture::new(device_run_object.get_run_future().borrow_mut()).fuse();
+            DerefFuture::new(device_run_object.get_run_future().borrow_mut()).fuse();
 
         let mut relay_id: usize = 0;
         let mut change_timer = tokio::time::interval(Duration::from_secs(1)).fuse();

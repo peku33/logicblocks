@@ -1,5 +1,5 @@
-pub mod local_bridge;
-pub mod next_item_map;
+pub mod handler_async_bridge;
+pub mod map_router;
 
 use super::{Request, Response};
 use futures::future::BoxFuture;
@@ -11,6 +11,14 @@ pub trait Handler {
         request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response>;
+}
+
+pub trait HandlerAsync {
+    fn handle(
+        &self,
+        request: Request,
+        uri_cursor: UriCursor,
+    ) -> BoxFuture<'_, BoxFuture<'static, Response>>;
 }
 
 #[derive(Debug)]

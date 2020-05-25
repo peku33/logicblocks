@@ -2,8 +2,8 @@ use super::recorder::{Recorder, Segment};
 use crate::modules::fs::Fs;
 use crate::modules::sqlite::SQLite;
 use crate::modules::{Context, Handle, Module, ModuleFactory};
-use crate::util::borrowed_async::DerefAsyncFuture;
-use crate::util::select_all_empty::select_all_empty;
+use crate::util::borrowed_async::DerefFuture;
+use crate::util::select_all_empty::SelectAllEmptyFuture;
 use crate::util::tokio_cancelable::ThreadedInfiniteToError;
 use chrono::{Datelike, NaiveDateTime, Timelike};
 use failure::{err_msg, format_err, Error};
@@ -202,10 +202,11 @@ impl Worker {
             .try_lock()
             .unwrap();
 
-        let select_all_empty_future =
-            select_all_empty(recorder_run_object_by_recorder_channel_key.values().map(
-                |recorder_owned_run| DerefAsyncFuture::new(recorder_owned_run.try_lock().unwrap()),
-            ));
+        let select_all_empty_future: SelectAllEmptyFuture<_> =
+            recorder_run_object_by_recorder_channel_key
+                .values()
+                .map(|recorder_owned_run| DerefFuture::new(recorder_owned_run.try_lock().unwrap()))
+                .collect();
 
         select_all_empty_future.await
     }

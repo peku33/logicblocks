@@ -2,6 +2,7 @@
 
 use super::common::{Address, AddressDeviceType, AddressSerial, Frame, Payload};
 use super::master::MasterDescriptor;
+use crossbeam::channel;
 use failure::{err_msg, format_err, Error};
 use futures::channel::oneshot;
 use scopeguard::defer;
@@ -208,7 +209,7 @@ pub struct Master {
 
     ftdi_context: *mut libftdi1_sys::ftdi_context,
     worker_thread: Option<thread::JoinHandle<()>>, // Option to allow manual dropping
-    worker_thread_sender: Option<crossbeam_channel::Sender<MasterTransaction>>, // Option to allow manual dropping
+    worker_thread_sender: Option<channel::Sender<MasterTransaction>>, // Option to allow manual dropping
 }
 impl Master {
     pub fn new(master_descriptor: MasterDescriptor) -> Result<Self, Error> {
@@ -296,7 +297,7 @@ impl Master {
         }
 
         let ftdi_context_wrapper = FtdiContextWrapper(ftdi_context);
-        let (channel_sender, channel_receiver) = crossbeam_channel::unbounded();
+        let (channel_sender, channel_receiver) = channel::unbounded();
 
         let worker_thread = thread::Builder::new()
             .name(format!(
@@ -377,7 +378,7 @@ impl Master {
 
     fn thread_main(
         ftdi_context: *mut libftdi1_sys::ftdi_context,
-        receiver: crossbeam_channel::Receiver<MasterTransaction>,
+        receiver: channel::Receiver<MasterTransaction>,
     ) {
         for master_transaction in receiver.iter() {
             let send_result = match master_transaction {

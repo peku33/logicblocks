@@ -1,4 +1,5 @@
 pub mod borrowed_async;
+pub mod bus;
 pub mod bus2;
 pub mod select_all_empty;
 pub mod sqlite_async;

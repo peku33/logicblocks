@@ -1,6 +1,6 @@
 use super::device::{AsDeviceTrait, RunObjectTrait};
 use super::device_event_stream;
-use crate::util::borrowed_async::DerefAsyncFuture;
+use crate::util::borrowed_async::DerefFuture;
 use crate::util::bus2;
 use crate::web::sse;
 use crate::web::uri_cursor::{Handler, UriCursor};
@@ -73,7 +73,7 @@ impl<'d> Pool<'d> {
             .map(|(device_id, device_owning_handle)| {
                 async move {
                     let run_future =
-                        DerefAsyncFuture::new(device_owning_handle.get_run_future().borrow_mut());
+                        DerefFuture::new(device_owning_handle.get_run_future().borrow_mut());
 
                     let event_stream_forward_future =
                         match device_owning_handle.event_stream_subscribe() {
