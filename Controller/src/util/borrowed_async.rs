@@ -1,6 +1,5 @@
 use futures::{
     future::{FusedFuture, Future},
-    stream::{FusedStream, Stream},
     task::{Context, Poll},
 };
 use std::{ops::DerefMut, pin::Pin};
