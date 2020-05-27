@@ -231,12 +231,13 @@ where
         // target_device_id_signal_id -> source_device_id_signal_ids
         let mut connection_state_candidates_inverted =
             HashMap::<DeviceIdSignalId<DeviceId>, HashSet<DeviceIdSignalId<DeviceId>>>::new();
-        for (source_device_id_signal_id, target_device_id_signal_ids) in connections {
+        for (source_device_id_signal_id, target_device_id_signal_ids) in connection_state_candidates
+        {
             for target_device_id_signal_id in target_device_id_signal_ids {
                 connection_state_candidates_inverted
-                    .entry(*target_device_id_signal_id)
+                    .entry(target_device_id_signal_id)
                     .or_default()
-                    .insert(*source_device_id_signal_id);
+                    .insert(source_device_id_signal_id);
             }
         }
 
