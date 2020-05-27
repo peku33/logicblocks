@@ -61,7 +61,8 @@ impl Device {
         self.output.set(Bool::new(true).into());
     }
     fn t(&self) {
-        self.output.set(Bool::new(self.output.get().value()).into());
+        let value = self.output.get().value();
+        self.output.set(Bool::new(!value).into());
     }
 }
 impl DeviceTrait for Device {
