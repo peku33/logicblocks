@@ -31,8 +31,7 @@ impl<V: StateValue + PartialEq + Eq> Device<V> {
 
         loop {
             select! {
-                () = input_stream.select_next_some() => {
-                    let value = self.input.get();
+                value = input_stream.select_next_some() => {
                     log::debug!("{} -> {:?}", self.name, value);
                 }
             }

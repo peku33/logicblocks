@@ -103,7 +103,7 @@ impl<V: StateValue + PartialEq + Eq> SignalBase for Signal<V> {
 pub trait RemoteBase: Send + Sync + fmt::Debug {
     fn type_id(&self) -> TypeId;
     fn get(&self) -> Arc<dyn ValueAny>;
-    fn get_stream(&self) -> BoxStream<()>;
+    fn get_stream(&self) -> BoxStream<Arc<dyn ValueAny>>;
 }
 #[derive(Debug)]
 pub struct Remote<V: StateValue + PartialEq + Eq> {
@@ -127,7 +127,7 @@ impl<V: StateValue + PartialEq + Eq> RemoteBase for Remote<V> {
 
         self.inner.get()
     }
-    fn get_stream(&self) -> BoxStream<()> {
+    fn get_stream(&self) -> BoxStream<Arc<dyn ValueAny>> {
         log::trace!("Remote - get_stream called");
 
         RemoteStream::new(self.inner.clone()).boxed()
@@ -150,7 +150,7 @@ impl<V: StateValue + PartialEq + Eq> RemoteStream<V> {
     }
 }
 impl<V: StateValue + PartialEq + Eq> Stream for RemoteStream<V> {
-    type Item = ();
+    type Item = Arc<dyn ValueAny>;
 
     fn poll_next(
         self: Pin<&mut Self>,
@@ -164,7 +164,7 @@ impl<V: StateValue + PartialEq + Eq> Stream for RemoteStream<V> {
 
         let version = self_.inner.version.load(Ordering::SeqCst);
         if self_.version.swap(version, Ordering::Relaxed) != version {
-            return Poll::Ready(Some(()));
+            return Poll::Ready(Some(self_.inner.get()));
         }
         Poll::Pending
     }

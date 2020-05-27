@@ -31,15 +31,10 @@ impl<V: EventValue> Inner<V> {
             stream_borrowed: AtomicBool::new(false),
         }
     }
-    pub fn take(&self) -> Box<[Arc<V>]> {
-        log::trace!("Inner - take called");
+    pub fn pop(&self) -> Option<Arc<V>> {
+        log::trace!("Inner - pop");
 
-        let values_count = self.queue.len();
-        let mut values = Vec::with_capacity(values_count);
-        for _ in 0..values_count {
-            values.push(self.queue.pop().unwrap());
-        }
-        values.into_boxed_slice()
+        self.queue.pop().ok()
     }
     pub fn push(
         &self,
@@ -67,11 +62,6 @@ impl<V: EventValue> Signal<V> {
         Self {
             inner: Arc::new(Inner::new()),
         }
-    }
-    pub fn take(&self) -> Box<[Arc<V>]> {
-        log::trace!("Signal - take called");
-
-        self.inner.take()
     }
     pub fn get_stream(&self) -> ValueStream<V> {
         log::trace!("Signal - get_stream called");
@@ -101,7 +91,7 @@ impl<V: EventValue> ValueStream<V> {
     }
 }
 impl<V: EventValue> Stream for ValueStream<V> {
-    type Item = ();
+    type Item = Arc<V>;
 
     fn poll_next(
         self: Pin<&mut Self>,
@@ -112,11 +102,10 @@ impl<V: EventValue> Stream for ValueStream<V> {
         let self_ = unsafe { self.get_unchecked_mut() };
 
         self_.inner.waker.register(cx.waker());
-
-        if !self_.inner.queue.is_empty() {
-            return Poll::Ready(Some(()));
+        match self_.inner.pop() {
+            Some(value) => Poll::Ready(Some(value)),
+            None => Poll::Pending,
         }
-        Poll::Pending
     }
 }
 impl<V: EventValue> FusedStream for ValueStream<V> {

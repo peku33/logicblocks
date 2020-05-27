@@ -13,7 +13,7 @@ use futures::{
 };
 use http::Method;
 use maplit::hashmap;
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 pub struct Device {
     signal: EventSource<Void>,
@@ -48,7 +48,7 @@ impl Handler for Device {
         match (request.method(), uri_cursor.next_item()) {
             (&Method::GET, ("", None)) => async move { Response::ok_empty() }.boxed(),
             (&Method::POST, ("", None)) => {
-                self.signal.push(Arc::new(Void::new()));
+                self.signal.push(Void::new().into());
                 async move { Response::ok_empty() }.boxed()
             }
             _ => async move { Response::error_404() }.boxed(),

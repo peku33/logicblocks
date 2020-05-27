@@ -112,7 +112,7 @@ impl<V: StateValue + PartialEq + Eq> ValueStream<V> {
     }
 }
 impl<V: StateValue + PartialEq + Eq> Stream for ValueStream<V> {
-    type Item = ();
+    type Item = Option<Arc<V>>;
 
     fn poll_next(
         self: Pin<&mut Self>,
@@ -126,7 +126,7 @@ impl<V: StateValue + PartialEq + Eq> Stream for ValueStream<V> {
 
         let version = self_.inner.version.load(Ordering::SeqCst);
         if self_.version.swap(version, Ordering::Relaxed) != version {
-            return Poll::Ready(Some(()));
+            return Poll::Ready(Some(self_.inner.get()));
         }
         Poll::Pending
     }

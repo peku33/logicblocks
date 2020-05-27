@@ -33,20 +33,10 @@ impl<V: EventValue> Inner<V> {
             remote_stream_borrowed: AtomicBool::new(false),
         }
     }
-    pub fn is_pending(&self) -> bool {
-        log::trace!("Inner - is_pending called");
+    pub fn pop(&self) -> Option<Arc<V>> {
+        log::trace!("Inner - pop called");
 
-        !self.queue.is_empty()
-    }
-    pub fn take(&self) -> Box<[Arc<V>]> {
-        log::trace!("Inner - take called");
-
-        let values_count = self.queue.len();
-        let mut values = Vec::with_capacity(values_count);
-        for _ in 0..values_count {
-            values.push(self.queue.pop().unwrap());
-        }
-        values.into_boxed_slice()
+        self.queue.pop().ok()
     }
     pub fn push(
         &self,
@@ -94,8 +84,7 @@ impl<V: EventValue> SignalBase for Signal<V> {
 
 pub trait RemoteBase: Send + Sync + fmt::Debug {
     fn type_id(&self) -> TypeId;
-    fn take(&self) -> Box<[Arc<dyn ValueAny>]>;
-    fn get_stream(&self) -> BoxStream<()>;
+    fn get_stream(&self) -> BoxStream<Arc<dyn ValueAny>>;
 }
 #[derive(Debug)]
 pub struct Remote<V: EventValue> {
@@ -117,18 +106,7 @@ impl<V: EventValue> RemoteBase for Remote<V> {
 
         TypeId::of::<V>()
     }
-    fn take(&self) -> Box<[Arc<dyn ValueAny>]> {
-        log::trace!("Remote - take called");
-
-        self.inner
-            .take()
-            .into_vec()
-            .into_iter()
-            .map(|item| item as Arc<dyn ValueAny>)
-            .collect::<Vec<_>>()
-            .into_boxed_slice()
-    }
-    fn get_stream(&self) -> BoxStream<()> {
+    fn get_stream(&self) -> BoxStream<Arc<dyn ValueAny>> {
         log::trace!("Remote - get_stream called");
 
         RemoteStream::new(self.inner.clone()).boxed()
@@ -158,7 +136,7 @@ impl<V: EventValue> RemoteStream<V> {
     }
 }
 impl<V: EventValue> Stream for RemoteStream<V> {
-    type Item = ();
+    type Item = Arc<dyn ValueAny>;
 
     fn poll_next(
         self: Pin<&mut Self>,
@@ -169,11 +147,10 @@ impl<V: EventValue> Stream for RemoteStream<V> {
         let self_ = unsafe { self.get_unchecked_mut() };
 
         self_.inner.waker.register(cx.waker());
-
-        if self_.inner.is_pending() {
-            return Poll::Ready(Some(()));
+        match self_.inner.pop() {
+            Some(value) => Poll::Ready(Some(value)),
+            None => Poll::Pending,
         }
-        Poll::Pending
     }
 }
 impl<V: EventValue> FusedStream for RemoteStream<V> {

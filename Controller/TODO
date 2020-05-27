@@ -1,4 +1,3 @@
-- Make signal_target::* ValueStreams return actual values, not ()
 - drop bus2
 - clear unused utils
 - check if refcell is used in device / project

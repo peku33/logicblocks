@@ -17,7 +17,7 @@ use futures::{
 use http::Method;
 use maplit::hashmap;
 use serde_json::json;
-use std::{borrow::Cow, cmp::Ordering, sync::Arc};
+use std::borrow::Cow;
 
 pub struct Device {
     r: EventTarget<Void>,
@@ -31,7 +31,7 @@ impl Device {
             r: EventTarget::new(),
             s: EventTarget::new(),
             t: EventTarget::new(),
-            output: StateSource::new(Arc::new(initial)),
+            output: StateSource::new(initial.into()),
         }
     }
     async fn run(&self) -> ! {
@@ -41,35 +41,27 @@ impl Device {
 
         loop {
             select! {
-                _ = r_stream.select_next_some() => {
-                    self.process_signals();
+                Void = r_stream.select_next_some() => {
+                    self.r();
                 },
-                _ = s_stream.select_next_some() => {
-                    self.process_signals();
+                Void = s_stream.select_next_some() => {
+                    self.s();
                 },
-                _ = t_stream.select_next_some() => {
-                    self.process_signals();
+                Void = t_stream.select_next_some() => {
+                    self.t();
                 },
             }
         }
     }
 
-    fn process_signals(&self) {
-        let r_count = self.r.take().len();
-        let s_count = self.s.take().len();
-        let t_count = self.t.take().len();
-
-        let mut value = match r_count.cmp(&s_count) {
-            Ordering::Less => true,
-            Ordering::Greater => false,
-            Ordering::Equal => self.output.get().value(),
-        };
-
-        if t_count % 2 == 1 {
-            value = !value;
-        }
-
-        self.output.set(Arc::new(Bool::new(value)));
+    fn r(&self) {
+        self.output.set(Bool::new(false).into());
+    }
+    fn s(&self) {
+        self.output.set(Bool::new(true).into());
+    }
+    fn t(&self) {
+        self.output.set(Bool::new(self.output.get().value()).into());
     }
 }
 impl DeviceTrait for Device {
@@ -108,16 +100,15 @@ impl Handler for Device {
                 async move { Response::ok_json(json!({ "value": value })) }.boxed()
             }
             (&Method::POST, ("r", None)) => {
-                self.output.set(Arc::new(Bool::new(false)));
+                self.r();
                 async move { Response::ok_empty() }.boxed()
             }
             (&Method::POST, ("s", None)) => {
-                self.output.set(Arc::new(Bool::new(true)));
+                self.s();
                 async move { Response::ok_empty() }.boxed()
             }
             (&Method::POST, ("t", None)) => {
-                let value = self.output.get().value();
-                self.output.set(Arc::new(Bool::new(!value)));
+                self.t();
                 async move { Response::ok_empty() }.boxed()
             }
             _ => async move { Response::error_404() }.boxed(),

@@ -310,9 +310,7 @@ where
 
                 source_remote_base
                     .get_stream()
-                    .for_each(async move |()| {
-                        let value = source_remote_base.get();
-
+                    .for_each(async move |value| {
                         log::trace!(
                             "new value from {:?}: {:?}",
                             source_device_id_signal_id,
@@ -381,23 +379,19 @@ where
 
                 source_remote_base
                     .get_stream()
-                    .for_each(async move |()| {
-                        let pending_values = source_remote_base.take().into_vec();
-
+                    .for_each(async move |pending_value| {
                         log::trace!(
-                            "new values from {:?}: {:?}",
+                            "new value from {:?}: {:?}",
                             source_device_id_signal_id,
-                            pending_values
+                            pending_value
                         );
 
-                        for pending_value in pending_values {
-                            for target in targets.iter() {
-                                let (target_device_id_signal_id, ref target_remote_base) = target;
+                        for target in targets.iter() {
+                            let (target_device_id_signal_id, ref target_remote_base) = target;
 
-                                log::trace!("forwarding to {:?}", target_device_id_signal_id);
+                            log::trace!("forwarding to {:?}", target_device_id_signal_id);
 
-                                target_remote_base.push_unwrap(pending_value.clone());
-                            }
+                            target_remote_base.push_unwrap(pending_value.clone());
                         }
                     })
                     .await;
