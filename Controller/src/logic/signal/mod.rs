@@ -3,14 +3,16 @@ pub mod event_target;
 pub mod state_source;
 pub mod state_target;
 
+use crate::datatypes::DataType;
 use std::{any::Any, fmt};
 
-pub trait Value: Any + Send + Sync + fmt::Debug + 'static {}
-
-pub trait StateValue: Value {}
-pub trait EventValue: Value {}
-
 pub trait ValueAny = Any + 'static + Send + Sync;
+
+pub trait EventValue: ValueAny + fmt::Debug {}
+impl<T> EventValue for T where T: DataType + ValueAny + fmt::Debug {}
+
+pub trait StateValue: ValueAny + fmt::Debug {}
+impl<T> StateValue for T where T: DataType + ValueAny + fmt::Debug {}
 
 pub trait SignalBase {
     fn remote(&self) -> SignalRemoteBase;

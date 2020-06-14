@@ -4,9 +4,10 @@ pub use super::master_linux::*;
 #[cfg(not(target_os = "linux"))]
 pub use super::master_stub::*;
 
-use std::ffi;
-use std::fmt;
-use std::fmt::{Debug, Display};
+use std::{
+    ffi, fmt,
+    fmt::{Debug, Display},
+};
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct MasterDescriptor {

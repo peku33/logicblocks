@@ -1,37 +1,33 @@
 #![cfg(target_os = "linux")]
 
-use super::common::{Address, AddressDeviceType, AddressSerial, Frame, Payload};
-use super::master::MasterDescriptor;
+use super::{
+    common::{Address, AddressDeviceType, AddressSerial, Frame, Payload},
+    master::MasterDescriptor,
+};
 use crossbeam::channel;
 use failure::{err_msg, format_err, Error};
 use futures::channel::oneshot;
 use scopeguard::defer;
-use std::cell::RefCell;
-use std::convert::TryInto;
-use std::ffi;
-use std::fmt;
-use std::fmt::{Debug, Display};
-use std::mem::MaybeUninit;
-use std::ptr;
-use std::thread;
-use std::time::Duration;
+use std::{
+    cell::RefCell, convert::TryInto, ffi, fmt, mem::MaybeUninit, ptr, thread, time::Duration,
+};
 
 enum MasterTransaction {
     FrameOut {
         service_mode: bool,
         address: Address,
         out_payload: Payload,
-        sender: oneshot::Sender<Result<(), Error>>,
+        result_sender: oneshot::Sender<Result<(), Error>>,
     },
     FrameOutIn {
         service_mode: bool,
         address: Address,
         out_payload: Payload,
         in_timeout: Duration,
-        sender: oneshot::Sender<Result<Payload, Error>>,
+        result_sender: oneshot::Sender<Result<Payload, Error>>,
     },
     DeviceDiscovery {
-        sender: oneshot::Sender<Result<Address, Error>>,
+        result_sender: oneshot::Sender<Result<Address, Error>>,
     },
 }
 
@@ -206,10 +202,9 @@ unsafe impl Send for FtdiContextWrapper {}
 
 pub struct Master {
     master_descriptor: MasterDescriptor,
-
     ftdi_context: *mut libftdi1_sys::ftdi_context,
+    master_transaction_sender: Option<channel::Sender<MasterTransaction>>, // Option to allow manual dropping
     worker_thread: Option<thread::JoinHandle<()>>, // Option to allow manual dropping
-    worker_thread_sender: Option<channel::Sender<MasterTransaction>>, // Option to allow manual dropping
 }
 impl Master {
     pub fn new(master_descriptor: MasterDescriptor) -> Result<Self, Error> {
@@ -297,7 +292,7 @@ impl Master {
         }
 
         let ftdi_context_wrapper = FtdiContextWrapper(ftdi_context);
-        let (channel_sender, channel_receiver) = channel::unbounded();
+        let (master_transaction_sender, master_transaction_receiver) = channel::unbounded();
 
         let worker_thread = thread::Builder::new()
             .name(format!(
@@ -305,15 +300,15 @@ impl Master {
                 master_descriptor.serial_number.to_string_lossy()
             ))
             .spawn(move || {
-                Self::thread_main(ftdi_context_wrapper.0, channel_receiver);
+                Self::thread_main(ftdi_context_wrapper.0, master_transaction_receiver);
             })
             .unwrap();
 
         Ok(Self {
             master_descriptor,
             ftdi_context: ftdi_context_rc.replace(ptr::null_mut()),
+            master_transaction_sender: Some(master_transaction_sender),
             worker_thread: Some(worker_thread),
-            worker_thread_sender: Some(channel_sender),
         })
     }
 
@@ -324,20 +319,20 @@ impl Master {
         address: Address,
         out_payload: Payload,
     ) -> Result<(), Error> {
-        let (sender, receiver) = oneshot::channel();
+        let (result_sender, result_receiver) = oneshot::channel();
 
-        self.worker_thread_sender
+        self.master_transaction_sender
             .as_ref()
             .unwrap()
             .send(MasterTransaction::FrameOut {
                 service_mode,
                 address,
                 out_payload,
-                sender,
+                result_sender,
             })
             .unwrap();
 
-        receiver.await?
+        result_receiver.await?
     }
 
     pub async fn transaction_out_in(
@@ -348,9 +343,9 @@ impl Master {
         out_payload: Payload,
         in_timeout: Duration,
     ) -> Result<Payload, Error> {
-        let (sender, receiver) = oneshot::channel();
+        let (result_sender, result_receiver) = oneshot::channel();
 
-        self.worker_thread_sender
+        self.master_transaction_sender
             .as_ref()
             .unwrap()
             .send(MasterTransaction::FrameOutIn {
@@ -358,36 +353,36 @@ impl Master {
                 address,
                 out_payload,
                 in_timeout,
-                sender,
+                result_sender,
             })
             .unwrap();
-        receiver.await?
+        result_receiver.await?
     }
 
     pub async fn transaction_device_discovery(&self) -> Result<Address, Error> {
-        let (sender, receiver) = oneshot::channel();
+        let (result_sender, result_receiver) = oneshot::channel();
 
-        self.worker_thread_sender
+        self.master_transaction_sender
             .as_ref()
             .unwrap()
-            .send(MasterTransaction::DeviceDiscovery { sender })
+            .send(MasterTransaction::DeviceDiscovery { result_sender })
             .unwrap();
 
-        receiver.await?
+        result_receiver.await?
     }
 
     fn thread_main(
         ftdi_context: *mut libftdi1_sys::ftdi_context,
-        receiver: channel::Receiver<MasterTransaction>,
+        master_transaction_receiver: channel::Receiver<MasterTransaction>,
     ) {
-        for master_transaction in receiver.iter() {
-            let send_result = match master_transaction {
+        for master_transaction in master_transaction_receiver.iter() {
+            let _ = match master_transaction {
                 MasterTransaction::FrameOut {
                     service_mode,
                     address,
                     out_payload,
-                    sender,
-                } => sender
+                    result_sender,
+                } => result_sender
                     .send(Self::handle_transaction_frame_out(
                         ftdi_context,
                         service_mode,
@@ -401,8 +396,8 @@ impl Master {
                     address,
                     out_payload,
                     in_timeout,
-                    sender,
-                } => sender
+                    result_sender,
+                } => result_sender
                     .send(Self::handle_transaction_frame_out_in(
                         ftdi_context,
                         service_mode,
@@ -412,14 +407,13 @@ impl Master {
                     ))
                     .map_err(|e| e.map(|_| ())),
 
-                MasterTransaction::DeviceDiscovery { sender } => sender
+                MasterTransaction::DeviceDiscovery { result_sender } => result_sender
                     .send(Self::handle_transaction_device_discovery(
                         ftdi_context,
                         &Duration::from_millis(250),
                     ))
                     .map_err(|e| e.map(|_| ())),
             };
-            send_result.unwrap_or_else(|error| log::error!("error while sending: {:?}", error));
         }
     }
 
@@ -500,7 +494,7 @@ impl Master {
         timeout_left: &mut Duration,
     ) -> Result<Box<[u8]>, Error> {
         loop {
-            let mut ftdi_read_data_buffer = [0, 128]; // FIXME: Move to heap buffer
+            let mut ftdi_read_data_buffer = [0, 128]; // TODO: Move to heap buffer
             let ftdi_read_data_result = unsafe {
                 libftdi1_sys::ftdi_read_data(
                     ftdi_context,
@@ -625,7 +619,7 @@ impl Master {
         }
     }
 }
-impl Display for Master {
+impl fmt::Display for Master {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,
@@ -633,7 +627,7 @@ impl Display for Master {
         return write!(f, "Master({})", self.master_descriptor);
     }
 }
-impl Debug for Master {
+impl fmt::Debug for Master {
     fn fmt(
         &self,
         f: &mut fmt::Formatter,
@@ -645,7 +639,7 @@ impl Debug for Master {
 }
 impl Drop for Master {
     fn drop(&mut self) {
-        self.worker_thread_sender.take(); // Closes the pipe, effectively telling thread to stop
+        self.master_transaction_sender.take(); // Closes the pipe, effectively telling thread to stop
         self.worker_thread.take().unwrap().join().unwrap(); // Close the thread
 
         if !self.ftdi_context.is_null() {
@@ -653,3 +647,5 @@ impl Drop for Master {
         }
     }
 }
+unsafe impl Sync for Master {}
+unsafe impl Send for Master {}

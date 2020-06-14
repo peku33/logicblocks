@@ -1,3 +1,4 @@
+- convert set-* property / signals to sinks
 - drop bus2
 - clear unused utils
 - check if refcell is used in device / project

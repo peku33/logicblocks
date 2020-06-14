@@ -4,7 +4,7 @@ use futures::{
     task::AtomicWaker,
 };
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     fmt,
     pin::Pin,
     sync::{
@@ -15,12 +15,12 @@ use std::{
 };
 
 #[derive(Debug)]
-struct Inner<V: StateValue + PartialEq + Eq> {
+struct Inner<V: StateValue + PartialEq> {
     value: Mutex<Arc<V>>,
     version: AtomicUsize,
     waker: AtomicWaker,
 }
-impl<V: StateValue + PartialEq + Eq> Inner<V> {
+impl<V: StateValue + PartialEq> Inner<V> {
     pub fn new(initial: Arc<V>) -> Self {
         log::trace!("Inner - new called");
 
@@ -60,16 +60,16 @@ impl<V: StateValue + PartialEq + Eq> Inner<V> {
         self.waker.wake();
     }
 }
-impl<V: StateValue + PartialEq + Eq> Drop for Inner<V> {
+impl<V: StateValue + PartialEq> Drop for Inner<V> {
     fn drop(&mut self) {
         log::trace!("Inner - drop called");
     }
 }
 
-pub struct Signal<V: StateValue + PartialEq + Eq> {
+pub struct Signal<V: StateValue + PartialEq> {
     inner: Arc<Inner<V>>,
 }
-impl<V: StateValue + PartialEq + Eq> Signal<V> {
+impl<V: StateValue + PartialEq> Signal<V> {
     pub fn new(initial: Arc<V>) -> Self {
         log::trace!("Signal - new called");
 
@@ -92,7 +92,7 @@ impl<V: StateValue + PartialEq + Eq> Signal<V> {
         self.inner.set(value)
     }
 }
-impl<V: StateValue + PartialEq + Eq> SignalBase for Signal<V> {
+impl<V: StateValue + PartialEq> SignalBase for Signal<V> {
     fn remote(&self) -> SignalRemoteBase {
         log::trace!("Signal - remote called");
 
@@ -102,25 +102,31 @@ impl<V: StateValue + PartialEq + Eq> SignalBase for Signal<V> {
 
 pub trait RemoteBase: Send + Sync + fmt::Debug {
     fn type_id(&self) -> TypeId;
+    fn type_name(&self) -> &'static str;
     fn get(&self) -> Arc<dyn ValueAny>;
     fn get_stream(&self) -> BoxStream<Arc<dyn ValueAny>>;
 }
 #[derive(Debug)]
-pub struct Remote<V: StateValue + PartialEq + Eq> {
+pub struct Remote<V: StateValue + PartialEq> {
     inner: Arc<Inner<V>>,
 }
-impl<V: StateValue + PartialEq + Eq> Remote<V> {
+impl<V: StateValue + PartialEq> Remote<V> {
     fn new(inner: Arc<Inner<V>>) -> Self {
         log::trace!("Remote - new called");
 
         Self { inner }
     }
 }
-impl<V: StateValue + PartialEq + Eq> RemoteBase for Remote<V> {
+impl<V: StateValue + PartialEq> RemoteBase for Remote<V> {
     fn type_id(&self) -> TypeId {
         log::trace!("Remote - new called");
 
         TypeId::of::<V>()
+    }
+    fn type_name(&self) -> &'static str {
+        log::trace!("Remote - type_name called");
+
+        type_name::<V>()
     }
     fn get(&self) -> Arc<dyn ValueAny> {
         log::trace!("Remote - get called");
@@ -134,11 +140,11 @@ impl<V: StateValue + PartialEq + Eq> RemoteBase for Remote<V> {
     }
 }
 
-pub struct RemoteStream<V: StateValue + PartialEq + Eq> {
+pub struct RemoteStream<V: StateValue + PartialEq> {
     inner: Arc<Inner<V>>,
     version: AtomicUsize,
 }
-impl<V: StateValue + PartialEq + Eq> RemoteStream<V> {
+impl<V: StateValue + PartialEq> RemoteStream<V> {
     fn new(inner: Arc<Inner<V>>) -> Self {
         log::trace!("RemoteStream - new called");
 
@@ -149,7 +155,7 @@ impl<V: StateValue + PartialEq + Eq> RemoteStream<V> {
         }
     }
 }
-impl<V: StateValue + PartialEq + Eq> Stream for RemoteStream<V> {
+impl<V: StateValue + PartialEq> Stream for RemoteStream<V> {
     type Item = Arc<dyn ValueAny>;
 
     fn poll_next(

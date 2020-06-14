@@ -1,43 +1,39 @@
-use super::super::super::{
-    device::{Device as DeviceTrait, Signals},
-    signal::{event_source::Signal as EventSource, SignalBase},
-    signal_values::Void,
+use crate::{
+    datatypes::void::Void,
+    logic::{
+        device::{Device as DeviceTrait, Signals},
+        signal::{event_source, SignalBase},
+    },
+    web::{
+        uri_cursor::{Handler, UriCursor},
+        Request, Response,
+    },
 };
-use crate::web::{
-    uri_cursor::{Handler, UriCursor},
-    Request, Response,
-};
-use futures::{
-    future::{pending as future_pending, ready, BoxFuture, FutureExt},
-    stream::{pending as stream_pending, BoxStream, StreamExt},
-};
+use async_trait::async_trait;
+use futures::future::{pending as future_pending, BoxFuture, FutureExt};
 use http::Method;
 use maplit::hashmap;
 use std::borrow::Cow;
 
 pub struct Device {
-    signal: EventSource<Void>,
+    signal: event_source::Signal<Void>,
 }
+#[async_trait]
 impl DeviceTrait for Device {
     fn get_class(&self) -> Cow<'static, str> {
-        Cow::from("soft/Button/A")
+        Cow::from("soft/button_a")
     }
 
-    fn get_signals_change_stream(&self) -> BoxStream<()> {
-        stream_pending().boxed()
-    }
     fn get_signals(&self) -> Signals {
         hashmap! {
             0 => &self.signal as &dyn SignalBase,
         }
     }
 
-    fn run(&self) -> BoxFuture<!> {
-        future_pending().boxed()
+    async fn run(&self) -> ! {
+        future_pending().await
     }
-    fn finalize(self: Box<Self>) -> BoxFuture<'static, ()> {
-        ready(()).boxed()
-    }
+    async fn finalize(self: Box<Self>) {}
 }
 impl Handler for Device {
     fn handle(
@@ -48,7 +44,7 @@ impl Handler for Device {
         match (request.method(), uri_cursor.next_item()) {
             (&Method::GET, ("", None)) => async move { Response::ok_empty() }.boxed(),
             (&Method::POST, ("", None)) => {
-                self.signal.push(Void::new().into());
+                self.signal.push(Void::default().into());
                 async move { Response::ok_empty() }.boxed()
             }
             _ => async move { Response::error_404() }.boxed(),

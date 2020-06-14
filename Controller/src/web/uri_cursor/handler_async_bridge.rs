@@ -2,12 +2,12 @@ use super::{
     super::{Request, Response},
     Handler, HandlerAsync, UriCursor,
 };
+use crate::util::atomic_cell::AtomicCell;
 use futures::{
     channel::{mpsc, oneshot},
     future::{BoxFuture, FutureExt},
     stream::StreamExt,
 };
-use std::sync::Mutex;
 
 struct HandlerAsyncBridgeItem {
     request: Request,
@@ -17,12 +17,12 @@ struct HandlerAsyncBridgeItem {
 
 pub struct HandlerAsyncBridge {
     requests_sender: mpsc::UnboundedSender<HandlerAsyncBridgeItem>,
-    requests_receiver: Mutex<mpsc::UnboundedReceiver<HandlerAsyncBridgeItem>>,
+    requests_receiver: AtomicCell<mpsc::UnboundedReceiver<HandlerAsyncBridgeItem>>,
 }
 impl HandlerAsyncBridge {
     pub fn new() -> Self {
         let (requests_sender, requests_receiver) = mpsc::unbounded();
-        let requests_receiver = Mutex::new(requests_receiver);
+        let requests_receiver = AtomicCell::new(requests_receiver);
 
         Self {
             requests_sender,
@@ -33,7 +33,7 @@ impl HandlerAsyncBridge {
         &self,
         handler_async: &H,
     ) -> ! {
-        let mut requests_receiver = self.requests_receiver.try_lock().unwrap();
+        let mut requests_receiver = self.requests_receiver.lease();
         requests_receiver
             .by_ref()
             .for_each(async move |item| {

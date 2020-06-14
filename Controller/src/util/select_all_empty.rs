@@ -1,33 +1,42 @@
-use futures::future::{FusedFuture, Future, FutureExt};
-use futures::stream::{FuturesUnordered, Stream};
-use futures::task::{Context, Poll};
-use std::iter::FromIterator;
-use std::marker::Unpin;
-use std::pin::Pin;
+use futures::{
+    future::{FusedFuture, Future},
+    stream::{FuturesUnordered, Stream},
+    task::{Context, Poll},
+};
+use std::{iter::FromIterator, pin::Pin};
 
-pub struct SelectAllEmptyFuture<F: Future + Unpin> {
-    futures: Box<[F]>,
+pub struct JoinAllEmptyUnit<F: Future<Output = ()>> {
+    futures_unordered: FuturesUnordered<F>,
 }
-impl<F: Future + Unpin> FromIterator<F> for SelectAllEmptyFuture<F> {
+impl<F: Future<Output = ()>> FromIterator<F> for JoinAllEmptyUnit<F> {
     fn from_iter<T: IntoIterator<Item = F>>(iter: T) -> Self {
         Self {
-            futures: iter.into_iter().collect(),
+            futures_unordered: FuturesUnordered::from_iter(iter),
         }
     }
 }
-impl<F: Future + Unpin> Future for SelectAllEmptyFuture<F> {
-    type Output = (F::Output, usize);
+impl<F: Future<Output = ()>> Future for JoinAllEmptyUnit<F> {
+    type Output = ();
 
     fn poll(
         self: Pin<&mut Self>,
         cx: &mut Context,
     ) -> Poll<Self::Output> {
-        for (id, future) in self.get_mut().futures.iter_mut().enumerate() {
-            if let Poll::Ready(result) = future.poll_unpin(cx) {
-                return Poll::Ready((result, id));
+        let futures_unordered =
+            unsafe { self.map_unchecked_mut(|self_| &mut self_.futures_unordered) };
+        match futures_unordered.poll_next(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Some(_)) => {
+                cx.waker().wake_by_ref();
+                Poll::Pending
             }
+            Poll::Ready(None) => Poll::Ready(()),
         }
-        Poll::Pending
+    }
+}
+impl<F: Future<Output = ()>> FusedFuture for JoinAllEmptyUnit<F> {
+    fn is_terminated(&self) -> bool {
+        self.futures_unordered.is_empty()
     }
 }
 

@@ -1,10 +1,15 @@
-use super::super::houseblocks_v1::common::{Address, Payload};
-use super::super::houseblocks_v1::master::Master;
-use failure::{err_msg, format_err, Error};
-use std::cell::RefCell;
-use std::convert::TryInto;
-use std::ops::Deref;
-use std::time::Duration;
+use super::{
+    super::super::houseblocks_v1::{
+        common::{Address, Payload},
+        master::Master,
+    },
+    parser::{Parser, ParserPayload},
+};
+use async_trait::async_trait;
+use failure::{err_msg, Error};
+use std::{fmt, ops::Deref, time::Duration};
+
+const TIMEOUT_DEFAULT: Duration = Duration::from_millis(250);
 
 #[derive(Debug)]
 pub struct PowerFlags {
@@ -22,15 +27,19 @@ pub struct Version {
 
 #[derive(Debug)]
 pub struct Driver<'m> {
-    master: &'m RefCell<Master>,
+    master: &'m Master,
     address: Address,
 }
 impl<'m> Driver<'m> {
     pub fn new(
-        master: &'m RefCell<Master>,
+        master: &'m Master,
         address: Address,
     ) -> Self {
         Self { master, address }
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
     }
 
     // Transactions
@@ -40,7 +49,6 @@ impl<'m> Driver<'m> {
         payload: Payload,
     ) -> Result<(), Error> {
         self.master
-            .borrow()
             .transaction_out(service_mode, self.address, payload)
             .await?;
 
@@ -55,7 +63,6 @@ impl<'m> Driver<'m> {
     ) -> Result<Payload, Error> {
         let result = self
             .master
-            .borrow()
             .transaction_out_in(service_mode, self.address, payload, timeout)
             .await?;
 
@@ -71,11 +78,10 @@ impl<'m> Driver<'m> {
             .transaction_out_in(
                 service_mode,
                 Payload::new(Box::from(*b"")).unwrap(),
-                Duration::from_millis(250),
+                TIMEOUT_DEFAULT,
             )
             .await?;
 
-        // TODO: Is .deref() call legal?
         if response.deref() != &b""[..] {
             return Err(err_msg("invalid healthcheck response"));
         }
@@ -89,7 +95,7 @@ impl<'m> Driver<'m> {
         self.transaction_out(service_mode, Payload::new(Box::from(*b"!")).unwrap())
             .await?;
 
-        tokio::time::delay_for(Duration::from_millis(250)).await;
+        tokio::time::delay_for(TIMEOUT_DEFAULT).await;
         Ok(())
     }
 
@@ -101,22 +107,22 @@ impl<'m> Driver<'m> {
             .transaction_out_in(
                 service_mode,
                 Payload::new(Box::from(*b"@")).unwrap(),
-                Duration::from_millis(250),
+                TIMEOUT_DEFAULT,
             )
             .await?;
 
-        if response.len() != 4 {
-            return Err(format_err!(
-                "invalid power_flags response length ({})",
-                response.len()
-            ));
-        }
+        let mut parser = ParserPayload::new(&response);
+        let wdt = parser.expect_bool()?;
+        let bod = parser.expect_bool()?;
+        let ext_reset = parser.expect_bool()?;
+        let pon = parser.expect_bool()?;
+        parser.expect_end()?;
 
         Ok(PowerFlags {
-            wdt: flag10_to_bool(response[0])?,
-            bod: flag10_to_bool(response[1])?,
-            ext_reset: flag10_to_bool(response[2])?,
-            pon: flag10_to_bool(response[3])?,
+            wdt,
+            bod,
+            ext_reset,
+            pon,
         })
     }
 
@@ -128,22 +134,14 @@ impl<'m> Driver<'m> {
             .transaction_out_in(
                 service_mode,
                 Payload::new(Box::from(*b"#")).unwrap(),
-                Duration::from_millis(250),
+                TIMEOUT_DEFAULT,
             )
             .await?;
 
-        if response.len() != 8 {
-            return Err(format_err!(
-                "invalid version response length ({})",
-                response.len()
-            ));
-        }
-
-        let avr_v1 = hex::decode(&response[0..4])?;
-        let avr_v1 = u16::from_be_bytes((&avr_v1[..]).try_into().unwrap());
-
-        let application = hex::decode(&response[4..8])?;
-        let application = u16::from_be_bytes((&application[..]).try_into().unwrap());
+        let mut parser = ParserPayload::new(&response);
+        let avr_v1 = parser.expect_u16()?;
+        let application = parser.expect_u16()?;
+        parser.expect_end()?;
 
         Ok(Version {
             avr_v1,
@@ -157,19 +155,13 @@ impl<'m> Driver<'m> {
             .transaction_out_in(
                 true,
                 Payload::new(Box::new(*b"C")).unwrap(),
-                Duration::from_millis(250),
+                TIMEOUT_DEFAULT,
             )
             .await?;
 
-        if response.len() != 4 {
-            return Err(format_err!(
-                "invalid checksum response length ({})",
-                response.len()
-            ));
-        }
-
-        let checksum = hex::decode(&response.as_ref())?;
-        let checksum = u16::from_be_bytes((&checksum[..]).try_into().unwrap());
+        let mut parser = ParserPayload::new(&response);
+        let checksum = parser.expect_u16()?;
+        parser.expect_end()?;
 
         Ok(checksum)
     }
@@ -182,11 +174,11 @@ impl<'m> Driver<'m> {
     }
 
     // Procedures
-    pub async fn initialize(&self) -> Result<ApplicationModeDriver<'m, '_>, Error> {
+    pub async fn prepare(&self) -> Result<(), Error> {
         // Driver may be already initialized, check it.
         let healthcheck_result = self.healthcheck(false).await;
         if healthcheck_result.is_ok() {
-            log::info!("{:?}: driver was already initialized, rebooting", self);
+            log::info!("{}: driver was already initialized, rebooting", self);
             self.reboot(false).await?;
         }
 
@@ -195,7 +187,7 @@ impl<'m> Driver<'m> {
 
         // Check application up to date
         let application_checksum = self.service_mode_read_application_checksum().await?;
-        log::trace!("{:?}: application_checksum: {}", self, application_checksum);
+        log::trace!("{}: application_checksum: {}", self, application_checksum);
         // TODO: Push new firmware
 
         // Reboot to application section
@@ -204,58 +196,46 @@ impl<'m> Driver<'m> {
         // Check life in application section
         self.healthcheck(false).await?;
 
-        Ok(ApplicationModeDriver::new(self))
+        Ok(())
+    }
+}
+impl<'m> fmt::Display for Driver<'m> {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter,
+    ) -> fmt::Result {
+        write!(f, "{} - {}", self.master, self.address())
     }
 }
 
-fn flag10_to_bool(value: u8) -> Result<bool, Error> {
-    match value {
-        b'0' => Ok(false),
-        b'1' => Ok(true),
-        _ => Err(err_msg("invalid bool flag value")),
-    }
-}
+#[async_trait]
+pub trait ApplicationDriver: Sync {
+    async fn transaction_out(
+        &self,
+        payload: Payload,
+    ) -> Result<(), Error>;
 
-pub struct ApplicationModeDriver<'m, 'd> {
-    driver: &'d Driver<'m>,
+    async fn transaction_out_in(
+        &self,
+        payload: Payload,
+        timeout: Option<Duration>,
+    ) -> Result<Payload, Error>;
 }
-impl<'m, 'd> ApplicationModeDriver<'m, 'd> {
-    fn new(driver: &'d Driver<'m>) -> Self {
-        Self { driver }
-    }
-
-    // Transactions
-    pub async fn transaction_out(
+#[async_trait]
+impl<'m> ApplicationDriver for Driver<'_> {
+    async fn transaction_out(
         &self,
         payload: Payload,
     ) -> Result<(), Error> {
-        self.driver.transaction_out(false, payload).await
+        self.transaction_out(false, payload).await
     }
 
-    pub async fn transaction_out_in(
+    async fn transaction_out_in(
         &self,
         payload: Payload,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<Payload, Error> {
-        self.driver
-            .transaction_out_in(false, payload, timeout)
+        self.transaction_out_in(false, payload, timeout.unwrap_or(TIMEOUT_DEFAULT))
             .await
-    }
-
-    // Routines
-    pub async fn healthcheck(&self) -> Result<(), Error> {
-        self.driver.healthcheck(false).await
-    }
-
-    pub async fn reboot(&self) -> Result<(), Error> {
-        self.driver.reboot(false).await
-    }
-
-    pub async fn read_clear_power_flags(&self) -> Result<PowerFlags, Error> {
-        self.driver.read_clear_power_flags(false).await
-    }
-
-    pub async fn read_application_version(&self) -> Result<Version, Error> {
-        self.driver.read_application_version(false).await
     }
 }

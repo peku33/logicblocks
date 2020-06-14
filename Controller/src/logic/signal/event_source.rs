@@ -5,7 +5,7 @@ use futures::{
     task::AtomicWaker,
 };
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     fmt,
     pin::Pin,
     sync::{
@@ -84,6 +84,7 @@ impl<V: EventValue> SignalBase for Signal<V> {
 
 pub trait RemoteBase: Send + Sync + fmt::Debug {
     fn type_id(&self) -> TypeId;
+    fn type_name(&self) -> &'static str;
     fn get_stream(&self) -> BoxStream<Arc<dyn ValueAny>>;
 }
 #[derive(Debug)]
@@ -105,6 +106,11 @@ impl<V: EventValue> RemoteBase for Remote<V> {
         log::trace!("Remote - type_id called");
 
         TypeId::of::<V>()
+    }
+    fn type_name(&self) -> &'static str {
+        log::trace!("Remote - type_name called");
+
+        type_name::<V>()
     }
     fn get_stream(&self) -> BoxStream<Arc<dyn ValueAny>> {
         log::trace!("Remote - get_stream called");

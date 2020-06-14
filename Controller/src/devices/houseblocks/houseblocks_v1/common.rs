@@ -1,11 +1,8 @@
 use crc::crc16::{Digest, Hasher16};
 use failure::{err_msg, format_err, Error};
-use std::convert::TryInto;
-use std::fmt;
-use std::ops::Deref;
-use std::slice;
+use std::{convert::TryInto, fmt, ops::Deref, slice};
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct AddressDeviceType([u8; Self::LENGTH]);
 impl AddressDeviceType {
     pub const LENGTH: usize = 4;
@@ -26,7 +23,7 @@ impl Deref for AddressDeviceType {
         self.0.as_ref()
     }
 }
-impl fmt::Debug for AddressDeviceType {
+impl fmt::Display for AddressDeviceType {
     fn fmt(
         &self,
         f: &mut fmt::Formatter,
@@ -51,7 +48,7 @@ mod test_address_device_type {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct AddressSerial([u8; Self::LENGTH]);
 impl AddressSerial {
     pub const LENGTH: usize = 8;
@@ -68,7 +65,7 @@ impl Deref for AddressSerial {
         self.0.as_ref()
     }
 }
-impl fmt::Debug for AddressSerial {
+impl fmt::Display for AddressSerial {
     fn fmt(
         &self,
         f: &mut fmt::Formatter,
@@ -114,6 +111,14 @@ impl Address {
     }
     pub fn serial(&self) -> &AddressSerial {
         &self.serial
+    }
+}
+impl fmt::Display for Address {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter,
+    ) -> fmt::Result {
+        write!(f, "{} {}", self.device_type(), self.serial())
     }
 }
 

@@ -5,7 +5,7 @@ use futures::{
     task::AtomicWaker,
 };
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     fmt,
     pin::Pin,
     sync::{
@@ -127,6 +127,7 @@ impl<V: EventValue> Drop for ValueStream<V> {
 
 pub trait RemoteBase: Send + Sync + fmt::Debug {
     fn type_id(&self) -> TypeId;
+    fn type_name(&self) -> &'static str;
     fn push_unwrap(
         &self,
         value: Arc<dyn ValueAny>,
@@ -148,6 +149,11 @@ impl<V: EventValue> RemoteBase for Remote<V> {
         log::trace!("Remote - type_id called");
 
         TypeId::of::<V>()
+    }
+    fn type_name(&self) -> &'static str {
+        log::trace!("Remote - type_name called");
+
+        type_name::<V>()
     }
     fn push_unwrap(
         &self,

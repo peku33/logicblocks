@@ -7,6 +7,9 @@ publish = false
 default-run = "logicblocks-controller"
 
 [dependencies]
+array-init = "0.1.1"
+arrayvec = "0.5.1"
+async-trait = "0.1.31"
 bytes = "0.5.4"
 chrono = "0.4.11"
 crc = { git = "https://github.com/mrhooray/crc-rs" } # FIXME: Until version > 1.9 is available for new_custom

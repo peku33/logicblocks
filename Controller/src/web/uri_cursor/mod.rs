@@ -2,6 +2,7 @@ pub mod handler_async_bridge;
 pub mod map_router;
 
 use super::{Request, Response};
+use async_trait::async_trait;
 use futures::future::BoxFuture;
 use std::sync::Arc;
 
@@ -13,12 +14,13 @@ pub trait Handler {
     ) -> BoxFuture<'static, Response>;
 }
 
+#[async_trait]
 pub trait HandlerAsync {
-    fn handle(
+    async fn handle(
         &self,
         request: Request,
         uri_cursor: UriCursor,
-    ) -> BoxFuture<'_, BoxFuture<'static, Response>>;
+    ) -> BoxFuture<'static, Response>;
 }
 
 #[derive(Debug)]

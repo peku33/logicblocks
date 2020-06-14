@@ -151,9 +151,9 @@ where
                             log::warn!(
                                 "invalid data type: {:?} ({:?}) -> {:?} ({:?})",
                                 source_device_id_signal_id,
-                                state_source_signal_remote_type_id,
+                                state_source_signal_remote.type_name(),
                                 target_device_id_signal_id,
-                                state_target_signal_remote_type_id
+                                state_target_signal_remote.type_name(),
                             );
                             continue;
                         }
@@ -327,7 +327,7 @@ where
                     })
                     .await;
 
-                log::debug!("get_stream {:?} yielded", source_device_id_signal_id);
+                log::trace!("get_stream {:?} yielded", source_device_id_signal_id);
 
                 pending::<()>().await;
                 panic!("pending yielded");
@@ -396,7 +396,7 @@ where
                     })
                     .await;
 
-                log::debug!("get_stream {:?} exited", source_device_id_signal_id);
+                log::trace!("get_stream {:?} exited", source_device_id_signal_id);
 
                 pending::<()>().await;
                 panic!("pending yielded");

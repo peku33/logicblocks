@@ -1,7 +1,5 @@
-use logicblocks_controller::devices::logicblocks::houseblocks_v1::master::{Master, MasterContext};
-use std::collections::HashMap;
-use std::env;
-use std::error::Error;
+use logicblocks_controller::devices::houseblocks::houseblocks_v1::master::{Master, MasterContext};
+use std::{collections::HashMap, env, error::Error};
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {

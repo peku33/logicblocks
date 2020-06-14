@@ -1,188 +1,185 @@
 use super::{
-    device_provider::DeviceProvider,
-    device_providers::{DevicePoolProvidersContext, DeviceProviderId, DeviceProviderIdDeviceId},
+    device::{Device, DeviceContext},
     signals_runner::{
         Connections as ConnectionsGeneric, DeviceIdSignalId as DeviceIdSignalIdGeneric,
         SignalsRunner as SignalsRunnerGeneric,
     },
 };
-use crate::web::{
-    uri_cursor::{Handler, UriCursor},
-    Request, Response,
+use crate::{
+    util::{
+        atomic_cell::AtomicCell,
+        select_all_empty::{JoinAllEmptyUnit, SelectAllEmptyFutureInfinite},
+        tokio_cancelable::ScopedSpawn,
+    },
+    web::{
+        uri_cursor::{Handler, UriCursor},
+        Request, Response,
+    },
 };
 use futures::{
-    channel::mpsc,
     future::{BoxFuture, FutureExt},
     pin_mut, select,
-    stream::StreamExt,
 };
+use http::Method;
 use owning_ref::OwningHandle;
-use std::{
-    collections::HashMap,
-    mem::{forget, replace, MaybeUninit},
-    sync::Mutex,
-};
-use tokio::sync::RwLock;
+use std::collections::HashMap;
 
-pub type SignalsRunner = SignalsRunnerGeneric<DeviceProviderIdDeviceId>;
-pub type Connections = ConnectionsGeneric<DeviceProviderIdDeviceId>;
-pub type DeviceIdSignalId = DeviceIdSignalIdGeneric<DeviceProviderIdDeviceId>;
+pub type DeviceId = u32;
 
-type SignalsRunnerRunContext = OwningHandle<Box<SignalsRunner>, Box<Mutex<BoxFuture<'static, !>>>>;
-fn signals_runner_run_context_build(signals_runner: SignalsRunner) -> SignalsRunnerRunContext {
-    SignalsRunnerRunContext::new_with_fn(Box::new(signals_runner), unsafe {
-        |signals_runner_ptr| Box::new(Mutex::new((*signals_runner_ptr).run().boxed()))
+type DeviceContextRunContext<'d> =
+    OwningHandle<Box<DeviceContext<'d>>, Box<AtomicCell<ScopedSpawn<'d, !>>>>;
+fn device_context_run_context_build(device_context: DeviceContext) -> DeviceContextRunContext {
+    DeviceContextRunContext::new_with_fn(Box::new(device_context), unsafe {
+        |device_context_ptr| {
+            Box::new(AtomicCell::new(ScopedSpawn::new(
+                (*device_context_ptr).run().boxed(),
+            )))
+        }
     })
 }
 
-pub struct Runner<'p> {
-    device_pool_provider_context: DevicePoolProvidersContext<'p>,
-    device_list_changed_sender: mpsc::UnboundedSender<()>,
-    device_list_changed_receiver: Mutex<mpsc::UnboundedReceiver<()>>,
+pub type SignalsRunner = SignalsRunnerGeneric<DeviceId>;
+pub type Connections = ConnectionsGeneric<DeviceId>;
+pub type DeviceIdSignalId = DeviceIdSignalIdGeneric<DeviceId>;
 
-    signals_runner_run_context: RwLock<SignalsRunnerRunContext>,
-
-    connections: RwLock<Connections>,
-    connections_sender: mpsc::UnboundedSender<Connections>,
-    connections_receiver: Mutex<mpsc::UnboundedReceiver<Connections>>,
+type SignalsRunnerRunContext =
+    OwningHandle<Box<SignalsRunner>, Box<AtomicCell<BoxFuture<'static, !>>>>;
+fn signals_runner_run_context_build(signals_runner: SignalsRunner) -> SignalsRunnerRunContext {
+    SignalsRunnerRunContext::new_with_fn(Box::new(signals_runner), unsafe {
+        |signals_runner_ptr| Box::new(AtomicCell::new((*signals_runner_ptr).run().boxed()))
+    })
 }
-impl<'p> Runner<'p> {
+
+pub struct Runner<'d> {
+    device_context_run_contexts: HashMap<DeviceId, DeviceContextRunContext<'d>>,
+    signals_runner_run_context: SignalsRunnerRunContext,
+}
+impl<'d> Runner<'d> {
     pub fn new(
-        device_providers: HashMap<DeviceProviderId, &'p dyn DeviceProvider>,
+        devices: HashMap<DeviceId, Box<dyn Device + 'd>>,
         connections: Connections,
     ) -> Self {
         log::trace!("new called");
 
-        let (device_list_changed_sender, device_list_changed_receiver) = mpsc::unbounded();
-        let device_list_changed_receiver = Mutex::new(device_list_changed_receiver);
+        let signals_runner = Self::build_signals_runner(&devices, &connections);
+        let signals_runner_run_context = signals_runner_run_context_build(signals_runner);
 
-        let device_pool_provider_context =
-            DevicePoolProvidersContext::new(device_providers, &device_list_changed_sender);
-
-        // Stub value, will be immediately reloaded during run
-        let signals_runner_run_context = RwLock::new(signals_runner_run_context_build(
-            SignalsRunner::new(HashMap::new(), &Connections::new()),
-        ));
-
-        let connections = RwLock::new(connections);
-        let (connections_sender, connections_receiver) = mpsc::unbounded();
-        let connections_receiver = Mutex::new(connections_receiver);
+        let device_context_run_contexts = devices
+            .into_iter()
+            .map(|(device_id, device)| {
+                (
+                    device_id,
+                    device_context_run_context_build(DeviceContext::new(device)),
+                )
+            })
+            .collect();
 
         Self {
-            device_pool_provider_context,
-            device_list_changed_sender,
-            device_list_changed_receiver,
-
+            device_context_run_contexts,
             signals_runner_run_context,
-
-            connections,
-            connections_sender,
-            connections_receiver,
         }
     }
 
-    async fn rebuild_signals_runner(&self) {
-        log::trace!("rebuild_signals_runner called");
-
-        let mut signals_runner_run_context = self.signals_runner_run_context.write().await;
-
-        // Build stub
-        let signals_runner_run_context_stub = MaybeUninit::<SignalsRunnerRunContext>::uninit();
-
-        // Replace old with stub
-        let signals_runner_run_context_old = replace(&mut *signals_runner_run_context, unsafe {
-            signals_runner_run_context_stub.assume_init()
-        });
-
-        // Drop old
-        drop(signals_runner_run_context_old);
-
-        // Build new one
-        let signals_runner_run_context_new = signals_runner_run_context_build({
-            let signals_remote_bases = self
-                .device_pool_provider_context
-                .get_signals_remote_bases()
-                .await;
-
-            let connections = self.connections.read().await;
-
-            SignalsRunner::new(signals_remote_bases, &connections)
-        });
-
-        // Replace stub with new one
-        let signals_runner_run_context_stub = replace(
-            &mut *signals_runner_run_context,
-            signals_runner_run_context_new,
-        );
-
-        // Don't drop stub
-        forget(signals_runner_run_context_stub);
-    }
-
-    pub fn connections_set(
-        &self,
-        connections: Connections,
-    ) {
-        log::trace!("connections_set called");
-        self.connections_sender.unbounded_send(connections).unwrap();
+    fn build_signals_runner(
+        devices: &HashMap<DeviceId, Box<dyn Device + 'd>>,
+        connections: &Connections,
+    ) -> SignalsRunner {
+        SignalsRunner::new(
+            devices
+                .iter()
+                .flat_map(move |(device_id, device)| {
+                    device
+                        .get_signals()
+                        .into_iter()
+                        .map(move |(signal_id, signal)| {
+                            (
+                                DeviceIdSignalId::new(*device_id, signal_id),
+                                signal.remote(),
+                            )
+                        })
+                })
+                .collect(),
+            connections,
+        )
     }
 
     pub async fn run(&self) -> ! {
         log::trace!("run called");
 
-        let device_pool_provider_context_run = self.device_pool_provider_context.run();
-        pin_mut!(device_pool_provider_context_run);
-        let mut device_pool_provider_context_run = device_pool_provider_context_run.fuse();
+        let device_context_run_contexts_run =
+            Self::run_device_context_run_contexts(&self.device_context_run_contexts);
+        pin_mut!(device_context_run_contexts_run);
+        let mut device_context_run_contexts_run = device_context_run_contexts_run.fuse();
 
-        let mut device_list_changed_receiver =
-            self.device_list_changed_receiver.try_lock().unwrap();
-        let mut device_list_changed_receiver = device_list_changed_receiver.by_ref().fuse();
+        let signals_runner_run_context_run =
+            Self::run_signals_runner_run_context(&self.signals_runner_run_context);
+        pin_mut!(signals_runner_run_context_run);
+        let mut signals_runner_run_context_run = signals_runner_run_context_run.fuse();
 
-        let mut connections_receiver = self.connections_receiver.try_lock().unwrap();
-        let mut connections_receiver = connections_receiver.by_ref().fuse();
-
-        // This will be called by device rebuild notifications
-        // self.rebuild_signals_runner().await;
-
-        log::trace!("run entering main loop");
-
-        loop {
-            select! {
-                _ = device_pool_provider_context_run => {
-                    panic!("device_pool_provider_context_run yielded");
-                },
-                _ = self.run_signals_runner_run_context().fuse() => {
-                    panic!("run_signals_runner_run_context yielded");
-                },
-                () = device_list_changed_receiver.select_next_some() => {
-                    log::trace!("device_list_changed_receiver yielded, calling rebuild_signals_runner");
-
-                    self.rebuild_signals_runner().await;
-                },
-                connections = connections_receiver.select_next_some() => {
-                    log::trace!("connections_receiver yielded, calling rebuild_signals_runner");
-
-                    *self.connections.write().await = connections;
-                    self.rebuild_signals_runner().await;
-                },
-            }
+        select! {
+            _ = device_context_run_contexts_run => panic!("device_context_run_contexts_run yielded"),
+            _ = signals_runner_run_context_run => panic!("signals_runner_run_context_run yielded"),
         }
     }
-    async fn run_signals_runner_run_context(&self) -> ! {
-        log::trace!("run_signals_runner_run_context called");
-
-        let signals_runner_run_context = self.signals_runner_run_context.read().await;
-        let mut signals_runner_run_context_run = signals_runner_run_context.try_lock().unwrap();
-        let signals_runner_run_context_run = &mut *signals_runner_run_context_run;
-        signals_runner_run_context_run.await
+    async fn run_device_context_run_contexts(
+        device_context_run_contexts: &HashMap<DeviceId, DeviceContextRunContext<'d>>
+    ) -> ! {
+        device_context_run_contexts
+            .values()
+            .map(move |device_context_run_context| {
+                Self::run_device_context_run_context(device_context_run_context)
+            })
+            .collect::<SelectAllEmptyFutureInfinite<_>>()
+            .await
+    }
+    async fn run_device_context_run_context(
+        device_context_run_context: &DeviceContextRunContext<'d>
+    ) -> ! {
+        let mut scoped_spawn = device_context_run_context.lease();
+        (&mut *scoped_spawn).await.unwrap()
+    }
+    async fn run_signals_runner_run_context(
+        signals_runner_run_context: &SignalsRunnerRunContext
+    ) -> ! {
+        let mut run = signals_runner_run_context.lease();
+        (&mut *run).await
     }
 
     pub async fn finalize(self) {
         log::trace!("finalize begin");
 
-        self.device_pool_provider_context.finalize().await;
+        Self::finalize_device_context_run_contexts(self.device_context_run_contexts).await;
 
         log::trace!("finalize end");
+    }
+    async fn finalize_device_context_run_contexts(
+        device_context_run_contexts: HashMap<DeviceId, DeviceContextRunContext<'d>>
+    ) {
+        log::trace!("finalize_device_context_run_contexts begin");
+
+        device_context_run_contexts
+            .into_iter()
+            .map(|(_, device_context_run_context)| {
+                Self::finalize_device_context_run_context(device_context_run_context)
+            })
+            .collect::<JoinAllEmptyUnit<_>>()
+            .await;
+
+        log::trace!("finalize_device_context_run_contexts end");
+    }
+    async fn finalize_device_context_run_context(
+        device_context_run_context: DeviceContextRunContext<'_>
+    ) {
+        log::trace!("finalize_device_context_run_context begin");
+
+        device_context_run_context.lease().finalize().await;
+        device_context_run_context
+            .into_owner()
+            .into_device()
+            .finalize()
+            .await;
+
+        log::trace!("finalize_device_context_run_context end");
     }
 }
 impl<'p> Handler for Runner<'p> {
@@ -191,13 +188,31 @@ impl<'p> Handler for Runner<'p> {
         request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
-        match uri_cursor.next_item() {
-            ("devices", Some(uri_cursor_next_item)) => self
-                .device_pool_provider_context
-                .handle(request, uri_cursor_next_item),
-            // ("signals", Some(uri_cursor_next_item)) => {
-            //     todo!();
-            // }
+        match (request.method(), uri_cursor.next_item()) {
+            (&Method::GET, ("devices", None)) => {
+                let device_ids = self
+                    .device_context_run_contexts
+                    .keys()
+                    .copied()
+                    .collect::<Vec<_>>();
+                async move { Response::ok_json(device_ids) }.boxed()
+            }
+            (_, (device_id_str, Some(uri_cursor_next))) => {
+                let device_id: DeviceId = match device_id_str.parse() {
+                    Ok(device_id) => device_id,
+                    Err(error) => {
+                        return async move { Response::error_400_from_error(error) }.boxed()
+                    }
+                };
+                let device_context_run_context =
+                    match self.device_context_run_contexts.get(&device_id) {
+                        Some(device_context_run_context) => device_context_run_context,
+                        None => return async move { Response::error_404() }.boxed(),
+                    };
+                device_context_run_context
+                    .as_owner()
+                    .handle(request, uri_cursor_next)
+            }
             _ => async move { Response::error_404() }.boxed(),
         }
     }

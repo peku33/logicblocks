@@ -4,7 +4,7 @@ use futures::{
     task::AtomicWaker,
 };
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     fmt,
     pin::Pin,
     sync::{
@@ -15,18 +15,18 @@ use std::{
 };
 
 #[derive(Debug)]
-struct Inner<V: StateValue + PartialEq + Eq> {
+struct Inner<V: StateValue + PartialEq> {
     value: Mutex<Option<Arc<V>>>,
     version: AtomicUsize,
     waker: AtomicWaker,
 }
-impl<V: StateValue + PartialEq + Eq> Inner<V> {
+impl<V: StateValue + PartialEq> Inner<V> {
     pub fn new() -> Self {
         log::trace!("Inner - new called");
 
         Self {
             value: Mutex::new(None),
-            version: AtomicUsize::new(0),
+            version: AtomicUsize::new(1), // Streams starts with zero to get value immediately
             waker: AtomicWaker::new(),
         }
     }
@@ -60,16 +60,16 @@ impl<V: StateValue + PartialEq + Eq> Inner<V> {
         self.waker.wake();
     }
 }
-impl<V: StateValue + PartialEq + Eq> Drop for Inner<V> {
+impl<V: StateValue + PartialEq> Drop for Inner<V> {
     fn drop(&mut self) {
         log::trace!("Inner - drop called");
     }
 }
 
-pub struct Signal<V: StateValue + PartialEq + Eq> {
+pub struct Signal<V: StateValue + PartialEq> {
     inner: Arc<Inner<V>>,
 }
-impl<V: StateValue + PartialEq + Eq> Signal<V> {
+impl<V: StateValue + PartialEq> Signal<V> {
     pub fn new() -> Self {
         log::trace!("Signal - new called");
 
@@ -88,7 +88,7 @@ impl<V: StateValue + PartialEq + Eq> Signal<V> {
         ValueStream::new(self.inner.clone())
     }
 }
-impl<V: StateValue + PartialEq + Eq> SignalBase for Signal<V> {
+impl<V: StateValue + PartialEq> SignalBase for Signal<V> {
     fn remote(&self) -> SignalRemoteBase {
         log::trace!("Signal - remote called");
 
@@ -96,22 +96,21 @@ impl<V: StateValue + PartialEq + Eq> SignalBase for Signal<V> {
     }
 }
 
-pub struct ValueStream<V: StateValue + PartialEq + Eq> {
+pub struct ValueStream<V: StateValue + PartialEq> {
     inner: Arc<Inner<V>>,
     version: AtomicUsize,
 }
-impl<V: StateValue + PartialEq + Eq> ValueStream<V> {
+impl<V: StateValue + PartialEq> ValueStream<V> {
     fn new(inner: Arc<Inner<V>>) -> Self {
         log::trace!("ValueStream - new called");
 
-        let version = inner.version.load(Ordering::Relaxed);
         Self {
             inner,
-            version: AtomicUsize::new(version),
+            version: AtomicUsize::new(0),
         }
     }
 }
-impl<V: StateValue + PartialEq + Eq> Stream for ValueStream<V> {
+impl<V: StateValue + PartialEq> Stream for ValueStream<V> {
     type Item = Option<Arc<V>>;
 
     fn poll_next(
@@ -131,7 +130,7 @@ impl<V: StateValue + PartialEq + Eq> Stream for ValueStream<V> {
         Poll::Pending
     }
 }
-impl<V: StateValue + PartialEq + Eq> FusedStream for ValueStream<V> {
+impl<V: StateValue + PartialEq> FusedStream for ValueStream<V> {
     fn is_terminated(&self) -> bool {
         log::trace!("ValueStream - is_terminated called");
 
@@ -141,6 +140,7 @@ impl<V: StateValue + PartialEq + Eq> FusedStream for ValueStream<V> {
 
 pub trait RemoteBase: Send + Sync + fmt::Debug {
     fn type_id(&self) -> TypeId;
+    fn type_name(&self) -> &'static str;
     fn set_none(&self);
     fn set_unwrap(
         &self,
@@ -148,21 +148,26 @@ pub trait RemoteBase: Send + Sync + fmt::Debug {
     );
 }
 #[derive(Debug)]
-pub struct Remote<V: StateValue + PartialEq + Eq> {
+pub struct Remote<V: StateValue + PartialEq> {
     inner: Arc<Inner<V>>,
 }
-impl<V: StateValue + PartialEq + Eq> Remote<V> {
+impl<V: StateValue + PartialEq> Remote<V> {
     fn new(inner: Arc<Inner<V>>) -> Self {
         log::trace!("Remote - new called");
 
         Self { inner }
     }
 }
-impl<V: StateValue + PartialEq + Eq> RemoteBase for Remote<V> {
+impl<V: StateValue + PartialEq> RemoteBase for Remote<V> {
     fn type_id(&self) -> TypeId {
         log::trace!("Remote - type_id called");
 
         TypeId::of::<V>()
+    }
+    fn type_name(&self) -> &'static str {
+        log::trace!("Remote - type_name called");
+
+        type_name::<V>()
     }
     fn set_none(&self) {
         log::trace!("Remote - set_none called");

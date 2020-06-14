@@ -1,9 +1,11 @@
 // Stub for development on non-linux systems
 
-use super::common::{Address, Payload};
-use super::master::MasterDescriptor;
+use super::{
+    common::{Address, Payload},
+    master::MasterDescriptor,
+};
 use failure::Error;
-use std::time::Duration;
+use std::{fmt, time::Duration};
 
 #[derive(Debug)]
 pub struct Master {}
@@ -33,6 +35,14 @@ impl Master {
     }
     pub async fn transaction_device_discovery(&self) -> Result<Address, Error> {
         unimplemented!()
+    }
+}
+impl fmt::Display for Master {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        return write!(f, "Master(Stub)");
     }
 }
 

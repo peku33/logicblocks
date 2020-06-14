@@ -3,10 +3,8 @@ use crate::web::{
     uri_cursor::{Handler, UriCursor},
     Request, Response,
 };
-use futures::{
-    future::{BoxFuture, FutureExt},
-    stream::BoxStream,
-};
+use async_trait::async_trait;
+use futures::future::{BoxFuture, FutureExt};
 use http::Method;
 use serde_json::json;
 use std::{borrow::Cow, collections::HashMap};
@@ -14,29 +12,29 @@ use std::{borrow::Cow, collections::HashMap};
 pub type SignalId = u16;
 pub type Signals<'a> = HashMap<SignalId, &'a dyn SignalBase>;
 
+#[async_trait]
 pub trait Device: Sync + Send + Handler {
     fn get_class(&self) -> Cow<'static, str>;
 
-    fn get_signals_change_stream(&self) -> BoxStream<()>;
     fn get_signals(&self) -> Signals;
 
-    fn run(&self) -> BoxFuture<!>;
-    fn finalize(self: Box<Self>) -> BoxFuture<'static, ()>;
+    async fn run(&self) -> !;
+    async fn finalize(self: Box<Self>);
 }
 
-pub struct DeviceContext {
-    device: Box<dyn Device>,
+pub struct DeviceContext<'d> {
+    device: Box<dyn Device + 'd>,
 }
-impl DeviceContext {
-    pub fn new(device: Box<dyn Device>) -> Self {
+impl<'d> DeviceContext<'d> {
+    pub fn new(device: Box<dyn Device + 'd>) -> Self {
         log::trace!("new called");
         Self { device }
     }
 
-    pub fn get_device(&self) -> &dyn Device {
+    pub fn as_device(&self) -> &dyn Device {
         &*self.device
     }
-    pub fn into_device(self) -> Box<dyn Device> {
+    pub fn into_device(self) -> Box<dyn Device + 'd> {
         self.device
     }
 
@@ -54,7 +52,7 @@ impl DeviceContext {
         log::trace!("finalize end");
     }
 }
-impl Handler for DeviceContext {
+impl<'d> Handler for DeviceContext<'d> {
     fn handle(
         &self,
         request: Request,
