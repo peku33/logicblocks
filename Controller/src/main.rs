@@ -120,7 +120,7 @@ async fn main() {
 
     let root_service = RootService::new(&root_router);
 
-    let server = server::serve("127.0.0.1:8080".parse().unwrap(), &root_service);
+    let server = server::serve("0.0.0.0:8080".parse().unwrap(), &root_service);
 
     futures::select! {
         _ = tokio::signal::ctrl_c().fuse() => (),
