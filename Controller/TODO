@@ -1,4 +1,2 @@
-- default use of async web handler
-- remove web body collecting upfront
 - clear unused utils
 - make async handler bridge use ScopedSpawn for threaded support
