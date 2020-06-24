@@ -65,15 +65,13 @@ impl Stream for Receiver {
         self: Pin<&mut Self>,
         cx: &mut Context,
     ) -> Poll<Option<Self::Item>> {
-        let self_ = unsafe { self.get_unchecked_mut() };
+        self.inner.waker.register(cx.waker());
 
-        self_.inner.waker.register(cx.waker());
-
-        let version = self_.inner.version.load(Ordering::SeqCst);
-        if self_.version.swap(version, Ordering::Relaxed) != version {
-            return Poll::Ready(Some(()));
+        let version = self.inner.version.load(Ordering::SeqCst);
+        if self.version.swap(version, Ordering::Relaxed) == version {
+            return Poll::Pending;
         }
-        Poll::Pending
+        Poll::Ready(Some(()))
     }
 }
 impl FusedStream for Receiver {

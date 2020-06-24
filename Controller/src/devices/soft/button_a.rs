@@ -20,11 +20,11 @@ pub struct Device {
 }
 #[async_trait]
 impl DeviceTrait for Device {
-    fn get_class(&self) -> Cow<'static, str> {
+    fn class(&self) -> Cow<'static, str> {
         Cow::from("soft/button_a")
     }
 
-    fn get_signals(&self) -> Signals {
+    fn signals(&self) -> Signals {
         hashmap! {
             0 => &self.signal as &dyn SignalBase,
         }
@@ -44,7 +44,7 @@ impl Handler for Device {
         match (request.method(), uri_cursor.next_item()) {
             (&Method::GET, ("", None)) => async move { Response::ok_empty() }.boxed(),
             (&Method::POST, ("", None)) => {
-                self.signal.push(Void::default().into());
+                self.signal.push(Void::default());
                 async move { Response::ok_empty() }.boxed()
             }
             _ => async move { Response::error_404() }.boxed(),

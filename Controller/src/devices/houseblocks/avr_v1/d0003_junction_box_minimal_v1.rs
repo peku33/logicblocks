@@ -12,7 +12,6 @@ pub mod logic {
         stream::{SelectAll, StreamExt},
     };
     use maplit::hashmap;
-    use std::sync::Arc;
 
     pub struct Device {
         keys: [signal::state_source::Signal<Option<Boolean>>; hardware::KEY_COUNT],
@@ -25,10 +24,10 @@ pub mod logic {
         type HardwareDevice = hardware::Device;
 
         fn new() -> Self {
-            let keys = array_init(|_| signal::state_source::Signal::new(None.into()));
+            let keys = array_init(|_| signal::state_source::Signal::new(None));
             let leds = array_init(|_| signal::state_target::Signal::new());
             let buzzer = signal::event_target::Signal::new();
-            let temperature = signal::state_source::Signal::new(None.into());
+            let temperature = signal::state_source::Signal::new(None);
 
             Self {
                 keys,
@@ -37,11 +36,11 @@ pub mod logic {
                 temperature,
             }
         }
-        fn get_class() -> &'static str {
+        fn class() -> &'static str {
             "junction_box_minimal_v1"
         }
 
-        fn get_signals(&self) -> Signals {
+        fn signals(&self) -> Signals {
             hashmap! {
                 10 => &self.keys[0] as &dyn SignalBase,
                 11 => &self.keys[1] as &dyn SignalBase,
@@ -77,7 +76,7 @@ pub mod logic {
             let keys_runner = keys.for_each(async move |key_values| {
                 for (index, key) in self.keys.iter().enumerate() {
                     let key_value = key_values.map(|key_values| Boolean::from(key_values[index]));
-                    key.set(Arc::new(key_value));
+                    key.set(key_value);
                 }
             });
             pin_mut!(keys_runner);
@@ -85,30 +84,32 @@ pub mod logic {
             let mut leds_runner = self
                 .leds
                 .iter()
-                .map(|led| led.get_stream().map(|_| ()))
+                .map(|led| led.stream().map(|_| ()))
                 .collect::<SelectAll<_>>()
                 .map(|()| {
-                    let led_values: hardware::LedValues = array_init(|index| {
+                    array_init(|index| {
                         self.leds[index]
-                            .get()
-                            .map(|value| (*value).into())
+                            .current()
+                            .map(|value| value.into())
                             .unwrap_or(false)
-                    });
-                    Ok(led_values)
+                    })
                 })
+                .map(Ok)
                 .forward(leds)
                 .map(|result| result.unwrap());
 
             let mut buzzer_runner = self
                 .buzzer
-                .get_stream()
-                .map(|buzzer_duration| Ok(buzzer_duration.as_ref().clone().into()))
+                .stream()
+                .map(|value| value.into())
+                .map(Ok)
                 .forward(buzzer)
                 .map(|result| result.unwrap());
 
-            let temperature_runner = temperature
-                .for_each(async move |temperature| self.temperature.set(Arc::new(temperature)));
-            pin_mut!(temperature_runner);
+            let mut temperature_runner = temperature
+                .map(Ok)
+                .forward(self.temperature.sink())
+                .map(|result| result.unwrap());
 
             select! {
                 () = keys_runner => panic!("keys_runner yielded"),

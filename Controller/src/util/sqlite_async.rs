@@ -1,11 +1,10 @@
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use failure::Error;
-use futures::channel::oneshot;
-use futures::{Future, FutureExt};
+use futures::{channel::oneshot, Future, FutureExt};
 use rusqlite::{Connection, Transaction};
 use std::thread;
 
-type AsyncOperation = Box<dyn FnOnce(&mut Connection) -> () + Send + 'static>;
+type AsyncOperation = Box<dyn FnOnce(&mut Connection) + Send + 'static>;
 
 pub struct SQLiteAsync {
     // None after drop

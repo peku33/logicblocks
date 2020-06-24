@@ -12,21 +12,20 @@ use crate::{
 use async_trait::async_trait;
 use futures::{
     future::{BoxFuture, FutureExt},
-    pin_mut, select,
+    select,
     stream::StreamExt,
 };
 use http::Method;
 use maplit::hashmap;
-use std::{any::type_name, borrow::Cow, sync::Arc};
+use std::{any::type_name, borrow::Cow};
 
 pub struct Device<V: DataType + StateValue + Clone + PartialEq> {
     output: state_source::Signal<V>,
     input: state_target::Signal<Option<V>>,
-    default: Arc<V>,
+    default: V,
 }
 impl<V: DataType + StateValue + Clone + PartialEq> Device<V> {
     pub fn new(default: V) -> Self {
-        let default = Arc::new(default);
         Self {
             output: state_source::Signal::new(default.clone()),
             input: state_target::Signal::new(),
@@ -36,11 +35,11 @@ impl<V: DataType + StateValue + Clone + PartialEq> Device<V> {
 }
 #[async_trait]
 impl<V: DataType + StateValue + Clone + PartialEq> DeviceTrait for Device<V> {
-    fn get_class(&self) -> Cow<'static, str> {
+    fn class(&self) -> Cow<'static, str> {
         format!("soft/state_unwrap<{}>", type_name::<V>()).into()
     }
 
-    fn get_signals(&self) -> Signals {
+    fn signals(&self) -> Signals {
         hashmap! {
             0 => &self.output as &dyn SignalBase,
             1 => &self.input as &dyn SignalBase,
@@ -48,20 +47,20 @@ impl<V: DataType + StateValue + Clone + PartialEq> DeviceTrait for Device<V> {
     }
 
     async fn run(&self) -> ! {
-        let input_runner = self.input.get_stream().for_each(async move |value| {
-            let value = match value {
-                Some(value) => match &*value {
-                    Some(value) => Arc::new(value.clone()),
-                    None => self.default.clone(),
-                },
-                None => self.default.clone(),
-            };
-            self.output.set(value);
-        });
-        pin_mut!(input_runner);
+        let mut input_runner = self
+            .input
+            .stream()
+            .map(|value| {
+                value
+                    .unwrap_or_else(|| Some(self.default.clone()))
+                    .unwrap_or_else(|| self.default.clone())
+            })
+            .map(Ok)
+            .forward(self.output.sink())
+            .map(|result| result.unwrap());
 
         select! {
-            _ = input_runner => panic!("input_runner yielded"),
+            () = input_runner => panic!("input_runner yielded"),
         }
     }
     async fn finalize(self: Box<Self>) {}

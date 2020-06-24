@@ -1,5 +1,4 @@
 #![feature(async_closure)]
-#![feature(atomic_min_max)]
 #![feature(drain_filter)]
 #![feature(exact_size_is_empty)]
 #![feature(generic_associated_types)]

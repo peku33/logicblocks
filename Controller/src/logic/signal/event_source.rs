@@ -1,11 +1,13 @@
 use super::{EventValue, SignalBase, SignalRemoteBase, ValueAny};
-use crossbeam::queue::SegQueue;
+use crossbeam::queue::{PopError, SegQueue};
 use futures::{
+    sink::Sink,
     stream::{BoxStream, FusedStream, Stream, StreamExt},
     task::AtomicWaker,
 };
 use std::{
     any::{type_name, TypeId},
+    convert::Infallible,
     fmt,
     pin::Pin,
     sync::{
@@ -17,7 +19,7 @@ use std::{
 
 #[derive(Debug)]
 struct Inner<V: EventValue> {
-    queue: SegQueue<Arc<V>>,
+    queue: SegQueue<V>,
     waker: AtomicWaker,
     remote_borrowed: AtomicBool,
     remote_stream_borrowed: AtomicBool,
@@ -32,20 +34,6 @@ impl<V: EventValue> Inner<V> {
             remote_borrowed: AtomicBool::new(false),
             remote_stream_borrowed: AtomicBool::new(false),
         }
-    }
-    pub fn pop(&self) -> Option<Arc<V>> {
-        log::trace!("Inner - pop called");
-
-        self.queue.pop().ok()
-    }
-    pub fn push(
-        &self,
-        value: Arc<V>,
-    ) {
-        log::trace!("Inner - push called");
-
-        self.queue.push(value);
-        self.waker.wake();
     }
 }
 impl<V: EventValue> Drop for Inner<V> {
@@ -65,13 +53,32 @@ impl<V: EventValue> Signal<V> {
             inner: Arc::new(Inner::new()),
         }
     }
+
     pub fn push(
         &self,
-        value: Arc<V>,
+        value: V,
     ) {
         log::trace!("Signal - push called");
 
-        self.inner.push(value);
+        self.inner.queue.push(value);
+        self.inner.waker.wake();
+    }
+    pub fn push_many(
+        &self,
+        values: impl Iterator<Item = V>,
+    ) {
+        log::trace!("Signal - push_many called");
+
+        for value in values {
+            self.inner.queue.push(value);
+        }
+        self.inner.waker.wake();
+    }
+
+    pub fn sink(&self) -> ValueSink<V> {
+        log::trace!("Signal - sink called");
+
+        ValueSink::new(self)
     }
 }
 impl<V: EventValue> SignalBase for Signal<V> {
@@ -82,11 +89,66 @@ impl<V: EventValue> SignalBase for Signal<V> {
     }
 }
 
+pub struct ValueSink<'s, V: EventValue> {
+    signal: &'s Signal<V>,
+}
+impl<'s, V: EventValue> ValueSink<'s, V> {
+    fn new(signal: &'s Signal<V>) -> Self {
+        log::trace!("ValueSink - new called");
+
+        Self { signal }
+    }
+}
+impl<'s, V: EventValue> Sink<V> for ValueSink<'s, V> {
+    type Error = Infallible;
+
+    fn poll_ready(
+        self: Pin<&mut Self>,
+        _cx: &mut Context,
+    ) -> Poll<Result<(), Self::Error>> {
+        log::trace!("ValueSink - poll_ready called");
+
+        Poll::Ready(Ok(()))
+    }
+
+    fn start_send(
+        self: Pin<&mut Self>,
+        value: V,
+    ) -> Result<(), Self::Error> {
+        log::trace!("ValueSink - start_send called");
+
+        self.signal.inner.queue.push(value);
+
+        Ok(())
+    }
+
+    fn poll_flush(
+        self: Pin<&mut Self>,
+        _cx: &mut Context,
+    ) -> Poll<Result<(), Self::Error>> {
+        log::trace!("ValueSink - poll_flush called");
+
+        self.signal.inner.waker.wake();
+
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close(
+        self: Pin<&mut Self>,
+        _cx: &mut Context,
+    ) -> Poll<Result<(), Self::Error>> {
+        log::trace!("ValueSink - poll_close called");
+
+        Poll::Ready(Ok(()))
+    }
+}
+
 pub trait RemoteBase: Send + Sync + fmt::Debug {
     fn type_id(&self) -> TypeId;
     fn type_name(&self) -> &'static str;
-    fn get_stream(&self) -> BoxStream<Arc<dyn ValueAny>>;
+    fn stream(&self) -> BoxStream<Box<dyn ValueAny>>;
 }
+
 #[derive(Debug)]
 pub struct Remote<V: EventValue> {
     inner: Arc<Inner<V>>,
@@ -112,8 +174,8 @@ impl<V: EventValue> RemoteBase for Remote<V> {
 
         type_name::<V>()
     }
-    fn get_stream(&self) -> BoxStream<Arc<dyn ValueAny>> {
-        log::trace!("Remote - get_stream called");
+    fn stream(&self) -> BoxStream<Box<dyn ValueAny>> {
+        log::trace!("Remote - stream called");
 
         RemoteStream::new(self.inner.clone()).boxed()
     }
@@ -142,7 +204,7 @@ impl<V: EventValue> RemoteStream<V> {
     }
 }
 impl<V: EventValue> Stream for RemoteStream<V> {
-    type Item = Arc<dyn ValueAny>;
+    type Item = Box<dyn ValueAny>;
 
     fn poll_next(
         self: Pin<&mut Self>,
@@ -150,12 +212,10 @@ impl<V: EventValue> Stream for RemoteStream<V> {
     ) -> Poll<Option<Self::Item>> {
         log::trace!("RemoteStream - poll_next called");
 
-        let self_ = unsafe { self.get_unchecked_mut() };
-
-        self_.inner.waker.register(cx.waker());
-        match self_.inner.pop() {
-            Some(value) => Poll::Ready(Some(value)),
-            None => Poll::Pending,
+        self.inner.waker.register(cx.waker());
+        match self.inner.queue.pop() {
+            Ok(value) => Poll::Ready(Some(Box::new(value))),
+            Err(PopError) => Poll::Pending,
         }
     }
 }

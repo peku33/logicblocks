@@ -14,9 +14,9 @@ pub type Signals<'a> = HashMap<SignalId, &'a dyn SignalBase>;
 
 #[async_trait]
 pub trait Device: Sync + Send + Handler {
-    fn get_class(&self) -> Cow<'static, str>;
+    fn class(&self) -> Cow<'static, str>;
 
-    fn get_signals(&self) -> Signals;
+    fn signals(&self) -> Signals;
 
     async fn run(&self) -> !;
     async fn finalize(self: Box<Self>);
@@ -62,7 +62,7 @@ impl<'d> Handler for DeviceContext<'d> {
             // Shared device information
             (&Method::GET, ("", None)) => {
                 let response = json!({
-                    "class": self.device.get_class(),
+                    "class": self.device.class(),
                 });
 
                 async move { Response::ok_json(response) }.boxed()

@@ -29,7 +29,7 @@ pub struct Device {
 impl Device {
     pub fn new(initial: Boolean) -> Self {
         Self {
-            output: state_source::Signal::new(initial.into()),
+            output: state_source::Signal::new(initial),
             r: event_target::Signal::new(),
             s: event_target::Signal::new(),
             t: event_target::Signal::new(),
@@ -37,25 +37,25 @@ impl Device {
     }
 
     fn r(&self) {
-        self.output.set(Boolean::from(false).into());
+        self.output.set(Boolean::from(false));
     }
     fn s(&self) {
-        self.output.set(Boolean::from(true).into());
+        self.output.set(Boolean::from(true));
     }
     fn t(&self) -> bool {
-        let value: bool = (*self.output.get()).into();
+        let value: bool = self.output.current().into();
         let value = !value;
-        self.output.set(Boolean::from(value).into());
+        self.output.set(Boolean::from(value));
         value
     }
 }
 #[async_trait]
 impl DeviceTrait for Device {
-    fn get_class(&self) -> Cow<'static, str> {
+    fn class(&self) -> Cow<'static, str> {
         Cow::from("soft/rst_a")
     }
 
-    fn get_signals(&self) -> Signals {
+    fn signals(&self) -> Signals {
         hashmap! {
             0 => &self.output as &dyn SignalBase,
             1 => &self.r as &dyn SignalBase,
@@ -65,17 +65,17 @@ impl DeviceTrait for Device {
     }
 
     async fn run(&self) -> ! {
-        let r_runner = self.r.get_stream().for_each(async move |_| {
+        let r_runner = self.r.stream().for_each(async move |_| {
             self.r();
         });
         pin_mut!(r_runner);
 
-        let s_runner = self.s.get_stream().for_each(async move |_| {
+        let s_runner = self.s.stream().for_each(async move |_| {
             self.s();
         });
         pin_mut!(s_runner);
 
-        let t_runner = self.t.get_stream().for_each(async move |_| {
+        let t_runner = self.t.stream().for_each(async move |_| {
             self.t();
         });
         pin_mut!(t_runner);
@@ -96,7 +96,7 @@ impl Handler for Device {
     ) -> BoxFuture<'static, Response> {
         match (request.method(), uri_cursor.next_item()) {
             (&Method::GET, ("", None)) => {
-                let value: bool = (*self.output.get()).into();
+                let value: bool = self.output.current().into();
                 async move { Response::ok_json(json!({ "value": value })) }.boxed()
             }
             (&Method::POST, ("r", None)) => {

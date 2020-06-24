@@ -21,9 +21,9 @@ pub trait Device: Sync + Send {
     type HardwareDevice: runner::Device;
 
     fn new() -> Self;
-    fn get_class() -> &'static str;
+    fn class() -> &'static str;
 
-    fn get_signals(&self) -> device::Signals;
+    fn signals(&self) -> device::Signals;
 
     async fn run(
         &self,
@@ -52,13 +52,13 @@ impl<'m, D: Device> Runner<'m, D> {
 }
 #[async_trait]
 impl<'m, D: Device> device::Device for Runner<'_, D> {
-    fn get_class(&self) -> Cow<'static, str> {
-        let class = format!("houseblocks/avr_v1/{}", D::get_class());
+    fn class(&self) -> Cow<'static, str> {
+        let class = format!("houseblocks/avr_v1/{}", D::class());
         Cow::from(class)
     }
 
-    fn get_signals(&self) -> device::Signals {
-        self.device.get_signals()
+    fn signals(&self) -> device::Signals {
+        self.device.signals()
     }
 
     async fn run(&self) -> ! {

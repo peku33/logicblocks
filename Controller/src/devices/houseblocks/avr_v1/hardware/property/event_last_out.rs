@@ -6,6 +6,7 @@ use futures::{
 use parking_lot::Mutex;
 use std::{
     cmp::max,
+    convert::Infallible,
     ops::Deref,
     pin::Pin,
     task::{Context, Poll},
@@ -74,12 +75,24 @@ where
     fn new(property: &'p Property<T>) -> Self {
         Self { property }
     }
+
+    pub fn set(
+        &self,
+        item: T,
+    ) {
+        let mut local = self.property.local.lock();
+        local.0.replace(item);
+        local.1 += 1;
+        drop(local);
+
+        self.property.waker.wake();
+    }
 }
 impl<'p, T> Sink<T> for ValueSink<'p, T>
 where
     T: Clone,
 {
-    type Error = ();
+    type Error = Infallible;
 
     fn poll_ready(
         self: Pin<&mut Self>,
@@ -97,7 +110,6 @@ where
         local.1 += 1;
         drop(local);
 
-        self.property.waker.wake();
         Ok(())
     }
 
@@ -105,6 +117,8 @@ where
         self: Pin<&mut Self>,
         _cx: &mut Context,
     ) -> Poll<Result<(), Self::Error>> {
+        self.property.waker.wake();
+
         Poll::Ready(Ok(()))
     }
 

@@ -1,5 +1,4 @@
-- convert set-* property / signals to sinks
-- drop bus2
+- default use of async web handler
+- remove web body collecting upfront
 - clear unused utils
-- check if refcell is used in device / project
 - make async handler bridge use ScopedSpawn for threaded support

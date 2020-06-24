@@ -2,7 +2,6 @@ use failure::{err_msg, Error};
 use futures::{
     future::{Future, FutureExt},
     pin_mut, select,
-    sink::SinkExt,
     stream::StreamExt,
 };
 use logicblocks_controller::devices::houseblocks::{
@@ -157,8 +156,8 @@ fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(
         async move {
             let avr_v1::d0003_junction_box_minimal_v1::hardware::RemoteProperties {
                 mut keys,
-                mut leds,
-                mut buzzer,
+                leds,
+                buzzer,
                 mut temperature,
             } = runner_ref.remote_properties();
 
@@ -178,7 +177,7 @@ fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(
                     led_values[led_index] = true;
 
                     log::info!("setting leds: {:?}", led_values);
-                    leds.send(led_values).await.unwrap();
+                    leds.set(led_values);
                     tokio::time::delay_for(Duration::from_secs(1)).await;
                 }
             };
@@ -188,7 +187,7 @@ fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(
             let buzzer_test_runner = async {
                 loop {
                     log::info!("pushing buzzer");
-                    buzzer.send(Duration::from_millis(125)).await.unwrap();
+                    buzzer.set(Duration::from_millis(125));
                     tokio::time::delay_for(Duration::from_secs(5)).await;
                 }
             };

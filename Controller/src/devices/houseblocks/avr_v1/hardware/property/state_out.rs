@@ -5,6 +5,7 @@ use futures::{
 };
 use parking_lot::Mutex;
 use std::{
+    convert::Infallible,
     ops::Deref,
     pin::Pin,
     task::{Context, Poll},
@@ -64,12 +65,26 @@ where
     fn new(property: &'p Property<T>) -> Self {
         Self { property }
     }
+
+    pub fn set(
+        &self,
+        item: T,
+    ) {
+        let mut local_device_value = self.property.local_device_value.lock();
+        if local_device_value.0 == item {
+            return;
+        }
+        local_device_value.0 = item;
+        drop(local_device_value);
+
+        self.property.waker.wake();
+    }
 }
 impl<'p, T> Sink<T> for ValueSink<'p, T>
 where
     T: Clone + PartialEq,
 {
-    type Error = ();
+    type Error = Infallible;
 
     fn poll_ready(
         self: Pin<&mut Self>,
@@ -86,13 +101,16 @@ where
             return Ok(());
         }
         local_device_value.0 = item;
-        self.property.waker.wake();
+        drop(local_device_value);
+
         Ok(())
     }
     fn poll_flush(
         self: Pin<&mut Self>,
         _cx: &mut Context,
     ) -> Poll<Result<(), Self::Error>> {
+        self.property.waker.wake();
+
         Poll::Ready(Ok(()))
     }
     fn poll_close(

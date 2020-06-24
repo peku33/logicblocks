@@ -23,9 +23,6 @@ where
     }
 
     // User
-    // pub fn get(&self) -> Option<T> {
-    //     self.receiver.borrow().clone()
-    // }
     pub fn user_get_stream(&self) -> ValueStream<T> {
         ValueStream::new(self)
     }

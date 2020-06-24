@@ -18,11 +18,11 @@ use http::Method;
 use maplit::hashmap;
 use std::{any::type_name, borrow::Cow};
 
-pub struct Device<V: StateValue + PartialEq> {
+pub struct Device<V: StateValue + Clone + PartialEq> {
     name: String,
     input: state_target::Signal<V>,
 }
-impl<V: StateValue + PartialEq> Device<V> {
+impl<V: StateValue + Clone + PartialEq> Device<V> {
     pub fn new(name: String) -> Self {
         Self {
             name,
@@ -31,12 +31,12 @@ impl<V: StateValue + PartialEq> Device<V> {
     }
 }
 #[async_trait]
-impl<V: StateValue + PartialEq> DeviceTrait for Device<V> {
-    fn get_class(&self) -> Cow<'static, str> {
+impl<V: StateValue + Clone + PartialEq> DeviceTrait for Device<V> {
+    fn class(&self) -> Cow<'static, str> {
         format!("soft/debug_state<{}>", type_name::<V>()).into()
     }
 
-    fn get_signals(&self) -> Signals {
+    fn signals(&self) -> Signals {
         hashmap! {
             0 => &self.input as &dyn SignalBase,
         }
@@ -45,7 +45,7 @@ impl<V: StateValue + PartialEq> DeviceTrait for Device<V> {
     async fn run(&self) -> ! {
         let input_runner = self
             .input
-            .get_stream()
+            .stream()
             .for_each(async move |value| match value {
                 Some(value) => {
                     log::debug!("{} -> {:?}", self.name, value);
@@ -62,7 +62,7 @@ impl<V: StateValue + PartialEq> DeviceTrait for Device<V> {
     }
     async fn finalize(self: Box<Self>) {}
 }
-impl<V: StateValue + PartialEq> Handler for Device<V> {
+impl<V: StateValue + Clone + PartialEq> Handler for Device<V> {
     fn handle(
         &self,
         request: Request,

@@ -89,7 +89,7 @@ impl<'d> Runner<'d> {
                 .iter()
                 .flat_map(move |(device_id, device)| {
                     device
-                        .get_signals()
+                        .signals()
                         .into_iter()
                         .map(move |(signal_id, signal)| {
                             (

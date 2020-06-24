@@ -117,15 +117,15 @@ where
             );
 
             match (
-                connections_state.get_source_details(source_device_id_signal_id),
-                connections_event.get_source_details(source_device_id_signal_id),
+                connections_state.source_details(source_device_id_signal_id),
+                connections_event.source_details(source_device_id_signal_id),
             ) {
                 (Some(state_source_signal_remote), None) => {
                     let state_source_signal_remote_type_id = state_source_signal_remote.type_id();
                     for target_device_id_signal_id in target_device_id_signal_ids {
                         let state_target_signal_remote = match (
-                            connections_state.get_target_details(target_device_id_signal_id),
-                            connections_event.get_target_details(target_device_id_signal_id),
+                            connections_state.target_details(target_device_id_signal_id),
+                            connections_event.target_details(target_device_id_signal_id),
                         ) {
                             (Some(state_target_signal_remote), None) => state_target_signal_remote,
                             (None, Some(_)) => {
@@ -169,8 +169,8 @@ where
                     let event_source_signal_remote_type_id = event_source_signal_remote.type_id();
                     for target_device_id_signal_id in target_device_id_signal_ids {
                         let event_target_signal_remote = match (
-                            connections_event.get_target_details(target_device_id_signal_id),
-                            connections_event.get_target_details(target_device_id_signal_id),
+                            connections_event.target_details(target_device_id_signal_id),
+                            connections_event.target_details(target_device_id_signal_id),
                         ) {
                             (Some(_), None) => {
                                 log::warn!(
@@ -309,7 +309,7 @@ where
                 );
 
                 source_remote_base
-                    .get_stream()
+                    .stream()
                     .for_each(async move |value| {
                         log::trace!(
                             "new value from {:?}: {:?}",
@@ -322,7 +322,7 @@ where
 
                             log::trace!("forwarding to {:?}", target_device_id_signal_id);
 
-                            target_remote_base.set_unwrap(value.clone());
+                            target_remote_base.set(Some(&*value));
                         }
                     })
                     .await;
@@ -341,7 +341,7 @@ where
             let (target_device_id_signal_id, ref target_remote_base) = target;
             match source {
                 Some((source_device_id_signal_id, ref source_remote_base)) => {
-                    let value = source_remote_base.get();
+                    let value = source_remote_base.current();
 
                     log::trace!(
                         "target {:?} is being initialized from {:?} with value {:?}",
@@ -350,12 +350,12 @@ where
                         value,
                     );
 
-                    target_remote_base.set_unwrap(value);
+                    target_remote_base.set(Some(&*value));
                 }
                 None => {
                     log::trace!("target {:?} is not initialized", target_device_id_signal_id);
 
-                    target_remote_base.set_none();
+                    target_remote_base.set(None);
                 }
             }
         }
@@ -378,7 +378,7 @@ where
                 );
 
                 source_remote_base
-                    .get_stream()
+                    .stream()
                     .for_each(async move |pending_value| {
                         log::trace!(
                             "new value from {:?}: {:?}",
@@ -391,7 +391,7 @@ where
 
                             log::trace!("forwarding to {:?}", target_device_id_signal_id);
 
-                            target_remote_base.push_unwrap(pending_value.clone());
+                            target_remote_base.push(&*pending_value);
                         }
                     })
                     .await;
@@ -465,7 +465,7 @@ where
         assert!(!duplicated);
     }
 
-    pub fn get_source_details(
+    pub fn source_details(
         &self,
         source: &S,
     ) -> Option<&SD> {
@@ -473,7 +473,7 @@ where
             .get(source)
             .map(|(source_details, _)| source_details)
     }
-    pub fn get_target_details(
+    pub fn target_details(
         &self,
         target: &T,
     ) -> Option<&TD> {
@@ -608,7 +608,7 @@ where
         }
     }
 
-    pub fn get_source_details(
+    pub fn source_details(
         &self,
         source: &S,
     ) -> Option<&SD> {
@@ -616,7 +616,7 @@ where
             .get(source)
             .map(|(source_details, _)| source_details)
     }
-    pub fn get_target_details(
+    pub fn target_details(
         &self,
         target: &T,
     ) -> Option<&TD> {
