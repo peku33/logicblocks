@@ -14,10 +14,12 @@ use futures::{
     future::{BoxFuture, FutureExt},
     pin_mut, select,
 };
+use http::Method;
+use serde_json::json;
 use std::borrow::Cow;
 
 #[async_trait]
-pub trait Device: Sync + Send {
+pub trait Device: Handler + Sync + Send {
     type HardwareDevice: runner::Device;
 
     fn new() -> Self;
@@ -88,7 +90,15 @@ impl<'m, D: Device> Handler for Runner<'m, D> {
         request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
-        // TODO:
-        async move { Response::ok_empty() }.boxed()
+        match (request.method(), uri_cursor.next_item()) {
+            (&Method::GET, ("", None)) => {
+                let response = json!({
+                    "device_state": self.hardware_runner.device_state(),
+                });
+                async move { Response::ok_json(response) }.boxed()
+            }
+            (_, ("device", Some(uri_cursor_next))) => self.device.handle(request, uri_cursor_next),
+            _ => async move { Response::error_404() }.boxed(),
+        }
     }
 }

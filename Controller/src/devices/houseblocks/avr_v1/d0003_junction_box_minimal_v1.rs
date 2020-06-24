@@ -3,11 +3,15 @@ pub mod logic {
     use crate::{
         datatypes::{boolean::Boolean, temperature::Temperature, time_duration::TimeDuration},
         logic::{device::Signals, signal, signal::SignalBase},
+        web::{
+            uri_cursor::{Handler, UriCursor},
+            Request, Response,
+        },
     };
     use array_init::array_init;
     use async_trait::async_trait;
     use futures::{
-        future::FutureExt,
+        future::{BoxFuture, FutureExt},
         pin_mut, select,
         stream::{SelectAll, StreamExt},
     };
@@ -119,6 +123,15 @@ pub mod logic {
             }
         }
         async fn finalize(self) {}
+    }
+    impl Handler for Device {
+        fn handle(
+            &self,
+            _request: Request,
+            _uri_cursor: UriCursor,
+        ) -> BoxFuture<'static, Response> {
+            async move { Response::ok_empty() }.boxed()
+        }
     }
 }
 
