@@ -188,31 +188,39 @@ impl<'p> Handler for Runner<'p> {
         request: Request,
         uri_cursor: UriCursor,
     ) -> BoxFuture<'static, Response> {
-        match (request.method(), uri_cursor.next_item()) {
-            (&Method::GET, ("devices", None)) => {
-                let device_ids = self
-                    .device_context_run_contexts
-                    .keys()
-                    .copied()
-                    .collect::<Vec<_>>();
-                async move { Response::ok_json(device_ids) }.boxed()
-            }
-            (_, (device_id_str, Some(uri_cursor_next))) => {
-                let device_id: DeviceId = match device_id_str.parse() {
-                    Ok(device_id) => device_id,
-                    Err(error) => {
-                        return async move { Response::error_400_from_error(error) }.boxed()
-                    }
-                };
-                let device_context_run_context =
-                    match self.device_context_run_contexts.get(&device_id) {
-                        Some(device_context_run_context) => device_context_run_context,
+        match uri_cursor.next_item() {
+            ("devices", uri_cursor_next_item) => match (request.method(), uri_cursor_next_item) {
+                (&Method::GET, None) => {
+                    let device_ids = self
+                        .device_context_run_contexts
+                        .keys()
+                        .copied()
+                        .collect::<Vec<_>>();
+                    async move { Response::ok_json(device_ids) }.boxed()
+                }
+                (_, Some(uri_cursor_next_item)) => {
+                    let (device_id_str, uri_cursor_next_item) = uri_cursor_next_item.next_item();
+                    let uri_cursor_next_item = match uri_cursor_next_item {
+                        Some(uri_cursor_next_item) => uri_cursor_next_item,
                         None => return async move { Response::error_404() }.boxed(),
                     };
-                device_context_run_context
-                    .as_owner()
-                    .handle(request, uri_cursor_next)
-            }
+                    let device_id: DeviceId = match device_id_str.parse() {
+                        Ok(device_id) => device_id,
+                        Err(error) => {
+                            return async move { Response::error_400_from_error(error) }.boxed()
+                        }
+                    };
+                    let device_context_run_context =
+                        match self.device_context_run_contexts.get(&device_id) {
+                            Some(device_context_run_context) => device_context_run_context,
+                            None => return async move { Response::error_404() }.boxed(),
+                        };
+                    device_context_run_context
+                        .as_owner()
+                        .handle(request, uri_cursor_next_item)
+                }
+                _ => async move { Response::error_404() }.boxed(),
+            },
             _ => async move { Response::error_404() }.boxed(),
         }
     }
