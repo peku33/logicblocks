@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use failure::Error;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use parking_lot::Mutex;
+use serde::Serialize;
 use std::{cmp::min, fmt, time::Duration};
 
 pub trait RunContext: Sync {
@@ -58,7 +59,7 @@ pub trait Device: BusDevice + Sync + Send {
 const POLL_DELAY_MAXIMUM: Duration = Duration::from_secs(5);
 const ERROR_DELAY: Duration = Duration::from_secs(10);
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Serialize, Copy, Clone, PartialEq, Eq, Debug)]
 pub enum DeviceState {
     ERROR,
     INITIALIZING,
