@@ -9,6 +9,7 @@ use std::{
     convert::Infallible,
     ops::Deref,
     pin::Pin,
+    sync::atomic::{AtomicBool, Ordering},
     task::{Context, Poll},
 };
 
@@ -67,13 +68,17 @@ where
     T: Clone,
 {
     property: &'p Property<T>,
+    flush_pending: AtomicBool,
 }
 impl<'p, T> ValueSink<'p, T>
 where
     T: Clone,
 {
     fn new(property: &'p Property<T>) -> Self {
-        Self { property }
+        Self {
+            property,
+            flush_pending: AtomicBool::new(false),
+        }
     }
 
     pub fn set(
@@ -110,6 +115,8 @@ where
         local.1 += 1;
         drop(local);
 
+        self.flush_pending.store(true, Ordering::Relaxed);
+
         Ok(())
     }
 
@@ -117,7 +124,9 @@ where
         self: Pin<&mut Self>,
         _cx: &mut Context,
     ) -> Poll<Result<(), Self::Error>> {
-        self.property.waker.wake();
+        if self.flush_pending.swap(false, Ordering::Relaxed) {
+            self.property.waker.wake();
+        }
 
         Poll::Ready(Ok(()))
     }

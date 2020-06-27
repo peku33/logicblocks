@@ -11,7 +11,7 @@ use std::{
     fmt,
     pin::Pin,
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
     },
     task::{Context, Poll},
@@ -93,12 +93,16 @@ impl<V: StateValue + Clone + PartialEq> SignalBase for Signal<V> {
 
 pub struct ValueSink<'s, V: StateValue + Clone + PartialEq> {
     signal: &'s Signal<V>,
+    flush_pending: AtomicBool,
 }
 impl<'s, V: StateValue + Clone + PartialEq> ValueSink<'s, V> {
     fn new(signal: &'s Signal<V>) -> Self {
         log::trace!("ValueSink - new called");
 
-        Self { signal }
+        Self {
+            signal,
+            flush_pending: AtomicBool::new(false),
+        }
     }
 }
 impl<'s, V: StateValue + Clone + PartialEq> Sink<V> for ValueSink<'s, V> {
@@ -128,6 +132,8 @@ impl<'s, V: StateValue + Clone + PartialEq> Sink<V> for ValueSink<'s, V> {
         }
         drop(current_value);
 
+        self.flush_pending.store(true, Ordering::Relaxed);
+
         Ok(())
     }
 
@@ -135,9 +141,9 @@ impl<'s, V: StateValue + Clone + PartialEq> Sink<V> for ValueSink<'s, V> {
         self: Pin<&mut Self>,
         _cx: &mut Context,
     ) -> Poll<Result<(), Self::Error>> {
-        log::trace!("ValueSink - poll_flush called");
-
-        self.signal.inner.waker.wake();
+        if self.flush_pending.swap(false, Ordering::Relaxed) {
+            self.signal.inner.waker.wake();
+        }
 
         Poll::Ready(Ok(()))
     }

@@ -68,7 +68,7 @@ impl Stream for Receiver {
         self.inner.waker.register(cx.waker());
 
         let version = self.inner.version.load(Ordering::SeqCst);
-        if self.version.swap(version, Ordering::Relaxed) == version {
+        if self.version.swap(version, Ordering::SeqCst) == version {
             return Poll::Pending;
         }
         Poll::Ready(Some(()))

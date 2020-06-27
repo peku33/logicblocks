@@ -91,12 +91,16 @@ impl<V: EventValue> SignalBase for Signal<V> {
 
 pub struct ValueSink<'s, V: EventValue> {
     signal: &'s Signal<V>,
+    flush_pending: AtomicBool,
 }
 impl<'s, V: EventValue> ValueSink<'s, V> {
     fn new(signal: &'s Signal<V>) -> Self {
         log::trace!("ValueSink - new called");
 
-        Self { signal }
+        Self {
+            signal,
+            flush_pending: AtomicBool::new(false),
+        }
     }
 }
 impl<'s, V: EventValue> Sink<V> for ValueSink<'s, V> {
@@ -118,6 +122,7 @@ impl<'s, V: EventValue> Sink<V> for ValueSink<'s, V> {
         log::trace!("ValueSink - start_send called");
 
         self.signal.inner.queue.push(value);
+        self.flush_pending.store(true, Ordering::Relaxed);
 
         Ok(())
     }
@@ -126,9 +131,9 @@ impl<'s, V: EventValue> Sink<V> for ValueSink<'s, V> {
         self: Pin<&mut Self>,
         _cx: &mut Context,
     ) -> Poll<Result<(), Self::Error>> {
-        log::trace!("ValueSink - poll_flush called");
-
-        self.signal.inner.waker.wake();
+        if self.flush_pending.swap(false, Ordering::Relaxed) {
+            self.signal.inner.waker.wake();
+        }
 
         Poll::Ready(Ok(()))
     }
