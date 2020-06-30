@@ -108,13 +108,14 @@ fn menu_master_avr_v1(master: &Master) -> Result<(), Error> {
     let menu = menu
         .with_prompt("Select device type")
         .item("d0003_junction_box_minimal_v1")
-        .item("d0006_relay14_opto_a_v1");
+        .item("d0006_relay14_opto_a_v1")
+        .item("d0007_relay14_ssr_a_v2");
 
     while let Some(result) = menu.interact_opt()? {
         match result {
             0 => menu_master_avr_v1_d0003_junction_box_minimal_v1(master),
             1 => menu_master_avr_v1_d0006_relay14_opto_a_v1(master),
-            // 1 => menu_master_avr_v1_d0007_relay14_ssr_a_v2(master),
+            2 => menu_master_avr_v1_d0007_relay14_ssr_a_v2(master),
             _ => panic!(),
         }?;
     }
@@ -219,15 +220,28 @@ fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(
     Ok(())
 }
 fn menu_master_avr_v1_d0006_relay14_opto_a_v1(master: &Master) -> Result<(), Error> {
-    let address_serial =
-        ask_device_serial(master, &AddressDeviceType::new_from_ordinal(6).unwrap())?;
+    menu_master_avr_v1_common_relay14_common::<
+        avr_v1::d0006_relay14_opto_a_v1::hardware::Specification,
+    >(master)
+}
+fn menu_master_avr_v1_d0007_relay14_ssr_a_v2(master: &Master) -> Result<(), Error> {
+    menu_master_avr_v1_common_relay14_common::<
+        avr_v1::d0007_relay14_ssr_a_v2::hardware::Specification,
+    >(master)
+}
+fn menu_master_avr_v1_common_relay14_common<
+    S: avr_v1::common::relay14_common::hardware::Specification,
+>(
+    master: &Master
+) -> Result<(), Error> {
+    let address_serial = ask_device_serial(master, &S::address_device_type())?;
     let runner = avr_v1::hardware::runner::Runner::<
-        avr_v1::d0006_relay14_opto_a_v1::hardware::Device,
+        avr_v1::common::relay14_common::hardware::Device<S>,
     >::new(master, address_serial);
     execute_on_tokio(async move {
         let runner_ref = &runner;
         async move {
-            let avr_v1::d0006_relay14_opto_a_v1::hardware::RemoteProperties { outputs } =
+            let avr_v1::common::relay14_common::hardware::RemoteProperties { outputs } =
                 runner_ref.remote_properties();
 
             let runner_run = runner_ref.run();
@@ -239,10 +253,10 @@ fn menu_master_avr_v1_d0006_relay14_opto_a_v1(master: &Master) -> Result<(), Err
 
                 loop {
                     output_index += 1;
-                    output_index %= avr_v1::d0006_relay14_opto_a_v1::hardware::OUTPUT_COUNT;
+                    output_index %= avr_v1::common::relay14_common::hardware::OUTPUT_COUNT;
 
                     let mut output_values =
-                        [false; avr_v1::d0006_relay14_opto_a_v1::hardware::OUTPUT_COUNT];
+                        [false; avr_v1::common::relay14_common::hardware::OUTPUT_COUNT];
                     output_values[output_index] = true;
 
                     log::info!("setting outputs: {:?}", output_values);

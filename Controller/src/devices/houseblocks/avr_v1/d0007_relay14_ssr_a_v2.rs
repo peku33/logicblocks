@@ -6,7 +6,7 @@ pub mod logic {
         type HardwareSpecification = hardware::Specification;
 
         fn class() -> &'static str {
-            "relay14_opto_a_v1"
+            "relay14_ssr_a_v2"
         }
     }
 
@@ -21,10 +21,10 @@ pub mod hardware {
     pub struct Specification {}
     impl hardware::Specification for Specification {
         fn device_type_name() -> &'static str {
-            "Relay14_Opto_A_v1"
+            "Relay14_SSR_A_v2"
         }
         fn address_device_type() -> AddressDeviceType {
-            AddressDeviceType::new_from_ordinal(6).unwrap()
+            AddressDeviceType::new_from_ordinal(7).unwrap()
         }
     }
 
