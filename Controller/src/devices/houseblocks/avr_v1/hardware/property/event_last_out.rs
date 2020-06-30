@@ -1,17 +1,7 @@
 use crate::util::waker_stream;
-use futures::{
-    sink::Sink,
-    stream::{FusedStream, Stream},
-};
+use futures::stream::{FusedStream, Stream};
 use parking_lot::Mutex;
-use std::{
-    cmp::max,
-    convert::Infallible,
-    ops::Deref,
-    pin::Pin,
-    sync::atomic::{AtomicBool, Ordering},
-    task::{Context, Poll},
-};
+use std::{cmp::max, ops::Deref};
 
 #[derive(Debug)]
 pub struct Property<T>
@@ -68,17 +58,13 @@ where
     T: Clone,
 {
     property: &'p Property<T>,
-    flush_pending: AtomicBool,
 }
 impl<'p, T> ValueSink<'p, T>
 where
     T: Clone,
 {
     fn new(property: &'p Property<T>) -> Self {
-        Self {
-            property,
-            flush_pending: AtomicBool::new(false),
-        }
+        Self { property }
     }
 
     pub fn set(
@@ -91,51 +77,6 @@ where
         drop(local);
 
         self.property.waker.wake();
-    }
-}
-impl<'p, T> Sink<T> for ValueSink<'p, T>
-where
-    T: Clone,
-{
-    type Error = Infallible;
-
-    fn poll_ready(
-        self: Pin<&mut Self>,
-        _cx: &mut Context,
-    ) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
-    }
-
-    fn start_send(
-        self: Pin<&mut Self>,
-        item: T,
-    ) -> Result<(), Self::Error> {
-        let mut local = self.property.local.lock();
-        local.0.replace(item);
-        local.1 += 1;
-        drop(local);
-
-        self.flush_pending.store(true, Ordering::Relaxed);
-
-        Ok(())
-    }
-
-    fn poll_flush(
-        self: Pin<&mut Self>,
-        _cx: &mut Context,
-    ) -> Poll<Result<(), Self::Error>> {
-        if self.flush_pending.swap(false, Ordering::Relaxed) {
-            self.property.waker.wake();
-        }
-
-        Poll::Ready(Ok(()))
-    }
-
-    fn poll_close(
-        self: Pin<&mut Self>,
-        _cx: &mut Context,
-    ) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
     }
 }
 

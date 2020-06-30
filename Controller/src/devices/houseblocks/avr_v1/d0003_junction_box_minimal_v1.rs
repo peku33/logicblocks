@@ -85,7 +85,8 @@ pub mod logic {
             });
             pin_mut!(keys_runner);
 
-            let mut leds_runner = self
+            let leds_ref = &leds;
+            let leds_runner = self
                 .leds
                 .iter()
                 .map(|led| led.stream().map(|_| ()))
@@ -98,22 +99,20 @@ pub mod logic {
                             .unwrap_or(false)
                     })
                 })
-                .map(Ok)
-                .forward(leds)
-                .map(|result| result.unwrap());
+                .for_each(async move |value| leds_ref.set(value));
+            pin_mut!(leds_runner);
 
-            let mut buzzer_runner = self
+            let buzzer_ref = &buzzer;
+            let buzzer_runner = self
                 .buzzer
                 .stream()
                 .map(|value| value.into())
-                .map(Ok)
-                .forward(buzzer)
-                .map(|result| result.unwrap());
+                .for_each(async move |value| buzzer_ref.set(value));
+            pin_mut!(buzzer_runner);
 
-            let mut temperature_runner = temperature
-                .map(Ok)
-                .forward(self.temperature.sink())
-                .map(|result| result.unwrap());
+            let temperature_runner =
+                temperature.for_each(async move |value| self.temperature.set(value));
+            pin_mut!(temperature_runner);
 
             select! {
                 () = keys_runner => panic!("keys_runner yielded"),
@@ -208,11 +207,13 @@ pub mod hardware {
             run_context: &dyn runner::RunContext,
         ) -> ! {
             let leds_runner = self.leds.device_get_stream().for_each(async move |()| {
+                log::debug!("leds_runner updated, calling poll_request");
                 run_context.poll_request();
             });
             pin_mut!(leds_runner);
 
             let buzzer_runner = self.buzzer.device_get_stream().for_each(async move |()| {
+                log::debug!("buzzer_runner updated, calling poll_request");
                 run_context.poll_request();
             });
             pin_mut!(buzzer_runner);

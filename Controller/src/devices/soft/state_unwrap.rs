@@ -12,7 +12,7 @@ use crate::{
 use async_trait::async_trait;
 use futures::{
     future::{BoxFuture, FutureExt},
-    select,
+    pin_mut, select,
     stream::StreamExt,
 };
 use http::Method;
@@ -47,7 +47,7 @@ impl<V: DataType + StateValue + Clone + PartialEq> DeviceTrait for Device<V> {
     }
 
     async fn run(&self) -> ! {
-        let mut input_runner = self
+        let input_runner = self
             .input
             .stream()
             .map(|value| {
@@ -55,9 +55,8 @@ impl<V: DataType + StateValue + Clone + PartialEq> DeviceTrait for Device<V> {
                     .unwrap_or_else(|| Some(self.default.clone()))
                     .unwrap_or_else(|| self.default.clone())
             })
-            .map(Ok)
-            .forward(self.output.sink())
-            .map(|result| result.unwrap());
+            .for_each(async move |value| self.output.set(value));
+        pin_mut!(input_runner);
 
         select! {
             () = input_runner => panic!("input_runner yielded"),

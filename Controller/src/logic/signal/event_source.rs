@@ -1,13 +1,11 @@
 use super::{EventValue, SignalBase, SignalRemoteBase, ValueAny};
 use crossbeam::queue::{PopError, SegQueue};
 use futures::{
-    sink::Sink,
     stream::{BoxStream, FusedStream, Stream, StreamExt},
     task::AtomicWaker,
 };
 use std::{
     any::{type_name, TypeId},
-    convert::Infallible,
     fmt,
     pin::Pin,
     sync::{
@@ -74,77 +72,12 @@ impl<V: EventValue> Signal<V> {
         }
         self.inner.waker.wake();
     }
-
-    pub fn sink(&self) -> ValueSink<V> {
-        log::trace!("Signal - sink called");
-
-        ValueSink::new(self)
-    }
 }
 impl<V: EventValue> SignalBase for Signal<V> {
     fn remote(&self) -> SignalRemoteBase {
         log::trace!("Signal - remote called");
 
         SignalRemoteBase::EventSource(Box::new(Remote::new(self.inner.clone())))
-    }
-}
-
-pub struct ValueSink<'s, V: EventValue> {
-    signal: &'s Signal<V>,
-    flush_pending: AtomicBool,
-}
-impl<'s, V: EventValue> ValueSink<'s, V> {
-    fn new(signal: &'s Signal<V>) -> Self {
-        log::trace!("ValueSink - new called");
-
-        Self {
-            signal,
-            flush_pending: AtomicBool::new(false),
-        }
-    }
-}
-impl<'s, V: EventValue> Sink<V> for ValueSink<'s, V> {
-    type Error = Infallible;
-
-    fn poll_ready(
-        self: Pin<&mut Self>,
-        _cx: &mut Context,
-    ) -> Poll<Result<(), Self::Error>> {
-        log::trace!("ValueSink - poll_ready called");
-
-        Poll::Ready(Ok(()))
-    }
-
-    fn start_send(
-        self: Pin<&mut Self>,
-        value: V,
-    ) -> Result<(), Self::Error> {
-        log::trace!("ValueSink - start_send called");
-
-        self.signal.inner.queue.push(value);
-        self.flush_pending.store(true, Ordering::Relaxed);
-
-        Ok(())
-    }
-
-    fn poll_flush(
-        self: Pin<&mut Self>,
-        _cx: &mut Context,
-    ) -> Poll<Result<(), Self::Error>> {
-        if self.flush_pending.swap(false, Ordering::Relaxed) {
-            self.signal.inner.waker.wake();
-        }
-
-        Poll::Ready(Ok(()))
-    }
-
-    fn poll_close(
-        self: Pin<&mut Self>,
-        _cx: &mut Context,
-    ) -> Poll<Result<(), Self::Error>> {
-        log::trace!("ValueSink - poll_close called");
-
-        Poll::Ready(Ok(()))
     }
 }
 

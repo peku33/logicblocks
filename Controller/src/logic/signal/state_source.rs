@@ -1,17 +1,15 @@
 use super::{SignalBase, SignalRemoteBase, StateValue, ValueAny};
 use futures::{
-    sink::Sink,
     stream::{BoxStream, Stream, StreamExt},
     task::AtomicWaker,
 };
 use parking_lot::Mutex;
 use std::{
     any::{type_name, TypeId},
-    convert::Infallible,
     fmt,
     pin::Pin,
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicUsize, Ordering},
         Arc,
     },
     task::{Context, Poll},
@@ -76,85 +74,12 @@ impl<V: StateValue + Clone + PartialEq> Signal<V> {
 
         self.inner.waker.wake();
     }
-
-    pub fn sink(&self) -> ValueSink<V> {
-        log::trace!("Signal - sink called");
-
-        ValueSink::new(self)
-    }
 }
 impl<V: StateValue + Clone + PartialEq> SignalBase for Signal<V> {
     fn remote(&self) -> SignalRemoteBase {
         log::trace!("Signal - remote called");
 
         SignalRemoteBase::StateSource(Box::new(Remote::new(self.inner.clone())))
-    }
-}
-
-pub struct ValueSink<'s, V: StateValue + Clone + PartialEq> {
-    signal: &'s Signal<V>,
-    flush_pending: AtomicBool,
-}
-impl<'s, V: StateValue + Clone + PartialEq> ValueSink<'s, V> {
-    fn new(signal: &'s Signal<V>) -> Self {
-        log::trace!("ValueSink - new called");
-
-        Self {
-            signal,
-            flush_pending: AtomicBool::new(false),
-        }
-    }
-}
-impl<'s, V: StateValue + Clone + PartialEq> Sink<V> for ValueSink<'s, V> {
-    type Error = Infallible;
-
-    fn poll_ready(
-        self: Pin<&mut Self>,
-        _cx: &mut Context,
-    ) -> Poll<Result<(), Self::Error>> {
-        log::trace!("ValueSink - poll_ready called");
-
-        Poll::Ready(Ok(()))
-    }
-
-    fn start_send(
-        self: Pin<&mut Self>,
-        value: V,
-    ) -> Result<(), Self::Error> {
-        log::trace!("ValueSink - start_send called");
-
-        let mut current_value = self.signal.inner.value.lock();
-        if *current_value != value {
-            log::trace!("ValueSink - start_send value changed");
-
-            *current_value = value;
-            self.signal.inner.version.fetch_add(1, Ordering::Relaxed);
-        }
-        drop(current_value);
-
-        self.flush_pending.store(true, Ordering::Relaxed);
-
-        Ok(())
-    }
-
-    fn poll_flush(
-        self: Pin<&mut Self>,
-        _cx: &mut Context,
-    ) -> Poll<Result<(), Self::Error>> {
-        if self.flush_pending.swap(false, Ordering::Relaxed) {
-            self.signal.inner.waker.wake();
-        }
-
-        Poll::Ready(Ok(()))
-    }
-
-    fn poll_close(
-        self: Pin<&mut Self>,
-        _cx: &mut Context,
-    ) -> Poll<Result<(), Self::Error>> {
-        log::trace!("ValueSink - poll_close called");
-
-        Poll::Ready(Ok(()))
     }
 }
 
