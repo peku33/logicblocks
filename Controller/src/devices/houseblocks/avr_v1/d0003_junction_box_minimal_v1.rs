@@ -175,8 +175,6 @@ pub mod hardware {
     }
     #[async_trait]
     impl runner::Device for Device {
-        type RemoteProperties<'d> = RemoteProperties<'d>;
-
         fn new() -> Self {
             Self {
                 keys: property::state_in::Property::new(),
@@ -193,6 +191,7 @@ pub mod hardware {
             AddressDeviceType::new_from_ordinal(3).unwrap()
         }
 
+        type RemoteProperties<'d> = RemoteProperties<'d>;
         fn remote_properties(&self) -> RemoteProperties<'_> {
             RemoteProperties {
                 keys: self.keys.user_get_stream(),
@@ -207,13 +206,11 @@ pub mod hardware {
             run_context: &dyn runner::RunContext,
         ) -> ! {
             let leds_runner = self.leds.device_get_stream().for_each(async move |()| {
-                log::debug!("leds_runner updated, calling poll_request");
                 run_context.poll_request();
             });
             pin_mut!(leds_runner);
 
             let buzzer_runner = self.buzzer.device_get_stream().for_each(async move |()| {
-                log::debug!("buzzer_runner updated, calling poll_request");
                 run_context.poll_request();
             });
             pin_mut!(buzzer_runner);

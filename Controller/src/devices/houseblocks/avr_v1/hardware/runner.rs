@@ -40,13 +40,12 @@ pub trait BusDevice {
 
 #[async_trait]
 pub trait Device: BusDevice + Sync + Send {
-    type RemoteProperties<'d>: Sync + Send;
-
     fn new() -> Self;
 
     fn device_type_name() -> &'static str;
     fn address_device_type() -> AddressDeviceType;
 
+    type RemoteProperties<'d>: Sync + Send;
     fn remote_properties(&self) -> Self::RemoteProperties<'_>;
 
     async fn run(
@@ -138,7 +137,7 @@ impl<'m, D: Device> Runner<'m, D> {
 
         // Main running loop
         *self.device_state.lock() = DeviceState::RUNNING;
-        log::debug!("{}: driver_run_once - initialized", self);
+        log::trace!("{}: driver_run_once - initialized", self);
 
         let mut poll_waker = self.poll_waker.receiver();
         loop {
