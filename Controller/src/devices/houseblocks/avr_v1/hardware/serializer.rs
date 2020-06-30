@@ -59,6 +59,18 @@ impl Serializer {
         }
         self.push_u8(bits);
     }
+    pub fn push_bool_array_16(
+        &mut self,
+        value: ArrayVec<[bool; 16]>,
+    ) {
+        let mut bits = 0u16;
+        for (index, item) in value.into_iter().enumerate() {
+            if item {
+                bits |= 1 << index;
+            }
+        }
+        self.push_u16(bits);
+    }
 }
 #[cfg(test)]
 mod test_serializer {
@@ -135,5 +147,19 @@ mod test_serializer {
         serializer.push_bool_array_8([true, true, false, false, false, true, false, true].into());
         let payload = serializer.into_payload();
         assert_eq!(payload, Payload::new(Box::from(*b"A3")).unwrap());
+    }
+    #[test]
+    fn push_bool_array_16() {
+        let mut serializer = Serializer::new();
+
+        serializer.push_bool_array_16(
+            [
+                false, true, false, false, false, false, true, true, false, false, false, false,
+                false, false, false, true,
+            ]
+            .into(),
+        );
+        let payload = serializer.into_payload();
+        assert_eq!(payload, Payload::new(Box::from(*b"80C2")).unwrap());
     }
 }
