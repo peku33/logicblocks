@@ -107,14 +107,13 @@ fn menu_master_avr_v1(master: &Master) -> Result<(), Error> {
     let mut menu = dialoguer::Select::new();
     let menu = menu
         .with_prompt("Select device type")
-        .item("d0003_junction_box_minimal_v1");
-    // .item("d0006_relay14_opto_a_v1")
-    // .item("d0007_relay14_ssr_a_v2");
+        .item("d0003_junction_box_minimal_v1")
+        .item("d0006_relay14_opto_a_v1");
 
     while let Some(result) = menu.interact_opt()? {
         match result {
             0 => menu_master_avr_v1_d0003_junction_box_minimal_v1(master),
-            // 0 => menu_master_avr_v1_d0006_relay14_opto_a_v1(master),
+            1 => menu_master_avr_v1_d0006_relay14_opto_a_v1(master),
             // 1 => menu_master_avr_v1_d0007_relay14_ssr_a_v2(master),
             _ => panic!(),
         }?;
@@ -210,6 +209,56 @@ fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(
                             None => log::warn!("temperature: None (Error)"),
                         }
                     }
+                    _ = ctrlc => break,
+                }
+            }
+        }
+        .await;
+        runner.finalize().await;
+    });
+    Ok(())
+}
+fn menu_master_avr_v1_d0006_relay14_opto_a_v1(master: &Master) -> Result<(), Error> {
+    let address_serial =
+        ask_device_serial(master, &AddressDeviceType::new_from_ordinal(6).unwrap())?;
+    let runner = avr_v1::hardware::runner::Runner::<
+        avr_v1::d0006_relay14_opto_a_v1::hardware::Device,
+    >::new(master, address_serial);
+    execute_on_tokio(async move {
+        let runner_ref = &runner;
+        async move {
+            let avr_v1::d0006_relay14_opto_a_v1::hardware::RemoteProperties { outputs } =
+                runner_ref.remote_properties();
+
+            let runner_run = runner_ref.run();
+            pin_mut!(runner_run);
+            let mut runner_run = runner_run.fuse();
+
+            let outputs_runner = async {
+                let mut output_index = 0;
+
+                loop {
+                    output_index += 1;
+                    output_index %= avr_v1::d0006_relay14_opto_a_v1::hardware::OUTPUT_COUNT;
+
+                    let mut output_values =
+                        [false; avr_v1::d0006_relay14_opto_a_v1::hardware::OUTPUT_COUNT];
+                    output_values[output_index] = true;
+
+                    log::info!("setting outputs: {:?}", output_values);
+                    outputs.set(output_values);
+                    tokio::time::delay_for(Duration::from_secs(1)).await;
+                }
+            };
+            pin_mut!(outputs_runner);
+            let mut outputs_runner = outputs_runner.fuse();
+
+            let mut ctrlc = tokio::signal::ctrl_c().boxed().fuse();
+
+            loop {
+                select! {
+                    _ = runner_run => panic!("runner_run yielded"),
+                    _ = outputs_runner => panic!("outputs_runner yielded"),
                     _ = ctrlc => break,
                 }
             }
