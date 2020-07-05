@@ -5,6 +5,7 @@ use super::{
 use crate::{
     logic::device,
     web::{
+        sse_aggregated::{Node, NodeProvider, PathItem},
         uri_cursor::{Handler, UriCursor},
         Request, Response,
     },
@@ -15,11 +16,12 @@ use futures::{
     pin_mut, select,
 };
 use http::Method;
+use maplit::hashmap;
 use serde_json::json;
 use std::borrow::Cow;
 
 #[async_trait]
-pub trait Device: Handler + Sync + Send {
+pub trait Device: Sync + Send + Handler + NodeProvider {
     type HardwareDevice: runner::Device;
 
     fn new() -> Self;
@@ -88,17 +90,27 @@ impl<'m, D: Device> Handler for Runner<'m, D> {
     fn handle(
         &self,
         request: Request,
-        uri_cursor: UriCursor,
+        uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response> {
-        match (request.method(), uri_cursor.next_item()) {
-            (&Method::GET, ("", None)) => {
-                let response = json!({
-                    "device_state": self.hardware_runner.device_state(),
-                });
-                async move { Response::ok_json(response) }.boxed()
-            }
-            (_, ("device", Some(uri_cursor_next))) => self.device.handle(request, uri_cursor_next),
+        match uri_cursor {
+            UriCursor::Terminal => match *request.method() {
+                Method::GET => {
+                    let response = json!({
+                        "device_state": self.hardware_runner.device_state(),
+                    });
+                    async move { Response::ok_json(response) }.boxed()
+                }
+                _ => async move { Response::error_405() }.boxed(),
+            },
+            UriCursor::Next("device", uri_cursor) => self.device.handle(request, uri_cursor),
             _ => async move { Response::error_404() }.boxed(),
         }
+    }
+}
+impl<'m, D: Device> NodeProvider for Runner<'m, D> {
+    fn node(&self) -> Node {
+        Node::Children(hashmap! {
+            PathItem::String("device".to_owned()) => self.device.node(),
+        })
     }
 }

@@ -4,7 +4,9 @@ use crate::{
         device::{Device as DeviceTrait, Signals},
         signal::{event_target, state_source, SignalBase},
     },
+    util::waker_stream,
     web::{
+        sse_aggregated::{Node, NodeProvider},
         uri_cursor::{Handler, UriCursor},
         Request, Response,
     },
@@ -25,6 +27,8 @@ pub struct Device {
     r: event_target::Signal<Void>,
     s: event_target::Signal<Void>,
     t: event_target::Signal<Void>,
+
+    sse_sender: waker_stream::Sender,
 }
 impl Device {
     pub fn new(initial: Boolean) -> Self {
@@ -33,19 +37,28 @@ impl Device {
             r: event_target::Signal::new(),
             s: event_target::Signal::new(),
             t: event_target::Signal::new(),
+
+            sse_sender: waker_stream::Sender::new(),
         }
     }
 
     fn r(&self) {
         self.output.set(Boolean::from(false));
+
+        self.sse_sender.wake();
     }
     fn s(&self) {
         self.output.set(Boolean::from(true));
+
+        self.sse_sender.wake();
     }
     fn t(&self) -> bool {
         let value: bool = self.output.current().into();
         let value = !value;
         self.output.set(Boolean::from(value));
+
+        self.sse_sender.wake();
+
         value
     }
 }
@@ -92,26 +105,52 @@ impl Handler for Device {
     fn handle(
         &self,
         request: Request,
-        uri_cursor: UriCursor,
+        uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response> {
-        match (request.method(), uri_cursor.next_item()) {
-            (&Method::GET, ("", None)) => {
-                let value: bool = self.output.current().into();
-                async move { Response::ok_json(json!({ "value": value })) }.boxed()
-            }
-            (&Method::POST, ("r", None)) => {
-                self.r();
-                async move { Response::ok_json(false) }.boxed()
-            }
-            (&Method::POST, ("s", None)) => {
-                self.s();
-                async move { Response::ok_json(true) }.boxed()
-            }
-            (&Method::POST, ("t", None)) => {
-                let value = self.t();
-                async move { Response::ok_json(value) }.boxed()
-            }
+        match uri_cursor {
+            UriCursor::Terminal => match *request.method() {
+                Method::GET => {
+                    let value: bool = self.output.current().into();
+                    async move { Response::ok_json(json!({ "value": value })) }.boxed()
+                }
+                _ => async move { Response::error_405() }.boxed(),
+            },
+            UriCursor::Next("r", uri_cursor) => match **uri_cursor {
+                UriCursor::Terminal => match *request.method() {
+                    Method::POST => {
+                        self.r();
+                        async move { Response::ok_json(false) }.boxed()
+                    }
+                    _ => async move { Response::error_405() }.boxed(),
+                },
+                _ => async move { Response::error_404() }.boxed(),
+            },
+            UriCursor::Next("s", uri_cursor) => match **uri_cursor {
+                UriCursor::Terminal => match *request.method() {
+                    Method::POST => {
+                        self.s();
+                        async move { Response::ok_json(false) }.boxed()
+                    }
+                    _ => async move { Response::error_405() }.boxed(),
+                },
+                _ => async move { Response::error_404() }.boxed(),
+            },
+            UriCursor::Next("t", uri_cursor) => match **uri_cursor {
+                UriCursor::Terminal => match *request.method() {
+                    Method::POST => {
+                        self.t();
+                        async move { Response::ok_json(false) }.boxed()
+                    }
+                    _ => async move { Response::error_405() }.boxed(),
+                },
+                _ => async move { Response::error_404() }.boxed(),
+            },
             _ => async move { Response::error_404() }.boxed(),
         }
+    }
+}
+impl NodeProvider for Device {
+    fn node(&self) -> Node {
+        Node::Terminal(self.sse_sender.receiver_factory())
     }
 }

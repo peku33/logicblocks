@@ -39,6 +39,22 @@ impl Sender {
         self.inner.version.fetch_add(1, Ordering::Relaxed);
         self.inner.waker.wake();
     }
+    pub fn receiver_factory(&self) -> ReceiverFactory {
+        ReceiverFactory::new(self.inner.clone())
+    }
+    pub fn receiver(&self) -> Receiver {
+        Receiver::new(self.inner.clone())
+    }
+}
+
+#[derive(Debug)]
+pub struct ReceiverFactory {
+    inner: Arc<Inner>,
+}
+impl ReceiverFactory {
+    fn new(inner: Arc<Inner>) -> Self {
+        Self { inner }
+    }
     pub fn receiver(&self) -> Receiver {
         Receiver::new(self.inner.clone())
     }

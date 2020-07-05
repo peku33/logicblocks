@@ -7,7 +7,9 @@ pub mod logic {
             signal,
             signal::SignalBase,
         },
+        util::waker_stream,
         web::{
+            sse_aggregated::{Node, NodeProvider},
             uri_cursor::{Handler, UriCursor},
             Request, Response,
         },
@@ -29,6 +31,7 @@ pub mod logic {
 
     pub struct Device<S: Specification> {
         outputs: [signal::state_target::Signal<Boolean>; hardware::OUTPUT_COUNT],
+        sse_sender: waker_stream::Sender,
         _phantom: PhantomData<S>,
     }
     #[async_trait]
@@ -37,9 +40,11 @@ pub mod logic {
 
         fn new() -> Self {
             let outputs = array_init(|_| signal::state_target::Signal::new());
+            let sse_sender = waker_stream::Sender::new();
 
             Self {
                 outputs,
+                sse_sender,
                 _phantom: PhantomData,
             }
         }
@@ -88,9 +93,14 @@ pub mod logic {
         fn handle(
             &self,
             _request: Request,
-            _uri_cursor: UriCursor,
+            _uri_cursor: &UriCursor,
         ) -> BoxFuture<'static, Response> {
-            async move { Response::ok_empty() }.boxed()
+            async move { Response::error_404() }.boxed()
+        }
+    }
+    impl<S: Specification> NodeProvider for Device<S> {
+        fn node(&self) -> Node {
+            Node::Terminal(self.sse_sender.receiver_factory())
         }
     }
 }

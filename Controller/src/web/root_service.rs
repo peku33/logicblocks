@@ -43,7 +43,7 @@ impl<'a> Handler for RootService<'a> {
         request: Request,
     ) -> BoxFuture<'static, Response> {
         // Extract request path
-        let path = request.uri().path();
+        let path = request.uri().path().to_owned();
 
         // Redirect / to /index.html
         if path == "/" {
@@ -53,9 +53,8 @@ impl<'a> Handler for RootService<'a> {
         // Serve API if url starts with /api
         let api_prefix = "/api/";
         if path.starts_with(api_prefix) {
-            let uri_cursor_left = path[api_prefix.len()..].to_owned();
-            let uri_cursor = UriCursor::new(uri_cursor_left);
-            return self.api_handler.handle(request, uri_cursor);
+            let uri_cursor = UriCursor::new(&path[api_prefix.len()..]);
+            return self.api_handler.handle(request, &uri_cursor);
         }
 
         // Serve GUI

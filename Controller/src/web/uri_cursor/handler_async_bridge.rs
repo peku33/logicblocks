@@ -11,7 +11,7 @@ use futures::{
 
 struct HandlerAsyncBridgeItem {
     request: Request,
-    uri_cursor: UriCursor,
+    uri_cursor: &UriCursor,
     result_future_sender: oneshot::Sender<BoxFuture<'static, Response>>,
 }
 
@@ -55,7 +55,7 @@ impl Handler for HandlerAsyncBridge {
     fn handle(
         &self,
         request: Request,
-        uri_cursor: UriCursor,
+        uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response> {
         let (result_future_sender, result_future_receiver) = oneshot::channel();
 

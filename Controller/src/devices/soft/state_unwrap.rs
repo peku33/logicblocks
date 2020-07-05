@@ -4,7 +4,9 @@ use crate::{
         device::{Device as DeviceTrait, Signals},
         signal::{state_source, state_target, SignalBase, StateValue},
     },
+    util::waker_stream,
     web::{
+        sse_aggregated::{Node, NodeProvider},
         uri_cursor::{Handler, UriCursor},
         Request, Response,
     },
@@ -23,6 +25,8 @@ pub struct Device<V: DataType + StateValue + Clone + PartialEq> {
     output: state_source::Signal<V>,
     input: state_target::Signal<Option<V>>,
     default: V,
+
+    sse_sender: waker_stream::Sender,
 }
 impl<V: DataType + StateValue + Clone + PartialEq> Device<V> {
     pub fn new(default: V) -> Self {
@@ -30,6 +34,8 @@ impl<V: DataType + StateValue + Clone + PartialEq> Device<V> {
             output: state_source::Signal::new(default.clone()),
             input: state_target::Signal::new(),
             default,
+
+            sse_sender: waker_stream::Sender::new(),
         }
     }
 }
@@ -68,15 +74,22 @@ impl<V: DataType + StateValue + Clone + PartialEq> Handler for Device<V> {
     fn handle(
         &self,
         request: Request,
-        uri_cursor: UriCursor,
+        uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response> {
-        match (request.method(), uri_cursor.next_item()) {
-            (&Method::GET, ("", None)) => async move {
-                // TODO: Return the actual value
-                Response::ok_empty()
-            }
-            .boxed(),
+        match uri_cursor {
+            UriCursor::Terminal => match *request.method() {
+                Method::GET => {
+                    // TODO: Return the actual value
+                    async move { Response::ok_empty() }.boxed()
+                }
+                _ => async move { Response::error_405() }.boxed(),
+            },
             _ => async move { Response::error_404() }.boxed(),
         }
+    }
+}
+impl<V: DataType + StateValue + Clone + PartialEq> NodeProvider for Device<V> {
+    fn node(&self) -> Node {
+        Node::Terminal(self.sse_sender.receiver_factory())
     }
 }

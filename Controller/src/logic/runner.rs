@@ -12,6 +12,7 @@ use crate::{
         tokio_cancelable::ScopedSpawn,
     },
     web::{
+        sse_aggregated::{Bus, Node, NodeProvider, PathItem},
         uri_cursor::{Handler, UriCursor},
         Request, Response,
     },
@@ -52,6 +53,8 @@ fn signals_runner_run_context_build(signals_runner: SignalsRunner) -> SignalsRun
 
 pub struct Runner<'d> {
     device_context_run_contexts: HashMap<DeviceId, DeviceContextRunContext<'d>>,
+    device_sse_aggregated_bus: Bus,
+
     signals_runner_run_context: SignalsRunnerRunContext,
 }
 impl<'d> Runner<'d> {
@@ -64,7 +67,7 @@ impl<'d> Runner<'d> {
         let signals_runner = Self::build_signals_runner(&devices, &connections);
         let signals_runner_run_context = signals_runner_run_context_build(signals_runner);
 
-        let device_context_run_contexts = devices
+        let device_context_run_contexts: HashMap<DeviceId, DeviceContextRunContext<'d>> = devices
             .into_iter()
             .map(|(device_id, device)| {
                 (
@@ -74,8 +77,19 @@ impl<'d> Runner<'d> {
             })
             .collect();
 
+        let device_sse_aggregated_bus = Bus::new(Node::Children(
+            device_context_run_contexts
+                .iter()
+                .map(move |(device_id, device)| {
+                    (PathItem::NumberU32(*device_id), device.as_owner().node())
+                })
+                .collect(),
+        ));
+
         Self {
             device_context_run_contexts,
+            device_sse_aggregated_bus,
+
             signals_runner_run_context,
         }
     }
@@ -186,24 +200,35 @@ impl<'p> Handler for Runner<'p> {
     fn handle(
         &self,
         request: Request,
-        uri_cursor: UriCursor,
+        uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response> {
-        match uri_cursor.next_item() {
-            ("devices", uri_cursor_next_item) => match (request.method(), uri_cursor_next_item) {
-                (&Method::GET, None) => {
-                    let device_ids = self
-                        .device_context_run_contexts
-                        .keys()
-                        .copied()
-                        .collect::<Vec<_>>();
-                    async move { Response::ok_json(device_ids) }.boxed()
-                }
-                (_, Some(uri_cursor_next_item)) => {
-                    let (device_id_str, uri_cursor_next_item) = uri_cursor_next_item.next_item();
-                    let uri_cursor_next_item = match uri_cursor_next_item {
-                        Some(uri_cursor_next_item) => uri_cursor_next_item,
-                        None => return async move { Response::error_404() }.boxed(),
-                    };
+        match uri_cursor {
+            UriCursor::Next("devices", uri_cursor) => match &**uri_cursor {
+                UriCursor::Next("list", uri_cursor) => match **uri_cursor {
+                    UriCursor::Terminal => match *request.method() {
+                        Method::GET => {
+                            let device_ids = self
+                                .device_context_run_contexts
+                                .keys()
+                                .copied()
+                                .collect::<Vec<_>>();
+                            async move { Response::ok_json(device_ids) }.boxed()
+                        }
+                        _ => async move { Response::error_405() }.boxed(),
+                    },
+                    _ => async move { Response::error_404() }.boxed(),
+                },
+                UriCursor::Next("events", uri_cursor) => match **uri_cursor {
+                    UriCursor::Terminal => match *request.method() {
+                        Method::GET => {
+                            let sse_stream = self.device_sse_aggregated_bus.sse_stream();
+                            async move { Response::ok_sse_stream(sse_stream) }.boxed()
+                        }
+                        _ => async move { Response::error_405() }.boxed(),
+                    },
+                    _ => async move { Response::error_404() }.boxed(),
+                },
+                UriCursor::Next(device_id_str, uri_cursor) => {
                     let device_id: DeviceId = match device_id_str.parse() {
                         Ok(device_id) => device_id,
                         Err(error) => {
@@ -217,7 +242,7 @@ impl<'p> Handler for Runner<'p> {
                         };
                     device_context_run_context
                         .as_owner()
-                        .handle(request, uri_cursor_next_item)
+                        .handle(request, &*uri_cursor)
                 }
                 _ => async move { Response::error_404() }.boxed(),
             },

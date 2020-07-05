@@ -17,14 +17,14 @@ impl<'h> Handler for MapRouter<'h> {
     fn handle(
         &self,
         request: Request,
-        uri_cursor: UriCursor,
+        uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response> {
-        match uri_cursor.next_item() {
-            (prefix, Some(uri_cursor_next)) => match self.handlers.get(prefix) {
-                Some(handler) => handler.handle(request, uri_cursor_next),
+        match uri_cursor {
+            UriCursor::Terminal => async move { Response::error_404() }.boxed(),
+            UriCursor::Next(prefix, uri_cursor) => match self.handlers.get(*prefix) {
+                Some(handler) => handler.handle(request, uri_cursor),
                 None => async move { Response::error_404() }.boxed(),
             },
-            _ => async move { Response::error_404() }.boxed(),
         }
     }
 }

@@ -1,16 +1,15 @@
-pub mod handler_async_bridge;
+// pub mod handler_async_bridge;
 pub mod map_router;
 
 use super::{Request, Response};
 use async_trait::async_trait;
 use futures::future::BoxFuture;
-use std::sync::Arc;
 
 pub trait Handler {
     fn handle(
         &self,
         request: Request,
-        uri_cursor: UriCursor,
+        uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response>;
 }
 
@@ -19,80 +18,23 @@ pub trait HandlerAsync {
     async fn handle(
         &self,
         request: Request,
-        uri_cursor: UriCursor,
+        uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response>;
 }
 
 #[derive(Debug)]
-pub struct UriCursor {
-    uri: Arc<String>,
-    position: usize,
+pub enum UriCursor<'p> {
+    Terminal,
+    Next(&'p str, Box<UriCursor<'p>>),
 }
-impl<'a> UriCursor {
-    pub fn new(uri: String) -> Self {
-        UriCursor {
-            uri: Arc::new(uri),
-            position: 0,
-        }
-    }
-
-    pub fn rest(&self) -> &str {
-        &self.uri[self.position..]
-    }
-
-    pub fn next_item(&self) -> (&str, Option<UriCursor>) {
-        let slash_position = self.rest().find('/');
-        match slash_position {
-            Some(slash_position) => (
-                &self.rest()[..slash_position],
-                Some(UriCursor {
-                    uri: self.uri.clone(),
-                    position: self.position + slash_position + 1,
-                }),
+impl<'p> UriCursor<'p> {
+    pub fn new(path: &'p str) -> Self {
+        match path.find('/') {
+            Some(slash_position) => UriCursor::Next(
+                &path[..slash_position],
+                Box::new(UriCursor::new(&path[slash_position + 1..])),
             ),
-            None => (self.rest(), None),
+            None => UriCursor::Next(path, Box::new(UriCursor::Terminal)),
         }
-    }
-}
-
-#[cfg(test)]
-mod test_uri_cursor {
-    use super::UriCursor;
-
-    #[test]
-    fn test_1() {
-        let uri_cursor = UriCursor::new("item1/thing2/the3".to_owned());
-
-        let (item, uri_cursor) = uri_cursor.next_item();
-        assert_eq!(item, "item1");
-        let uri_cursor = uri_cursor.unwrap();
-
-        let (item, uri_cursor) = uri_cursor.next_item();
-        assert_eq!(item, "thing2");
-        let uri_cursor = uri_cursor.unwrap();
-
-        let (item, uri_cursor) = uri_cursor.next_item();
-        assert_eq!(item, "the3");
-        assert!(uri_cursor.is_none());
-    }
-
-    #[test]
-    fn test_2() {
-        let uri_cursor = UriCursor::new("".to_owned());
-        let (item, uri_cursor) = uri_cursor.next_item();
-        assert_eq!(item, "");
-        assert!(uri_cursor.is_none());
-    }
-
-    #[test]
-    fn test_3() {
-        let uri_cursor = UriCursor::new("/".to_owned());
-        let (item, uri_cursor) = uri_cursor.next_item();
-        assert_eq!(item, "");
-        let uri_cursor = uri_cursor.unwrap();
-
-        let (item, uri_cursor) = uri_cursor.next_item();
-        assert_eq!(item, "");
-        assert!(uri_cursor.is_none());
     }
 }

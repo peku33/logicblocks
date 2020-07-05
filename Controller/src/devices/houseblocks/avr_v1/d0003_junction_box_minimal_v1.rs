@@ -3,7 +3,9 @@ pub mod logic {
     use crate::{
         datatypes::{boolean::Boolean, temperature::Temperature, time_duration::TimeDuration},
         logic::{device::Signals, signal, signal::SignalBase},
+        util::waker_stream,
         web::{
+            sse_aggregated::{Node, NodeProvider},
             uri_cursor::{Handler, UriCursor},
             Request, Response,
         },
@@ -22,6 +24,8 @@ pub mod logic {
         leds: [signal::state_target::Signal<Boolean>; hardware::LED_COUNT],
         buzzer: signal::event_target::Signal<TimeDuration>,
         temperature: signal::state_source::Signal<Option<Temperature>>,
+
+        sse_sender: waker_stream::Sender,
     }
     #[async_trait]
     impl logic::Device for Device {
@@ -33,11 +37,15 @@ pub mod logic {
             let buzzer = signal::event_target::Signal::new();
             let temperature = signal::state_source::Signal::new(None);
 
+            let sse_sender = waker_stream::Sender::new();
+
             Self {
                 keys,
                 leds,
                 buzzer,
                 temperature,
+
+                sse_sender,
             }
         }
         fn class() -> &'static str {
@@ -127,9 +135,14 @@ pub mod logic {
         fn handle(
             &self,
             _request: Request,
-            _uri_cursor: UriCursor,
+            _uri_cursor: &UriCursor,
         ) -> BoxFuture<'static, Response> {
-            async move { Response::ok_empty() }.boxed()
+            async move { Response::error_404() }.boxed()
+        }
+    }
+    impl NodeProvider for Device {
+        fn node(&self) -> Node {
+            Node::Terminal(self.sse_sender.receiver_factory())
         }
     }
 }

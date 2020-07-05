@@ -2,6 +2,7 @@ pub mod hyper_body_variant;
 pub mod root_service;
 pub mod server;
 pub mod sse;
+pub mod sse_aggregated;
 pub mod uri_cursor;
 
 use bytes::Bytes;
@@ -13,7 +14,7 @@ use futures::{
 use http::{header, HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use hyper_body_variant::HttpBodyVariant;
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
+use std::{net::SocketAddr, ops::Deref};
 
 pub struct Request {
     remote_address: SocketAddr,
@@ -123,7 +124,7 @@ impl Response {
 
         Response { hyper_response }
     }
-    pub fn ok_sse_stream<S: Stream<Item = sse::Event> + Sync + Send + 'static>(
+    pub fn ok_sse_stream<S: Stream<Item = impl Deref<Target = sse::Event>> + Send + 'static>(
         sse_stream: S
     ) -> Response {
         let hyper_body =
@@ -164,8 +165,11 @@ impl Response {
     pub fn error_404() -> Response {
         Self::error(StatusCode::NOT_FOUND)
     }
+    pub fn error_405() -> Response {
+        Self::error(StatusCode::METHOD_NOT_ALLOWED)
+    }
     pub fn error_500() -> Response {
-        Self::error(StatusCode::NOT_FOUND)
+        Self::error(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
 

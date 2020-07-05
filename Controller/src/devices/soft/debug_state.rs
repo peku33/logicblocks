@@ -3,7 +3,9 @@ use crate::{
         device::{Device as DeviceTrait, Signals},
         signal::{state_target, SignalBase, StateValue},
     },
+    util::waker_stream,
     web::{
+        sse_aggregated::{Node, NodeProvider},
         uri_cursor::{Handler, UriCursor},
         Request, Response,
     },
@@ -21,12 +23,14 @@ use std::{any::type_name, borrow::Cow};
 pub struct Device<V: StateValue + Clone + PartialEq> {
     name: String,
     input: state_target::Signal<V>,
+    sse_sender: waker_stream::Sender,
 }
 impl<V: StateValue + Clone + PartialEq> Device<V> {
     pub fn new(name: String) -> Self {
         Self {
             name,
             input: state_target::Signal::new(),
+            sse_sender: waker_stream::Sender::new(),
         }
     }
 }
@@ -66,15 +70,22 @@ impl<V: StateValue + Clone + PartialEq> Handler for Device<V> {
     fn handle(
         &self,
         request: Request,
-        uri_cursor: UriCursor,
+        uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response> {
-        match (request.method(), uri_cursor.next_item()) {
-            (&Method::GET, ("", None)) => async move {
-                // TODO: Return the actual value
-                Response::ok_empty()
-            }
-            .boxed(),
+        match uri_cursor {
+            UriCursor::Terminal => match *request.method() {
+                Method::GET => {
+                    // TODO: Return the actual value
+                    async move { Response::ok_empty() }.boxed()
+                }
+                _ => async move { Response::error_405() }.boxed(),
+            },
             _ => async move { Response::error_404() }.boxed(),
         }
+    }
+}
+impl<V: StateValue + Clone + PartialEq> NodeProvider for Device<V> {
+    fn node(&self) -> Node {
+        Node::Terminal(self.sse_sender.receiver_factory())
     }
 }
