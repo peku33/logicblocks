@@ -22,8 +22,8 @@ use maplit::hashmap;
 use std::{any::type_name, borrow::Cow};
 
 pub struct Device<V: DataType + StateValue + Clone + PartialEq> {
-    output: state_source::Signal<V>,
     input: state_target::Signal<Option<V>>,
+    output: state_source::Signal<V>,
     default: V,
 
     sse_sender: waker_stream::Sender,
@@ -31,8 +31,8 @@ pub struct Device<V: DataType + StateValue + Clone + PartialEq> {
 impl<V: DataType + StateValue + Clone + PartialEq> Device<V> {
     pub fn new(default: V) -> Self {
         Self {
-            output: state_source::Signal::new(default.clone()),
             input: state_target::Signal::new(),
+            output: state_source::Signal::new(default.clone()),
             default,
 
             sse_sender: waker_stream::Sender::new(),
@@ -47,8 +47,8 @@ impl<V: DataType + StateValue + Clone + PartialEq> DeviceTrait for Device<V> {
 
     fn signals(&self) -> Signals {
         hashmap! {
-            0 => &self.output as &dyn SignalBase,
-            1 => &self.input as &dyn SignalBase,
+            0 => &self.input as &dyn SignalBase,
+            1 => &self.output as &dyn SignalBase,
         }
     }
 
