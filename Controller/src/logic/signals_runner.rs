@@ -140,7 +140,10 @@ where
                                 log::warn!("missing target: {:?}", target_device_id_signal_id);
                                 continue;
                             }
-                            _ => panic!("duplicated signal type: {:?}", target_device_id_signal_id),
+                            _ => panic!(
+                                "duplicated state signal type: {:?}",
+                                target_device_id_signal_id
+                            ),
                         };
 
                         let state_target_signal_remote_type_id =
@@ -169,7 +172,7 @@ where
                     let event_source_signal_remote_type_id = event_source_signal_remote.type_id();
                     for target_device_id_signal_id in target_device_id_signal_ids {
                         let event_target_signal_remote = match (
-                            connections_event.target_details(target_device_id_signal_id),
+                            connections_state.target_details(target_device_id_signal_id),
                             connections_event.target_details(target_device_id_signal_id),
                         ) {
                             (Some(_), None) => {
@@ -185,7 +188,10 @@ where
                                 log::warn!("missing target: {:?}", target_device_id_signal_id);
                                 continue;
                             }
-                            _ => panic!("duplicated signal type: {:?}", target_device_id_signal_id),
+                            _ => panic!(
+                                "duplicated event signal type: {:?}",
+                                target_device_id_signal_id
+                            ),
                         };
 
                         let event_target_signal_remote_type_id =
@@ -214,7 +220,10 @@ where
                     log::warn!("missing source: {:?}", source_device_id_signal_id);
                     continue;
                 }
-                _ => panic!("duplicated signal type: {:?}", source_device_id_signal_id),
+                _ => panic!(
+                    "duplicated root signal type: {:?}",
+                    source_device_id_signal_id
+                ),
             };
         }
 
