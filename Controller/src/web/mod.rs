@@ -115,11 +115,11 @@ impl Response {
         Response { hyper_response }
     }
     pub fn ok_json<T: Serialize>(value: T) -> Response {
+        // FIXME: This may fail if serialization fails
+        let body = serde_json::to_vec(&value).unwrap();
         let hyper_response = hyper::Response::builder()
             .header(header::CONTENT_TYPE, "application/json")
-            .body(HttpBodyVariant::from(hyper::Body::from(
-                serde_json::to_vec(&value).unwrap(),
-            )))
+            .body(HttpBodyVariant::from(hyper::Body::from(body)))
             .unwrap();
 
         Response { hyper_response }
