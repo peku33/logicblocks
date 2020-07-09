@@ -42,6 +42,10 @@ where
             None
         }
     }
+    pub fn device_set_unknown(&self) {
+        let mut local_device_value = self.local_device_value.lock();
+        local_device_value.1 = None;
+    }
 }
 
 pub struct ValueSink<'p, T>

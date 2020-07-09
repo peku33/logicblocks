@@ -215,7 +215,9 @@ pub mod hardware {
             Ok(())
         }
 
-        fn failed(&self) {}
+        fn failed(&self) {
+            self.outputs.device_set_unknown();
+        }
     }
 
     struct BusRequestOutputs {

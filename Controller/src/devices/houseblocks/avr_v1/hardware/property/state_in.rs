@@ -33,9 +33,12 @@ where
     }
     pub fn device_set(
         &self,
-        value: Option<T>,
+        value: T,
     ) {
-        let _ = self.sender.broadcast(value);
+        let _ = self.sender.broadcast(Some(value));
+    }
+    pub fn device_set_unknown(&self) {
+        let _ = self.sender.broadcast(None);
     }
 }
 

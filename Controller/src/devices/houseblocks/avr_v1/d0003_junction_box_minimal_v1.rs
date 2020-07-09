@@ -298,18 +298,18 @@ pub mod hardware {
             let stage_2_response = BusResponse::from_payload(stage_2_response_payload)?;
 
             if let Some(response_keys) = stage_2_response.keys {
-                self.keys.device_set(Some(response_keys.values()));
+                self.keys.device_set(response_keys.values());
             }
             if let Some(response_temperature) = stage_2_response.temperature {
                 match response_temperature.as_temperature() {
-                    Some(temperature) => self.temperature.device_set(Some(temperature)),
+                    Some(temperature) => self.temperature.device_set(temperature),
                     None => {
                         log::warn!(
                             "temperature sensor failure ({:?}, {})",
                             response_temperature.state.sensor_type(),
                             response_temperature.state.reset_count()
                         );
-                        self.temperature.device_set(None);
+                        self.temperature.device_set_unknown();
                     }
                 };
             }
@@ -325,8 +325,9 @@ pub mod hardware {
         }
 
         fn failed(&self) {
-            self.keys.device_set(None);
-            self.temperature.device_set(None);
+            self.keys.device_set_unknown();
+            self.leds.device_set_unknown();
+            self.temperature.device_set_unknown();
         }
     }
 
