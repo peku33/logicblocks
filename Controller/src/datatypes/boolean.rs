@@ -1,6 +1,7 @@
 use super::DataType;
+use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Boolean {
     value: bool,
 }

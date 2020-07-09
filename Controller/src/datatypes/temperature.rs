@@ -1,4 +1,5 @@
 use super::DataType;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 pub enum Unit {
@@ -7,7 +8,7 @@ pub enum Unit {
     FAHRENHEIT,
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub struct Temperature {
     kelvin: f64,
 }

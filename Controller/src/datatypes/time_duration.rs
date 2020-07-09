@@ -1,7 +1,8 @@
 use super::DataType;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Copy, Clone, Eq, PartialEq, Debug)]
 pub struct TimeDuration {
     value: Duration,
 }
