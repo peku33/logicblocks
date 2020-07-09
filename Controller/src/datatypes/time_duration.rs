@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Copy, Clone, Eq, PartialEq, Debug)]
+#[serde(transparent)]
 pub struct TimeDuration {
     value: Duration,
 }

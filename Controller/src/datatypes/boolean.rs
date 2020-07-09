@@ -2,6 +2,7 @@ use super::DataType;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Copy, Clone, Eq, PartialEq, Debug)]
+#[serde(transparent)]
 pub struct Boolean {
     value: bool,
 }

@@ -9,6 +9,7 @@ pub enum Unit {
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
+#[serde(transparent)]
 pub struct Temperature {
     kelvin: f64,
 }
