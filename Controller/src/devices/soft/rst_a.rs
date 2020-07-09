@@ -110,7 +110,7 @@ impl Handler for Device {
         match uri_cursor {
             UriCursor::Terminal => match *request.method() {
                 Method::GET => {
-                    let value: bool = self.output.current().into();
+                    let value = self.output.current();
                     async move { Response::ok_json(json!({ "value": value })) }.boxed()
                 }
                 _ => async move { Response::error_405() }.boxed(),
@@ -119,7 +119,7 @@ impl Handler for Device {
                 UriCursor::Terminal => match *request.method() {
                     Method::POST => {
                         self.r();
-                        async move { Response::ok_json(false) }.boxed()
+                        async move { Response::ok_empty() }.boxed()
                     }
                     _ => async move { Response::error_405() }.boxed(),
                 },
@@ -129,7 +129,7 @@ impl Handler for Device {
                 UriCursor::Terminal => match *request.method() {
                     Method::POST => {
                         self.s();
-                        async move { Response::ok_json(false) }.boxed()
+                        async move { Response::ok_empty() }.boxed()
                     }
                     _ => async move { Response::error_405() }.boxed(),
                 },
@@ -139,7 +139,7 @@ impl Handler for Device {
                 UriCursor::Terminal => match *request.method() {
                     Method::POST => {
                         self.t();
-                        async move { Response::ok_json(false) }.boxed()
+                        async move { Response::ok_empty() }.boxed()
                     }
                     _ => async move { Response::error_405() }.boxed(),
                 },

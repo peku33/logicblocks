@@ -18,14 +18,15 @@ use futures::{
 };
 use http::Method;
 use maplit::hashmap;
+use serde::Serialize;
 use std::{any::type_name, borrow::Cow};
 
-pub struct Device<V: StateValue + Clone + PartialEq> {
+pub struct Device<V: StateValue + Serialize + Clone + PartialEq> {
     name: String,
     input: state_target::Signal<V>,
     sse_sender: waker_stream::Sender,
 }
-impl<V: StateValue + Clone + PartialEq> Device<V> {
+impl<V: StateValue + Serialize + Clone + PartialEq> Device<V> {
     pub fn new(name: String) -> Self {
         Self {
             name,
@@ -35,7 +36,7 @@ impl<V: StateValue + Clone + PartialEq> Device<V> {
     }
 }
 #[async_trait]
-impl<V: StateValue + Clone + PartialEq> DeviceTrait for Device<V> {
+impl<V: StateValue + Serialize + Clone + PartialEq> DeviceTrait for Device<V> {
     fn class(&self) -> Cow<'static, str> {
         format!("soft/debug_state<{}>", type_name::<V>()).into()
     }
@@ -66,7 +67,7 @@ impl<V: StateValue + Clone + PartialEq> DeviceTrait for Device<V> {
     }
     async fn finalize(self: Box<Self>) {}
 }
-impl<V: StateValue + Clone + PartialEq> Handler for Device<V> {
+impl<V: StateValue + Serialize + Clone + PartialEq> Handler for Device<V> {
     fn handle(
         &self,
         request: Request,
@@ -75,8 +76,8 @@ impl<V: StateValue + Clone + PartialEq> Handler for Device<V> {
         match uri_cursor {
             UriCursor::Terminal => match *request.method() {
                 Method::GET => {
-                    // TODO: Return the actual value
-                    async move { Response::ok_empty() }.boxed()
+                    let value = self.input.current();
+                    async move { Response::ok_json(value) }.boxed()
                 }
                 _ => async move { Response::error_405() }.boxed(),
             },
@@ -84,7 +85,7 @@ impl<V: StateValue + Clone + PartialEq> Handler for Device<V> {
         }
     }
 }
-impl<V: StateValue + Clone + PartialEq> NodeProvider for Device<V> {
+impl<V: StateValue + Serialize + Clone + PartialEq> NodeProvider for Device<V> {
     fn node(&self) -> Node {
         Node::Terminal(self.sse_sender.receiver_factory())
     }
