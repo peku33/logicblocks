@@ -30,8 +30,9 @@ function useDeviceIds(): number[] | undefined {
   useAsyncEffect(
     async (isMounted) => {
       const deviceIds = await getJson<number[]>("/device_runner/devices/list");
+      const deviceIdsSorted = deviceIds.sort();
       if (!isMounted) return;
-      setDeviceIds(deviceIds);
+      setDeviceIds(deviceIdsSorted);
     },
     () => {
       setDeviceIds(undefined);
