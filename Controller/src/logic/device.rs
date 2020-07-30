@@ -25,12 +25,20 @@ pub trait Device: Sync + Send + Handler + NodeProvider {
 }
 
 pub struct DeviceContext<'d> {
+    name: String,
     device: Box<dyn Device + 'd>,
 }
 impl<'d> DeviceContext<'d> {
-    pub fn new(device: Box<dyn Device + 'd>) -> Self {
+    pub fn new(
+        name: String,
+        device: Box<dyn Device + 'd>,
+    ) -> Self {
         log::trace!("new called");
-        Self { device }
+        Self { name, device }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn as_device(&self) -> &dyn Device {
@@ -64,6 +72,7 @@ impl<'d> Handler for DeviceContext<'d> {
             UriCursor::Terminal => match *request.method() {
                 Method::GET => {
                     let response = json!({
+                        "name": self.name(),
                         "class": self.device.class(),
                     });
                     async move { Response::ok_json(response) }.boxed()
