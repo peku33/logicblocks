@@ -59,32 +59,44 @@ pub struct Runner<'d> {
 }
 impl<'d> Runner<'d> {
     pub fn new(
-        devices: HashMap<DeviceId, Box<dyn Device + 'd>>,
+        device_contexts: HashMap<DeviceId, DeviceContext<'d>>,
         connections: Connections,
     ) -> Self {
         log::trace!("new called");
 
-        let signals_runner = Self::build_signals_runner(&devices, &connections);
-        let signals_runner_run_context = signals_runner_run_context_build(signals_runner);
-
-        let device_context_run_contexts: HashMap<DeviceId, DeviceContextRunContext<'d>> = devices
-            .into_iter()
-            .map(|(device_id, device)| {
-                (
-                    device_id,
-                    device_context_run_context_build(DeviceContext::new(device)),
-                )
-            })
-            .collect();
+        let device_context_run_contexts: HashMap<DeviceId, DeviceContextRunContext<'d>> =
+            device_contexts
+                .into_iter()
+                .map(|(device_id, device_context)| {
+                    (device_id, device_context_run_context_build(device_context))
+                })
+                .collect();
 
         let device_sse_aggregated_bus = Bus::new(Node::Children(
             device_context_run_contexts
                 .iter()
-                .map(move |(device_id, device)| {
-                    (PathItem::NumberU32(*device_id), device.as_owner().node())
+                .map(move |(device_id, device_context_run_context)| {
+                    (
+                        PathItem::NumberU32(*device_id),
+                        device_context_run_context.as_owner().node(),
+                    )
                 })
                 .collect(),
         ));
+
+        let signals_runner = Self::build_signals_runner(
+            &device_context_run_contexts
+                .iter()
+                .map(move |(device_id, device_context_run_context)| {
+                    (
+                        *device_id,
+                        device_context_run_context.as_owner().as_device(),
+                    )
+                })
+                .collect(),
+            &connections,
+        );
+        let signals_runner_run_context = signals_runner_run_context_build(signals_runner);
 
         Self {
             device_context_run_contexts,
@@ -95,7 +107,7 @@ impl<'d> Runner<'d> {
     }
 
     fn build_signals_runner(
-        devices: &HashMap<DeviceId, Box<dyn Device + 'd>>,
+        devices: &HashMap<DeviceId, &dyn Device>,
         connections: &Connections,
     ) -> SignalsRunner {
         SignalsRunner::new(
