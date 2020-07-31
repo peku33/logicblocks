@@ -6,8 +6,9 @@ class ApiRequestError implements Error {
   }
 }
 
+const API_HOST = process.env.REACT_APP_API_HOST || "";
 export function urlBuild(endpoint: string): string {
-  return `/api${endpoint}`;
+  return `${API_HOST}/api${endpoint}`;
 }
 
 export async function getJson<R>(endpoint: string): Promise<R> {
