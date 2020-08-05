@@ -23,20 +23,18 @@ const DeviceSummary: React.FC<{
   const Component = getSummaryComponent(deviceData.class);
 
   return (
-    <Grid columns={2} divided>
-      <Grid.Row>
-        <Grid.Column width={4}>
-          <Header>
-            {deviceData.name}
-            <Header.Subheader>
-              #{deviceId} {deviceData.class}
-            </Header.Subheader>
-          </Header>
-        </Grid.Column>
-        <Grid.Column width={12}>
-          <Component deviceId={deviceId} deviceClass={deviceData.class} />
-        </Grid.Column>
-      </Grid.Row>
+    <Grid columns={2} padded>
+      <Grid.Column width={8} computer={6}>
+        <Header>
+          {deviceData.name}
+          <Header.Subheader>
+            #{deviceId} {deviceData.class}
+          </Header.Subheader>
+        </Header>
+      </Grid.Column>
+      <Grid.Column width={8} computer={10}>
+        <Component deviceId={deviceId} deviceClass={deviceData.class} />
+      </Grid.Column>
     </Grid>
   );
 };
