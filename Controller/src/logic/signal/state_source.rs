@@ -9,7 +9,7 @@ use std::{
     fmt,
     pin::Pin,
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
     },
     task::{Context, Poll},
@@ -20,6 +20,8 @@ struct Inner<V: StateValue + Clone + PartialEq> {
     value: Mutex<V>,
     version: AtomicUsize,
     waker: AtomicWaker,
+    remote_borrowed: AtomicBool,
+    remote_stream_borrowed: AtomicBool,
 }
 impl<V: StateValue + Clone + PartialEq> Inner<V> {
     pub fn new(initial: V) -> Self {
@@ -29,6 +31,8 @@ impl<V: StateValue + Clone + PartialEq> Inner<V> {
             value: Mutex::new(initial),
             version: AtomicUsize::new(0),
             waker: AtomicWaker::new(),
+            remote_borrowed: AtomicBool::new(false),
+            remote_stream_borrowed: AtomicBool::new(false),
         }
     }
 }
@@ -98,6 +102,10 @@ impl<V: StateValue + Clone + PartialEq> Remote<V> {
     fn new(inner: Arc<Inner<V>>) -> Self {
         log::trace!("Remote - new called");
 
+        if inner.remote_borrowed.swap(true, Ordering::Relaxed) {
+            panic!("remote already borrowed");
+        }
+
         Self { inner }
     }
 }
@@ -124,6 +132,15 @@ impl<V: StateValue + Clone + PartialEq> RemoteBase for Remote<V> {
         RemoteStream::new(self.inner.clone()).boxed()
     }
 }
+impl<V: StateValue + Clone + PartialEq> Drop for Remote<V> {
+    fn drop(&mut self) {
+        log::trace!("Remote - drop called");
+
+        if !self.inner.remote_borrowed.swap(false, Ordering::Relaxed) {
+            panic!("remote not borrowed");
+        }
+    }
+}
 
 pub struct RemoteStream<V: StateValue + Clone + PartialEq> {
     inner: Arc<Inner<V>>,
@@ -132,6 +149,10 @@ pub struct RemoteStream<V: StateValue + Clone + PartialEq> {
 impl<V: StateValue + Clone + PartialEq> RemoteStream<V> {
     fn new(inner: Arc<Inner<V>>) -> Self {
         log::trace!("RemoteStream - new called");
+
+        if inner.remote_stream_borrowed.swap(true, Ordering::Relaxed) {
+            panic!("remote already borrowed");
+        }
 
         let version = inner.version.load(Ordering::Relaxed);
         Self {
@@ -159,5 +180,18 @@ impl<V: StateValue + Clone + PartialEq> Stream for RemoteStream<V> {
         let value = self.inner.value.lock().clone();
         let value = Box::new(value);
         Poll::Ready(Some(value))
+    }
+}
+impl<V: StateValue + Clone + PartialEq> Drop for RemoteStream<V> {
+    fn drop(&mut self) {
+        log::trace!("RemoteStream - drop called");
+
+        if !self
+            .inner
+            .remote_stream_borrowed
+            .swap(false, Ordering::Relaxed)
+        {
+            panic!("remote not borrowed");
+        }
     }
 }

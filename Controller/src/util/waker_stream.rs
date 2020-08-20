@@ -3,74 +3,110 @@ use futures::{
     task::{AtomicWaker, Context, Poll},
 };
 use std::{
+    collections::HashSet,
     pin::Pin,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc,
+        Arc, RwLock,
     },
 };
 
+#[derive(PartialEq, Eq, Hash, Debug)]
+struct ReceiverInnerPointer(*const ReceiverInner);
+unsafe impl Sync for ReceiverInnerPointer {}
+unsafe impl Send for ReceiverInnerPointer {}
+
 #[derive(Debug)]
-struct Inner {
+struct Common {
     version: AtomicUsize,
-    waker: AtomicWaker,
+    receivers: RwLock<HashSet<ReceiverInnerPointer>>,
 }
-impl Inner {
+impl Common {
     pub fn new() -> Self {
         Self {
             version: AtomicUsize::new(0),
-            waker: AtomicWaker::new(),
+            receivers: RwLock::new(HashSet::new()),
         }
+    }
+    pub fn wake(&self) {
+        self.version.fetch_add(1, Ordering::Relaxed);
+        self.receivers
+            .read()
+            .unwrap()
+            .iter()
+            .for_each(|receiver_inner_pointer| {
+                let receiver_common: &ReceiverInner = unsafe { &*receiver_inner_pointer.0 };
+                receiver_common.waker.wake();
+            });
     }
 }
 
 #[derive(Debug)]
 pub struct Sender {
-    inner: Arc<Inner>,
+    common: Arc<Common>,
 }
 impl Sender {
     pub fn new() -> Self {
-        let inner = Inner::new();
+        let common = Common::new();
         Self {
-            inner: Arc::new(inner),
+            common: Arc::new(common),
         }
     }
     pub fn wake(&self) {
-        self.inner.version.fetch_add(1, Ordering::Relaxed);
-        self.inner.waker.wake();
+        self.common.wake();
     }
     pub fn receiver_factory(&self) -> ReceiverFactory {
-        ReceiverFactory::new(self.inner.clone())
+        ReceiverFactory::new(self.common.clone())
     }
     pub fn receiver(&self) -> Receiver {
-        Receiver::new(self.inner.clone())
+        Receiver::new(self.common.clone())
     }
 }
 
 #[derive(Debug)]
 pub struct ReceiverFactory {
-    inner: Arc<Inner>,
+    common: Arc<Common>,
 }
 impl ReceiverFactory {
-    fn new(inner: Arc<Inner>) -> Self {
-        Self { inner }
+    fn new(common: Arc<Common>) -> Self {
+        Self { common }
     }
     pub fn receiver(&self) -> Receiver {
-        Receiver::new(self.inner.clone())
+        Receiver::new(self.common.clone())
     }
 }
 
 #[derive(Debug)]
+struct ReceiverInner {
+    waker: AtomicWaker,
+}
+
+#[derive(Debug)]
 pub struct Receiver {
-    inner: Arc<Inner>,
+    common: Arc<Common>,
     version: AtomicUsize,
+    inner: Box<ReceiverInner>,
 }
 impl Receiver {
-    fn new(inner: Arc<Inner>) -> Self {
-        let version = inner.version.load(Ordering::Relaxed);
+    fn new(common: Arc<Common>) -> Self {
+        let version = common.version.load(Ordering::Relaxed);
+        let version = AtomicUsize::new(version);
+
+        let inner = ReceiverInner {
+            waker: AtomicWaker::new(),
+        };
+        let inner = Box::new(inner);
+
+        common
+            .receivers
+            .write()
+            .unwrap()
+            .insert(ReceiverInnerPointer(&*inner));
+
         Self {
+            common,
+            version,
             inner,
-            version: AtomicUsize::new(version),
         }
     }
 }
@@ -83,7 +119,7 @@ impl Stream for Receiver {
     ) -> Poll<Option<Self::Item>> {
         self.inner.waker.register(cx.waker());
 
-        let version = self.inner.version.load(Ordering::SeqCst);
+        let version = self.common.version.load(Ordering::SeqCst);
         if self.version.swap(version, Ordering::SeqCst) == version {
             return Poll::Pending;
         }
@@ -93,5 +129,14 @@ impl Stream for Receiver {
 impl FusedStream for Receiver {
     fn is_terminated(&self) -> bool {
         false
+    }
+}
+impl Drop for Receiver {
+    fn drop(&mut self) {
+        self.common
+            .receivers
+            .write()
+            .unwrap()
+            .remove(&ReceiverInnerPointer(&*self.inner));
     }
 }

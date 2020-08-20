@@ -9,7 +9,7 @@ use std::{
     fmt,
     pin::Pin,
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
     },
     task::{Context, Poll},
@@ -20,6 +20,7 @@ struct Inner<V: StateValue + Clone + PartialEq> {
     value: Mutex<Option<V>>,
     version: AtomicUsize,
     waker: AtomicWaker,
+    stream_borrowed: AtomicBool,
 }
 impl<V: StateValue + Clone + PartialEq> Inner<V> {
     pub fn new() -> Self {
@@ -29,6 +30,7 @@ impl<V: StateValue + Clone + PartialEq> Inner<V> {
             value: Mutex::new(None),
             version: AtomicUsize::new(1), // Streams starts with zero to get value immediately
             waker: AtomicWaker::new(),
+            stream_borrowed: AtomicBool::new(false),
         }
     }
 }
@@ -77,6 +79,10 @@ impl<'s, V: StateValue + Clone + PartialEq> ValueStream<'s, V> {
     fn new(signal: &'s Signal<V>) -> Self {
         log::trace!("ValueStream - new called");
 
+        if signal.inner.stream_borrowed.swap(true, Ordering::Relaxed) {
+            panic!("stream already borrowed");
+        }
+
         Self {
             signal,
             version: AtomicUsize::new(0),
@@ -110,6 +116,20 @@ impl<'s, V: StateValue + Clone + PartialEq> FusedStream for ValueStream<'s, V> {
         log::trace!("ValueStream - is_terminated called");
 
         false
+    }
+}
+impl<'s, V: StateValue + Clone + PartialEq> Drop for ValueStream<'s, V> {
+    fn drop(&mut self) {
+        log::trace!("ValueStream - drop called");
+
+        if !self
+            .signal
+            .inner
+            .stream_borrowed
+            .swap(false, Ordering::Relaxed)
+        {
+            panic!("stream not borrowed");
+        }
     }
 }
 

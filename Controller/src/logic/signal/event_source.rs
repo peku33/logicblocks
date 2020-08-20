@@ -98,6 +98,7 @@ impl<V: EventValue> Remote<V> {
         if inner.remote_borrowed.swap(true, Ordering::Relaxed) {
             panic!("remote already borrowed");
         }
+
         Self { inner }
     }
 }

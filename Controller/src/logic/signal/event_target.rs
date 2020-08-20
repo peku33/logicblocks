@@ -74,6 +74,7 @@ impl<'s, V: EventValue + Clone> ValueStream<'s, V> {
         if signal.inner.stream_borrowed.swap(true, Ordering::Relaxed) {
             panic!("stream already borrowed");
         }
+
         Self { signal }
     }
 }
