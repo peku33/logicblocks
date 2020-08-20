@@ -1,6 +1,10 @@
+# IDE
+.vscode
+
+# Binary & build artifacts
 /target
 **/*.rs.bk
-config.secure.toml
 
+# Data inside project
 /data
 /temporary

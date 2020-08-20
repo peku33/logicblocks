@@ -9,7 +9,10 @@
       "webRoot": "${workspaceFolder}/src",
       "sourceMapPathOverrides": {
         "webpack:///src/*": "${webRoot}/*"
-      }
+      },
+      "runtimeArgs": [
+        "--disable-web-security"
+      ],
     }
   ]
 }

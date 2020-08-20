@@ -1,23 +1,25 @@
-use super::uri_cursor::{Handler as UriCursorHandler, UriCursor};
-use super::{Handler, Request, Response};
-use futures::future::{ready, BoxFuture};
-use futures::FutureExt;
+use super::{
+    uri_cursor::{Handler as UriCursorHandler, UriCursor},
+    Handler, Request, Response,
+};
+use futures::{future::BoxFuture, FutureExt};
+use http::{HeaderMap, Method, Uri};
 
 #[cfg(feature = "ci-packed-gui")]
 use owning_ref::OwningHandle;
 #[cfg(feature = "ci-packed-gui")]
-use web_static_pack::hyper_loader::Responder;
+use web_static_pack::hyper_loader::{Responder, ResponderError};
 #[cfg(feature = "ci-packed-gui")]
 use web_static_pack::loader::Loader;
 
 pub struct RootService<'a> {
-    api_handler: &'a (dyn UriCursorHandler + Sync + Send),
+    api_handler: &'a (dyn UriCursorHandler + Sync),
 
     #[cfg(feature = "ci-packed-gui")]
     gui_responder: OwningHandle<Box<Loader>, Box<Responder<'static>>>,
 }
 impl<'a> RootService<'a> {
-    pub fn new(api_handler: &'a (dyn UriCursorHandler + Sync + Send)) -> Self {
+    pub fn new(api_handler: &'a (dyn UriCursorHandler + Sync)) -> Self {
         #[cfg(feature = "ci-packed-gui")]
         let gui_responder = OwningHandle::new_with_fn(
             Box::new(
@@ -32,6 +34,51 @@ impl<'a> RootService<'a> {
             gui_responder,
         }
     }
+
+    #[cfg(feature = "ci-packed-gui")]
+    fn gui_responder_respond(
+        &self,
+        method: &Method,
+        uri: &Uri,
+        headers: &HeaderMap,
+    ) -> Response {
+        // If path is /, use index.html
+        if uri.path() == "/" {
+            match self.gui_responder.parts_respond_or_error(
+                method,
+                &Uri::from_static("/index.html"),
+                headers,
+            ) {
+                Ok(response) => return Response::wrap_web_static_pack_response(response),
+                Err(error) => return Response::error(error.as_http_status_code()),
+            };
+        }
+
+        // Try actual file
+        match self
+            .gui_responder
+            .parts_respond_or_error(method, uri, headers)
+        {
+            Ok(response) => return Response::wrap_web_static_pack_response(response),
+            Err(error) => match error {
+                ResponderError::LoaderPathNotFound => (),
+                _ => return Response::error(error.as_http_status_code()),
+            },
+        };
+
+        // Fallback to /
+        Response::redirect_302("/")
+    }
+
+    #[cfg(not(feature = "ci-packed-gui"))]
+    fn gui_responder_respond(
+        &self,
+        _method: &Method,
+        _uri: &Uri,
+        _headers: &HeaderMap,
+    ) -> Response {
+        Response::error_404()
+    }
 }
 impl<'a> Handler for RootService<'a> {
     fn handle(
@@ -39,36 +86,18 @@ impl<'a> Handler for RootService<'a> {
         request: Request,
     ) -> BoxFuture<'static, Response> {
         // Extract request path
-        let path = request.uri().path();
-
-        // Redirect / to /index.html
-        if path == "/" {
-            return ready(Response::redirect_302("/index.html")).boxed();
-        }
+        let path = request.uri().path().to_owned();
 
         // Serve API if url starts with /api
         let api_prefix = "/api/";
         if path.starts_with(api_prefix) {
-            let uri_cursor_left = path[api_prefix.len()..].to_owned();
-            let uri_cursor = UriCursor::new(uri_cursor_left);
-            return self.api_handler.handle(request, uri_cursor);
+            let uri_cursor = UriCursor::new(&path[api_prefix.len()..]);
+            return self.api_handler.handle(request, &uri_cursor);
         }
 
         // Serve GUI
-        #[cfg(feature = "ci-packed-gui")]
-        return ready(
-            match self.gui_responder.parts_respond_or_error(
-                request.method(),
-                request.uri(),
-                request.headers(),
-            ) {
-                Ok(response) => Response::wrap_web_static_pack_response(response),
-                Err(error) => Response::error(error.as_http_status_code()),
-            },
-        )
-        .boxed();
-
-        #[cfg(not(feature = "ci-packed-gui"))]
-        return ready(Response::error_404()).boxed();
+        let gui_response =
+            self.gui_responder_respond(request.method(), request.uri(), request.headers());
+        async move { gui_response }.boxed()
     }
 }

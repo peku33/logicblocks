@@ -1,9 +1,9 @@
+use futures::task::{Context, Poll};
 use http::HeaderMap;
 use http_body::SizeHint;
 use hyper::body::{Buf, HttpBody};
 use std::error::Error;
 use std::pin::Pin;
-use std::task::{Context, Poll};
 
 // Common boxed types
 pub type DataVariantBox = Box<dyn Buf + Sync + Send>;
