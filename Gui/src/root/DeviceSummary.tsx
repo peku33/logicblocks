@@ -24,7 +24,7 @@ const DeviceSummary: React.FC<{
 
   return (
     <Grid columns={2} padded>
-      <Grid.Column width={8} computer={6}>
+      <Grid.Column mobile={16} computer={6}>
         <Header>
           {deviceData.name}
           <Header.Subheader>
@@ -32,7 +32,7 @@ const DeviceSummary: React.FC<{
           </Header.Subheader>
         </Header>
       </Grid.Column>
-      <Grid.Column width={8} computer={10}>
+      <Grid.Column mobile={16} computer={10}>
         <Component deviceId={deviceId} deviceClass={deviceData.class} />
       </Grid.Column>
     </Grid>
