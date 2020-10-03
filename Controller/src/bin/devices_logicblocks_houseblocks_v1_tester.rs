@@ -1,4 +1,4 @@
-use failure::{err_msg, Error};
+use anyhow::{bail, Context, Error};
 use futures::{
     future::{Future, FutureExt},
     pin_mut, select,
@@ -38,15 +38,17 @@ fn main_error() -> Result<(), Error> {
 
     while let Some(result) = menu.interact_opt()? {
         match result {
-            0 => menu_masters_context(),
+            0 => menu_masters_context().context("menu_masters_context")?,
             _ => panic!(),
-        }?;
+        };
     }
     Ok(())
 }
 fn menu_masters_context() -> Result<(), Error> {
-    let master_context = MasterContext::new()?;
-    let master_descriptors = master_context.find_master_descriptors()?;
+    let master_context = MasterContext::new().context("master_context")?;
+    let master_descriptors = master_context
+        .find_master_descriptors()
+        .context("master_descriptors")?;
 
     let master_descriptor_names = master_descriptors
         .iter()
@@ -65,7 +67,8 @@ fn menu_masters_context() -> Result<(), Error> {
         .items(&master_descriptor_names);
 
     while let Some(result) = menu.interact_opt()? {
-        menu_master_context(&master_context, master_descriptors[result].clone())?;
+        menu_master_context(&master_context, master_descriptors[result].clone())
+            .context("menu_master_context")?;
     }
     Ok(())
 }
@@ -73,7 +76,7 @@ fn menu_master_context(
     _master_context: &MasterContext,
     master_descriptor: MasterDescriptor,
 ) -> Result<(), Error> {
-    let master = Master::new(master_descriptor)?;
+    let master = Master::new(master_descriptor).context("master")?;
 
     let mut menu = dialoguer::Select::new();
     let menu = menu
@@ -83,10 +86,10 @@ fn menu_master_context(
 
     while let Some(result) = menu.interact_opt()? {
         match result {
-            0 => menu_master_device_discovery(&master),
-            1 => menu_master_avr_v1(&master),
+            0 => menu_master_device_discovery(&master).context("menu_master_device_discovery")?,
+            1 => menu_master_avr_v1(&master).context("menu_master_avr_v1")?,
             _ => panic!(),
-        }?;
+        };
     }
     Ok(())
 }
@@ -99,7 +102,7 @@ fn master_device_discovery(master: &Master) -> Result<Address, Error> {
 fn menu_master_device_discovery(master: &Master) -> Result<(), Error> {
     match master_device_discovery(master) {
         Ok(address) => println!("address: {}", address),
-        Err(error) => println!("error: {}", error),
+        Err(error) => log::error!("error: {:?}", error),
     };
     Ok(())
 }
@@ -113,11 +116,14 @@ fn menu_master_avr_v1(master: &Master) -> Result<(), Error> {
 
     while let Some(result) = menu.interact_opt()? {
         match result {
-            0 => menu_master_avr_v1_d0003_junction_box_minimal_v1(master),
-            1 => menu_master_avr_v1_d0006_relay14_opto_a_v1(master),
-            2 => menu_master_avr_v1_d0007_relay14_ssr_a_v2(master),
+            0 => menu_master_avr_v1_d0003_junction_box_minimal_v1(master)
+                .context("menu_master_avr_v1_d0003_junction_box_minimal_v1")?,
+            1 => menu_master_avr_v1_d0006_relay14_opto_a_v1(master)
+                .context("menu_master_avr_v1_d0006_relay14_opto_a_v1")?,
+            2 => menu_master_avr_v1_d0007_relay14_ssr_a_v2(master)
+                .context("menu_master_avr_v1_d0007_relay14_ssr_a_v2")?,
             _ => panic!(),
-        }?;
+        };
     }
 
     Ok(())
@@ -133,37 +139,45 @@ fn ask_device_serial(
 
     let address_serial = input.interact()?;
     if address_serial.is_empty() {
-        let address = master_device_discovery(master)?;
+        let address = master_device_discovery(master).context("master_device_discovery")?;
         if address.device_type() != address_device_type {
-            return Err(err_msg(
-                "resolved device type does not match requested device type",
-            ));
+            bail!("resolved device type does not match requested device type");
         }
         Ok(*address.serial())
     } else {
-        let address_serial = AddressSerial::new(address_serial.as_bytes().try_into()?)?;
+        let address_serial =
+            AddressSerial::new(address_serial.as_bytes().try_into()?).context("address_serial")?;
         Ok(address_serial)
     }
 }
 fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(), Error> {
     let address_serial =
-        ask_device_serial(master, &AddressDeviceType::new_from_ordinal(3).unwrap())?;
+        ask_device_serial(master, &AddressDeviceType::new_from_ordinal(3).unwrap())
+            .context("ask_device_serial")?;
     let runner = avr_v1::hardware::runner::Runner::<
         avr_v1::d0003_junction_box_minimal_v1::hardware::Device,
     >::new(master, address_serial);
     execute_on_tokio(async move {
         let runner_ref = &runner;
         async move {
-            let avr_v1::d0003_junction_box_minimal_v1::hardware::RemoteProperties {
-                mut keys,
+            let avr_v1::d0003_junction_box_minimal_v1::hardware::PropertiesRemote {
+                keys,
                 leds,
                 buzzer,
-                mut temperature,
-            } = runner_ref.remote_properties();
+                temperature,
+            } = runner_ref.properties_remote();
 
             let runner_run = runner_ref.run();
             pin_mut!(runner_run);
             let mut runner_run = runner_run.fuse();
+
+            let keys_changed = || {
+                let keys = match keys.take() {
+                    Some(keys) => keys,
+                    None => return,
+                };
+                log::info!("keys: {:?}", keys);
+            };
 
             let leds_runner = async {
                 let mut led_index = 0;
@@ -177,39 +191,61 @@ fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(
                     led_values[led_index] = true;
 
                     log::info!("setting leds: {:?}", led_values);
-                    leds.set(led_values);
+                    if leds.set(led_values) {
+                        runner_ref.properties_remote_out_change_waker_wake();
+                    }
+
                     tokio::time::delay_for(Duration::from_secs(1)).await;
                 }
             };
             pin_mut!(leds_runner);
             let mut leds_runner = leds_runner.fuse();
 
-            let buzzer_test_runner = async {
+            let buzzer_runner = async {
                 loop {
                     log::info!("pushing buzzer");
-                    buzzer.set(Duration::from_millis(125));
+                    if buzzer.push(Duration::from_millis(125)) {
+                        runner_ref.properties_remote_out_change_waker_wake();
+                    }
+
                     tokio::time::delay_for(Duration::from_secs(5)).await;
                 }
             };
-            pin_mut!(buzzer_test_runner);
-            let mut buzzer_test_runner = buzzer_test_runner.fuse();
+            pin_mut!(buzzer_runner);
+            let mut buzzer_runner = buzzer_runner.fuse();
+
+            let temperature_changed = || {
+                let temperature = match temperature.take() {
+                    Some(temperature) => temperature,
+                    None => return,
+                };
+
+                match temperature {
+                    Some(temperature) => log::info!("temperature: {:?}", temperature),
+                    None => log::warn!("temperature: None (Error)"),
+                }
+            };
+
+            let properties_remote_in_changed_runner = async move {
+                runner_ref
+                    .properties_remote_in_change_waker_receiver()
+                    .by_ref()
+                    .for_each(|()| async move {
+                        keys_changed();
+                        temperature_changed();
+                    }).await;
+            };
+            pin_mut!(properties_remote_in_changed_runner);
+            let mut properties_remote_in_changed_runner = properties_remote_in_changed_runner.fuse();
 
             let mut ctrlc = tokio::signal::ctrl_c().boxed().fuse();
 
             loop {
                 select! {
                     _ = runner_run => panic!("runner_run yielded"),
-                    keys = keys.select_next_some() => {
-                        log::info!("keys: {:?}", keys);
-                    },
-                    _ = leds_runner => panic!("leds_runner yielded"),
-                    _ = buzzer_test_runner => panic!("buzzer_test_runner yielded"),
-                    temperature = temperature.select_next_some() => {
-                        match temperature {
-                            Some(temperature) => log::info!("temperature: {}", temperature),
-                            None => log::warn!("temperature: None (Error)"),
-                        }
-                    }
+                    _ = leds_runner => panic!("leds_runner"),
+                    _ = buzzer_runner => panic!("leds_runner"),
+                    _ = properties_remote_in_changed_runner => panic!("properties_remote_in_changed_runner yielded"),
                     _ = ctrlc => break,
                 }
             }
@@ -230,19 +266,20 @@ fn menu_master_avr_v1_d0007_relay14_ssr_a_v2(master: &Master) -> Result<(), Erro
     >(master)
 }
 fn menu_master_avr_v1_common_relay14_common<
-    S: avr_v1::common::relay14_common::hardware::Specification,
+    S: avr_v1::common::relay14_common_a::hardware::Specification,
 >(
     master: &Master
 ) -> Result<(), Error> {
-    let address_serial = ask_device_serial(master, &S::address_device_type())?;
+    let address_serial =
+        ask_device_serial(master, &S::address_device_type()).context("ask_device_serial")?;
     let runner = avr_v1::hardware::runner::Runner::<
-        avr_v1::common::relay14_common::hardware::Device<S>,
+        avr_v1::common::relay14_common_a::hardware::Device<S>,
     >::new(master, address_serial);
     execute_on_tokio(async move {
         let runner_ref = &runner;
         async move {
-            let avr_v1::common::relay14_common::hardware::RemoteProperties { outputs } =
-                runner_ref.remote_properties();
+            let avr_v1::common::relay14_common_a::hardware::PropertiesRemote { outputs } =
+                runner_ref.properties_remote();
 
             let runner_run = runner_ref.run();
             pin_mut!(runner_run);
@@ -253,14 +290,16 @@ fn menu_master_avr_v1_common_relay14_common<
 
                 loop {
                     output_index += 1;
-                    output_index %= avr_v1::common::relay14_common::hardware::OUTPUT_COUNT;
+                    output_index %= avr_v1::common::relay14_common_a::hardware::OUTPUT_COUNT;
 
                     let mut output_values =
-                        [false; avr_v1::common::relay14_common::hardware::OUTPUT_COUNT];
+                        [false; avr_v1::common::relay14_common_a::hardware::OUTPUT_COUNT];
                     output_values[output_index] = true;
 
                     log::info!("setting outputs: {:?}", output_values);
-                    outputs.set(output_values);
+                    if outputs.set(output_values) {
+                        runner_ref.properties_remote_out_change_waker_wake();
+                    }
                     tokio::time::delay_for(Duration::from_secs(1)).await;
                 }
             };

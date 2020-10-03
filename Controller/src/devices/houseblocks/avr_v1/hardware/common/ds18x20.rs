@@ -1,9 +1,10 @@
 use super::super::parser::Parser;
 use crate::datatypes::temperature::{Temperature, Unit};
-use failure::Error;
+use anyhow::Error;
+use serde::Serialize;
 use std::mem::transmute;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Serialize, Debug)]
 pub enum SensorType {
     EMPTY,
     INVALID,
@@ -11,7 +12,7 @@ pub enum SensorType {
     B,
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Serialize, Debug)]
 pub struct State {
     sensor_type: SensorType,
     reset_count: u8,

@@ -1,5 +1,5 @@
 use super::sse;
-use crate::util::waker_stream;
+use crate::util::waker_stream::mpmc::ReceiverFactory;
 use futures::stream::{SelectAll, Stream, StreamExt};
 use std::{
     borrow::Cow,
@@ -21,37 +21,31 @@ impl PathItem {
     }
 }
 
-pub enum Node {
-    Terminal(waker_stream::ReceiverFactory),
-    Children(HashMap<PathItem, Node>),
+pub struct Node {
+    pub terminal: Option<ReceiverFactory>,
+    pub children: HashMap<PathItem, Node>,
 }
 pub trait NodeProvider {
     fn node(&self) -> Node;
 }
 
-fn build_recursive(
-    node: Node
-) -> LinkedList<(waker_stream::ReceiverFactory, LinkedList<PathItem>)> {
+fn build_recursive(node: Node) -> LinkedList<(ReceiverFactory, LinkedList<PathItem>)> {
     let mut paths = LinkedList::new();
-    match node {
-        Node::Terminal(receiver_factory) => {
-            paths.push_back((receiver_factory, LinkedList::new()));
+    if let Some(terminal) = node.terminal {
+        paths.push_back((terminal, LinkedList::new()));
+    }
+    for (path_item, child) in node.children {
+        let mut child_paths = build_recursive(child);
+        for (_, child_path) in child_paths.iter_mut() {
+            child_path.push_front(path_item.clone());
         }
-        Node::Children(children_map) => {
-            for (path_item, child) in children_map {
-                let mut child_paths = build_recursive(child);
-                for (_, child_path) in child_paths.iter_mut() {
-                    child_path.push_front(path_item.clone());
-                }
-                paths.append(&mut child_paths);
-            }
-        }
+        paths.append(&mut child_paths);
     }
     paths
 }
 
 pub struct Bus {
-    events: Vec<(waker_stream::ReceiverFactory, Arc<sse::Event>)>,
+    events: Vec<(ReceiverFactory, Arc<sse::Event>)>,
 }
 impl Bus {
     pub fn new(node: Node) -> Self {

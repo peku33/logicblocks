@@ -1,3 +1,4 @@
+#![feature(associated_type_defaults)]
 #![feature(async_closure)]
 #![feature(drain_filter)]
 #![feature(exact_size_is_empty)]
@@ -15,12 +16,13 @@
 #![allow(clippy::new_without_default)]
 #![allow(clippy::type_complexity)]
 #![allow(dead_code)]
+#![allow(incomplete_features)]
 #![recursion_limit = "256"]
 
 pub mod datatypes;
 pub mod devices;
-pub mod logic;
 pub mod modules;
+pub mod signals;
 pub mod stubs;
 pub mod util;
 pub mod web;

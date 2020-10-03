@@ -17,6 +17,7 @@
         "deinitialize",
         "deinitializing",
         "dialoguer",
+        "disi",
         "ffmpeg",
         "hashset",
         "healthcheck",
@@ -26,6 +27,8 @@
         "leds",
         "logicblocks",
         "maplit",
+        "mpmc",
+        "mpsc",
         "multicast",
         "oneshot",
         "realmonitor",
@@ -38,9 +41,5 @@
         "uninit"
     ],
     "editor.formatOnSave": true,
-    "rust.build_lib": true,
-    "rust.build_bin": "logicblocks-controller",
-    "rust.all_targets": false,
     "files.eol": "\n",
-    "workbench.panel.defaultLocation": "right",
 }

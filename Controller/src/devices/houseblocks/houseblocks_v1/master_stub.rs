@@ -4,7 +4,7 @@ use super::{
     common::{Address, Payload},
     master::MasterDescriptor,
 };
-use failure::Error;
+use anyhow::Error;
 use std::{fmt, time::Duration};
 
 #[derive(Debug)]

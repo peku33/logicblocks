@@ -3,13 +3,14 @@ use futures::{
     stream::{FusedStream, Stream},
     task::AtomicWaker,
 };
+use parking_lot::RwLock;
 use std::{
     collections::HashSet,
     fmt,
     marker::PhantomPinned,
     pin::Pin,
     ptr::NonNull,
-    sync::{Arc, RwLock},
+    sync::Arc,
     task::{Context, Poll},
 };
 
@@ -52,16 +53,11 @@ where
         &self,
         value: T,
     ) {
-        self.common
-            .read()
-            .unwrap()
-            .receivers
-            .iter()
-            .for_each(|receiver| {
-                let receiver = unsafe { receiver.as_ref() };
-                receiver.queue.push(value.clone());
-                receiver.waker.wake();
-            });
+        self.common.read().receivers.iter().for_each(|receiver| {
+            let receiver = unsafe { receiver.as_ref() };
+            receiver.queue.push(value.clone());
+            receiver.waker.wake();
+        });
     }
 
     pub fn sender(&self) -> Sender<T> {
@@ -158,11 +154,7 @@ where
             pin: PhantomPinned,
         });
         let receiver_inner_pointer = NonNull::new(&mut *receiver_inner).unwrap();
-        common
-            .write()
-            .unwrap()
-            .receivers
-            .insert(receiver_inner_pointer);
+        common.write().receivers.insert(receiver_inner_pointer);
         Self {
             common,
             receiver_inner,
@@ -211,7 +203,6 @@ where
         let receiver_inner_pointer = NonNull::new(&mut *self.receiver_inner).unwrap();
         self.common
             .write()
-            .unwrap()
             .receivers
             .remove(&receiver_inner_pointer);
     }

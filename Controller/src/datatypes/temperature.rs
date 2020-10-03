@@ -1,4 +1,3 @@
-use super::DataType;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -50,4 +49,3 @@ impl fmt::Display for Temperature {
         )
     }
 }
-impl DataType for Temperature {}

@@ -1,7 +1,6 @@
-use super::fs::Fs;
-use super::{Context, Module, ModuleFactory};
+use super::{fs::Fs, Context, Module, ModuleFactory};
 use crate::util::sqlite_async::SQLiteAsync;
-use failure::Error;
+use anyhow::Error;
 use futures::future::Future;
 use rusqlite::{Connection, Transaction};
 

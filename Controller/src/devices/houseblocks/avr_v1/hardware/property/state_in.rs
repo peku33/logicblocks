@@ -1,100 +1,208 @@
-use futures::stream::{FusedStream, Stream};
-use std::{
-    pin::Pin,
-    task::{Context, Poll},
+use super::Base;
+use crate::{
+    util::{
+        erased_ref::{ErasedRef, ErasedRefLease},
+        waker_stream,
+    },
+    web::{self, sse_aggregated, uri_cursor},
 };
-use tokio::sync::watch;
+use futures::{future::BoxFuture, FutureExt};
+use maplit::hashmap;
+use parking_lot::Mutex;
+use serde::Serialize;
+use serde_json::json;
 
 #[derive(Debug)]
-pub struct Property<T>
-where
-    T: Clone + PartialEq,
-{
-    sender: watch::Sender<Option<T>>,
-    receiver: watch::Receiver<Option<T>>,
+struct State<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
+    device: Option<T>,
+    user_pending: bool,
 }
-impl<T> Property<T>
-where
-    T: Clone + PartialEq,
-{
+
+#[derive(Debug)]
+struct Inner<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
+    state: Mutex<State<T>>,
+    sse_aggregated_waker: waker_stream::mpmc::Sender,
+}
+
+#[derive(Debug)]
+pub struct Property<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
+    inner: ErasedRef<Inner<T>>,
+}
+impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn new() -> Self {
-        let (sender, receiver) = watch::channel(None);
-        Self { sender, receiver }
+        let state = State {
+            device: None,
+            user_pending: false,
+        };
+        let state = Mutex::new(state);
+
+        let sse_aggregated_waker = waker_stream::mpmc::Sender::new();
+        let inner = Inner {
+            state,
+            sse_aggregated_waker,
+        };
+        let inner = ErasedRef::new(inner);
+
+        Self { inner }
     }
 
     // User
-    pub fn user_get_stream(&self) -> ValueStream<T> {
-        ValueStream::new(self)
+    pub fn user_pending(&self) -> bool {
+        let state = self.inner.state.lock();
+
+        let value = state.user_pending;
+
+        drop(state);
+
+        value
+    }
+    pub fn user_stream(&self) -> Stream<T> {
+        Stream::new(self)
     }
 
     // Device
-    pub fn device_is_set(&self) -> bool {
-        self.receiver.borrow().is_some()
+    pub fn device_must_read(&self) -> bool {
+        let state = self.inner.state.lock();
+
+        let result = state.device.is_none();
+
+        drop(state);
+
+        result
     }
     pub fn device_set(
         &self,
         value: T,
-    ) {
-        let _ = self.sender.broadcast(Some(value));
-    }
-    pub fn device_set_unknown(&self) {
-        let _ = self.sender.broadcast(None);
-    }
-}
+    ) -> bool {
+        let mut state = self.inner.state.lock();
 
-pub struct ValueStream<'p, T>
-where
-    T: Clone + PartialEq,
-{
-    parent: &'p Property<T>,
-    receiver: watch::Receiver<Option<T>>,
-    completed: bool,
+        if state.device.contains(&value) {
+            return false;
+        }
+
+        state.device.replace(value);
+        state.user_pending = true;
+
+        drop(state);
+
+        self.inner.sse_aggregated_waker.wake();
+
+        true
+    }
+    pub fn device_reset(&self) -> bool {
+        let mut state = self.inner.state.lock();
+
+        if state.device.is_none() {
+            return false;
+        }
+
+        state.device = None;
+        state.user_pending = true;
+
+        drop(state);
+
+        self.inner.sse_aggregated_waker.wake();
+
+        true
+    }
 }
-impl<'p, T> ValueStream<'p, T>
-where
-    T: Clone + PartialEq,
+impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Base for Property<T> {}
+impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> uri_cursor::Handler for Property<T> {
+    fn handle(
+        &self,
+        request: web::Request,
+        uri_cursor: &uri_cursor::UriCursor,
+    ) -> BoxFuture<'static, web::Response> {
+        match uri_cursor {
+            uri_cursor::UriCursor::Terminal => match *request.method() {
+                http::Method::GET => {
+                    let state = self.inner.state.lock();
+
+                    let device = state.device.clone();
+                    let user_pending = state.user_pending;
+
+                    drop(state);
+
+                    async move {
+                        let response = json! {{
+                            "device": device,
+                            "user_pending": user_pending
+                        }};
+
+                        web::Response::ok_json(response)
+                    }
+                    .boxed()
+                }
+                _ => async move { web::Response::error_405() }.boxed(),
+            },
+            _ => async move { web::Response::error_404() }.boxed(),
+        }
+    }
+}
+impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> sse_aggregated::NodeProvider
+    for Property<T>
 {
-    fn new(parent: &'p Property<T>) -> Self {
-        Self {
-            parent,
-            receiver: parent.receiver.clone(),
-            completed: false,
+    fn node(&self) -> sse_aggregated::Node {
+        sse_aggregated::Node {
+            terminal: Some(self.inner.sse_aggregated_waker.receiver_factory()),
+            children: hashmap! {},
         }
     }
 }
 
-impl<'p, T> Stream for ValueStream<'p, T>
-where
-    T: Clone + PartialEq,
-{
-    type Item = Option<T>;
+#[derive(Debug)]
+pub struct Stream<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
+    inner: ErasedRefLease<Inner<T>>,
+}
+impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
+    fn new(parent: &Property<T>) -> Self {
+        let inner = parent.inner.lease();
+        Self { inner }
+    }
 
-    fn poll_next(
-        self: Pin<&mut Self>,
-        cx: &mut Context,
-    ) -> Poll<Option<Self::Item>> {
-        let self_ = unsafe { self.get_unchecked_mut() };
+    pub fn take(&self) -> Option<Option<T>> {
+        let mut state = self.inner.state.lock();
 
-        if self_.completed {
-            return Poll::Pending;
+        if !state.user_pending {
+            return None;
         }
 
-        let receiver = unsafe { Pin::new_unchecked(&mut self_.receiver) };
-        match receiver.poll_next(cx) {
-            Poll::Pending => Poll::Pending,
-            Poll::Ready(None) => {
-                self_.completed = true;
-                Poll::Pending
-            }
-            Poll::Ready(Some(item)) => Poll::Ready(Some(item)),
-        }
+        let value = state.device.clone();
+        state.user_pending = false;
+
+        drop(state);
+
+        self.inner.sse_aggregated_waker.wake();
+
+        Some(value)
     }
 }
-impl<'p, T> FusedStream for ValueStream<'p, T>
-where
-    T: Clone + PartialEq,
-{
-    fn is_terminated(&self) -> bool {
-        false
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_1() {
+        let property = Property::<usize>::new();
+        let stream = property.user_stream();
+
+        assert!(stream.take().is_none());
+        assert!(property.device_must_read());
+
+        assert_eq!(property.device_set(1), true);
+        assert_eq!(property.device_set(1), false);
+        assert_eq!(stream.take().unwrap().unwrap(), 1);
+        assert!(stream.take().is_none());
+
+        assert_eq!(property.device_set(2), true);
+        assert_eq!(property.device_set(3), true);
+        assert_eq!(stream.take().unwrap().unwrap(), 3);
+        assert!(stream.take().is_none());
+
+        assert!(stream.take().is_none());
+        assert!(property.device_reset());
+        assert!(stream.take().unwrap().is_none());
+        assert!(stream.take().is_none());
     }
 }

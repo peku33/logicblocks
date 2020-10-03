@@ -1,121 +1,216 @@
-use crate::util::waker_stream;
-use futures::stream::{FusedStream, Stream};
+use super::Base;
+use crate::{
+    util::{
+        erased_ref::{ErasedRef, ErasedRefLease},
+        waker_stream,
+    },
+    web::{self, sse_aggregated, uri_cursor},
+};
+use futures::{future::BoxFuture, FutureExt};
+use maplit::hashmap;
 use parking_lot::Mutex;
-use std::{cmp::max, ops::Deref};
+use serde::Serialize;
+use serde_json::json;
+use std::ops::Deref;
 
 #[derive(Debug)]
-pub struct Property<T>
-where
-    T: Clone,
-{
-    local: Mutex<(Option<T>, usize)>, // (pending_value, version)
-    device: Mutex<usize>,             // version
-    waker: waker_stream::Sender,
+struct State<T: Clone + Serialize + Send + Sync + 'static> {
+    user: Option<T>,
+    user_version: usize,
+    device_version: usize,
 }
-impl<T> Property<T>
-where
-    T: Clone,
-{
+
+#[derive(Debug)]
+struct Inner<T: Clone + Serialize + Send + Sync + 'static> {
+    state: Mutex<State<T>>,
+    sse_aggregated_waker: waker_stream::mpmc::Sender,
+}
+
+#[derive(Debug)]
+pub struct Property<T: Clone + Serialize + Send + Sync + 'static> {
+    inner: ErasedRef<Inner<T>>,
+}
+impl<T: Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn new() -> Self {
-        let local = Mutex::new((None, 0));
-        let device = Mutex::new(0);
+        let state = State {
+            user: None,
+            user_version: 0,
+            device_version: 0,
+        };
+        let state = Mutex::new(state);
 
-        let waker = waker_stream::Sender::new();
+        let sse_aggregated_waker = waker_stream::mpmc::Sender::new();
 
-        Self {
-            local,
-            device,
-            waker,
-        }
+        let inner = Inner {
+            state,
+            sse_aggregated_waker,
+        };
+        let inner = ErasedRef::new(inner);
+
+        Self { inner }
     }
 
     // User
-    pub fn user_get_sink(&self) -> ValueSink<T> {
-        ValueSink::new(self)
+    pub fn user_sink(&self) -> Sink<T> {
+        Sink::new(self)
     }
 
     // Device
-    pub fn device_get_stream(&self) -> impl Stream<Item = ()> + FusedStream {
-        self.waker.receiver()
+    pub fn device_pending(&self) -> Option<Pending<T>> {
+        let state = self.inner.state.lock();
+
+        if state.device_version >= state.user_version {
+            return None;
+        }
+
+        let value = match state.user.as_ref() {
+            Some(value) => value.clone(),
+            None => return None,
+        };
+
+        let pending = Pending {
+            property: self,
+            value,
+            version: state.user_version,
+        };
+
+        Some(pending)
     }
-    pub fn device_get_pending(&self) -> Option<Pending<T>> {
-        let local = self.local.lock();
-        let device = *self.device.lock();
-        if local.1 > device {
-            Some(Pending::new(
-                self,
-                local.0.as_ref().unwrap().clone(),
-                local.1,
-            ))
-        } else {
-            None
+}
+impl<T: Clone + Serialize + Send + Sync + 'static> Base for Property<T> {}
+impl<T: Clone + Serialize + Send + Sync + 'static> uri_cursor::Handler for Property<T> {
+    fn handle(
+        &self,
+        request: web::Request,
+        uri_cursor: &uri_cursor::UriCursor,
+    ) -> BoxFuture<'static, web::Response> {
+        match uri_cursor {
+            uri_cursor::UriCursor::Terminal => match *request.method() {
+                http::Method::GET => {
+                    let state = self.inner.state.lock();
+
+                    let user = state.user.clone();
+                    let device_pending = state.user_version > state.device_version;
+
+                    drop(state);
+
+                    async move {
+                        let response = json! {{
+                            "user": user,
+                            "device_pending": device_pending
+                        }};
+
+                        web::Response::ok_json(response)
+                    }
+                    .boxed()
+                }
+                _ => async move { web::Response::error_405() }.boxed(),
+            },
+            _ => async move { web::Response::error_404() }.boxed(),
+        }
+    }
+}
+impl<T: Clone + Serialize + Send + Sync + 'static> sse_aggregated::NodeProvider for Property<T> {
+    fn node(&self) -> sse_aggregated::Node {
+        sse_aggregated::Node {
+            terminal: Some(self.inner.sse_aggregated_waker.receiver_factory()),
+            children: hashmap! {},
         }
     }
 }
 
-pub struct ValueSink<'p, T>
-where
-    T: Clone,
-{
-    property: &'p Property<T>,
+#[derive(Debug)]
+pub struct Sink<T: Clone + Serialize + Send + Sync + 'static> {
+    inner: ErasedRefLease<Inner<T>>,
 }
-impl<'p, T> ValueSink<'p, T>
-where
-    T: Clone,
-{
-    fn new(property: &'p Property<T>) -> Self {
-        Self { property }
+impl<T: Clone + Serialize + Send + Sync + 'static> Sink<T> {
+    fn new(parent: &Property<T>) -> Self {
+        let inner = parent.inner.lease();
+        Self { inner }
     }
 
-    pub fn set(
+    #[must_use = "use this value to wake properties changed waker"]
+    pub fn push(
         &self,
-        item: T,
-    ) {
-        let mut local = self.property.local.lock();
-        local.0.replace(item);
-        local.1 += 1;
-        drop(local);
+        value: T,
+    ) -> bool {
+        let mut state = self.inner.state.lock();
 
-        self.property.waker.wake();
+        state.user.replace(value);
+        state.user_version += 1;
+
+        drop(state);
+
+        self.inner.sse_aggregated_waker.wake();
+
+        true
     }
 }
 
-pub struct Pending<'p, T>
-where
-    T: Clone,
-{
-    parent: &'p Property<T>,
-
+pub struct Pending<'p, T: Clone + Serialize + Send + Sync + 'static> {
+    property: &'p Property<T>,
     value: T,
     version: usize,
 }
-impl<'p, T> Pending<'p, T>
-where
-    T: Clone,
-{
-    pub fn new(
-        parent: &'p Property<T>,
-
-        value: T,
-        version: usize,
-    ) -> Self {
-        Self {
-            parent,
-            value,
-            version,
-        }
-    }
+impl<'p, T: Clone + Serialize + Send + Sync + 'static> Pending<'p, T> {
     pub fn commit(self) {
-        let mut device = self.parent.device.lock();
-        *device = max(*device, self.version);
+        let mut state = self.property.inner.state.lock();
+
+        state.device_version = self.version;
+
+        drop(state);
+
+        self.property.inner.sse_aggregated_waker.wake();
     }
 }
 impl<'p, T> Deref for Pending<'p, T>
 where
-    T: Clone,
+    T: Clone + Serialize + Send + Sync + 'static,
 {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.value
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_1() {
+        let property = Property::new();
+        let sink = property.user_sink();
+
+        // Initial state
+        assert!(property.device_pending().is_none());
+
+        // Sink 1
+        assert_eq!(sink.push(1usize), true);
+        let pending = property.device_pending().unwrap();
+        assert_eq!(*pending, 1);
+        pending.commit();
+        assert!(property.device_pending().is_none());
+
+        // Sink 2
+        assert_eq!(sink.push(2usize), true);
+        let pending = property.device_pending().unwrap();
+        assert_eq!(*pending, 2);
+        let pending = property.device_pending().unwrap();
+        assert_eq!(*pending, 2);
+        pending.commit();
+        assert!(property.device_pending().is_none());
+
+        // Sink 3
+        assert_eq!(sink.push(3usize), true);
+        let pending = property.device_pending().unwrap();
+        assert_eq!(*pending, 3);
+        assert_eq!(sink.push(4usize), true);
+        assert_eq!(*pending, 3);
+        pending.commit();
+        let pending = property.device_pending().unwrap();
+        assert_eq!(*pending, 4);
+        pending.commit();
+        assert!(property.device_pending().is_none());
     }
 }

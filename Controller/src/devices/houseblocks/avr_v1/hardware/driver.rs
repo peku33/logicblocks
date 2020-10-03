@@ -5,9 +5,8 @@ use super::{
     },
     parser::{Parser, ParserPayload},
 };
-use async_trait::async_trait;
-use failure::{err_msg, Error};
-use std::{fmt, ops::Deref, time::Duration};
+use anyhow::{bail, Context, Error};
+use std::{ops::Deref, time::Duration};
 
 const TIMEOUT_DEFAULT: Duration = Duration::from_millis(250);
 
@@ -83,7 +82,7 @@ impl<'m> Driver<'m> {
             .await?;
 
         if response.deref() != &b""[..] {
-            return Err(err_msg("invalid healthcheck response"));
+            bail!("invalid healthcheck response");
         }
         Ok(())
     }
@@ -112,10 +111,10 @@ impl<'m> Driver<'m> {
             .await?;
 
         let mut parser = ParserPayload::new(&response);
-        let wdt = parser.expect_bool()?;
-        let bod = parser.expect_bool()?;
-        let ext_reset = parser.expect_bool()?;
-        let pon = parser.expect_bool()?;
+        let wdt = parser.expect_bool().context("wdt")?;
+        let bod = parser.expect_bool().context("bod")?;
+        let ext_reset = parser.expect_bool().context("ext_reset")?;
+        let pon = parser.expect_bool().context("pon")?;
         parser.expect_end()?;
 
         Ok(PowerFlags {
@@ -139,8 +138,8 @@ impl<'m> Driver<'m> {
             .await?;
 
         let mut parser = ParserPayload::new(&response);
-        let avr_v1 = parser.expect_u16()?;
-        let application = parser.expect_u16()?;
+        let avr_v1 = parser.expect_u16().context("avr_v1")?;
+        let application = parser.expect_u16().context("application")?;
         parser.expect_end()?;
 
         Ok(Version {
@@ -160,7 +159,7 @@ impl<'m> Driver<'m> {
             .await?;
 
         let mut parser = ParserPayload::new(&response);
-        let checksum = parser.expect_u16()?;
+        let checksum = parser.expect_u16().context("checksum")?;
         parser.expect_end()?;
 
         Ok(checksum)
@@ -178,64 +177,59 @@ impl<'m> Driver<'m> {
         // Driver may be already initialized, check it.
         let healthcheck_result = self.healthcheck(false).await;
         if healthcheck_result.is_ok() {
-            log::info!("{}: driver was already initialized, rebooting", self);
-            self.reboot(false).await?;
+            // Is initialized, perform reboot
+            self.reboot(false).await.context("deinitialize reboot")?;
         }
 
         // We should be in service mode
-        self.healthcheck(true).await?;
+        self.healthcheck(true)
+            .await
+            .context("service mode healthcheck")?;
 
         // Check application up to date
-        let application_checksum = self.service_mode_read_application_checksum().await?;
-        log::trace!("{}: application_checksum: {}", self, application_checksum);
+        let application_checksum = self
+            .service_mode_read_application_checksum()
+            .await
+            .context("service mode read application checksum")?;
+        log::trace!("application_checksum: {}", application_checksum);
         // TODO: Push new firmware
 
         // Reboot to application section
-        self.service_mode_jump_to_application_mode().await?;
+        self.service_mode_jump_to_application_mode()
+            .await
+            .context("jump to application mode")?;
 
         // Check life in application section
-        self.healthcheck(false).await?;
+        self.healthcheck(false)
+            .await
+            .context("application mode healthcheck")?;
 
         Ok(())
     }
 }
-impl<'m> fmt::Display for Driver<'m> {
-    fn fmt(
-        &self,
-        f: &mut fmt::Formatter,
-    ) -> fmt::Result {
-        write!(f, "{} - {}", self.master, self.address())
+
+pub struct ApplicationDriver<'d> {
+    driver: &'d Driver<'d>,
+}
+impl<'d> ApplicationDriver<'d> {
+    pub fn new(driver: &'d Driver<'d>) -> Self {
+        Self { driver }
     }
-}
 
-#[async_trait]
-pub trait ApplicationDriver: Sync {
-    async fn transaction_out(
-        &self,
-        payload: Payload,
-    ) -> Result<(), Error>;
-
-    async fn transaction_out_in(
-        &self,
-        payload: Payload,
-        timeout: Option<Duration>,
-    ) -> Result<Payload, Error>;
-}
-#[async_trait]
-impl<'m> ApplicationDriver for Driver<'_> {
-    async fn transaction_out(
+    pub async fn transaction_out(
         &self,
         payload: Payload,
     ) -> Result<(), Error> {
-        self.transaction_out(false, payload).await
+        self.driver.transaction_out(false, payload).await
     }
 
-    async fn transaction_out_in(
+    pub async fn transaction_out_in(
         &self,
         payload: Payload,
         timeout: Option<Duration>,
     ) -> Result<Payload, Error> {
-        self.transaction_out_in(false, payload, timeout.unwrap_or(TIMEOUT_DEFAULT))
+        self.driver
+            .transaction_out_in(false, payload, timeout.unwrap_or(TIMEOUT_DEFAULT))
             .await
     }
 }
