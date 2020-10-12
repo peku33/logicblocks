@@ -14,7 +14,7 @@ use serde_json::json;
 
 #[derive(Debug)]
 struct State<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
-    device: Option<T>,
+    value: Option<T>,
     user_pending: bool,
 }
 
@@ -31,7 +31,7 @@ pub struct Property<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
 impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn new() -> Self {
         let state = State {
-            device: None,
+            value: None,
             user_pending: false,
         };
         let state = Mutex::new(state);
@@ -50,11 +50,11 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn user_pending(&self) -> bool {
         let state = self.inner.state.lock();
 
-        let value = state.user_pending;
+        let user_pending = state.user_pending;
 
         drop(state);
 
-        value
+        user_pending
     }
     pub fn user_stream(&self) -> Stream<T> {
         Stream::new(self)
@@ -64,11 +64,11 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn device_must_read(&self) -> bool {
         let state = self.inner.state.lock();
 
-        let result = state.device.is_none();
+        let device_must_read = state.value.is_none();
 
         drop(state);
 
-        result
+        device_must_read
     }
     pub fn device_set(
         &self,
@@ -76,11 +76,11 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
     ) -> bool {
         let mut state = self.inner.state.lock();
 
-        if state.device.contains(&value) {
+        if state.value.contains(&value) {
             return false;
         }
 
-        state.device.replace(value);
+        state.value.replace(value);
         state.user_pending = true;
 
         drop(state);
@@ -92,11 +92,11 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn device_reset(&self) -> bool {
         let mut state = self.inner.state.lock();
 
-        if state.device.is_none() {
+        if state.value.is_none() {
             return false;
         }
 
-        state.device = None;
+        state.value = None;
         state.user_pending = true;
 
         drop(state);
@@ -118,14 +118,14 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> uri_cursor::Handl
                 http::Method::GET => {
                     let state = self.inner.state.lock();
 
-                    let device = state.device.clone();
+                    let value = state.value.clone();
                     let user_pending = state.user_pending;
 
                     drop(state);
 
                     async move {
                         let response = json! {{
-                            "device": device,
+                            "value": value,
                             "user_pending": user_pending
                         }};
 
@@ -167,7 +167,7 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
             return None;
         }
 
-        let value = state.device.clone();
+        let value = state.value.clone();
         state.user_pending = false;
 
         drop(state);

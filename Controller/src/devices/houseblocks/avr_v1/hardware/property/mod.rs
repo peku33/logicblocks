@@ -1,4 +1,4 @@
-pub mod event_last_out;
+pub mod event_out_last;
 pub mod state_in;
 pub mod state_out;
 

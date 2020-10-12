@@ -185,7 +185,7 @@ pub mod hardware {
     pub struct Properties {
         keys: property::state_in::Property<KeyValues>,
         leds: property::state_out::Property<LedValues>,
-        buzzer: property::event_last_out::Property<Duration>,
+        buzzer: property::event_out_last::Property<Duration>,
         temperature: property::state_in::Property<ds18x20::State>,
     }
     impl Properties {
@@ -193,7 +193,7 @@ pub mod hardware {
             Self {
                 keys: property::state_in::Property::new(),
                 leds: property::state_out::Property::new([false; LED_COUNT]),
-                buzzer: property::event_last_out::Property::new(),
+                buzzer: property::event_out_last::Property::new(),
                 temperature: property::state_in::Property::new(),
             }
         }
@@ -226,7 +226,7 @@ pub mod hardware {
     pub struct PropertiesRemote {
         pub keys: property::state_in::Stream<KeyValues>,
         pub leds: property::state_out::Sink<LedValues>,
-        pub buzzer: property::event_last_out::Sink<Duration>,
+        pub buzzer: property::event_out_last::Sink<Duration>,
         pub temperature: property::state_in::Stream<ds18x20::State>,
     }
 

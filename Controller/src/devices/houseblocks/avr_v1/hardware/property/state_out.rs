@@ -15,7 +15,7 @@ use std::ops::Deref;
 
 #[derive(Debug)]
 struct State<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
-    user: T,
+    value: T,
     device_pending: bool,
 }
 
@@ -32,7 +32,7 @@ pub struct Property<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
 impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn new(initial: T) -> Self {
         let state = State {
-            user: initial,
+            value: initial,
             device_pending: true,
         };
         let state = Mutex::new(state);
@@ -63,7 +63,7 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
 
         let pending = Pending {
             property: self,
-            value: state.user.clone(),
+            value: state.value.clone(),
         };
 
         drop(state);
@@ -94,14 +94,14 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> uri_cursor::Handl
                 http::Method::GET => {
                     let state = self.inner.state.lock();
 
-                    let user = state.user.clone();
+                    let value = state.value.clone();
                     let device_pending = state.device_pending;
 
                     drop(state);
 
                     async move {
                         let response = json! {{
-                            "user": user,
+                            "value": value,
                             "device_pending": device_pending
                         }};
 
@@ -143,11 +143,11 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Sink<T> {
     ) -> bool {
         let mut state = self.inner.state.lock();
 
-        if state.user == value {
+        if state.value == value {
             return false;
         }
 
-        state.user = value;
+        state.value = value;
         state.device_pending = true;
 
         drop(state);
@@ -166,7 +166,7 @@ impl<'p, T: PartialEq + Clone + Serialize + Send + Sync + 'static> Pending<'p, T
     pub fn commit(self) {
         let mut lock = self.property.inner.state.lock();
 
-        if lock.user == self.value {
+        if lock.value == self.value {
             lock.device_pending = false;
         }
 

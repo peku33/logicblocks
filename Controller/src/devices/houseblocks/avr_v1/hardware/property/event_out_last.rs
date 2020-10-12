@@ -15,7 +15,7 @@ use std::ops::Deref;
 
 #[derive(Debug)]
 struct State<T: Clone + Serialize + Send + Sync + 'static> {
-    user: Option<T>,
+    value_last: Option<T>,
     user_version: usize,
     device_version: usize,
 }
@@ -33,7 +33,7 @@ pub struct Property<T: Clone + Serialize + Send + Sync + 'static> {
 impl<T: Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn new() -> Self {
         let state = State {
-            user: None,
+            value_last: None,
             user_version: 0,
             device_version: 0,
         };
@@ -63,7 +63,7 @@ impl<T: Clone + Serialize + Send + Sync + 'static> Property<T> {
             return None;
         }
 
-        let value = match state.user.as_ref() {
+        let value = match state.value_last.as_ref() {
             Some(value) => value.clone(),
             None => return None,
         };
@@ -89,14 +89,12 @@ impl<T: Clone + Serialize + Send + Sync + 'static> uri_cursor::Handler for Prope
                 http::Method::GET => {
                     let state = self.inner.state.lock();
 
-                    let user = state.user.clone();
                     let device_pending = state.user_version > state.device_version;
 
                     drop(state);
 
                     async move {
                         let response = json! {{
-                            "user": user,
                             "device_pending": device_pending
                         }};
 
@@ -136,7 +134,7 @@ impl<T: Clone + Serialize + Send + Sync + 'static> Sink<T> {
     ) -> bool {
         let mut state = self.inner.state.lock();
 
-        state.user.replace(value);
+        state.value_last.replace(value);
         state.user_version += 1;
 
         drop(state);
