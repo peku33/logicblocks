@@ -2,26 +2,40 @@ use super::{
     super::types::{event::Value, Base as ValueBase},
     Base, EventTargetRemoteBase, RemoteBase, RemoteBaseVariant,
 };
-use crossbeam::queue::SegQueue;
-use std::any::{type_name, TypeId};
+use parking_lot::RwLock;
+use std::{
+    any::{type_name, TypeId},
+    mem::replace,
+};
+
+#[derive(Debug)]
+struct Inner<V: Value + Clone> {
+    pending: Vec<V>,
+}
 
 #[derive(Debug)]
 pub struct Signal<V: Value + Clone> {
-    queue: SegQueue<V>,
+    inner: RwLock<Inner<V>>,
 }
 impl<V: Value + Clone> Signal<V> {
     pub fn new() -> Self {
+        let inner = Inner {
+            pending: Vec::new(),
+        };
+
         Self {
-            queue: SegQueue::new(),
+            inner: RwLock::new(inner),
         }
     }
 
     pub fn take_pending(&self) -> Box<[V]> {
-        let mut buffer = Vec::with_capacity(self.queue.len());
-        while let Ok(value) = self.queue.pop() {
-            buffer.push(value);
-        }
-        buffer.into_boxed_slice()
+        let mut lock = self.inner.write();
+
+        let pending = replace(&mut lock.pending, Vec::new());
+
+        drop(lock);
+
+        pending.into_boxed_slice()
     }
 }
 impl<V: Value + Clone> Base for Signal<V> {
@@ -34,10 +48,16 @@ impl<V: Value + Clone> EventTargetRemoteBase for Signal<V> {
         &self,
         values: &[Box<dyn ValueBase>],
     ) -> bool {
-        for value in values.iter() {
-            let value = value.downcast_ref::<V>().unwrap().clone();
-            self.queue.push(value);
-        }
+        let mut lock = self.inner.write();
+
+        lock.pending.extend(
+            values
+                .iter()
+                .map(|value| value.downcast_ref::<V>().unwrap().clone()),
+        );
+
+        drop(lock);
+
         true
     }
 }
