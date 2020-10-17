@@ -69,14 +69,33 @@ pub mod logic {
             let mut signals_changed = false;
 
             // keys
-            if let Some(keys) = self.properties_remote.keys.take() {
-                self.signal_keys
-                    .iter()
-                    .enumerate()
-                    .for_each(|(index, signal_key)| {
-                        let key = keys.map(|key_values| key_values[index]);
-                        signals_changed |= signal_key.set(key);
+            if let Some((key_values, key_changes_count_queue)) = self.properties_remote.keys.take()
+            {
+                if let Some(key_values) = key_values {
+                    // Calculate total number of key ticks
+                    let mut key_changes_count_merged = [0usize; hardware::KEY_COUNT];
+                    for key_changes_count in key_changes_count_queue.into_vec().into_iter() {
+                        for (key_index, key_changes_count) in key_changes_count.iter().enumerate() {
+                            key_changes_count_merged[key_index] += *key_changes_count as usize;
+                        }
+                    }
+
+                    // Set total number of key ticks
+                    self.signal_keys
+                        .iter()
+                        .enumerate()
+                        .for_each(|(key_index, signal_key)| {
+                            for key_change_index in (0..key_changes_count_merged[key_index]).rev() {
+                                let key_value = key_values[key_index] ^ (key_change_index % 2 != 0);
+                                signals_changed |= signal_key.set(Some(key_value));
+                            }
+                        });
+                } else {
+                    // Keys are broken
+                    self.signal_keys.iter().for_each(|signal_key| {
+                        signals_changed |= signal_key.set(None);
                     });
+                }
             }
 
             // temperature
@@ -177,13 +196,14 @@ pub mod hardware {
 
     pub const KEY_COUNT: usize = 6;
     pub type KeyValues = [bool; KEY_COUNT];
+    pub type KeyChangesCount = [u8; KEY_COUNT];
 
     pub const LED_COUNT: usize = 6;
     pub type LedValues = [bool; LED_COUNT];
 
     #[derive(Debug)]
     pub struct Properties {
-        keys: property::state_in::Property<KeyValues>,
+        keys: property::state_event_in::Property<KeyValues, KeyChangesCount>,
         leds: property::state_out::Property<LedValues>,
         buzzer: property::event_out_last::Property<Duration>,
         temperature: property::state_in::Property<ds18x20::State>,
@@ -191,7 +211,7 @@ pub mod hardware {
     impl Properties {
         pub fn new() -> Self {
             Self {
-                keys: property::state_in::Property::new(),
+                keys: property::state_event_in::Property::new(),
                 leds: property::state_out::Property::new([false; LED_COUNT]),
                 buzzer: property::event_out_last::Property::new(),
                 temperature: property::state_in::Property::new(),
@@ -224,7 +244,7 @@ pub mod hardware {
     }
     #[derive(Debug)]
     pub struct PropertiesRemote {
-        pub keys: property::state_in::Stream<KeyValues>,
+        pub keys: property::state_event_in::Stream<KeyValues, KeyChangesCount>,
         pub leds: property::state_out::Sink<LedValues>,
         pub buzzer: property::event_out_last::Sink<Duration>,
         pub temperature: property::state_in::Stream<ds18x20::State>,
@@ -322,7 +342,9 @@ pub mod hardware {
 
             // Propagate values to properties
             if let Some(response_keys) = stage_2_response.keys {
-                self.properties.keys.device_set(response_keys.values());
+                self.properties
+                    .keys
+                    .device_set(response_keys.values(), response_keys.changes_count());
             }
 
             if let Some(response_temperature) = stage_2_response.temperature {
@@ -518,6 +540,9 @@ pub mod hardware {
         pub fn value(&self) -> bool {
             self.value
         }
+        pub fn changes_count(&self) -> u8 {
+            self.changes_count
+        }
     }
 
     #[derive(Debug)]
@@ -538,6 +563,14 @@ pub mod hardware {
             self.keys
                 .iter()
                 .map(|key| key.value())
+                .collect::<ArrayVec<[_; KEY_COUNT]>>()
+                .into_inner()
+                .unwrap()
+        }
+        pub fn changes_count(&self) -> KeyChangesCount {
+            self.keys
+                .iter()
+                .map(|key| key.changes_count())
                 .collect::<ArrayVec<[_; KEY_COUNT]>>()
                 .into_inner()
                 .unwrap()
