@@ -3,45 +3,81 @@ use super::{
     Base, RemoteBase, RemoteBaseVariant, StateSourceRemoteBase,
 };
 use parking_lot::RwLock;
-use std::any::{type_name, TypeId};
+use std::{
+    any::{type_name, TypeId},
+    mem::replace,
+};
 
 #[derive(Debug)]
-struct ValuePending<V: Value + Clone> {
-    value: V,
-    pending: bool,
+struct Inner<V: Value + Clone> {
+    last: V,
+    pending: Vec<V>,
 }
 
 #[derive(Debug)]
 pub struct Signal<V: Value + Clone> {
-    value_pending: RwLock<ValuePending<V>>,
+    inner: RwLock<Inner<V>>,
 }
 impl<V: Value + Clone> Signal<V> {
     pub fn new(initial: V) -> Self {
+        let inner = Inner {
+            last: initial,
+            pending: Vec::new(),
+        };
+
         Self {
-            value_pending: RwLock::new(ValuePending {
-                value: initial,
-                pending: false,
-            }),
+            inner: RwLock::new(inner),
         }
     }
 
     pub fn get(&self) -> V {
-        self.value_pending.read().value.clone()
+        self.inner.read().last.clone()
     }
-    pub fn set(
+
+    #[must_use = "use this value to wake signals change notifier"]
+    pub fn set_one(
         &self,
         value: V,
     ) -> bool {
-        let mut lock = self.value_pending.write();
-        if value == lock.value {
+        let mut lock = self.inner.write();
+
+        if lock.last == value {
             return false;
         }
-        *lock = ValuePending {
-            value,
-            pending: true,
-        };
+        lock.last = value.clone();
+        lock.pending.push(value);
+
         drop(lock);
+
         true
+    }
+    #[must_use = "use this value to wake signals change notifier"]
+    pub fn set_many(
+        &self,
+        values: Box<[V]>,
+    ) -> bool {
+        if values.is_empty() {
+            return false;
+        }
+
+        let mut changes = false;
+
+        let mut lock = self.inner.write();
+
+        for value in values.into_vec().into_iter() {
+            if lock.last == value {
+                continue;
+            }
+
+            lock.last = value.clone();
+            lock.pending.push(value);
+
+            changes = true;
+        }
+
+        drop(lock);
+
+        changes
     }
 }
 impl<V: Value + Clone> Base for Signal<V> {
@@ -49,22 +85,23 @@ impl<V: Value + Clone> Base for Signal<V> {
         self
     }
 }
-
 impl<V: Value + Clone> StateSourceRemoteBase for Signal<V> {
-    fn take_pending(&self) -> Option<Box<dyn ValueBase>> {
-        let mut lock = self.value_pending.write();
-        if !lock.pending {
-            return None;
-        }
-        let value = lock.value.clone();
-        lock.pending = false;
+    fn take_pending(&self) -> Box<[Box<dyn ValueBase>]> {
+        let mut lock = self.inner.write();
+
+        let pending = replace(&mut lock.pending, Vec::new());
+        let pending = pending
+            .into_iter()
+            .map(|value| Box::new(value) as Box<dyn ValueBase>)
+            .collect::<Box<[_]>>();
+
         drop(lock);
 
-        Some(Box::new(value))
+        pending
     }
 
     fn get_last(&self) -> Box<dyn ValueBase> {
-        let value = self.value_pending.read().value.clone();
+        let value = self.inner.read().last.clone();
         Box::new(value)
     }
 }

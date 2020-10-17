@@ -1,6 +1,6 @@
 use crate::{
     devices,
-    signals::{self, signal, signal::state_target, types::state::Value, Signals},
+    signals::{self, signal, signal::state_target_queued, types::state::Value, Signals},
     util::waker_stream,
 };
 use maplit::hashmap;
@@ -12,7 +12,7 @@ pub struct Configuration {
     pub name: String,
 }
 
-type SignalInput<V> = state_target::Signal<V>;
+type SignalInput<V> = state_target_queued::Signal<V>;
 
 #[derive(Debug)]
 pub struct Device<V: Value + Clone> {
@@ -42,12 +42,8 @@ impl<V: Value + Clone> devices::Device for Device<V> {
 }
 impl<V: Value + Clone> signals::Device for Device<V> {
     fn signal_targets_changed_wake(&self) {
-        let value = match self.signal_input.take_pending() {
-            Some(value) => value,
-            None => return,
-        };
-
-        log::debug!("{}: {:?}", self.configuration.name, value);
+        let values = self.signal_input.take_pending();
+        log::debug!("{}: {:?}", self.configuration.name, values);
     }
     fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
         self.signal_sources_changed_waker.receiver()

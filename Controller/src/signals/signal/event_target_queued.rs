@@ -29,16 +29,16 @@ impl<V: Value + Clone> Base for Signal<V> {
         self
     }
 }
-
 impl<V: Value + Clone> EventTargetRemoteBase for Signal<V> {
     fn push(
         &self,
         values: &[Box<dyn ValueBase>],
-    ) {
+    ) -> bool {
         for value in values.iter() {
             let value = value.downcast_ref::<V>().unwrap().clone();
             self.queue.push(value);
         }
+        true
     }
 }
 impl<V: Value + Clone> RemoteBase for Signal<V> {

@@ -85,17 +85,17 @@ impl Device {
     }
 
     pub fn r(&self) {
-        if self.signal_output.set(false) {
+        if self.signal_output.set_one(false) {
             self.signal_sources_changed_waker.wake();
         }
     }
     pub fn s(&self) {
-        if self.signal_output.set(true) {
+        if self.signal_output.set_one(true) {
             self.signal_sources_changed_waker.wake();
         }
     }
     pub fn t(&self) {
-        if self.signal_output.set(!self.signal_output.get()) {
+        if self.signal_output.set_one(!self.signal_output.get()) {
             self.signal_sources_changed_waker.wake();
         }
     }

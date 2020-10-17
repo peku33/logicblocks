@@ -2,7 +2,7 @@ use crate::{
     devices,
     signals::{
         self,
-        signal::{self, state_source, state_target},
+        signal::{self, state_source, state_target_queued},
         types::state::Value,
         Signals,
     },
@@ -22,7 +22,7 @@ where
     pub default: V,
 }
 
-type SignalInput<V> = state_target::Signal<Option<V>>;
+type SignalInput<V> = state_target_queued::Signal<Option<V>>;
 type SignalOutput<V> = state_source::Signal<V>;
 
 #[derive(Debug)]
@@ -79,16 +79,19 @@ where
     Option<V>: Value + Clone,
 {
     fn signal_targets_changed_wake(&self) {
-        let value = match self.signal_input.take_pending() {
-            Some(value) => value,
-            None => return,
-        };
+        let values = self.signal_input.take_pending();
 
-        let value = value
-            .unwrap_or_else(|| Some(self.configuration.default.clone()))
-            .unwrap_or_else(|| self.configuration.default.clone());
+        let values = values
+            .into_vec()
+            .into_iter()
+            .map(|value| {
+                value
+                    .unwrap_or_else(|| Some(self.configuration.default.clone()))
+                    .unwrap_or_else(|| self.configuration.default.clone())
+            })
+            .collect::<Box<[_]>>();
 
-        if self.signal_output.set(value) {
+        if self.signal_output.set_many(values) {
             self.signal_sources_changed_waker.wake();
         }
     }

@@ -67,8 +67,13 @@ impl<'d> Exchanger<'d> {
                 Some((_, state_source_remote_base)) => Some(state_source_remote_base.get_last()),
                 None => None,
             };
-            state_target_remote_base.set(&value);
-            target_device_ids.insert(target_device_id_signal_id.device_id);
+
+            if match value {
+                Some(value) => state_target_remote_base.set(&[value]),
+                None => state_target_remote_base.set_none(),
+            } {
+                target_device_ids.insert(target_device_id_signal_id.device_id);
+            }
         }
 
         for target_device_id in target_device_ids.into_iter() {
@@ -95,15 +100,13 @@ impl<'d> Exchanger<'d> {
                 }
             }
 
-            let pending = match state_source_remote_base.take_pending() {
-                Some(pending) => pending,
-                None => continue,
-            };
+            let pending = state_source_remote_base.take_pending();
+            if pending.is_empty() {
+                continue;
+            }
 
-            let pending = Some(pending);
             for (target_device_id_signal_id, state_target_remote_base) in targets {
-                let changed = state_target_remote_base.set(&pending);
-                if changed {
+                if state_target_remote_base.set(&pending) {
                     target_device_ids.insert(target_device_id_signal_id.device_id);
                 }
             }
@@ -125,8 +128,9 @@ impl<'d> Exchanger<'d> {
             }
 
             for (target_device_id_signal_id, state_target_remote_base) in targets {
-                state_target_remote_base.push(&pending);
-                target_device_ids.insert(target_device_id_signal_id.device_id);
+                if state_target_remote_base.push(&pending) {
+                    target_device_ids.insert(target_device_id_signal_id.device_id);
+                }
             }
         }
 

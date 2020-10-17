@@ -2,7 +2,7 @@ use crate::{
     devices,
     signals::{
         self,
-        signal::{self, state_source, state_target},
+        signal::{self, state_source, state_target_queued},
         Signals,
     },
     util::waker_stream,
@@ -11,7 +11,7 @@ use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
-type SignalInput = state_target::Signal<bool>;
+type SignalInput = state_target_queued::Signal<bool>;
 type SignalOutput = state_source::Signal<bool>;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -51,17 +51,18 @@ impl devices::Device for Device {
 }
 impl signals::Device for Device {
     fn signal_targets_changed_wake(&self) {
-        let value = match self.signal_input.take_pending() {
-            Some(value) => value,
-            None => return,
-        };
+        let values = self.signal_input.take_pending();
 
-        let value = match value {
-            Some(value) => !value,
-            None => self.configuration.default_state,
-        };
+        let values = values
+            .into_vec()
+            .into_iter()
+            .map(|value| match value {
+                Some(value) => !value,
+                None => self.configuration.default_state,
+            })
+            .collect::<Box<[_]>>();
 
-        if self.signal_output.set(value) {
+        if self.signal_output.set_many(values) {
             self.signal_sources_changed_waker.wake()
         }
     }

@@ -2,7 +2,7 @@ pub mod logic {
     use super::{super::super::logic, hardware};
     use crate::{
         signals,
-        signals::signal::state_target,
+        signals::signal::state_target_last,
         util::waker_stream,
         web::{sse_aggregated, uri_cursor},
     };
@@ -22,7 +22,7 @@ pub mod logic {
         properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver,
 
         signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-        signal_outputs: [state_target::Signal<bool>; hardware::OUTPUT_COUNT],
+        signal_outputs: [state_target_last::Signal<bool>; hardware::OUTPUT_COUNT],
 
         _phantom: PhantomData<S>,
     }
@@ -35,7 +35,7 @@ pub mod logic {
                 properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
                 signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-                signal_outputs: array_init(|_| state_target::Signal::new()),
+                signal_outputs: array_init(|_| state_target_last::Signal::new()),
 
                 _phantom: PhantomData,
             }

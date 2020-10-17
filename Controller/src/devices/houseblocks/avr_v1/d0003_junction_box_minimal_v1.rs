@@ -4,7 +4,7 @@ pub mod logic {
         datatypes::temperature::Temperature,
         signals::{
             self,
-            signal::{self, event_target_last, state_source, state_target},
+            signal::{self, event_target_last, state_source, state_target_last},
         },
         util::waker_stream,
         web::{sse_aggregated, uri_cursor},
@@ -22,7 +22,7 @@ pub mod logic {
 
         signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
         signal_keys: [state_source::Signal<Option<bool>>; hardware::KEY_COUNT],
-        signal_leds: [state_target::Signal<bool>; hardware::LED_COUNT],
+        signal_leds: [state_target_last::Signal<bool>; hardware::LED_COUNT],
         signal_buzzer: event_target_last::Signal<Duration>,
         signal_temperature: state_source::Signal<Option<Temperature>>,
     }
@@ -36,7 +36,7 @@ pub mod logic {
             let signal_sources_changed_waker = waker_stream::mpsc::SenderReceiver::new();
 
             let signal_keys = array_init(|_| state_source::Signal::new(None));
-            let signal_leds = array_init(|_| state_target::Signal::new());
+            let signal_leds = array_init(|_| state_target_last::Signal::new());
             let signal_buzzer = event_target_last::Signal::new();
             let signal_temperature = state_source::Signal::new(None);
 
@@ -85,15 +85,20 @@ pub mod logic {
                         .iter()
                         .enumerate()
                         .for_each(|(key_index, signal_key)| {
-                            for key_change_index in (0..key_changes_count_merged[key_index]).rev() {
-                                let key_value = key_values[key_index] ^ (key_change_index % 2 != 0);
-                                signals_changed |= signal_key.set(Some(key_value));
-                            }
+                            let key_values = (0..key_changes_count_merged[key_index])
+                                .rev()
+                                .map(|key_change_index| {
+                                    let key_value =
+                                        key_values[key_index] ^ (key_change_index % 2 != 0);
+                                    Some(key_value)
+                                })
+                                .collect::<Box<[_]>>();
+                            signals_changed |= signal_key.set_many(key_values);
                         });
                 } else {
                     // Keys are broken
                     self.signal_keys.iter().for_each(|signal_key| {
-                        signals_changed |= signal_key.set(None);
+                        signals_changed |= signal_key.set_one(None);
                     });
                 }
             }
@@ -103,7 +108,7 @@ pub mod logic {
                 let temperature = temperature
                     .map(|temperature| temperature.temperature())
                     .flatten();
-                signals_changed |= self.signal_temperature.set(temperature);
+                signals_changed |= self.signal_temperature.set_one(temperature);
             }
 
             if signals_changed {

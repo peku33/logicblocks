@@ -16,11 +16,23 @@ impl<V: Value + Clone> Signal<V> {
         }
     }
 
-    pub fn push(
+    #[must_use = "use this value to wake signals change notifier"]
+    pub fn push_one(
         &self,
         value: V,
-    ) {
+    ) -> bool {
         self.queue.push(value);
+        true
+    }
+    #[must_use = "use this value to wake signals change notifier"]
+    pub fn push_many(
+        &self,
+        values: Box<[V]>,
+    ) -> bool {
+        for value in values.into_vec().into_iter() {
+            self.queue.push(value);
+        }
+        true
     }
 }
 impl<V: Value + Clone> Base for Signal<V> {
@@ -28,7 +40,6 @@ impl<V: Value + Clone> Base for Signal<V> {
         self
     }
 }
-
 impl<V: Value + Clone> EventSourceRemoteBase for Signal<V> {
     fn take_pending(&self) -> Box<[Box<dyn ValueBase>]> {
         let mut buffer = Vec::with_capacity(self.queue.len());
