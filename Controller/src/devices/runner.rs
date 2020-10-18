@@ -7,7 +7,7 @@ use crate::{
         Device as SignalsDevice,
     },
     util::select_all_empty::SelectAllEmptyFutureInfinite,
-    web::{self, sse_aggregated, uri_cursor},
+    web::{self, sse_aggregated, sse_aggregated::NodeProvider, uri_cursor},
 };
 use futures::{future::BoxFuture, pin_mut, select, FutureExt};
 use maplit::hashmap;
@@ -47,14 +47,11 @@ impl<'d> Runner<'d> {
                     terminal: None,
                     children: device_contexts
                         .iter()
-                        .filter_map(|(device_id, device_context)| {
-                            match device_context.device().as_sse_aggregated_node_provider() {
-                                Some(node_provider) => Some((
-                                    sse_aggregated::PathItem::NumberU32(*device_id),
-                                    node_provider.node(),
-                                )),
-                                None => None,
-                            }
+                        .map(|(device_id, device_context)| {
+                            (
+                                sse_aggregated::PathItem::NumberU32(*device_id),
+                                device_context.node(),
+                            )
                         })
                         .collect(),
                 };

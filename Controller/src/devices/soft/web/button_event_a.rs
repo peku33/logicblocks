@@ -17,8 +17,6 @@ type SignalOutput = event_source::Signal<()>;
 pub struct Device {
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
     output: SignalOutput,
-
-    sse_sender: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn click(&self) {
@@ -32,8 +30,6 @@ impl Device {
         Self {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
             output: SignalOutput::new(),
-
-            sse_sender: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -49,7 +45,7 @@ impl devices::Device for Device {
         Some(self)
     }
     fn as_sse_aggregated_node_provider(&self) -> Option<&dyn sse_aggregated::NodeProvider> {
-        Some(self)
+        None
     }
 }
 impl signals::Device for Device {
@@ -80,14 +76,6 @@ impl uri_cursor::Handler for Device {
                 _ => async move { web::Response::error_405() }.boxed(),
             },
             _ => async move { web::Response::error_404() }.boxed(),
-        }
-    }
-}
-impl sse_aggregated::NodeProvider for Device {
-    fn node(&self) -> sse_aggregated::Node {
-        sse_aggregated::Node {
-            terminal: Some(self.sse_sender.receiver_factory()),
-            children: hashmap! {},
         }
     }
 }

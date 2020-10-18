@@ -32,7 +32,7 @@ pub struct Device {
     signal_s: event_target_last::Signal<()>,
     signal_t: event_target_last::Signal<()>,
 
-    sse_sender: waker_stream::mpmc::Sender,
+    sse_aggregated_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn new(
@@ -51,7 +51,7 @@ impl Device {
             signal_s: event_target_last::Signal::new(),
             signal_t: event_target_last::Signal::new(),
 
-            sse_sender: waker_stream::mpmc::Sender::new(),
+            sse_aggregated_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -88,16 +88,19 @@ impl Device {
         if self.signal_output.set_one(false) {
             self.signal_sources_changed_waker.wake();
         }
+        self.sse_aggregated_waker.wake();
     }
     pub fn s(&self) {
         if self.signal_output.set_one(true) {
             self.signal_sources_changed_waker.wake();
         }
+        self.sse_aggregated_waker.wake();
     }
     pub fn t(&self) {
         if self.signal_output.set_one(!self.signal_output.get()) {
             self.signal_sources_changed_waker.wake();
         }
+        self.sse_aggregated_waker.wake();
     }
 }
 #[async_trait]
@@ -196,7 +199,7 @@ impl uri_cursor::Handler for Device {
 impl sse_aggregated::NodeProvider for Device {
     fn node(&self) -> sse_aggregated::Node {
         sse_aggregated::Node {
-            terminal: Some(self.sse_sender.receiver_factory()),
+            terminal: Some(self.sse_aggregated_waker.receiver_factory()),
             children: hashmap! {},
         }
     }

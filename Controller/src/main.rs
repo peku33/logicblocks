@@ -1,4 +1,4 @@
-use futures::FutureExt;
+use futures::future::FutureExt;
 use logicblocks_controller::{
     devices::{self, runner::Runner, DeviceContext, Id as DeviceId},
     signals::{exchange::DeviceIdSignalId, Id as SignalId},
@@ -113,7 +113,7 @@ async fn main() {
 
     // Web service
     let root_router = MapRouter::new(hashmap! {
-        "device_runner".to_owned() => &device_runner as &(dyn Handler + Sync)
+        "devices_runner".to_owned() => &device_runner as &(dyn Handler + Sync)
     });
 
     let root_service = RootService::new(&root_router);
