@@ -3,26 +3,18 @@ import { Link, matchPath, useLocation } from "react-router-dom";
 import { Menu } from "semantic-ui-react";
 
 const SemanticUiReactMenuItemRouter: React.FC<{
-  path: string,
-  exact?: boolean,
-  strict?: boolean,
-  sensitive?: boolean,
+  path: string;
+  exact?: boolean;
+  strict?: boolean;
+  sensitive?: boolean;
 
-  text: string,
+  text: string;
 }> = (props) => {
   const location = useLocation();
-  const match = !!matchPath(
-    location.pathname,
-    props,
-  );
+  const match = !!matchPath(location.pathname, props);
   return (
-    <Menu.Item
-      link={true}
-      active={match}
-    >
-      <Link to={props.path}>
-        {props.text}
-      </Link>
+    <Menu.Item link={true} active={match}>
+      <Link to={props.path}>{props.text}</Link>
     </Menu.Item>
   );
 };

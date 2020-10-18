@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "semantic-ui-react";
-import { postDeviceEmpty } from "services/LogicRunnerDevices";
+import { devicePostEmpty } from "services/LogicDevicesRunner";
 
 const Summary: React.FC<{
   deviceId: number;
@@ -9,7 +9,7 @@ const Summary: React.FC<{
   const { deviceId } = props;
 
   const signal = (): void => {
-    postDeviceEmpty(deviceId, "");
+    devicePostEmpty(deviceId, "");
   };
 
   return <Button onClick={(): void => signal()}>Signal</Button>;

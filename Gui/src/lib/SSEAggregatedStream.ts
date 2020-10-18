@@ -1,19 +1,19 @@
-import { urlBuild } from "./Api";
 import deepEqual from "deep-equal";
+import { urlBuild } from "./Api";
 
 export class WatchToken {
   constructor(public readonly token: number) {}
 }
 
-type PathElement = number | string;
-type Path = PathElement[];
+export type PathElement = number | string;
+export type Path = PathElement[];
 
 interface WatchContext {
   path: Path;
   callback: () => void;
 }
 
-export default class SSEAggregatedClient {
+export default class Client {
   public constructor(private readonly endpoint: string) {}
 
   private stream: EventSource | undefined;
@@ -60,6 +60,7 @@ export default class SSEAggregatedClient {
 
   private tokenNext = 0;
   private watches: Map<number, WatchContext> = new Map();
+
   public watchAdd(path: Path, callback: () => void): WatchToken {
     if (this.watches.size === 0) {
       this.streamStart();

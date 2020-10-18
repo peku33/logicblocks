@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { Grid, Header, Loader } from "semantic-ui-react";
-import useAsyncEffect from "use-async-effect";
 import { getSummaryComponent } from "components/devices/Factory";
 import { getJson } from "lib/Api";
+import React, { useState } from "react";
+import { Grid, Header, Loader } from "semantic-ui-react";
+import { urlBuild } from "services/LogicDevicesRunner";
+import useAsyncEffect from "use-async-effect";
 
 interface DeviceData {
   name: string;
@@ -46,7 +47,7 @@ function useDeviceContext(deviceId: number): DeviceData | undefined {
 
   useAsyncEffect(
     async (isMounted) => {
-      const deviceData = await getJson<DeviceData>(`/device_runner/devices/${deviceId}`);
+      const deviceData = await getJson<DeviceData>(urlBuild(`/devices/${deviceId}`));
       if (!isMounted) return;
       setDeviceData(deviceData);
     },

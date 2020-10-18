@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { Loader, List } from "semantic-ui-react";
-import DeviceSummary from "./DeviceSummary";
-import useAsyncEffect from "use-async-effect";
 import { getJson } from "lib/Api";
+import React, { useState } from "react";
+import { List, Loader } from "semantic-ui-react";
+import { urlBuild } from "services/LogicDevicesRunner";
+import useAsyncEffect from "use-async-effect";
+import DeviceSummary from "./DeviceSummary";
 
 const DevicesSummary: React.FC = () => {
   const deviceIds = useDeviceIds();
@@ -29,7 +30,7 @@ function useDeviceIds(): number[] | undefined {
 
   useAsyncEffect(
     async (isMounted) => {
-      const deviceIds = await getJson<number[]>("/device_runner/devices/list");
+      const deviceIds = await getJson<number[]>(urlBuild("/devices/list"));
       const deviceIdsSorted = deviceIds.sort((a, b) => a - b);
       if (!isMounted) return;
       setDeviceIds(deviceIdsSorted);
