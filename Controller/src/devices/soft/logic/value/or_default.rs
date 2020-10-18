@@ -7,7 +7,6 @@ use crate::{
         Signals,
     },
     util::waker_stream,
-    web::{sse_aggregated, uri_cursor},
 };
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
@@ -36,6 +35,8 @@ where
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
     signal_input: SignalInput<V>,
     signal_output: SignalOutput<V>,
+
+    gui_summary_provider_waker: waker_stream::mpmc::Sender,
 }
 impl<V> Device<V>
 where
@@ -51,6 +52,8 @@ where
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
             signal_input: SignalInput::new(),
             signal_output: SignalOutput::new(signal_output_value),
+
+            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -63,14 +66,11 @@ where
         Cow::from("soft/value/or_default")
     }
 
-    fn as_signals_device(&self) -> Option<&dyn signals::Device> {
-        Some(self)
+    fn as_signals_device(&self) -> &dyn signals::Device {
+        self
     }
-    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
-        None
-    }
-    fn as_sse_aggregated_node_provider(&self) -> Option<&dyn sse_aggregated::NodeProvider> {
-        None
+    fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
+        self
     }
 }
 impl<V> signals::Device for Device<V>
@@ -103,5 +103,18 @@ where
             0 => &self.signal_input as &dyn signal::Base,
             1 => &self.signal_output as &dyn signal::Base,
         }
+    }
+}
+impl<V> devices::GuiSummaryProvider for Device<V>
+where
+    V: Value + Clone,
+    Option<V>: Value + Clone,
+{
+    fn get_value(&self) -> serde_json::Value {
+        serde_json::Value::Null
+    }
+
+    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+        self.gui_summary_provider_waker.receiver_factory()
     }
 }

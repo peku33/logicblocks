@@ -1,8 +1,8 @@
 import React from "react";
 import { Button, Dimmer, Loader } from "semantic-ui-react";
-import { devicePostEmpty, useDeviceObservableState } from "services/LogicDevicesRunner";
+import { devicePostEmpty, useDeviceSummary } from "services/LogicDevicesRunner";
 
-interface DeviceState {
+interface DeviceSummary {
   value: boolean;
 }
 
@@ -12,7 +12,7 @@ const Summary: React.FC<{
 }> = (props) => {
   const { deviceId } = props;
 
-  const { state } = useDeviceObservableState<DeviceState>(deviceId, "", []);
+  const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
 
   const doR = (): void => {
     devicePostEmpty(deviceId, "/r");
@@ -25,16 +25,16 @@ const Summary: React.FC<{
   };
 
   return (
-    <Dimmer.Dimmable dimmed={state === undefined}>
-      <Dimmer active={state === undefined} inverted>
+    <Dimmer.Dimmable dimmed={deviceSummary === undefined}>
+      <Dimmer active={deviceSummary === undefined} inverted>
         <Loader />
       </Dimmer>
       <Button.Group>
-        <Button color={state && state.value ? "blue" : undefined} onClick={(): void => doS()}>
+        <Button color={deviceSummary && deviceSummary.value ? "blue" : undefined} onClick={(): void => doS()}>
           SET (On)
         </Button>
         <Button onClick={(): void => doT()}>TOGGLE (Flip)</Button>
-        <Button color={state && !state.value ? "blue" : undefined} onClick={(): void => doR()}>
+        <Button color={deviceSummary && !deviceSummary.value ? "blue" : undefined} onClick={(): void => doR()}>
           RESET (Off)
         </Button>
       </Button.Group>

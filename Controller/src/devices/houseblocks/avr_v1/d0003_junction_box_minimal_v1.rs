@@ -2,17 +2,18 @@ pub mod logic {
     use super::{super::logic, hardware};
     use crate::{
         datatypes::temperature::Temperature,
+        devices,
         signals::{
             self,
             signal::{self, event_target_last, state_source, state_target_last},
         },
         util::waker_stream,
-        web::{sse_aggregated, uri_cursor},
     };
     use array_init::array_init;
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
     use maplit::hashmap;
+    use serde_json::json;
     use std::time::Duration;
 
     #[derive(Debug)]
@@ -25,6 +26,8 @@ pub mod logic {
         signal_leds: [state_target_last::Signal<bool>; hardware::LED_COUNT],
         signal_buzzer: event_target_last::Signal<Duration>,
         signal_temperature: state_source::Signal<Option<Temperature>>,
+
+        gui_summary_provider_waker: waker_stream::mpmc::Sender,
     }
 
     #[async_trait]
@@ -32,41 +35,33 @@ pub mod logic {
         type HardwareDevice = hardware::Device;
 
         fn new(properties_remote: hardware::PropertiesRemote) -> Self {
-            let properties_remote_out_changed_waker = waker_stream::mpsc::SenderReceiver::new();
-            let signal_sources_changed_waker = waker_stream::mpsc::SenderReceiver::new();
-
-            let signal_keys = array_init(|_| state_source::Signal::new(None));
-            let signal_leds = array_init(|_| state_target_last::Signal::new());
-            let signal_buzzer = event_target_last::Signal::new();
-            let signal_temperature = state_source::Signal::new(None);
-
             Self {
                 properties_remote,
-                properties_remote_out_changed_waker,
+                properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
-                signal_sources_changed_waker,
-                signal_keys,
-                signal_leds,
-                signal_buzzer,
-                signal_temperature,
+                signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+                signal_keys: array_init(|_| state_source::Signal::new(None)),
+                signal_leds: array_init(|_| state_target_last::Signal::new()),
+                signal_buzzer: event_target_last::Signal::new(),
+                signal_temperature: state_source::Signal::new(None),
+
+                gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
             }
         }
         fn class() -> &'static str {
             "junction_box_minimal_v1"
         }
 
-        fn as_signals_device(&self) -> Option<&dyn signals::Device> {
-            Some(self)
+        fn as_signals_device(&self) -> &dyn signals::Device {
+            self
         }
-        fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
-            None
-        }
-        fn as_sse_aggregated_node_provider(&self) -> Option<&dyn sse_aggregated::NodeProvider> {
-            None
+        fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
+            self
         }
 
         fn properties_remote_in_changed(&self) {
             let mut signals_changed = false;
+            let mut gui_summary_changed = false;
 
             // keys
             if let Some((key_values, key_changes_count_queue)) = self.properties_remote.keys.take()
@@ -93,12 +88,16 @@ pub mod logic {
                                     Some(key_value)
                                 })
                                 .collect::<Box<[_]>>();
-                            signals_changed |= signal_key.set_many(key_values);
+                            if signal_key.set_many(key_values) {
+                                signals_changed = true;
+                            }
                         });
                 } else {
                     // Keys are broken
                     self.signal_keys.iter().for_each(|signal_key| {
-                        signals_changed |= signal_key.set_one(None);
+                        if signal_key.set_one(None) {
+                            signals_changed = true;
+                        }
                     });
                 }
             }
@@ -108,11 +107,18 @@ pub mod logic {
                 let temperature = temperature
                     .map(|temperature| temperature.temperature())
                     .flatten();
-                signals_changed |= self.signal_temperature.set_one(temperature);
+
+                if self.signal_temperature.set_one(temperature) {
+                    signals_changed = true;
+                    gui_summary_changed = true;
+                }
             }
 
             if signals_changed {
                 self.signal_sources_changed_waker.wake();
+            }
+            if gui_summary_changed {
+                self.gui_summary_provider_waker.wake();
             }
         }
         fn properties_remote_out_changed_waker_receiver(
@@ -139,12 +145,16 @@ pub mod logic {
                     .into_inner()
                     .unwrap();
 
-                properties_remote_changed |= self.properties_remote.leds.set(leds);
+                if self.properties_remote.leds.set(leds) {
+                    properties_remote_changed = true;
+                }
             }
 
             // buzzer
             if let Some(buzzer) = self.signal_buzzer.take_pending() {
-                properties_remote_changed |= self.properties_remote.buzzer.push(buzzer);
+                if self.properties_remote.buzzer.push(buzzer) {
+                    properties_remote_changed = true;
+                }
             }
 
             if properties_remote_changed {
@@ -174,6 +184,19 @@ pub mod logic {
 
                 40 => &self.signal_temperature as &dyn signal::Base,
             }
+        }
+    }
+    impl devices::GuiSummaryProvider for Device {
+        fn get_value(&self) -> serde_json::Value {
+            let temperature = self.signal_temperature.get();
+
+            json! {{
+                "temperature": temperature,
+            }}
+        }
+
+        fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+            self.gui_summary_provider_waker.receiver_factory()
         }
     }
 }
@@ -692,7 +715,7 @@ pub mod hardware {
                     .state()
                     .temperature()
                     .unwrap(),
-                Temperature::new(TemperatureUnit::CELSIUS, 125.00)
+                Temperature::new(TemperatureUnit::Celsius, 125.00)
             );
         }
         #[test]

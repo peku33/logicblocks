@@ -7,16 +7,15 @@ use crate::{
         Device as SignalsDevice,
     },
     util::select_all_empty::SelectAllEmptyFutureInfinite,
-    web::{self, sse_aggregated, sse_aggregated::NodeProvider, uri_cursor},
+    web::{self, sse_aggregated, uri_cursor},
 };
 use futures::{future::BoxFuture, pin_mut, select, FutureExt};
-use maplit::hashmap;
 use owning_ref::OwningHandle;
 use std::collections::HashMap;
 
 struct RunnerInner<'d> {
     exchanger: Exchanger<'d>,
-    sse_aggregated_bus: sse_aggregated::Bus,
+    devices_gui_summary_sse_aggregated_bus: sse_aggregated::Bus,
 }
 
 pub struct Runner<'d> {
@@ -27,49 +26,39 @@ impl<'d> Runner<'d> {
         device_contexts: HashMap<DeviceId, DeviceContext<'d>>,
         connections_requested: ConnectionsRequested,
     ) -> Self {
-        let inner = OwningHandle::new_with_fn(
-            Box::new(device_contexts),
-            |device_contexts_box_ptr| {
+        let inner =
+            OwningHandle::new_with_fn(Box::new(device_contexts), |device_contexts_box_ptr| {
                 let device_contexts = unsafe { &*device_contexts_box_ptr };
 
                 let exchanger_devices = device_contexts
                     .iter()
-                    .filter_map(|(device_id, device_context)| {
-                        match device_context.device().as_signals_device() {
-                            Some(signals_device) => Some((*device_id, signals_device)),
-                            None => None,
-                        }
+                    .map(|(device_id, device_context)| {
+                        (*device_id, device_context.device().as_signals_device())
                     })
                     .collect::<HashMap<DeviceId, &'d dyn SignalsDevice>>();
                 let exchanger = Exchanger::new(exchanger_devices, &connections_requested);
 
-                let sse_aggregated_bus_devices = sse_aggregated::Node {
+                let devices_gui_summary_sse_aggregated_node = sse_aggregated::Node {
                     terminal: None,
                     children: device_contexts
                         .iter()
                         .map(|(device_id, device_context)| {
                             (
                                 sse_aggregated::PathItem::NumberU32(*device_id),
-                                device_context.node(),
+                                device_context.gui_summary_waker(),
                             )
                         })
                         .collect(),
                 };
-
-                let sse_aggregated_bus = sse_aggregated::Bus::new(sse_aggregated::Node {
-                    terminal: None,
-                    children: hashmap! {
-                        sse_aggregated::PathItem::String("devices".to_owned()) => sse_aggregated_bus_devices
-                    },
-                });
+                let devices_gui_summary_sse_aggregated_bus =
+                    sse_aggregated::Bus::new(devices_gui_summary_sse_aggregated_node);
 
                 let inner = RunnerInner {
                     exchanger,
-                    sse_aggregated_bus,
+                    devices_gui_summary_sse_aggregated_bus,
                 };
                 Box::new(inner)
-            },
-        );
+            });
 
         Self { inner }
     }
@@ -115,6 +104,20 @@ impl<'p> uri_cursor::Handler for Runner<'p> {
                     },
                     _ => async move { web::Response::error_404() }.boxed(),
                 },
+                uri_cursor::UriCursor::Next("gui-summary-events", uri_cursor) => match **uri_cursor
+                {
+                    uri_cursor::UriCursor::Terminal => match *request.method() {
+                        http::Method::GET => {
+                            let sse_stream = self
+                                .inner
+                                .devices_gui_summary_sse_aggregated_bus
+                                .sse_stream();
+                            async move { web::Response::ok_sse_stream(sse_stream) }.boxed()
+                        }
+                        _ => async move { web::Response::error_405() }.boxed(),
+                    },
+                    _ => async move { web::Response::error_404() }.boxed(),
+                },
                 uri_cursor::UriCursor::Next(device_id_str, uri_cursor) => {
                     let device_id: DeviceId = match device_id_str.parse() {
                         Ok(device_id) => device_id,
@@ -129,16 +132,6 @@ impl<'p> uri_cursor::Handler for Runner<'p> {
                     };
                     device_context_run_context.handle(request, &*uri_cursor)
                 }
-                _ => async move { web::Response::error_404() }.boxed(),
-            },
-            uri_cursor::UriCursor::Next("events", uri_cursor) => match **uri_cursor {
-                uri_cursor::UriCursor::Terminal => match *request.method() {
-                    http::Method::GET => {
-                        let sse_stream = self.inner.sse_aggregated_bus.sse_stream();
-                        async move { web::Response::ok_sse_stream(sse_stream) }.boxed()
-                    }
-                    _ => async move { web::Response::error_405() }.boxed(),
-                },
                 _ => async move { web::Response::error_404() }.boxed(),
             },
             _ => async move { web::Response::error_404() }.boxed(),

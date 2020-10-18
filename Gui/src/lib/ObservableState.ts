@@ -8,11 +8,7 @@ export function useObservableState<S>(
 
   sseAggregatedStreamClient: Client,
   sseAggregatedStreamPath: Path,
-): {
-  state: S | undefined;
-  invalidate: () => void;
-  version: number;
-} {
+): S | undefined {
   const [state, setState] = useState<S>();
 
   const version = useObservableStateVersion(sseAggregatedStreamClient, sseAggregatedStreamPath);
@@ -29,11 +25,7 @@ export function useObservableState<S>(
     [getJsonUrl, sseAggregatedStreamClient, ...sseAggregatedStreamPath, version],
   );
 
-  const invalidate = (): void => {
-    setState(undefined);
-  };
-
-  return { state, invalidate, version };
+  return state;
 }
 
 export function useObservableStateVersion(sseAggregatedStreamClient: Client, sseAggregatedStreamPath: Path): number {

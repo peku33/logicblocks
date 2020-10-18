@@ -1,7 +1,17 @@
+import { kelvinToCelsius } from "lib/Temperature";
 import React from "react";
+import { Header } from "semantic-ui-react";
+import makeAvrV1Summary from "../Summary";
 
-const D0003JunctionBoxMinimalV1: React.FC = () => {
-  return <span>D0003JunctionBoxMinimalV1</span>;
+interface DeviceState {
+  temperature: number;
+}
+
+const Summary: React.FC<{
+  state?: DeviceState;
+}> = (props) => {
+  const { state } = props;
+  return <Header as="h1">{state !== undefined ? kelvinToCelsius(state.temperature) : "?"}&deg;C</Header>;
 };
 
-export default D0003JunctionBoxMinimalV1;
+export default makeAvrV1Summary(Summary);

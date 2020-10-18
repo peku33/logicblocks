@@ -1,11 +1,6 @@
 pub mod logic {
     use super::{super::super::logic, hardware};
-    use crate::{
-        signals,
-        signals::signal::state_target_last,
-        util::waker_stream,
-        web::{sse_aggregated, uri_cursor},
-    };
+    use crate::{devices, signals, signals::signal::state_target_last, util::waker_stream};
     use array_init::array_init;
     use arrayvec::ArrayVec;
     use std::{fmt, marker::PhantomData};
@@ -24,6 +19,8 @@ pub mod logic {
         signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
         signal_outputs: [state_target_last::Signal<bool>; hardware::OUTPUT_COUNT],
 
+        gui_summary_provider_waker: waker_stream::mpmc::Sender,
+
         _phantom: PhantomData<S>,
     }
     impl<S: Specification> logic::Device for Device<S> {
@@ -37,6 +34,8 @@ pub mod logic {
                 signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
                 signal_outputs: array_init(|_| state_target_last::Signal::new()),
 
+                gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+
                 _phantom: PhantomData,
             }
         }
@@ -45,16 +44,12 @@ pub mod logic {
             S::class()
         }
 
-        fn as_signals_device(&self) -> Option<&dyn signals::Device> {
-            Some(self)
+        fn as_signals_device(&self) -> &dyn signals::Device {
+            self
         }
-        fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
-            None
+        fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
+            self
         }
-        fn as_sse_aggregated_node_provider(&self) -> Option<&dyn sse_aggregated::NodeProvider> {
-            None
-        }
-
         fn properties_remote_in_changed(&self) {
             // We have no "in" properties
         }
@@ -82,7 +77,9 @@ pub mod logic {
                     .into_inner()
                     .unwrap();
 
-                properties_remote_changed |= self.properties_remote.outputs.set(outputs);
+                if self.properties_remote.outputs.set(outputs) {
+                    properties_remote_changed = true;
+                }
             }
 
             if properties_remote_changed {
@@ -98,6 +95,15 @@ pub mod logic {
                 .enumerate()
                 .map(|(index, signal)| (index as signals::Id, signal as &dyn signals::signal::Base))
                 .collect::<signals::Signals>()
+        }
+    }
+    impl<S: Specification> devices::GuiSummaryProvider for Device<S> {
+        fn get_value(&self) -> serde_json::Value {
+            serde_json::Value::Null
+        }
+
+        fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+            self.gui_summary_provider_waker.receiver_factory()
         }
     }
 }

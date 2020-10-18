@@ -4,15 +4,16 @@ pub mod soft;
 
 use crate::{
     signals,
-    util::atomic_cell::AtomicCell,
+    util::{atomic_cell::AtomicCell, waker_stream},
     web::{self, sse_aggregated, uri_cursor},
 };
 use async_trait::async_trait;
 use futures::future::{pending, BoxFuture, FutureExt};
+use maplit::hashmap;
 use owning_ref::OwningHandle;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::json;
-use std::{borrow::Cow, collections::HashMap, fmt};
+use std::{borrow::Cow, fmt};
 
 pub type Id = u32;
 
@@ -23,13 +24,9 @@ pub trait State = Serialize + DeserializeOwned;
 pub trait Device: Send + Sync + fmt::Debug {
     fn class(&self) -> Cow<'static, str>;
 
-    fn as_signals_device(&self) -> Option<&dyn signals::Device> {
-        None
-    }
+    fn as_signals_device(&self) -> &dyn signals::Device;
+    fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider;
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
-        None
-    }
-    fn as_sse_aggregated_node_provider(&self) -> Option<&dyn sse_aggregated::NodeProvider> {
         None
     }
 
@@ -62,8 +59,15 @@ impl<'d> DeviceContext<'d> {
     pub fn name(&self) -> &String {
         &self.name
     }
-    pub fn device(&self) -> &(dyn Device + 'd) {
+    fn device(&self) -> &(dyn Device + 'd) {
         &**self.inner.as_owner()
+    }
+
+    pub fn gui_summary_waker(&self) -> sse_aggregated::Node {
+        sse_aggregated::Node {
+            terminal: Some(self.device().as_gui_summary_provider().get_waker()),
+            children: hashmap! {},
+        }
     }
 
     // Could be called many times
@@ -101,6 +105,16 @@ impl<'d> uri_cursor::Handler for DeviceContext<'d> {
                 }
                 _ => async move { web::Response::error_405() }.boxed(),
             },
+            uri_cursor::UriCursor::Next("gui-summary", uri_cursor) => match **uri_cursor {
+                uri_cursor::UriCursor::Terminal => match *request.method() {
+                    http::Method::GET => {
+                        let value = self.device().as_gui_summary_provider().get_value();
+                        async move { web::Response::ok_json(value) }.boxed()
+                    }
+                    _ => async move { web::Response::error_405() }.boxed(),
+                },
+                _ => async move { web::Response::error_404() }.boxed(),
+            },
             uri_cursor::UriCursor::Next("device", uri_cursor) => {
                 match self.device().as_web_handler() {
                     Some(handler) => handler.handle(request, uri_cursor),
@@ -111,20 +125,8 @@ impl<'d> uri_cursor::Handler for DeviceContext<'d> {
         }
     }
 }
-impl<'d> sse_aggregated::NodeProvider for DeviceContext<'d> {
-    fn node(&self) -> sse_aggregated::Node {
-        let mut children = HashMap::new();
-        if let Some(sse_aggregated_node_provider) = self.device().as_sse_aggregated_node_provider()
-        {
-            children.insert(
-                sse_aggregated::PathItem::String("device".to_owned()),
-                sse_aggregated_node_provider.node(),
-            );
-        }
 
-        sse_aggregated::Node {
-            children,
-            terminal: None,
-        }
-    }
+pub trait GuiSummaryProvider {
+    fn get_value(&self) -> serde_json::Value;
+    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory;
 }

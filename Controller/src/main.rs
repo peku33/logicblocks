@@ -84,7 +84,7 @@ async fn main() {
             Box::new(
                 devices::soft::logic::boolean::slope_a::Device::new(
                     devices::soft::logic::boolean::slope_a::Configuration {
-                        edge: devices::soft::logic::boolean::slope_a::Edge::FALLING,
+                        edge: devices::soft::logic::boolean::slope_a::Edge::Falling,
                     }
                 ),
             ),

@@ -20,6 +20,8 @@ pub struct Device<V: Value + Clone> {
 
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
     signal_input: SignalInput<V>,
+
+    gui_summary_provider_waker: waker_stream::mpmc::Sender,
 }
 impl<V: Value + Clone> Device<V> {
     pub fn new(configuration: Configuration) -> Self {
@@ -28,6 +30,8 @@ impl<V: Value + Clone> Device<V> {
 
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
             signal_input: SignalInput::new(),
+
+            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -36,8 +40,11 @@ impl<V: Value + Clone> devices::Device for Device<V> {
         Cow::from(format!("soft/debug/log_event<{}>", type_name::<V>()))
     }
 
-    fn as_signals_device(&self) -> Option<&dyn signals::Device> {
-        Some(self)
+    fn as_signals_device(&self) -> &dyn signals::Device {
+        self
+    }
+    fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
+        self
     }
 }
 impl<V: Value + Clone> signals::Device for Device<V> {
@@ -54,5 +61,14 @@ impl<V: Value + Clone> signals::Device for Device<V> {
         hashmap! {
             0 => &self.signal_input as &dyn signal::Base,
         }
+    }
+}
+impl<V: Value + Clone> devices::GuiSummaryProvider for Device<V> {
+    fn get_value(&self) -> serde_json::Value {
+        serde_json::Value::Null
+    }
+
+    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+        self.gui_summary_provider_waker.receiver_factory()
     }
 }

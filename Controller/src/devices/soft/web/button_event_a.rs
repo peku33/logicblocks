@@ -5,7 +5,7 @@ use crate::{
         Signals,
     },
     util::waker_stream,
-    web::{self, sse_aggregated, uri_cursor},
+    web::{self, uri_cursor},
 };
 use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
@@ -16,11 +16,13 @@ type SignalOutput = event_source::Signal<()>;
 #[derive(Debug)]
 pub struct Device {
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-    output: SignalOutput,
+    signal_output: SignalOutput,
+
+    gui_summary_provider_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn click(&self) {
-        if self.output.push_one(()) {
+        if self.signal_output.push_one(()) {
             self.signal_sources_changed_waker.wake();
         }
     }
@@ -29,7 +31,9 @@ impl Device {
     pub fn new() -> Self {
         Self {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            output: SignalOutput::new(),
+            signal_output: SignalOutput::new(),
+
+            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -38,14 +42,14 @@ impl devices::Device for Device {
         Cow::from("soft/web/button_event_a")
     }
 
-    fn as_signals_device(&self) -> Option<&dyn signals::Device> {
-        Some(self)
+    fn as_signals_device(&self) -> &dyn signals::Device {
+        self
+    }
+    fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
+        self
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
         Some(self)
-    }
-    fn as_sse_aggregated_node_provider(&self) -> Option<&dyn sse_aggregated::NodeProvider> {
-        None
     }
 }
 impl signals::Device for Device {
@@ -57,8 +61,17 @@ impl signals::Device for Device {
     }
     fn signals(&self) -> Signals {
         hashmap! {
-            0 => &self.output as &dyn signal::Base,
+            0 => &self.signal_output as &dyn signal::Base,
         }
+    }
+}
+impl devices::GuiSummaryProvider for Device {
+    fn get_value(&self) -> serde_json::Value {
+        serde_json::Value::Null
+    }
+
+    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+        self.gui_summary_provider_waker.receiver_factory()
     }
 }
 impl uri_cursor::Handler for Device {

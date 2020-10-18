@@ -3,16 +3,14 @@ use super::{
     hardware::runner,
 };
 use crate::{
-    devices, signals,
+    devices::{self, GuiSummaryProvider},
+    signals,
     util::waker_stream,
-    web::{self, sse_aggregated, uri_cursor},
+    web::uri_cursor,
 };
 use async_trait::async_trait;
-use futures::{
-    future::{pending, BoxFuture},
-    pin_mut, select, FutureExt, StreamExt,
-};
-use maplit::hashmap;
+use futures::{future::pending, pin_mut, select, FutureExt, StreamExt};
+use serde_json::json;
 use std::{borrow::Cow, fmt};
 
 #[async_trait]
@@ -25,9 +23,11 @@ pub trait Device: Sync + Send + fmt::Debug {
 
     fn class() -> &'static str;
 
-    fn as_signals_device(&self) -> Option<&dyn signals::Device>;
-    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler>;
-    fn as_sse_aggregated_node_provider(&self) -> Option<&dyn sse_aggregated::NodeProvider>;
+    fn as_signals_device(&self) -> &dyn signals::Device;
+    fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider;
+    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
+        None
+    }
 
     fn properties_remote_in_changed(&self);
     fn properties_remote_out_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease;
@@ -43,6 +43,8 @@ pub struct Runner<'m, D: Device> {
     // device: D must declared used before hardware_runner to keep destruction order (device first)
     device: D,
     hardware_runner: runner::Runner<'m, D::HardwareDevice>,
+
+    gui_summary_provider_waker: waker_stream::mpmc::Sender,
 }
 impl<'m, D: Device> Runner<'m, D> {
     pub fn new(
@@ -57,6 +59,8 @@ impl<'m, D: Device> Runner<'m, D> {
         Self {
             hardware_runner,
             device,
+
+            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -67,14 +71,11 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
         Cow::from(class)
     }
 
-    fn as_signals_device(&self) -> Option<&dyn signals::Device> {
+    fn as_signals_device(&self) -> &dyn signals::Device {
         self.device.as_signals_device()
     }
-    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
-        Some(self)
-    }
-    fn as_sse_aggregated_node_provider(&self) -> Option<&dyn sse_aggregated::NodeProvider> {
-        Some(self)
+    fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider {
+        self
     }
 
     async fn run(&self) -> ! {
@@ -109,11 +110,36 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
         let mut properties_remote_out_changed_waker_forwarder =
             properties_remote_out_changed_waker_forwarder.fuse();
 
+        let hardware_runner_gui_summary_provider_waker_forwarder = self
+            .hardware_runner
+            .get_waker()
+            .receiver()
+            .for_each(async move |()| {
+                self.gui_summary_provider_waker.wake();
+            });
+        pin_mut!(hardware_runner_gui_summary_provider_waker_forwarder);
+        let mut hardware_runner_gui_summary_provider_waker_forwarder =
+            hardware_runner_gui_summary_provider_waker_forwarder.fuse();
+
+        let device_gui_summary_provider_waker_forwarder = self
+            .device
+            .as_gui_summary_provider()
+            .get_waker()
+            .receiver()
+            .for_each(async move |()| {
+                self.gui_summary_provider_waker.wake();
+            });
+        pin_mut!(device_gui_summary_provider_waker_forwarder);
+        let mut device_gui_summary_provider_waker_forwarder =
+            device_gui_summary_provider_waker_forwarder.fuse();
+
         select! {
             _ = hardware_runner_run => panic!("hardware_runner_run yielded"),
             _ = device_run => panic!("device_run yielded"),
             _ = properties_remote_in_changed_waker_forwarder => panic!("properties_remote_in_changed_waker_forwarder yielded"),
             _ = properties_remote_out_changed_waker_forwarder => panic!("properties_remote_out_changed_waker_forwarder yielded"),
+            _ = hardware_runner_gui_summary_provider_waker_forwarder => panic!("hardware_runner_gui_summary_provider_waker_forwarder yielded"),
+            _ = device_gui_summary_provider_waker_forwarder => panic!("device_gui_summary_provider_waker_forwarder yielded"),
         }
     }
     async fn finalize(&self) {
@@ -121,43 +147,18 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
         self.hardware_runner.finalize().await;
     }
 }
-impl<'m, D: Device> uri_cursor::Handler for Runner<'m, D> {
-    fn handle(
-        &self,
-        request: web::Request,
-        uri_cursor: &uri_cursor::UriCursor,
-    ) -> BoxFuture<'static, web::Response> {
-        match uri_cursor {
-            uri_cursor::UriCursor::Next("device", uri_cursor) => {
-                match self.device.as_web_handler() {
-                    Some(device_web_handler) => device_web_handler.handle(request, uri_cursor),
-                    None => async move { web::Response::error_404() }.boxed(),
-                }
-            }
-            uri_cursor::UriCursor::Next("hardware_runner", uri_cursor) => {
-                self.hardware_runner.handle(request, uri_cursor)
-            }
-            _ => async move { web::Response::error_404() }.boxed(),
-        }
-    }
-}
-impl<'m, D: Device> sse_aggregated::NodeProvider for Runner<'m, D> {
-    fn node(&self) -> sse_aggregated::Node {
-        let mut children = hashmap! {
-            sse_aggregated::PathItem::String("hardware_runner".to_owned()) => self.hardware_runner.node(),
-        };
-        if let Some(device_sse_aggregated_node_provider) =
-            self.device.as_sse_aggregated_node_provider()
-        {
-            children.insert(
-                sse_aggregated::PathItem::String("device".to_owned()),
-                device_sse_aggregated_node_provider.node(),
-            );
-        }
+impl<'m, D: Device> GuiSummaryProvider for Runner<'m, D> {
+    fn get_value(&self) -> serde_json::Value {
+        let device = self.device.as_gui_summary_provider().get_value();
+        let hardware_runner = self.hardware_runner.get_value();
 
-        sse_aggregated::Node {
-            terminal: None,
-            children,
-        }
+        json! {{
+            "device": device,
+            "hardware_runner": hardware_runner
+        }}
+    }
+
+    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+        self.gui_summary_provider_waker.receiver_factory()
     }
 }

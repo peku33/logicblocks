@@ -6,7 +6,7 @@ use crate::{
         Signals,
     },
     util::waker_stream,
-    web::{self, sse_aggregated, uri_cursor},
+    web::{self, uri_cursor},
 };
 use async_trait::async_trait;
 use futures::{future::BoxFuture, FutureExt};
@@ -32,7 +32,7 @@ pub struct Device {
     signal_s: event_target_last::Signal<()>,
     signal_t: event_target_last::Signal<()>,
 
-    sse_aggregated_waker: waker_stream::mpmc::Sender,
+    gui_summary_provider_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn new(
@@ -51,7 +51,7 @@ impl Device {
             signal_s: event_target_last::Signal::new(),
             signal_t: event_target_last::Signal::new(),
 
-            sse_aggregated_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -87,20 +87,20 @@ impl Device {
     pub fn r(&self) {
         if self.signal_output.set_one(false) {
             self.signal_sources_changed_waker.wake();
+            self.gui_summary_provider_waker.wake();
         }
-        self.sse_aggregated_waker.wake();
     }
     pub fn s(&self) {
         if self.signal_output.set_one(true) {
             self.signal_sources_changed_waker.wake();
+            self.gui_summary_provider_waker.wake();
         }
-        self.sse_aggregated_waker.wake();
     }
     pub fn t(&self) {
         if self.signal_output.set_one(!self.signal_output.get()) {
             self.signal_sources_changed_waker.wake();
+            self.gui_summary_provider_waker.wake();
         }
-        self.sse_aggregated_waker.wake();
     }
 }
 #[async_trait]
@@ -109,15 +109,13 @@ impl devices::Device for Device {
         Cow::from("soft/logic/flipflop/rst_a")
     }
 
-    fn as_signals_device(&self) -> Option<&dyn signals::Device> {
-        Some(self)
+    fn as_signals_device(&self) -> &dyn signals::Device {
+        self
     }
-
+    fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
+        self
+    }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
-        Some(self)
-    }
-
-    fn as_sse_aggregated_node_provider(&self) -> Option<&dyn sse_aggregated::NodeProvider> {
         Some(self)
     }
 }
@@ -141,6 +139,19 @@ impl signals::Device for Device {
         }
     }
 }
+impl devices::GuiSummaryProvider for Device {
+    fn get_value(&self) -> serde_json::Value {
+        let value = self.signal_output.get();
+
+        json! {{
+            "value": value,
+        }}
+    }
+
+    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+        self.gui_summary_provider_waker.receiver_factory()
+    }
+}
 impl uri_cursor::Handler for Device {
     fn handle(
         &self,
@@ -148,20 +159,6 @@ impl uri_cursor::Handler for Device {
         uri_cursor: &uri_cursor::UriCursor,
     ) -> BoxFuture<'static, web::Response> {
         match uri_cursor {
-            uri_cursor::UriCursor::Terminal => match *request.method() {
-                http::Method::GET => {
-                    let value = self.signal_output.get();
-                    async move {
-                        let response = json! {{
-                            "value": value
-                        }};
-
-                        web::Response::ok_json(response)
-                    }
-                    .boxed()
-                }
-                _ => async move { web::Response::error_405() }.boxed(),
-            },
             uri_cursor::UriCursor::Next("r", uri_cursor) => match **uri_cursor {
                 uri_cursor::UriCursor::Terminal => match *request.method() {
                     http::Method::POST => {
@@ -193,14 +190,6 @@ impl uri_cursor::Handler for Device {
                 _ => async move { web::Response::error_404() }.boxed(),
             },
             _ => async move { web::Response::error_404() }.boxed(),
-        }
-    }
-}
-impl sse_aggregated::NodeProvider for Device {
-    fn node(&self) -> sse_aggregated::Node {
-        sse_aggregated::Node {
-            terminal: Some(self.sse_aggregated_waker.receiver_factory()),
-            children: hashmap! {},
         }
     }
 }

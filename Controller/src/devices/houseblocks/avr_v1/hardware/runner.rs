@@ -7,17 +7,16 @@ use super::{
     property,
 };
 use crate::{
+    devices,
     util::{optional_async::StreamOrPending, waker_stream},
-    web::{self, sse_aggregated, uri_cursor},
 };
 use anyhow::{Context, Error};
 use async_trait::async_trait;
 use futures::{
-    future::{pending, BoxFuture, FutureExt},
+    future::{pending, FutureExt},
     pin_mut, select,
     stream::StreamExt,
 };
-use maplit::hashmap;
 use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json::json;
@@ -74,9 +73,9 @@ pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
 
 #[derive(Serialize, Copy, Clone, PartialEq, Eq, Debug)]
 pub enum DeviceState {
-    ERROR,
-    INITIALIZING,
-    RUNNING,
+    Error,
+    Initializing,
+    Running,
 }
 
 const POLL_DELAY_MAX: Duration = Duration::from_secs(5);
@@ -92,7 +91,7 @@ pub struct Runner<'m, D: Device> {
     properties_remote_in_change_waker: waker_stream::mpsc::SenderReceiver,
     properties_remote_out_change_waker: waker_stream::mpsc::SenderReceiver,
 
-    sse_aggregated_waker_stream: waker_stream::mpmc::Sender,
+    gui_summary_provider_waker: waker_stream::mpmc::Sender,
 }
 impl<'m, D: Device> Runner<'m, D> {
     pub fn new(
@@ -105,7 +104,7 @@ impl<'m, D: Device> Runner<'m, D> {
         );
         let device = D::new();
 
-        let device_state = Mutex::new(DeviceState::INITIALIZING);
+        let device_state = Mutex::new(DeviceState::Initializing);
 
         Self {
             driver,
@@ -116,7 +115,7 @@ impl<'m, D: Device> Runner<'m, D> {
             properties_remote_in_change_waker: waker_stream::mpsc::SenderReceiver::new(),
             properties_remote_out_change_waker: waker_stream::mpsc::SenderReceiver::new(),
 
-            sse_aggregated_waker_stream: waker_stream::mpmc::Sender::new(),
+            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -131,8 +130,8 @@ impl<'m, D: Device> Runner<'m, D> {
     }
 
     async fn driver_run_once(&self) -> Error {
-        *self.device_state.lock() = DeviceState::INITIALIZING;
-        self.sse_aggregated_waker_stream.wake();
+        *self.device_state.lock() = DeviceState::Initializing;
+        self.gui_summary_provider_waker.wake();
 
         // Hardware initializing & avr_v1
         if let Err(error) = self.driver.prepare().await.context("initial prepare") {
@@ -156,8 +155,8 @@ impl<'m, D: Device> Runner<'m, D> {
         }
 
         // Device is fully initialized
-        *self.device_state.lock() = DeviceState::RUNNING;
-        self.sse_aggregated_waker_stream.wake();
+        *self.device_state.lock() = DeviceState::Running;
+        self.gui_summary_provider_waker.wake();
 
         // Main loop
         let mut device_poll_waker_receiver = self.device.poll_waker_receiver();
@@ -194,8 +193,8 @@ impl<'m, D: Device> Runner<'m, D> {
         }
     }
     async fn driver_run_infinite(&self) -> ! {
-        *self.device_state.lock() = DeviceState::INITIALIZING;
-        self.sse_aggregated_waker_stream.wake();
+        *self.device_state.lock() = DeviceState::Initializing;
+        self.gui_summary_provider_waker.wake();
 
         loop {
             let error = self.driver_run_once().await;
@@ -205,8 +204,8 @@ impl<'m, D: Device> Runner<'m, D> {
                 self.properties_remote_in_change_waker.wake();
             }
 
-            *self.device_state.lock() = DeviceState::ERROR;
-            self.sse_aggregated_waker_stream.wake();
+            *self.device_state.lock() = DeviceState::Error;
+            self.gui_summary_provider_waker.wake();
             log::warn!("device {} failed: {:?}", self.driver.address(), error);
 
             tokio::time::delay_for(ERROR_RESTART_DELAY).await;
@@ -229,7 +228,7 @@ impl<'m, D: Device> Runner<'m, D> {
     }
     pub async fn finalize(&self) {
         let device_state = *self.device_state.lock();
-        if device_state == DeviceState::INITIALIZING || device_state == DeviceState::RUNNING {
+        if device_state == DeviceState::Initializing || device_state == DeviceState::Running {
             let application_driver = ApplicationDriver::new(&self.driver);
 
             let _ = self
@@ -241,80 +240,23 @@ impl<'m, D: Device> Runner<'m, D> {
                 self.properties_remote_in_change_waker.wake();
             }
 
-            *self.device_state.lock() = DeviceState::INITIALIZING;
-            self.sse_aggregated_waker_stream.wake();
+            *self.device_state.lock() = DeviceState::Initializing;
+            self.gui_summary_provider_waker.wake();
         }
 
         self.device.finalize().await;
     }
 }
-impl<'m, D: Device> uri_cursor::Handler for Runner<'m, D> {
-    fn handle(
-        &self,
-        request: web::Request,
-        uri_cursor: &uri_cursor::UriCursor,
-    ) -> BoxFuture<'static, web::Response> {
-        match uri_cursor {
-            uri_cursor::UriCursor::Terminal => match *request.method() {
-                http::Method::GET => {
-                    let device_state = *self.device_state.lock();
-                    async move {
-                        let response = json! {{
-                            "device_state": device_state
-                        }};
-                        web::Response::ok_json(response)
-                    }
-                    .boxed()
-                }
-                _ => async move { web::Response::error_405() }.boxed(),
-            },
-            uri_cursor::UriCursor::Next("properties", uri_cursor) => {
-                let properties_by_name = self.device.properties().by_name();
+impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
+    fn get_value(&self) -> serde_json::Value {
+        let device_state = *self.device_state.lock();
 
-                match &**uri_cursor {
-                    uri_cursor::UriCursor::Terminal => match *request.method() {
-                        http::Method::GET => {
-                            let property_names =
-                                properties_by_name.keys().copied().collect::<Vec<_>>();
-                            async move { web::Response::ok_json(property_names) }.boxed()
-                        }
-                        _ => async move { web::Response::error_405() }.boxed(),
-                    },
-                    uri_cursor::UriCursor::Next(property_name, uri_cursor) => {
-                        match properties_by_name.get(property_name) {
-                            Some(property) => property.handle(request, uri_cursor),
-                            None => async move { web::Response::error_404() }.boxed(),
-                        }
-                    }
-                }
-            }
-            _ => async move { web::Response::error_404() }.boxed(),
-        }
+        json! {{
+            "device_state": device_state
+        }}
     }
-}
-impl<'m, D: Device> sse_aggregated::NodeProvider for Runner<'m, D> {
-    fn node(&self) -> sse_aggregated::Node {
-        let properties = sse_aggregated::Node {
-            terminal: None,
-            children: self
-                .device
-                .properties()
-                .by_name()
-                .into_iter()
-                .map(|(name, property)| {
-                    (
-                        sse_aggregated::PathItem::String(name.to_owned()),
-                        property.node(),
-                    )
-                })
-                .collect(),
-        };
 
-        sse_aggregated::Node {
-            terminal: Some(self.sse_aggregated_waker_stream.receiver_factory()),
-            children: hashmap! {
-                sse_aggregated::PathItem::String("properties".to_owned()) => properties,
-            },
-        }
+    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+        self.gui_summary_provider_waker.receiver_factory()
     }
 }
