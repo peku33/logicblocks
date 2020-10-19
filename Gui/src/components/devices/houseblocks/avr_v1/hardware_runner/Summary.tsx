@@ -1,23 +1,11 @@
+import { Chip, ChipState } from "components/common/Chips";
 import React from "react";
-import { Label } from "semantic-ui-react";
+import styled from "styled-components";
 
 type DeviceState = "Error" | "Initializing" | "Running";
 
 export interface State {
   device_state: DeviceState;
-}
-
-function deviceStateToColor(deviceState: DeviceState | undefined): "red" | "blue" | "green" {
-  switch (deviceState) {
-    case "Error":
-      return "red";
-    case "Initializing":
-      return "blue";
-    case "Running":
-      return "green";
-    case undefined:
-      return "red";
-  }
 }
 
 const Summary: React.FC<{
@@ -26,12 +14,29 @@ const Summary: React.FC<{
   const { state } = props;
 
   return (
-    <div>
-      <Label color={deviceStateToColor(state?.device_state)}>
+    <Wrapper>
+      <Chip chipState={deviceStateToChipState(state?.device_state)}>
         {state !== undefined ? state.device_state : "Unknown"}
-      </Label>
-    </div>
+      </Chip>
+    </Wrapper>
   );
 };
 
 export default Summary;
+
+const Wrapper = styled.div`
+  display: flex;
+`;
+
+function deviceStateToChipState(deviceState: DeviceState | undefined): ChipState {
+  switch (deviceState) {
+    case undefined:
+      return ChipState.UNDEFINED;
+    case "Error":
+      return ChipState.ERROR;
+    case "Initializing":
+      return ChipState.WARNING;
+    case "Running":
+      return ChipState.OK;
+  }
+}

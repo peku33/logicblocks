@@ -1,6 +1,6 @@
 import React from "react";
-import { Button } from "semantic-ui-react";
 import { devicePostEmpty } from "services/LogicDevicesRunner";
+import styled from "styled-components";
 
 const Summary: React.FC<{
   deviceId: number;
@@ -16,3 +16,5 @@ const Summary: React.FC<{
 };
 
 export default Summary;
+
+const Button = styled.div``;

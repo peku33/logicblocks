@@ -1,7 +1,8 @@
+import Colors from "components/common/Colors";
 import { getJson } from "lib/Api";
 import React, { useState } from "react";
-import { List, Loader } from "semantic-ui-react";
 import { urlBuild } from "services/LogicDevicesRunner";
+import styled from "styled-components";
 import useAsyncEffect from "use-async-effect";
 import DeviceSummary from "./DeviceSummary";
 
@@ -9,17 +10,17 @@ const DevicesSummary: React.FC = () => {
   const deviceIds = useDeviceIds();
 
   if (deviceIds === undefined) {
-    return <Loader active />;
+    return null; // TODO
   }
 
   return (
-    <List relaxed divided>
+    <DevicesList>
       {deviceIds.map((deviceId) => (
-        <List.Item key={deviceId}>
+        <DevicesListItem key={deviceId}>
           <DeviceSummary deviceId={deviceId} />
-        </List.Item>
+        </DevicesListItem>
       ))}
-    </List>
+    </DevicesList>
   );
 };
 
@@ -43,3 +44,13 @@ function useDeviceIds(): number[] | undefined {
 
   return deviceIds;
 }
+
+const DevicesList = styled.div``;
+const DevicesListItem = styled.div`
+  margin: 0.25rem;
+  padding: 0.25rem;
+  border-bottom: solid 1px ${Colors.GREY_LIGHTEST};
+  &:last-child {
+    border-bottom: none;
+  }
+`;

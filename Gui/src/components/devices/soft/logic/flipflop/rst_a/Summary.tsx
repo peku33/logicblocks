@@ -1,6 +1,7 @@
+import { Button, ButtonGroup } from "components/common/Button";
 import React from "react";
-import { Button, Dimmer, Loader } from "semantic-ui-react";
 import { devicePostEmpty, useDeviceSummary } from "services/LogicDevicesRunner";
+import styled from "styled-components";
 
 interface DeviceSummary {
   value: boolean;
@@ -25,21 +26,20 @@ const Summary: React.FC<{
   };
 
   return (
-    <Dimmer.Dimmable dimmed={deviceSummary === undefined}>
-      <Dimmer active={deviceSummary === undefined} inverted>
-        <Loader />
-      </Dimmer>
-      <Button.Group>
-        <Button color={deviceSummary && deviceSummary.value ? "blue" : undefined} onClick={(): void => doS()}>
+    <Wrapper>
+      <ButtonGroup>
+        <Button active={deviceSummary && deviceSummary.value} onClick={(): void => doS()}>
           SET (On)
         </Button>
         <Button onClick={(): void => doT()}>TOGGLE (Flip)</Button>
-        <Button color={deviceSummary && !deviceSummary.value ? "blue" : undefined} onClick={(): void => doR()}>
+        <Button active={deviceSummary && !deviceSummary.value} onClick={(): void => doR()}>
           RESET (Off)
         </Button>
-      </Button.Group>
-    </Dimmer.Dimmable>
+      </ButtonGroup>
+    </Wrapper>
   );
 };
 
 export default Summary;
+
+const Wrapper = styled.div``;
