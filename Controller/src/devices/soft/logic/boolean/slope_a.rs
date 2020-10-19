@@ -34,7 +34,7 @@ pub struct Device {
     signal_input: SignalInput,
     signal_output: SignalOutput,
 
-    gui_summary_provider_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -45,7 +45,7 @@ impl Device {
             signal_input: SignalInput::new(),
             signal_output: SignalOutput::new(),
 
-            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -97,6 +97,6 @@ impl devices::GuiSummaryProvider for Device {
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_provider_waker.receiver_factory()
+        self.gui_summary_waker.receiver_factory()
     }
 }

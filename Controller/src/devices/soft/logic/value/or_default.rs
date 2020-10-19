@@ -36,7 +36,7 @@ where
     signal_input: SignalInput<V>,
     signal_output: SignalOutput<V>,
 
-    gui_summary_provider_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl<V> Device<V>
 where
@@ -53,7 +53,7 @@ where
             signal_input: SignalInput::new(),
             signal_output: SignalOutput::new(signal_output_value),
 
-            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -115,6 +115,6 @@ where
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_provider_waker.receiver_factory()
+        self.gui_summary_waker.receiver_factory()
     }
 }

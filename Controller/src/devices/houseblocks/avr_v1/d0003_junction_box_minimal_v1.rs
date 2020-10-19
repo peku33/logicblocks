@@ -27,7 +27,7 @@ pub mod logic {
         signal_buzzer: event_target_last::Signal<Duration>,
         signal_temperature: state_source::Signal<Option<Temperature>>,
 
-        gui_summary_provider_waker: waker_stream::mpmc::Sender,
+        gui_summary_waker: waker_stream::mpmc::Sender,
     }
 
     #[async_trait]
@@ -45,7 +45,7 @@ pub mod logic {
                 signal_buzzer: event_target_last::Signal::new(),
                 signal_temperature: state_source::Signal::new(None),
 
-                gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+                gui_summary_waker: waker_stream::mpmc::Sender::new(),
             }
         }
         fn class() -> &'static str {
@@ -118,7 +118,7 @@ pub mod logic {
                 self.signal_sources_changed_waker.wake();
             }
             if gui_summary_changed {
-                self.gui_summary_provider_waker.wake();
+                self.gui_summary_waker.wake();
             }
         }
         fn properties_remote_out_changed_waker_receiver(
@@ -196,7 +196,7 @@ pub mod logic {
         }
 
         fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-            self.gui_summary_provider_waker.receiver_factory()
+            self.gui_summary_waker.receiver_factory()
         }
     }
 }

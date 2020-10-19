@@ -18,7 +18,7 @@ pub struct Device {
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
     signal_output: SignalOutput,
 
-    gui_summary_provider_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn click(&self) {
@@ -33,7 +33,7 @@ impl Device {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
             signal_output: SignalOutput::new(),
 
-            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -71,7 +71,7 @@ impl devices::GuiSummaryProvider for Device {
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_provider_waker.receiver_factory()
+        self.gui_summary_waker.receiver_factory()
     }
 }
 impl uri_cursor::Handler for Device {

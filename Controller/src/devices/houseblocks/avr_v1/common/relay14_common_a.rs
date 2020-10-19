@@ -19,7 +19,7 @@ pub mod logic {
         signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
         signal_outputs: [state_target_last::Signal<bool>; hardware::OUTPUT_COUNT],
 
-        gui_summary_provider_waker: waker_stream::mpmc::Sender,
+        gui_summary_waker: waker_stream::mpmc::Sender,
 
         _phantom: PhantomData<S>,
     }
@@ -34,7 +34,7 @@ pub mod logic {
                 signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
                 signal_outputs: array_init(|_| state_target_last::Signal::new()),
 
-                gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+                gui_summary_waker: waker_stream::mpmc::Sender::new(),
 
                 _phantom: PhantomData,
             }
@@ -62,6 +62,7 @@ pub mod logic {
     impl<S: Specification> signals::Device for Device<S> {
         fn signal_targets_changed_wake(&self) {
             let mut properties_remote_changed = false;
+            let mut gui_summary_changed = false;
 
             // outputs
             let outputs_last = self
@@ -79,11 +80,15 @@ pub mod logic {
 
                 if self.properties_remote.outputs.set(outputs) {
                     properties_remote_changed = true;
+                    gui_summary_changed = true;
                 }
             }
 
             if properties_remote_changed {
                 self.properties_remote_out_changed_waker.wake();
+            }
+            if gui_summary_changed {
+                self.gui_summary_waker.wake()
             }
         }
         fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
@@ -99,11 +104,20 @@ pub mod logic {
     }
     impl<S: Specification> devices::GuiSummaryProvider for Device<S> {
         fn get_value(&self) -> serde_json::Value {
-            serde_json::Value::Null
+            let values = self
+                .signal_outputs
+                .iter()
+                .map(|signal_output| match signal_output.get_last() {
+                    Some(value) => serde_json::Value::Bool(value),
+                    None => serde_json::Value::Null,
+                })
+                .collect::<Vec<_>>();
+
+            serde_json::Value::Array(values)
         }
 
         fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-            self.gui_summary_provider_waker.receiver_factory()
+            self.gui_summary_waker.receiver_factory()
         }
     }
 }

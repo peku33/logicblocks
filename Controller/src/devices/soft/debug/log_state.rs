@@ -21,7 +21,7 @@ pub struct Device<V: Value + Clone> {
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
     signal_input: SignalInput<V>,
 
-    gui_summary_provider_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl<V: Value + Clone> Device<V> {
     pub fn new(configuration: Configuration) -> Self {
@@ -31,7 +31,7 @@ impl<V: Value + Clone> Device<V> {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
             signal_input: SignalInput::new(),
 
-            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -67,6 +67,6 @@ impl<V: Value + Clone> devices::GuiSummaryProvider for Device<V> {
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_provider_waker.receiver_factory()
+        self.gui_summary_waker.receiver_factory()
     }
 }

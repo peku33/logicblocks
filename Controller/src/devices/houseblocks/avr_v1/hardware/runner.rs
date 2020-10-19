@@ -91,7 +91,7 @@ pub struct Runner<'m, D: Device> {
     properties_remote_in_change_waker: waker_stream::mpsc::SenderReceiver,
     properties_remote_out_change_waker: waker_stream::mpsc::SenderReceiver,
 
-    gui_summary_provider_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl<'m, D: Device> Runner<'m, D> {
     pub fn new(
@@ -115,7 +115,7 @@ impl<'m, D: Device> Runner<'m, D> {
             properties_remote_in_change_waker: waker_stream::mpsc::SenderReceiver::new(),
             properties_remote_out_change_waker: waker_stream::mpsc::SenderReceiver::new(),
 
-            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -131,7 +131,7 @@ impl<'m, D: Device> Runner<'m, D> {
 
     async fn driver_run_once(&self) -> Error {
         *self.device_state.lock() = DeviceState::Initializing;
-        self.gui_summary_provider_waker.wake();
+        self.gui_summary_waker.wake();
 
         // Hardware initializing & avr_v1
         if let Err(error) = self.driver.prepare().await.context("initial prepare") {
@@ -156,7 +156,7 @@ impl<'m, D: Device> Runner<'m, D> {
 
         // Device is fully initialized
         *self.device_state.lock() = DeviceState::Running;
-        self.gui_summary_provider_waker.wake();
+        self.gui_summary_waker.wake();
 
         // Main loop
         let mut device_poll_waker_receiver = self.device.poll_waker_receiver();
@@ -194,7 +194,7 @@ impl<'m, D: Device> Runner<'m, D> {
     }
     async fn driver_run_infinite(&self) -> ! {
         *self.device_state.lock() = DeviceState::Initializing;
-        self.gui_summary_provider_waker.wake();
+        self.gui_summary_waker.wake();
 
         loop {
             let error = self.driver_run_once().await;
@@ -205,7 +205,7 @@ impl<'m, D: Device> Runner<'m, D> {
             }
 
             *self.device_state.lock() = DeviceState::Error;
-            self.gui_summary_provider_waker.wake();
+            self.gui_summary_waker.wake();
             log::warn!("device {} failed: {:?}", self.driver.address(), error);
 
             tokio::time::delay_for(ERROR_RESTART_DELAY).await;
@@ -241,7 +241,7 @@ impl<'m, D: Device> Runner<'m, D> {
             }
 
             *self.device_state.lock() = DeviceState::Initializing;
-            self.gui_summary_provider_waker.wake();
+            self.gui_summary_waker.wake();
         }
 
         self.device.finalize().await;
@@ -257,6 +257,6 @@ impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_provider_waker.receiver_factory()
+        self.gui_summary_waker.receiver_factory()
     }
 }

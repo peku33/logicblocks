@@ -44,7 +44,7 @@ pub struct Runner<'m, D: Device> {
     device: D,
     hardware_runner: runner::Runner<'m, D::HardwareDevice>,
 
-    gui_summary_provider_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl<'m, D: Device> Runner<'m, D> {
     pub fn new(
@@ -60,7 +60,7 @@ impl<'m, D: Device> Runner<'m, D> {
             hardware_runner,
             device,
 
-            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 }
@@ -110,36 +110,35 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
         let mut properties_remote_out_changed_waker_forwarder =
             properties_remote_out_changed_waker_forwarder.fuse();
 
-        let hardware_runner_gui_summary_provider_waker_forwarder = self
+        let hardware_runner_gui_summary_waker_forwarder = self
             .hardware_runner
             .get_waker()
             .receiver()
             .for_each(async move |()| {
-                self.gui_summary_provider_waker.wake();
+                self.gui_summary_waker.wake();
             });
-        pin_mut!(hardware_runner_gui_summary_provider_waker_forwarder);
-        let mut hardware_runner_gui_summary_provider_waker_forwarder =
-            hardware_runner_gui_summary_provider_waker_forwarder.fuse();
+        pin_mut!(hardware_runner_gui_summary_waker_forwarder);
+        let mut hardware_runner_gui_summary_waker_forwarder =
+            hardware_runner_gui_summary_waker_forwarder.fuse();
 
-        let device_gui_summary_provider_waker_forwarder = self
+        let device_gui_summary_waker_forwarder = self
             .device
             .as_gui_summary_provider()
             .get_waker()
             .receiver()
             .for_each(async move |()| {
-                self.gui_summary_provider_waker.wake();
+                self.gui_summary_waker.wake();
             });
-        pin_mut!(device_gui_summary_provider_waker_forwarder);
-        let mut device_gui_summary_provider_waker_forwarder =
-            device_gui_summary_provider_waker_forwarder.fuse();
+        pin_mut!(device_gui_summary_waker_forwarder);
+        let mut device_gui_summary_waker_forwarder = device_gui_summary_waker_forwarder.fuse();
 
         select! {
             _ = hardware_runner_run => panic!("hardware_runner_run yielded"),
             _ = device_run => panic!("device_run yielded"),
             _ = properties_remote_in_changed_waker_forwarder => panic!("properties_remote_in_changed_waker_forwarder yielded"),
             _ = properties_remote_out_changed_waker_forwarder => panic!("properties_remote_out_changed_waker_forwarder yielded"),
-            _ = hardware_runner_gui_summary_provider_waker_forwarder => panic!("hardware_runner_gui_summary_provider_waker_forwarder yielded"),
-            _ = device_gui_summary_provider_waker_forwarder => panic!("device_gui_summary_provider_waker_forwarder yielded"),
+            _ = hardware_runner_gui_summary_waker_forwarder => panic!("hardware_runner_gui_summary_waker_forwarder yielded"),
+            _ = device_gui_summary_waker_forwarder => panic!("device_gui_summary_waker_forwarder yielded"),
         }
     }
     async fn finalize(&self) {
@@ -159,6 +158,6 @@ impl<'m, D: Device> GuiSummaryProvider for Runner<'m, D> {
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_provider_waker.receiver_factory()
+        self.gui_summary_waker.receiver_factory()
     }
 }

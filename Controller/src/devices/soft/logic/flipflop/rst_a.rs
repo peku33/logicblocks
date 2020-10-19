@@ -32,7 +32,7 @@ pub struct Device {
     signal_s: event_target_last::Signal<()>,
     signal_t: event_target_last::Signal<()>,
 
-    gui_summary_provider_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn new(
@@ -51,7 +51,7 @@ impl Device {
             signal_s: event_target_last::Signal::new(),
             signal_t: event_target_last::Signal::new(),
 
-            gui_summary_provider_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -87,19 +87,19 @@ impl Device {
     pub fn r(&self) {
         if self.signal_output.set_one(false) {
             self.signal_sources_changed_waker.wake();
-            self.gui_summary_provider_waker.wake();
+            self.gui_summary_waker.wake();
         }
     }
     pub fn s(&self) {
         if self.signal_output.set_one(true) {
             self.signal_sources_changed_waker.wake();
-            self.gui_summary_provider_waker.wake();
+            self.gui_summary_waker.wake();
         }
     }
     pub fn t(&self) {
         if self.signal_output.set_one(!self.signal_output.get()) {
             self.signal_sources_changed_waker.wake();
-            self.gui_summary_provider_waker.wake();
+            self.gui_summary_waker.wake();
         }
     }
 }
@@ -149,7 +149,7 @@ impl devices::GuiSummaryProvider for Device {
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_provider_waker.receiver_factory()
+        self.gui_summary_waker.receiver_factory()
     }
 }
 impl uri_cursor::Handler for Device {
