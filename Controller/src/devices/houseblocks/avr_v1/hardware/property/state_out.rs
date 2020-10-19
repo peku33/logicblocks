@@ -156,6 +156,16 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Sink<T> {
 
         true
     }
+
+    pub fn get_last(&self) -> T {
+        let state = self.inner.state.lock();
+
+        let value = state.value.clone();
+
+        drop(state);
+
+        value
+    }
 }
 
 pub struct Pending<'p, T: PartialEq + Clone + Serialize + Send + Sync + 'static> {

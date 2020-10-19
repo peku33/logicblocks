@@ -30,7 +30,7 @@ impl<V: Value + Clone> Signal<V> {
         }
     }
 
-    pub fn get(&self) -> V {
+    pub fn get_last(&self) -> V {
         self.inner.read().last.clone()
     }
 

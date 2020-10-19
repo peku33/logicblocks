@@ -64,8 +64,8 @@ impl<V: Value + Clone> signals::Device for Device<V> {
     }
 }
 impl<V: Value + Clone> devices::GuiSummaryProvider for Device<V> {
-    fn get_value(&self) -> serde_json::Value {
-        serde_json::Value::Null
+    fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+        Box::new(())
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {

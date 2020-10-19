@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use futures::{future::BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::borrow::Cow;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -97,7 +96,7 @@ impl Device {
         }
     }
     pub fn t(&self) {
-        if self.signal_output.set_one(!self.signal_output.get()) {
+        if self.signal_output.set_one(!self.signal_output.get_last()) {
             self.signal_sources_changed_waker.wake();
             self.gui_summary_waker.wake();
         }
@@ -139,13 +138,15 @@ impl signals::Device for Device {
         }
     }
 }
+#[derive(Serialize)]
+struct GuiSummary {
+    value: bool,
+}
 impl devices::GuiSummaryProvider for Device {
-    fn get_value(&self) -> serde_json::Value {
-        let value = self.signal_output.get();
-
-        json! {{
-            "value": value,
-        }}
+    fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+        Box::new(GuiSummary {
+            value: self.signal_output.get_last(),
+        })
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {

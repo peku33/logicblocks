@@ -160,7 +160,7 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
         Self { inner }
     }
 
-    pub fn take(&self) -> Option<Option<T>> {
+    pub fn take_pending(&self) -> Option<Option<T>> {
         let mut state = self.inner.state.lock();
 
         if !state.user_pending {
@@ -176,6 +176,16 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
 
         Some(value)
     }
+
+    pub fn get_last(&self) -> Option<T> {
+        let state = self.inner.state.lock();
+
+        let value = state.value.clone();
+
+        drop(state);
+
+        value
+    }
 }
 
 #[cfg(test)]
@@ -187,22 +197,22 @@ mod test {
         let property = Property::<usize>::new();
         let stream = property.user_stream();
 
-        assert!(stream.take().is_none());
+        assert!(stream.take_pending().is_none());
         assert!(property.device_must_read());
 
         assert_eq!(property.device_set(1), true);
         assert_eq!(property.device_set(1), false);
-        assert_eq!(stream.take().unwrap().unwrap(), 1);
-        assert!(stream.take().is_none());
+        assert_eq!(stream.take_pending().unwrap().unwrap(), 1);
+        assert!(stream.take_pending().is_none());
 
         assert_eq!(property.device_set(2), true);
         assert_eq!(property.device_set(3), true);
-        assert_eq!(stream.take().unwrap().unwrap(), 3);
-        assert!(stream.take().is_none());
+        assert_eq!(stream.take_pending().unwrap().unwrap(), 3);
+        assert!(stream.take_pending().is_none());
 
-        assert!(stream.take().is_none());
+        assert!(stream.take_pending().is_none());
         assert!(property.device_reset());
-        assert!(stream.take().unwrap().is_none());
-        assert!(stream.take().is_none());
+        assert!(stream.take_pending().unwrap().is_none());
+        assert!(stream.take_pending().is_none());
     }
 }

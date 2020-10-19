@@ -19,7 +19,6 @@ use futures::{
 };
 use parking_lot::Mutex;
 use serde::Serialize;
-use serde_json::json;
 use std::{cmp::min, collections::HashMap, fmt, time::Duration};
 
 #[async_trait]
@@ -247,13 +246,16 @@ impl<'m, D: Device> Runner<'m, D> {
         self.device.finalize().await;
     }
 }
-impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
-    fn get_value(&self) -> serde_json::Value {
-        let device_state = *self.device_state.lock();
 
-        json! {{
-            "device_state": device_state
-        }}
+#[derive(Serialize)]
+struct GuiSummary {
+    device_state: DeviceState,
+}
+impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
+    fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+        Box::new(GuiSummary {
+            device_state: *self.device_state.lock(),
+        })
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {

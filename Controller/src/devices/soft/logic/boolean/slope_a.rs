@@ -92,8 +92,8 @@ impl signals::Device for Device {
     }
 }
 impl devices::GuiSummaryProvider for Device {
-    fn get_value(&self) -> serde_json::Value {
-        serde_json::Value::Null
+    fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+        Box::new(())
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {

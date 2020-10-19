@@ -126,7 +126,8 @@ impl<'d> uri_cursor::Handler for DeviceContext<'d> {
     }
 }
 
+pub trait GuiSummary = erased_serde::Serialize + Send + Sync;
 pub trait GuiSummaryProvider {
-    fn get_value(&self) -> serde_json::Value;
+    fn get_value(&self) -> Box<dyn GuiSummary>;
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory;
 }

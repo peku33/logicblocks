@@ -193,7 +193,7 @@ where
         Self { inner }
     }
 
-    pub fn take(&self) -> Option<(Option<S>, Box<[E]>)> {
+    pub fn take_pending(&self) -> Option<(Option<S>, Box<[E]>)> {
         let mut state_inner = self.inner.state.lock();
 
         if !state_inner.user_pending {
@@ -210,6 +210,16 @@ where
 
         Some((state, events))
     }
+
+    pub fn get_last(&self) -> Option<S> {
+        let state_inner = self.inner.state.lock();
+
+        let value = state_inner.state.clone();
+
+        drop(state_inner);
+
+        value
+    }
 }
 
 #[cfg(test)]
@@ -221,19 +231,22 @@ mod test {
         let property = Property::<[bool; 2], [u8; 2]>::new();
         let stream = property.user_stream();
 
-        assert!(stream.take().is_none());
+        assert!(stream.take_pending().is_none());
         assert!(property.device_must_read());
 
         assert_eq!(property.device_set([false, false], [1, 2]), true);
         assert_eq!(
-            stream.take().unwrap(),
+            stream.take_pending().unwrap(),
             (Some([false, false]), vec![[1, 2]].into_boxed_slice())
         );
-        assert!(stream.take().is_none());
+        assert!(stream.take_pending().is_none());
 
-        assert!(stream.take().is_none());
+        assert!(stream.take_pending().is_none());
         assert!(property.device_reset());
-        assert_eq!(stream.take().unwrap(), (None, vec![].into_boxed_slice()));
-        assert!(stream.take().is_none());
+        assert_eq!(
+            stream.take_pending().unwrap(),
+            (None, vec![].into_boxed_slice())
+        );
+        assert!(stream.take_pending().is_none());
     }
 }

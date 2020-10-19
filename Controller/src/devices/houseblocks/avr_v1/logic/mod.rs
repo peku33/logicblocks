@@ -10,7 +10,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::{future::pending, pin_mut, select, FutureExt, StreamExt};
-use serde_json::json;
+use serde::Serialize;
 use std::{borrow::Cow, fmt};
 
 #[async_trait]
@@ -146,15 +146,18 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
         self.hardware_runner.finalize().await;
     }
 }
-impl<'m, D: Device> GuiSummaryProvider for Runner<'m, D> {
-    fn get_value(&self) -> serde_json::Value {
-        let device = self.device.as_gui_summary_provider().get_value();
-        let hardware_runner = self.hardware_runner.get_value();
 
-        json! {{
-            "device": device,
-            "hardware_runner": hardware_runner
-        }}
+#[derive(Serialize)]
+struct GuiSummary {
+    device: Box<dyn devices::GuiSummary>,
+    hardware_runner: Box<dyn devices::GuiSummary>,
+}
+impl<'m, D: Device> GuiSummaryProvider for Runner<'m, D> {
+    fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+        Box::new(GuiSummary {
+            device: self.device.as_gui_summary_provider().get_value(),
+            hardware_runner: self.hardware_runner.get_value(),
+        })
     }
 
     fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {

@@ -3,6 +3,7 @@ pub mod logic {
     use crate::{devices, signals, signals::signal::state_target_last, util::waker_stream};
     use array_init::array_init;
     use arrayvec::ArrayVec;
+    use serde::Serialize;
     use std::{fmt, marker::PhantomData};
 
     pub trait Specification: Send + Sync + fmt::Debug {
@@ -102,18 +103,16 @@ pub mod logic {
                 .collect::<signals::Signals>()
         }
     }
-    impl<S: Specification> devices::GuiSummaryProvider for Device<S> {
-        fn get_value(&self) -> serde_json::Value {
-            let values = self
-                .signal_outputs
-                .iter()
-                .map(|signal_output| match signal_output.get_last() {
-                    Some(value) => serde_json::Value::Bool(value),
-                    None => serde_json::Value::Null,
-                })
-                .collect::<Vec<_>>();
 
-            serde_json::Value::Array(values)
+    #[derive(Serialize)]
+    struct GuiSummary {
+        values: [bool; hardware::OUTPUT_COUNT],
+    }
+    impl<S: Specification> devices::GuiSummaryProvider for Device<S> {
+        fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+            Box::new(GuiSummary {
+                values: self.properties_remote.outputs.get_last(),
+            })
         }
 
         fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {

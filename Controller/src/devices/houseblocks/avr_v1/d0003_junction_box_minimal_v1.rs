@@ -13,7 +13,7 @@ pub mod logic {
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
     use maplit::hashmap;
-    use serde_json::json;
+    use serde::Serialize;
     use std::time::Duration;
 
     #[derive(Debug)]
@@ -64,7 +64,8 @@ pub mod logic {
             let mut gui_summary_changed = false;
 
             // keys
-            if let Some((key_values, key_changes_count_queue)) = self.properties_remote.keys.take()
+            if let Some((key_values, key_changes_count_queue)) =
+                self.properties_remote.keys.take_pending()
             {
                 if let Some(key_values) = key_values {
                     // Calculate total number of key ticks
@@ -103,15 +104,15 @@ pub mod logic {
             }
 
             // temperature
-            if let Some(temperature) = self.properties_remote.temperature.take() {
+            if let Some(temperature) = self.properties_remote.temperature.take_pending() {
                 let temperature = temperature
                     .map(|temperature| temperature.temperature())
                     .flatten();
 
                 if self.signal_temperature.set_one(temperature) {
                     signals_changed = true;
-                    gui_summary_changed = true;
                 }
+                gui_summary_changed = true;
             }
 
             if signals_changed {
@@ -186,13 +187,21 @@ pub mod logic {
             }
         }
     }
-    impl devices::GuiSummaryProvider for Device {
-        fn get_value(&self) -> serde_json::Value {
-            let temperature = self.signal_temperature.get();
 
-            json! {{
-                "temperature": temperature,
-            }}
+    #[derive(Serialize)]
+    struct GuiSummary {
+        temperature: Option<Temperature>,
+    }
+    impl devices::GuiSummaryProvider for Device {
+        fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+            Box::new(GuiSummary {
+                temperature: self
+                    .properties_remote
+                    .temperature
+                    .get_last()
+                    .map(|temperature| temperature.temperature())
+                    .flatten(),
+            })
         }
 
         fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {

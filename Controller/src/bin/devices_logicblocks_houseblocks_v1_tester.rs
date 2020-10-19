@@ -172,7 +172,7 @@ fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(
             let mut runner_run = runner_run.fuse();
 
             let keys_changed = || {
-                let keys = match keys.take() {
+                let keys = match keys.take_pending() {
                     Some(keys) => keys,
                     None => return,
                 };
@@ -215,7 +215,7 @@ fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(
             let mut buzzer_runner = buzzer_runner.fuse();
 
             let temperature_changed = || {
-                let temperature = match temperature.take() {
+                let temperature = match temperature.take_pending() {
                     Some(temperature) => temperature,
                     None => return,
                 };
