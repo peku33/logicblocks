@@ -26,7 +26,6 @@ echo "Creating GUI Pack <"
 # Build Controller
 echo "Building Controller >"
 cd $ROOT_DIR/Controller
-cargo clean --release --locked
 CI_WEB_STATIC_PACK_GUI=$WEB_STATIC_PACK_GUI cargo build --release --locked --features ci
 echo "Building Controller <"
 
