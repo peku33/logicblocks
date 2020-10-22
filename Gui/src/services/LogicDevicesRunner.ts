@@ -3,7 +3,7 @@ import { useObservableState } from "lib/ObservableState";
 import Client from "lib/SSEAggregatedStream";
 
 export function urlBuild(endpoint: string): string {
-  return `/devices_runner${endpoint}`;
+  return `/devices-runner${endpoint}`;
 }
 
 const devicesSummaryEvents = new Client(urlBuild("/devices/gui-summary-events"));

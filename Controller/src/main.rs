@@ -113,7 +113,7 @@ async fn main() {
 
     // Web service
     let root_router = MapRouter::new(hashmap! {
-        "devices_runner".to_owned() => &device_runner as &(dyn Handler + Sync)
+        "devices-runner".to_owned() => &device_runner as &(dyn Handler + Sync)
     });
 
     let root_service = RootService::new(&root_router);
