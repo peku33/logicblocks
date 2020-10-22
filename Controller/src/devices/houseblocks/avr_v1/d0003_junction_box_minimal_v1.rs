@@ -1,148 +1,211 @@
 pub mod logic {
     use super::{super::logic, hardware};
     use crate::{
-        datatypes::{boolean::Boolean, temperature::Temperature, time_duration::TimeDuration},
-        logic::{device::Signals, signal, signal::SignalBase},
-        util::waker_stream,
-        web::{
-            sse_aggregated::{Node, NodeProvider},
-            uri_cursor::{Handler, UriCursor},
-            Request, Response,
+        datatypes::temperature::Temperature,
+        devices,
+        signals::{
+            self,
+            signal::{self, event_target_last, state_source, state_target_last},
         },
+        util::waker_stream,
     };
     use array_init::array_init;
+    use arrayvec::ArrayVec;
     use async_trait::async_trait;
-    use futures::{
-        future::{BoxFuture, FutureExt},
-        pin_mut, select,
-        stream::{SelectAll, StreamExt},
-    };
     use maplit::hashmap;
+    use serde::Serialize;
+    use std::time::Duration;
 
+    #[derive(Debug)]
     pub struct Device {
-        keys: [signal::state_source::Signal<Option<Boolean>>; hardware::KEY_COUNT],
-        leds: [signal::state_target::Signal<Boolean>; hardware::LED_COUNT],
-        buzzer: signal::event_target::Signal<TimeDuration>,
-        temperature: signal::state_source::Signal<Option<Temperature>>,
+        properties_remote: hardware::PropertiesRemote,
+        properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver,
 
-        sse_sender: waker_stream::Sender,
+        signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+        signal_keys: [state_source::Signal<Option<bool>>; hardware::KEY_COUNT],
+        signal_leds: [state_target_last::Signal<bool>; hardware::LED_COUNT],
+        signal_buzzer: event_target_last::Signal<Duration>,
+        signal_temperature: state_source::Signal<Option<Temperature>>,
+
+        gui_summary_waker: waker_stream::mpmc::Sender,
     }
+
     #[async_trait]
     impl logic::Device for Device {
         type HardwareDevice = hardware::Device;
 
-        fn new() -> Self {
-            let keys = array_init(|_| signal::state_source::Signal::new(None));
-            let leds = array_init(|_| signal::state_target::Signal::new());
-            let buzzer = signal::event_target::Signal::new();
-            let temperature = signal::state_source::Signal::new(None);
-
-            let sse_sender = waker_stream::Sender::new();
-
+        fn new(properties_remote: hardware::PropertiesRemote) -> Self {
             Self {
-                keys,
-                leds,
-                buzzer,
-                temperature,
+                properties_remote,
+                properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
-                sse_sender,
+                signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+                signal_keys: array_init(|_| state_source::Signal::new(None)),
+                signal_leds: array_init(|_| state_target_last::Signal::new()),
+                signal_buzzer: event_target_last::Signal::new(),
+                signal_temperature: state_source::Signal::new(None),
+
+                gui_summary_waker: waker_stream::mpmc::Sender::new(),
             }
         }
         fn class() -> &'static str {
             "junction_box_minimal_v1"
         }
 
-        fn signals(&self) -> Signals {
-            hashmap! {
-                10 => &self.keys[0] as &dyn SignalBase,
-                11 => &self.keys[1] as &dyn SignalBase,
-                12 => &self.keys[2] as &dyn SignalBase,
-                13 => &self.keys[3] as &dyn SignalBase,
-                14 => &self.keys[4] as &dyn SignalBase,
-                15 => &self.keys[5] as &dyn SignalBase,
-
-                20 => &self.leds[0] as &dyn SignalBase,
-                21 => &self.leds[1] as &dyn SignalBase,
-                22 => &self.leds[2] as &dyn SignalBase,
-                23 => &self.leds[3] as &dyn SignalBase,
-                24 => &self.leds[4] as &dyn SignalBase,
-                25 => &self.leds[5] as &dyn SignalBase,
-
-                30 => &self.buzzer as &dyn SignalBase,
-
-                40 => &self.temperature as &dyn SignalBase,
-            }
+        fn as_signals_device(&self) -> &dyn signals::Device {
+            self
+        }
+        fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
+            self
         }
 
-        async fn run(
-            &self,
-            remote_properties: hardware::RemoteProperties<'_>,
-        ) -> ! {
-            let hardware::RemoteProperties {
-                keys,
-                leds,
-                buzzer,
-                temperature,
-            } = remote_properties;
+        fn properties_remote_in_changed(&self) {
+            let mut signals_changed = false;
+            let mut gui_summary_changed = false;
 
-            let keys_runner = keys.for_each(async move |key_values| {
-                for (index, key) in self.keys.iter().enumerate() {
-                    let key_value = key_values.map(|key_values| Boolean::from(key_values[index]));
-                    key.set(key_value);
+            // keys
+            if let Some((key_values, key_changes_count_queue)) =
+                self.properties_remote.keys.take_pending()
+            {
+                if let Some(key_values) = key_values {
+                    // Calculate total number of key ticks
+                    let mut key_changes_count_merged = [0usize; hardware::KEY_COUNT];
+                    for key_changes_count in key_changes_count_queue.into_vec().into_iter() {
+                        for (key_index, key_changes_count) in key_changes_count.iter().enumerate() {
+                            key_changes_count_merged[key_index] += *key_changes_count as usize;
+                        }
+                    }
+
+                    // Set total number of key ticks
+                    self.signal_keys
+                        .iter()
+                        .enumerate()
+                        .for_each(|(key_index, signal_key)| {
+                            let key_values = (0..key_changes_count_merged[key_index])
+                                .rev()
+                                .map(|key_change_index| {
+                                    let key_value =
+                                        key_values[key_index] ^ (key_change_index % 2 != 0);
+                                    Some(key_value)
+                                })
+                                .collect::<Box<[_]>>();
+                            if signal_key.set_many(key_values) {
+                                signals_changed = true;
+                            }
+                        });
+                } else {
+                    // Keys are broken
+                    self.signal_keys.iter().for_each(|signal_key| {
+                        if signal_key.set_one(None) {
+                            signals_changed = true;
+                        }
+                    });
                 }
-            });
-            pin_mut!(keys_runner);
+            }
 
-            let leds_ref = &leds;
-            let leds_runner = self
-                .leds
-                .iter()
-                .map(|led| led.stream().map(|_| ()))
-                .collect::<SelectAll<_>>()
-                .map(|()| {
-                    array_init(|index| {
-                        self.leds[index]
-                            .current()
-                            .map(|value| value.into())
-                            .unwrap_or(false)
-                    })
-                })
-                .for_each(async move |value| leds_ref.set(value));
-            pin_mut!(leds_runner);
+            // temperature
+            if let Some(temperature) = self.properties_remote.temperature.take_pending() {
+                let temperature = temperature
+                    .map(|temperature| temperature.temperature())
+                    .flatten();
 
-            let buzzer_ref = &buzzer;
-            let buzzer_runner = self
-                .buzzer
-                .stream()
-                .map(|value| value.into())
-                .for_each(async move |value| buzzer_ref.set(value));
-            pin_mut!(buzzer_runner);
+                if self.signal_temperature.set_one(temperature) {
+                    signals_changed = true;
+                }
+                gui_summary_changed = true;
+            }
 
-            let temperature_runner =
-                temperature.for_each(async move |value| self.temperature.set(value));
-            pin_mut!(temperature_runner);
-
-            select! {
-                () = keys_runner => panic!("keys_runner yielded"),
-                () = leds_runner => panic!("leds_runner yielded"),
-                () = buzzer_runner => panic!("buzzer_runner yielded"),
-                () = temperature_runner => panic!("temperature_runner yielded"),
+            if signals_changed {
+                self.signal_sources_changed_waker.wake();
+            }
+            if gui_summary_changed {
+                self.gui_summary_waker.wake();
             }
         }
-        async fn finalize(self) {}
-    }
-    impl Handler for Device {
-        fn handle(
-            &self,
-            _request: Request,
-            _uri_cursor: &UriCursor,
-        ) -> BoxFuture<'static, Response> {
-            async move { Response::error_404() }.boxed()
+        fn properties_remote_out_changed_waker_receiver(
+            &self
+        ) -> waker_stream::mpsc::ReceiverLease {
+            self.properties_remote_out_changed_waker.receiver()
         }
     }
-    impl NodeProvider for Device {
-        fn node(&self) -> Node {
-            Node::Terminal(self.sse_sender.receiver_factory())
+    impl signals::Device for Device {
+        fn signal_targets_changed_wake(&self) {
+            let mut properties_remote_changed = false;
+
+            // leds
+            let leds_last = self
+                .signal_leds
+                .iter()
+                .map(|signal_led| signal_led.take_last())
+                .collect::<ArrayVec<[_; hardware::LED_COUNT]>>();
+            if leds_last.iter().any(|led_last| led_last.pending) {
+                let leds = leds_last
+                    .iter()
+                    .map(|led_last| led_last.value.unwrap_or(false))
+                    .collect::<ArrayVec<[_; hardware::LED_COUNT]>>()
+                    .into_inner()
+                    .unwrap();
+
+                if self.properties_remote.leds.set(leds) {
+                    properties_remote_changed = true;
+                }
+            }
+
+            // buzzer
+            if let Some(buzzer) = self.signal_buzzer.take_pending() {
+                if self.properties_remote.buzzer.push(buzzer) {
+                    properties_remote_changed = true;
+                }
+            }
+
+            if properties_remote_changed {
+                self.properties_remote_out_changed_waker.wake();
+            }
+        }
+        fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
+            self.signal_sources_changed_waker.receiver()
+        }
+        fn signals(&self) -> signals::Signals {
+            hashmap! {
+                10 => &self.signal_keys[0] as &dyn signal::Base,
+                11 => &self.signal_keys[1] as &dyn signal::Base,
+                12 => &self.signal_keys[2] as &dyn signal::Base,
+                13 => &self.signal_keys[3] as &dyn signal::Base,
+                14 => &self.signal_keys[4] as &dyn signal::Base,
+                15 => &self.signal_keys[5] as &dyn signal::Base,
+
+                20 => &self.signal_leds[0] as &dyn signal::Base,
+                21 => &self.signal_leds[1] as &dyn signal::Base,
+                22 => &self.signal_leds[2] as &dyn signal::Base,
+                23 => &self.signal_leds[3] as &dyn signal::Base,
+                24 => &self.signal_leds[4] as &dyn signal::Base,
+                25 => &self.signal_leds[5] as &dyn signal::Base,
+
+                30 => &self.signal_buzzer as &dyn signal::Base,
+
+                40 => &self.signal_temperature as &dyn signal::Base,
+            }
+        }
+    }
+
+    #[derive(Serialize)]
+    struct GuiSummary {
+        temperature: Option<Temperature>,
+    }
+    impl devices::GuiSummaryProvider for Device {
+        fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+            Box::new(GuiSummary {
+                temperature: self
+                    .properties_remote
+                    .temperature
+                    .get_last()
+                    .map(|temperature| temperature.temperature())
+                    .flatten(),
+            })
+        }
+
+        fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+            self.gui_summary_waker.receiver_factory()
         }
     }
 }
@@ -158,42 +221,81 @@ pub mod hardware {
             serializer::Serializer,
         },
     };
-    use crate::datatypes::temperature::Temperature;
+    use anyhow::{bail, Context, Error};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
-    use failure::{err_msg, format_err, Error};
-    use futures::{pin_mut, select, stream::StreamExt};
+    use maplit::hashmap;
     use std::{
         cmp::{max, min},
+        collections::HashMap,
         time::Duration,
     };
 
     pub const KEY_COUNT: usize = 6;
     pub type KeyValues = [bool; KEY_COUNT];
+    pub type KeyChangesCount = [u8; KEY_COUNT];
 
     pub const LED_COUNT: usize = 6;
     pub type LedValues = [bool; LED_COUNT];
 
-    pub struct Device {
-        keys: property::state_in::Property<KeyValues>,
+    #[derive(Debug)]
+    pub struct Properties {
+        keys: property::state_event_in::Property<KeyValues, KeyChangesCount>,
         leds: property::state_out::Property<LedValues>,
-        buzzer: property::event_last_out::Property<Duration>,
-        temperature: property::state_in::Property<Temperature>,
+        buzzer: property::event_out_last::Property<Duration>,
+        temperature: property::state_in::Property<ds18x20::State>,
     }
-    pub struct RemoteProperties<'d> {
-        pub keys: property::state_in::ValueStream<'d, KeyValues>,
-        pub leds: property::state_out::ValueSink<'d, LedValues>,
-        pub buzzer: property::event_last_out::ValueSink<'d, Duration>,
-        pub temperature: property::state_in::ValueStream<'d, Temperature>,
+    impl Properties {
+        pub fn new() -> Self {
+            Self {
+                keys: property::state_event_in::Property::new(),
+                leds: property::state_out::Property::new([false; LED_COUNT]),
+                buzzer: property::event_out_last::Property::new(),
+                temperature: property::state_in::Property::new(),
+            }
+        }
+    }
+    impl runner::Properties for Properties {
+        fn by_name(&self) -> HashMap<&'static str, &dyn property::Base> {
+            hashmap! {
+                "keys" => &self.keys as &dyn property::Base,
+                "leds" => &self.leds as &dyn property::Base,
+                "buzzer" => &self.buzzer as &dyn property::Base,
+                "temperature" => &self.temperature as &dyn property::Base,
+            }
+        }
+
+        fn in_any_user_pending(&self) -> bool {
+            self.keys.user_pending() || self.temperature.user_pending()
+        }
+
+        type Remote = PropertiesRemote;
+        fn remote(&self) -> Self::Remote {
+            PropertiesRemote {
+                keys: self.keys.user_stream(),
+                leds: self.leds.user_sink(),
+                buzzer: self.buzzer.user_sink(),
+                temperature: self.temperature.user_stream(),
+            }
+        }
+    }
+    #[derive(Debug)]
+    pub struct PropertiesRemote {
+        pub keys: property::state_event_in::Stream<KeyValues, KeyChangesCount>,
+        pub leds: property::state_out::Sink<LedValues>,
+        pub buzzer: property::event_out_last::Sink<Duration>,
+        pub temperature: property::state_in::Stream<ds18x20::State>,
+    }
+
+    #[derive(Debug)]
+    pub struct Device {
+        properties: Properties,
     }
     #[async_trait]
     impl runner::Device for Device {
         fn new() -> Self {
             Self {
-                keys: property::state_in::Property::new(),
-                leds: property::state_out::Property::new([false; LED_COUNT]),
-                buzzer: property::event_last_out::Property::new(),
-                temperature: property::state_in::Property::new(),
+                properties: Properties::new(),
             }
         }
 
@@ -204,42 +306,16 @@ pub mod hardware {
             AddressDeviceType::new_from_ordinal(3).unwrap()
         }
 
-        type RemoteProperties<'d> = RemoteProperties<'d>;
-        fn remote_properties(&self) -> RemoteProperties<'_> {
-            RemoteProperties {
-                keys: self.keys.user_get_stream(),
-                leds: self.leds.user_get_sink(),
-                buzzer: self.buzzer.user_get_sink(),
-                temperature: self.temperature.user_get_stream(),
-            }
+        type Properties = Properties;
+        fn properties(&self) -> &Self::Properties {
+            &self.properties
         }
-
-        async fn run(
-            &self,
-            run_context: &dyn runner::RunContext,
-        ) -> ! {
-            let leds_runner = self.leds.device_get_stream().for_each(async move |()| {
-                run_context.poll_request();
-            });
-            pin_mut!(leds_runner);
-
-            let buzzer_runner = self.buzzer.device_get_stream().for_each(async move |()| {
-                run_context.poll_request();
-            });
-            pin_mut!(buzzer_runner);
-
-            select! {
-                () = leds_runner => panic!("leds_runner yielded"),
-                () = buzzer_runner => panic!("buzzer_runner yielded"),
-            }
-        }
-        async fn finalize(self) {}
     }
     #[async_trait]
     impl runner::BusDevice for Device {
         async fn initialize(
-            &self,
-            _driver: &dyn ApplicationDriver,
+            &'_ self,
+            _driver: &ApplicationDriver<'_>,
         ) -> Result<(), Error> {
             Ok(())
         }
@@ -249,11 +325,11 @@ pub mod hardware {
         }
         async fn poll(
             &self,
-            driver: &dyn ApplicationDriver,
+            driver: &ApplicationDriver<'_>,
         ) -> Result<(), Error> {
             // Stage 1 - Poll + Pending values
-            let leds_pending = self.leds.device_get_pending();
-            let buzzer_pending = self.buzzer.device_get_pending();
+            let leds_pending = self.properties.leds.device_pending();
+            let buzzer_pending = self.properties.buzzer.device_pending();
 
             let stage_1_request = BusRequest::new(
                 true,
@@ -269,8 +345,10 @@ pub mod hardware {
             let stage_1_request_payload = stage_1_request.into_payload();
             let stage_1_response_payload = driver
                 .transaction_out_in(stage_1_request_payload, None)
-                .await?;
-            let stage_1_response = BusResponse::from_payload(stage_1_response_payload)?;
+                .await
+                .context("stage 1 transaction")?;
+            let stage_1_response =
+                BusResponse::from_payload(stage_1_response_payload).context("stage 1 response")?;
 
             if let Some(leds_pending) = leds_pending {
                 leds_pending.commit();
@@ -286,32 +364,30 @@ pub mod hardware {
             };
             let stage_2_request = BusRequest::new(
                 false,
-                stage_1_response_poll.keys || !self.keys.device_is_set(),
+                stage_1_response_poll.keys || self.properties.keys.device_must_read(),
                 None,
                 None,
-                stage_1_response_poll.temperature,
+                stage_1_response_poll.temperature || self.properties.temperature.device_must_read(),
             );
             let stage_2_request_payload = stage_2_request.into_payload();
             let stage_2_response_payload = driver
                 .transaction_out_in(stage_2_request_payload, None)
-                .await?;
-            let stage_2_response = BusResponse::from_payload(stage_2_response_payload)?;
+                .await
+                .context("stage 2 transaction")?;
+            let stage_2_response =
+                BusResponse::from_payload(stage_2_response_payload).context("stage 2 response")?;
 
+            // Propagate values to properties
             if let Some(response_keys) = stage_2_response.keys {
-                self.keys.device_set(response_keys.values());
+                self.properties
+                    .keys
+                    .device_set(response_keys.values(), response_keys.changes_count());
             }
+
             if let Some(response_temperature) = stage_2_response.temperature {
-                match response_temperature.as_temperature() {
-                    Some(temperature) => self.temperature.device_set(temperature),
-                    None => {
-                        log::warn!(
-                            "temperature sensor failure ({:?}, {})",
-                            response_temperature.state.sensor_type(),
-                            response_temperature.state.reset_count()
-                        );
-                        self.temperature.device_set_unknown();
-                    }
-                };
+                self.properties
+                    .temperature
+                    .device_set(response_temperature.state());
             }
 
             Ok(())
@@ -319,15 +395,15 @@ pub mod hardware {
 
         async fn deinitialize(
             &self,
-            _driver: &dyn ApplicationDriver,
+            _driver: &ApplicationDriver<'_>,
         ) -> Result<(), Error> {
             Ok(())
         }
 
         fn failed(&self) {
-            self.keys.device_set_unknown();
-            self.leds.device_set_unknown();
-            self.temperature.device_set_unknown();
+            self.properties.keys.device_reset();
+            self.properties.leds.device_reset();
+            self.properties.temperature.device_reset();
         }
     }
 
@@ -477,8 +553,8 @@ pub mod hardware {
     }
     impl BusResponsePoll {
         pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
-            let keys = parser.expect_bool()?;
-            let temperature = parser.expect_bool()?;
+            let keys = parser.expect_bool().context("keys")?;
+            let temperature = parser.expect_bool().context("temperature")?;
             Ok(Self { keys, temperature })
         }
     }
@@ -490,8 +566,8 @@ pub mod hardware {
     }
     impl BusResponseKey {
         pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
-            let value = parser.expect_bool()?;
-            let changes_count = parser.expect_u8()?;
+            let value = parser.expect_bool().context("value")?;
+            let changes_count = parser.expect_u8().context("changes_count")?;
             Ok(Self {
                 value,
                 changes_count,
@@ -500,6 +576,9 @@ pub mod hardware {
 
         pub fn value(&self) -> bool {
             self.value
+        }
+        pub fn changes_count(&self) -> u8 {
+            self.changes_count
         }
     }
 
@@ -525,6 +604,14 @@ pub mod hardware {
                 .into_inner()
                 .unwrap()
         }
+        pub fn changes_count(&self) -> KeyChangesCount {
+            self.keys
+                .iter()
+                .map(|key| key.changes_count())
+                .collect::<ArrayVec<[_; KEY_COUNT]>>()
+                .into_inner()
+                .unwrap()
+        }
     }
 
     #[derive(Debug)]
@@ -533,12 +620,12 @@ pub mod hardware {
     }
     impl BusResponseTemperature {
         pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
-            let state = ds18x20::State::parse(parser)?;
+            let state = ds18x20::State::parse(parser).context("state")?;
             Ok(Self { state })
         }
 
-        pub fn as_temperature(&self) -> Option<Temperature> {
-            self.state.temperature()
+        pub fn state(&self) -> ds18x20::State {
+            self.state
         }
     }
 
@@ -563,24 +650,30 @@ pub mod hardware {
             while let Some(opcode) = parser.get_byte() {
                 match opcode {
                     b'P' => {
-                        if poll.replace(BusResponsePoll::parse(parser)?).is_some() {
-                            return Err(err_msg("duplicated poll"));
+                        if poll
+                            .replace(BusResponsePoll::parse(parser).context("poll")?)
+                            .is_some()
+                        {
+                            bail!("duplicated poll");
                         }
                     }
                     b'K' => {
-                        if keys.replace(BusResponseKeys::parse(parser)?).is_some() {
-                            return Err(err_msg("duplicated keys"));
+                        if keys
+                            .replace(BusResponseKeys::parse(parser).context("keys")?)
+                            .is_some()
+                        {
+                            bail!("duplicated keys");
                         }
                     }
                     b'T' => {
                         if temperature
-                            .replace(BusResponseTemperature::parse(parser)?)
+                            .replace(BusResponseTemperature::parse(parser).context("temperature")?)
                             .is_some()
                         {
-                            return Err(err_msg("duplicated temperature"));
+                            bail!("duplicated temperature");
                         }
                     }
-                    opcode => return Err(format_err!("unrecognized opcode: {}", opcode)),
+                    opcode => bail!("unrecognized opcode: {}", opcode),
                 }
             }
 
@@ -625,8 +718,13 @@ pub mod hardware {
             assert_eq!(bus_response.poll.as_ref().unwrap().temperature, true);
             assert!(bus_response.keys.is_none());
             assert_eq!(
-                bus_response.temperature.unwrap().as_temperature().unwrap(),
-                Temperature::new(TemperatureUnit::CELSIUS, 125.00)
+                bus_response
+                    .temperature
+                    .unwrap()
+                    .state()
+                    .temperature()
+                    .unwrap(),
+                Temperature::new(TemperatureUnit::Celsius, 125.00)
             );
         }
         #[test]

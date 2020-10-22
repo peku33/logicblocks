@@ -1,5 +1,5 @@
+use anyhow::Error;
 use crossbeam::channel::{unbounded, Receiver, Sender};
-use failure::Error;
 use futures::{channel::oneshot, Future, FutureExt};
 use rusqlite::{Connection, Transaction};
 use std::thread;

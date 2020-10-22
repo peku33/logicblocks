@@ -4,8 +4,8 @@ use super::{
     common::{Address, AddressDeviceType, AddressSerial, Frame, Payload},
     master::MasterDescriptor,
 };
+use anyhow::{bail, Error};
 use crossbeam::channel;
-use failure::{err_msg, format_err, Error};
 use futures::channel::oneshot;
 use scopeguard::defer;
 use std::{
@@ -48,7 +48,7 @@ impl MasterContext {
         *ftdi_context_rc.borrow_mut() = unsafe { libftdi1_sys::ftdi_new() };
         let ftdi_context = *ftdi_context_rc.borrow_mut();
         if ftdi_context.is_null() {
-            return Err(err_msg("ftdi_new() failed"));
+            bail!("ftdi_new() failed");
         }
 
         Ok(Self {
@@ -72,10 +72,7 @@ impl MasterContext {
             libftdi1_sys::ftdi_usb_find_all(self.ftdi_context, &mut ftdi_device_list_ptr, 0, 0)
         };
         if ftdi_usb_find_all_result < 0 {
-            return Err(format_err!(
-                "ftdi_usb_find_all() returned {}",
-                ftdi_usb_find_all_result,
-            ));
+            bail!("ftdi_usb_find_all() returned {}", ftdi_usb_find_all_result,);
         }
 
         let mut master_descriptors =
@@ -100,10 +97,10 @@ impl MasterContext {
                 )
             };
             if libusb_get_device_descriptor_result != 0 {
-                return Err(format_err!(
+                bail!(
                     "libusb_get_device_descriptor() failed: {}",
                     libusb_get_device_descriptor_result,
-                ));
+                );
             }
             let libusb_device_descriptor = unsafe { libusb_device_descriptor.assume_init() };
 
@@ -221,7 +218,7 @@ impl Master {
 
         let ftdi_context = *ftdi_context_rc.borrow_mut();
         if ftdi_context.is_null() {
-            return Err(err_msg("ftdi_new() failed"));
+            bail!("ftdi_new() failed");
         }
 
         let ftdi_usb_open_desc_result = unsafe {
@@ -234,19 +231,19 @@ impl Master {
             )
         };
         if ftdi_usb_open_desc_result != 0 {
-            return Err(format_err!(
+            bail!(
                 "ftdi_usb_open_desc() failed with code {}",
                 ftdi_usb_open_desc_result,
-            ));
+            );
         }
 
         let ftdi_set_baudrate_result =
             unsafe { libftdi1_sys::ftdi_set_baudrate(ftdi_context, 115_200) };
         if ftdi_set_baudrate_result != 0 {
-            return Err(format_err!(
+            bail!(
                 "ftdi_set_baudrate() failed with code {}",
                 ftdi_set_baudrate_result,
-            ));
+            );
         }
 
         let ftdi_set_line_property_result = unsafe {
@@ -259,10 +256,10 @@ impl Master {
             )
         };
         if ftdi_set_line_property_result != 0 {
-            return Err(format_err!(
+            bail!(
                 "ftdi_set_line_property() failed with code {}",
                 ftdi_set_line_property_result,
-            ));
+            );
         }
 
         let ftdi_setflowctrl_result = unsafe {
@@ -272,10 +269,10 @@ impl Master {
             )
         };
         if ftdi_setflowctrl_result != 0 {
-            return Err(format_err!(
+            bail!(
                 "ftdi_setflowctrl() failed with code {}",
                 ftdi_setflowctrl_result
-            ));
+            );
         }
 
         let ftdi_set_latency_timer_result = unsafe {
@@ -285,10 +282,10 @@ impl Master {
             )
         };
         if ftdi_set_latency_timer_result != 0 {
-            return Err(format_err!(
+            bail!(
                 "ftdi_set_latency_timer() failed with code {}",
                 ftdi_set_latency_timer_result
-            ));
+            );
         }
 
         let ftdi_context_wrapper = FtdiContextWrapper(ftdi_context);
@@ -455,10 +452,10 @@ impl Master {
         let ftdi_usb_purge_buffers_result =
             unsafe { libftdi1_sys::ftdi_usb_purge_buffers(ftdi_context) };
         if ftdi_usb_purge_buffers_result != 0 {
-            return Err(format_err!(
+            bail!(
                 "ftdi_usb_purge_buffers() failed with code {}",
                 ftdi_usb_purge_buffers_result,
-            ));
+            );
         }
         Ok(())
     }
@@ -474,16 +471,16 @@ impl Master {
             )
         };
         if ftdi_write_data_submit_result.is_null() {
-            return Err(err_msg("ftdi_write_data_submit() failed with NULL"));
+            bail!("ftdi_write_data_submit() failed with NULL");
         }
 
         let ftdi_transfer_data_done_result =
             unsafe { libftdi1_sys::ftdi_transfer_data_done(ftdi_write_data_submit_result) };
         if ftdi_transfer_data_done_result != data.len() as i32 {
-            return Err(format_err!(
+            bail!(
                 "ftdi_transfer_data_done() failed with code {}",
                 ftdi_transfer_data_done_result,
-            ));
+            );
         }
 
         Ok(())
@@ -503,17 +500,17 @@ impl Master {
                 )
             };
             if ftdi_read_data_result < 0 {
-                return Err(format_err!(
+                bail!(
                     "ftdi_read_data() failed with code {}",
                     ftdi_read_data_result,
-                ));
+                );
             } else if ftdi_read_data_result == 0 {
                 // No data was read, check the timeout
 
                 // 1ms is the timeout of ftdi read op
                 match timeout_left.checked_sub(Duration::from_millis(1)) {
                     Some(timeout_left_next) => *timeout_left = timeout_left_next,
-                    None => return Err(err_msg("timeout expired")),
+                    None => bail!("timeout expired"),
                 };
             } else {
                 return Ok(Box::from(
@@ -549,7 +546,7 @@ impl Master {
 
             frame_buffer.extend_from_slice(&frame);
             if frame_buffer.len() > FRAME_BUFFER_MAX_LENGTH {
-                return Err(err_msg("frame_buffer size exceeded. Noise?"));
+                bail!("frame_buffer size exceeded. Noise?");
             }
 
             let char_begin_position = match frame_buffer
@@ -604,7 +601,7 @@ impl Master {
 
             frame_buffer.extend_from_slice(&frame);
             if frame_buffer.len() > ADDRESS_LENGTH {
-                return Err(err_msg("frame_buffer size exceeded. Noise?"));
+                bail!("frame_buffer size exceeded. Noise?");
             }
 
             if frame_buffer.len() == ADDRESS_LENGTH {

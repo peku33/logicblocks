@@ -1,17 +1,18 @@
 use super::super::parser::Parser;
 use crate::datatypes::temperature::{Temperature, Unit};
-use failure::Error;
+use anyhow::Error;
+use serde::Serialize;
 use std::mem::transmute;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Serialize, Debug)]
 pub enum SensorType {
-    EMPTY,
-    INVALID,
+    Empty,
+    Invalid,
     S,
     B,
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Serialize, Debug)]
 pub struct State {
     sensor_type: SensorType,
     reset_count: u8,
@@ -36,8 +37,8 @@ impl State {
 
     pub fn from_u16(value: u16) -> Result<Self, Error> {
         let sensor_type = match (value >> 14) & 0b11 {
-            0b00 => SensorType::EMPTY,
-            0b01 => SensorType::INVALID,
+            0b00 => SensorType::Empty,
+            0b01 => SensorType::Invalid,
             0b10 => SensorType::S,
             0b11 => SensorType::B,
             _ => panic!(),
@@ -54,7 +55,7 @@ impl State {
                     temperature |= 0b1111_0000_0000_0000;
                 }
                 let temperature = unsafe { transmute::<u16, i16>(temperature) } as f64 / 16.0;
-                let temperature = Temperature::new(Unit::CELSIUS, temperature);
+                let temperature = Temperature::new(Unit::Celsius, temperature);
                 Some(temperature)
             }
             _ => None,
@@ -74,14 +75,14 @@ mod state_tests {
     #[test]
     fn test_invalid_1() {
         let state = State::from_u16(0b0000_0000_0000_0000).unwrap();
-        assert_eq!(state.sensor_type, SensorType::EMPTY);
+        assert_eq!(state.sensor_type, SensorType::Empty);
         assert_eq!(state.reset_count, 0);
         assert_eq!(state.temperature, None);
     }
     #[test]
     fn test_invalid_2() {
         let state = State::from_u16(0b0111_0111_1101_0000).unwrap();
-        assert_eq!(state.sensor_type, SensorType::INVALID);
+        assert_eq!(state.sensor_type, SensorType::Invalid);
         assert_eq!(state.reset_count, 3);
         assert_eq!(state.temperature, None);
     }
@@ -93,7 +94,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 0);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, 125.0))
+            Some(Temperature::new(Unit::Celsius, 125.0))
         );
     }
 
@@ -104,7 +105,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 0);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, 85.0))
+            Some(Temperature::new(Unit::Celsius, 85.0))
         );
     }
 
@@ -115,7 +116,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 1);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, 25.0625))
+            Some(Temperature::new(Unit::Celsius, 25.0625))
         );
     }
 
@@ -126,7 +127,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 1);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, 10.125))
+            Some(Temperature::new(Unit::Celsius, 10.125))
         );
     }
 
@@ -137,7 +138,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 2);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, 0.5))
+            Some(Temperature::new(Unit::Celsius, 0.5))
         );
     }
 
@@ -148,7 +149,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 2);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, 0.0))
+            Some(Temperature::new(Unit::Celsius, 0.0))
         );
     }
 
@@ -159,7 +160,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 3);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, -0.5))
+            Some(Temperature::new(Unit::Celsius, -0.5))
         );
     }
 
@@ -170,7 +171,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 3);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, -10.125))
+            Some(Temperature::new(Unit::Celsius, -10.125))
         );
     }
 
@@ -181,7 +182,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 0);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, -25.0625))
+            Some(Temperature::new(Unit::Celsius, -25.0625))
         );
     }
 
@@ -192,7 +193,7 @@ mod state_tests {
         assert_eq!(state.reset_count, 0);
         assert_eq!(
             state.temperature,
-            Some(Temperature::new(Unit::CELSIUS, -55.0))
+            Some(Temperature::new(Unit::Celsius, -55.0))
         );
     }
 }

@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::Error;
 // use logicblocks_controller::devices::dahua::ipc::api::{Client, SaneDefaultsConfig};
 
 #[tokio::main]
@@ -35,5 +35,5 @@ async fn main() -> Result<(), Error> {
     //     })
     //     .await?;
 
-    return Ok(());
+    Ok(())
 }

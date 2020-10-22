@@ -1,5 +1,5 @@
-use crc::crc16::{Digest, Hasher16};
-use failure::{err_msg, format_err, Error};
+use anyhow::{bail, Error};
+use crc_all::Crc;
 use std::{convert::TryInto, fmt, ops::Deref, slice};
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
@@ -8,7 +8,7 @@ impl AddressDeviceType {
     pub const LENGTH: usize = 4;
     pub fn new(device_type: [u8; Self::LENGTH]) -> Result<Self, Error> {
         if !device_type.iter().all(|item| item.is_ascii_digit()) {
-            return Err(err_msg("invalid characters in device_type"));
+            bail!("invalid characters in device_type");
         }
         Ok(Self(device_type))
     }
@@ -54,7 +54,7 @@ impl AddressSerial {
     pub const LENGTH: usize = 8;
     pub fn new(serial: [u8; Self::LENGTH]) -> Result<Self, Error> {
         if !serial.iter().all(|item| item.is_ascii_digit()) {
-            return Err(err_msg("invalid characters in serial"));
+            bail!("invalid characters in serial");
         }
         Ok(Self(serial))
     }
@@ -127,7 +127,7 @@ pub struct Payload(Box<[u8]>);
 impl Payload {
     pub fn new(data: Box<[u8]>) -> Result<Self, Error> {
         if !data.iter().all(|item| item.is_ascii_graphic()) {
-            return Err(err_msg("invalid characters in payload"));
+            bail!("invalid characters in payload");
         }
         Ok(Self(data))
     }
@@ -136,6 +136,14 @@ impl Deref for Payload {
     type Target = [u8];
     fn deref(&self) -> &Self::Target {
         self.0.as_ref()
+    }
+}
+impl fmt::Display for Payload {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter,
+    ) -> fmt::Result {
+        write!(f, "{:X?}", self.0.as_ref())
     }
 }
 #[cfg(test)]
@@ -161,9 +169,10 @@ impl Frame {
     pub const CHAR_END: u8 = b'\r';
 
     const CRC_POLY: u16 = 0x8005;
+    const CRC_WIDTH: usize = 16;
     const CRC_INITIAL: u16 = 0xFFFF;
     const CRC_FINAL_XOR: u16 = 0x0000;
-    const CRC_CALC: crc::CalcType = crc::CalcType::Reverse;
+    const CRC_REFLECT: bool = true;
 
     const CHAR_DIRECTION_NORMAL_IN: u8 = b'<';
     const CHAR_DIRECTION_NORMAL_OUT: u8 = b'>';
@@ -181,17 +190,18 @@ impl Frame {
             &Self::CHAR_DIRECTION_NORMAL_OUT
         };
 
-        let mut crc16 = Digest::new_custom(
+        let mut crc16 = Crc::<u16>::new(
             Self::CRC_POLY,
+            Self::CRC_WIDTH,
             Self::CRC_INITIAL,
             Self::CRC_FINAL_XOR,
-            Self::CRC_CALC,
+            Self::CRC_REFLECT,
         );
-        crc16.write(slice::from_ref(&char_direction));
-        crc16.write(&address.device_type);
-        crc16.write(&address.serial);
-        crc16.write(payload);
-        let crc16 = crc16.sum16();
+        crc16.update(slice::from_ref(&char_direction));
+        crc16.update(&address.device_type);
+        crc16.update(&address.serial);
+        crc16.update(payload);
+        let crc16 = crc16.finish();
         let crc16 = hex::encode_upper(crc16.to_be_bytes());
         let crc16 = crc16.as_bytes();
 
@@ -218,11 +228,11 @@ impl Frame {
         pub const FRAME_LENGTH_MIN: usize = 1 + 1 + 4 /* + 0 */ + 1;
 
         if frame.len() < FRAME_LENGTH_MIN {
-            return Err(err_msg("frame too short"));
+            bail!("frame too short");
         }
 
         if frame[0] != Self::CHAR_BEGIN {
-            return Err(err_msg("invalid begin character"));
+            bail!("invalid begin character");
         }
 
         if frame[1]
@@ -232,7 +242,7 @@ impl Frame {
                 Self::CHAR_DIRECTION_NORMAL_IN
             })
         {
-            return Err(err_msg("invalid service_mode character"));
+            bail!("invalid service_mode character");
         }
 
         let crc16_received = &frame[2..2 + 4];
@@ -240,7 +250,7 @@ impl Frame {
             .iter()
             .all(|item| item.is_ascii_uppercase() || item.is_ascii_digit())
         {
-            return Err(err_msg("invalid character in crc16"));
+            bail!("invalid character in crc16");
         }
         let crc16_received = hex::decode(crc16_received)?;
         let crc16_received = u16::from_be_bytes((&crc16_received[..]).try_into().unwrap());
@@ -248,27 +258,28 @@ impl Frame {
         let payload = Payload::new(Box::from(&frame[2 + 4..frame.len() - 1]))?;
 
         if frame[frame.len() - 1] != Frame::CHAR_END {
-            return Err(err_msg("invalid end character"));
+            bail!("invalid end character");
         }
 
-        let mut crc16_expected = Digest::new_custom(
+        let mut crc16_expected = Crc::<u16>::new(
             Self::CRC_POLY,
+            Self::CRC_WIDTH,
             Self::CRC_INITIAL,
             Self::CRC_FINAL_XOR,
-            Self::CRC_CALC,
+            Self::CRC_REFLECT,
         );
-        Hasher16::write(&mut crc16_expected, slice::from_ref(&frame[1]));
-        Hasher16::write(&mut crc16_expected, &address.device_type);
-        Hasher16::write(&mut crc16_expected, &address.serial);
-        Hasher16::write(&mut crc16_expected, &payload);
-        let crc16_expected = Hasher16::sum16(&crc16_expected);
+        crc16_expected.update(slice::from_ref(&frame[1]));
+        crc16_expected.update(&address.device_type);
+        crc16_expected.update(&address.serial);
+        crc16_expected.update(&payload);
+        let crc16_expected = crc16_expected.finish();
 
         if crc16_expected != crc16_received {
-            return Err(format_err!(
+            bail!(
                 "invalid CRC16, expected: {:04X}, received: {:04X}",
                 crc16_expected,
                 crc16_received,
-            ));
+            );
         }
 
         Ok(payload)

@@ -1,5 +1,5 @@
 use super::super::super::houseblocks_v1::common::Payload;
-use failure::{err_msg, format_err, Error};
+use anyhow::{bail, Error};
 use std::slice;
 
 pub trait Parser {
@@ -9,7 +9,7 @@ pub trait Parser {
     fn expect_byte(&mut self) -> Result<u8, Error> {
         let byte = match self.get_byte() {
             Some(byte) => byte,
-            None => return Err(err_msg("premature data end")),
+            None => bail!("premature data end"),
         };
         Ok(byte)
     }
@@ -17,7 +17,7 @@ pub trait Parser {
         let value = match self.expect_byte()? {
             b'0' => false,
             b'1' => true,
-            value => return Err(format_err!("invalid character for bool: {}", value)),
+            value => bail!("invalid character for bool: {}", value),
         };
         Ok(value)
     }
@@ -58,7 +58,7 @@ impl<'a> Parser for ParserPayload<'a> {
     }
     fn expect_end(&self) -> Result<(), Error> {
         if !self.iterator.is_empty() {
-            return Err(err_msg("more data available"));
+            bail!("more data available");
         }
         Ok(())
     }

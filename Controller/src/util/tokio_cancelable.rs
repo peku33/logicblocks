@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::Error;
 use futures::{
     future::{
         abortable, AbortHandle, Abortable, Aborted, BoxFuture, FusedFuture, Future, FutureExt,

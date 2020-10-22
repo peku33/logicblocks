@@ -1,8 +1,10 @@
-import React, { useState } from "react";
-import { Grid, Header, Loader } from "semantic-ui-react";
-import useAsyncEffect from "use-async-effect";
+import MediaQueries from "components/common/MediaQueries";
 import { getSummaryComponent } from "components/devices/Factory";
 import { getJson } from "lib/Api";
+import React, { useState } from "react";
+import { urlBuild } from "services/LogicDevicesRunner";
+import styled from "styled-components";
+import useAsyncEffect from "use-async-effect";
 
 interface DeviceData {
   name: string;
@@ -17,25 +19,23 @@ const DeviceSummary: React.FC<{
   const deviceData = useDeviceContext(deviceId);
 
   if (deviceData === undefined) {
-    return <Loader active />;
+    return null; // TODO
   }
 
   const Component = getSummaryComponent(deviceData.class);
 
   return (
-    <Grid columns={2} padded>
-      <Grid.Column mobile={16} computer={6}>
-        <Header>
-          {deviceData.name}
-          <Header.Subheader>
-            #{deviceId} {deviceData.class}
-          </Header.Subheader>
-        </Header>
-      </Grid.Column>
-      <Grid.Column mobile={16} computer={10}>
+    <Wrapper>
+      <DeviceDetails>
+        <DeviceDetailsName>{deviceData.name}</DeviceDetailsName>
+        <DeviceDetailsDetails>
+          #{deviceId} {deviceData.class}
+        </DeviceDetailsDetails>
+      </DeviceDetails>
+      <DeviceComponentWrapper>
         <Component deviceId={deviceId} deviceClass={deviceData.class} />
-      </Grid.Column>
-    </Grid>
+      </DeviceComponentWrapper>
+    </Wrapper>
   );
 };
 
@@ -46,7 +46,7 @@ function useDeviceContext(deviceId: number): DeviceData | undefined {
 
   useAsyncEffect(
     async (isMounted) => {
-      const deviceData = await getJson<DeviceData>(`/device_runner/devices/${deviceId}`);
+      const deviceData = await getJson<DeviceData>(urlBuild(`/devices/${deviceId}`));
       if (!isMounted) return;
       setDeviceData(deviceData);
     },
@@ -58,3 +58,27 @@ function useDeviceContext(deviceId: number): DeviceData | undefined {
 
   return deviceData;
 }
+
+const Wrapper = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-gap: 0.25rem;
+  align-items: center;
+
+  @media ${MediaQueries.COMPUTER_ONLY} {
+    grid-template-columns: 1fr 2fr;
+    grid-gap: 1rem;
+  }
+`;
+const DeviceDetails = styled.div``;
+const DeviceDetailsName = styled.h2`
+  font-size: 1.25rem;
+  font-weight: bold;
+  word-break: break-all;
+`;
+const DeviceDetailsDetails = styled.h4`
+  font-size: 1.125rem;
+  font-weight: 600;
+  word-break: break-all;
+`;
+const DeviceComponentWrapper = styled.div``;

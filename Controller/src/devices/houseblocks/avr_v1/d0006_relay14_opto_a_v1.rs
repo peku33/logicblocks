@@ -1,6 +1,7 @@
 pub mod logic {
-    use super::{super::common::relay14_common::logic, hardware};
+    use super::{super::common::relay14_common_a::logic, hardware};
 
+    #[derive(Debug)]
     pub struct Specification {}
     impl logic::Specification for Specification {
         type HardwareSpecification = hardware::Specification;
@@ -13,11 +14,12 @@ pub mod logic {
     pub type Device = logic::Device<Specification>;
 }
 pub mod hardware {
-    pub use super::super::common::relay14_common::hardware::{RemoteProperties, OUTPUT_COUNT};
+    pub use super::super::common::relay14_common_a::hardware::{PropertiesRemote, OUTPUT_COUNT};
     use super::super::{
-        super::houseblocks_v1::common::AddressDeviceType, common::relay14_common::hardware,
+        super::houseblocks_v1::common::AddressDeviceType, common::relay14_common_a::hardware,
     };
 
+    #[derive(Debug)]
     pub struct Specification {}
     impl hardware::Specification for Specification {
         fn device_type_name() -> &'static str {

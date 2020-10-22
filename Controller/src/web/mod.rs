@@ -5,8 +5,8 @@ pub mod sse;
 pub mod sse_aggregated;
 pub mod uri_cursor;
 
+use anyhow::{bail, Error};
 use bytes::Bytes;
-use failure::{format_err, Error};
 use futures::{
     future::BoxFuture,
     stream::{Stream, StreamExt},
@@ -52,10 +52,10 @@ impl Request {
             .and_then(|header| header.to_str().ok());
 
         if content_type != Some("application/json") {
-            return Err(format_err!(
+            bail!(
                 "expected content type application/json, got: {:?}",
                 content_type,
-            ));
+            );
         }
 
         let json = serde_json::from_slice(&self.body)?;
