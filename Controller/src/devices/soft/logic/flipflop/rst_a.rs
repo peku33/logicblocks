@@ -38,7 +38,7 @@ impl Device {
         configuration: Configuration,
         state: Option<State>,
     ) -> Self {
-        let state = state.unwrap_or_else(|| State {
+        let state = state.unwrap_or(State {
             value: configuration.initial_value,
         });
 

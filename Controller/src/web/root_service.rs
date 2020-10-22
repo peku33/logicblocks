@@ -89,9 +89,8 @@ impl<'a> Handler for RootService<'a> {
         let path = request.uri().path().to_owned();
 
         // Serve API if url starts with /api
-        let api_prefix = "/api/";
-        if path.starts_with(api_prefix) {
-            let uri_cursor = UriCursor::new(&path[api_prefix.len()..]);
+        if let Some(api_path) = path.strip_prefix("/api/") {
+            let uri_cursor = UriCursor::new(api_path);
             return self.api_handler.handle(request, &uri_cursor);
         }
 
