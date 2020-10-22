@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import Colors from "components/common/Colors";
 import MediaQueries from "components/common/MediaQueries";
 import React from "react";
 import { useDeviceSummary } from "services/LogicDevicesRunner";

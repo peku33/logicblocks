@@ -47,7 +47,6 @@ function useDeviceIds(): number[] | undefined {
 
 const DevicesList = styled.div``;
 const DevicesListItem = styled.div`
-  margin: 0.25rem;
   padding: 0.25rem;
   border-bottom: solid 1px ${Colors.GREY_LIGHTEST};
   &:last-child {

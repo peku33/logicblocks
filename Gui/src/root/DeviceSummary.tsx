@@ -1,3 +1,4 @@
+import Colors from "components/common/Colors";
 import MediaQueries from "components/common/MediaQueries";
 import { getSummaryComponent } from "components/devices/Factory";
 import { getJson } from "lib/Api";
@@ -65,7 +66,7 @@ const Wrapper = styled.div`
   grid-gap: 0.25rem;
   align-items: center;
 
-  @media ${MediaQueries.COMPUTER_ONLY} {
+  @media ${MediaQueries.COMPUTER_AT_LEAST} {
     grid-template-columns: 1fr 2fr;
     grid-gap: 1rem;
   }
@@ -81,4 +82,13 @@ const DeviceDetailsDetails = styled.h4`
   font-weight: 600;
   word-break: break-all;
 `;
-const DeviceComponentWrapper = styled.div``;
+const DeviceComponentWrapper = styled.div`
+  @media ${MediaQueries.MOBILE_ONLY} {
+    padding-top: 0.25rem;
+    border-top: solid 1px ${Colors.GREY_LIGHTEST};
+  }
+  @media ${MediaQueries.COMPUTER_ONLY} {
+    padding-left: 1rem;
+    border-left: solid 1px ${Colors.GREY_LIGHTEST};
+  }
+`;

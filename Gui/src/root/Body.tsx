@@ -1,5 +1,4 @@
 import Colors from "components/common/Colors";
-import MediaQueries from "components/common/MediaQueries";
 import React from "react";
 import { matchPath, Redirect, Route, Switch, useLocation } from "react-router";
 import { Link } from "react-router-dom";
@@ -54,22 +53,25 @@ const MenuItem: React.FC<{
   const location = useLocation();
   const match = !!matchPath(location.pathname, props);
   return (
-    <MenuLink to={props.path} active={match}>
-      {props.text}
+    <MenuLink isActive={match}>
+      <Link to={props.path}>{props.text}</Link>
     </MenuLink>
   );
 };
-const MenuLink = styled(Link)<{
-  active: boolean;
+const MenuLink = styled.div<{
+  isActive: boolean;
 }>`
   display: inline-block;
   padding: 1rem;
 
-  color: inherit;
-  text-decoration: none;
   background-color: ${Colors.BLUE};
 
   font-weight: bold;
+
+  & > a {
+    color: inherit;
+    text-decoration: none;
+  }
 `;
 const Content = styled.div`
   flex: auto;
