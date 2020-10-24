@@ -1,7 +1,7 @@
 use futures::stream::BoxStream;
-use std::io::Error;
-use std::path::Path;
+use std::{io::Error, path::Path};
 
+#[derive(Debug)]
 pub struct EventOwned {
     pub name: Option<String>,
 }

@@ -9,6 +9,7 @@ use crate::{
     util::select_all_empty::SelectAllEmptyFutureInfinite,
     web::{self, sse_aggregated, uri_cursor},
 };
+use anyhow::Context;
 use futures::{future::BoxFuture, pin_mut, select, FutureExt};
 use owning_ref::OwningHandle;
 use std::collections::HashMap;
@@ -119,7 +120,7 @@ impl<'p> uri_cursor::Handler for Runner<'p> {
                     _ => async move { web::Response::error_404() }.boxed(),
                 },
                 uri_cursor::UriCursor::Next(device_id_str, uri_cursor) => {
-                    let device_id: DeviceId = match device_id_str.parse() {
+                    let device_id: DeviceId = match device_id_str.parse().context("device_id") {
                         Ok(device_id) => device_id,
                         Err(error) => {
                             return async move { web::Response::error_400_from_error(error) }

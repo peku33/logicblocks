@@ -1,7 +1,9 @@
 use super::{Context, Module, ModuleFactory};
-use std::env::current_dir;
-use std::fs::create_dir_all;
-use std::path::{Path, PathBuf};
+use std::{
+    env::current_dir,
+    fs::create_dir_all,
+    path::{Path, PathBuf},
+};
 
 pub struct Fs {
     persistent_data_directory: PathBuf,

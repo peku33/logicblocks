@@ -196,7 +196,7 @@ impl<'m, D: Device> Runner<'m, D> {
         self.gui_summary_waker.wake();
 
         loop {
-            let error = self.driver_run_once().await;
+            let error = self.driver_run_once().await.context("driver_run_once");
 
             self.device.failed();
             if self.device.properties().in_any_user_pending() {
@@ -205,7 +205,7 @@ impl<'m, D: Device> Runner<'m, D> {
 
             *self.device_state.lock() = DeviceState::Error;
             self.gui_summary_waker.wake();
-            log::warn!("device {} failed: {:?}", self.driver.address(), error);
+            log::error!("device {} failed: {:?}", self.driver.address(), error);
 
             tokio::time::delay_for(ERROR_RESTART_DELAY).await;
         }

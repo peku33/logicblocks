@@ -134,15 +134,16 @@ impl Global {
                 );
                 continue;
             }
-            let serial_number = ffi::CStr::from_bytes_with_nul(
+            let serial_number = match ffi::CStr::from_bytes_with_nul(
                 &serial_number
                     [..(libusb_get_string_descriptor_ascii_serial_number_result as usize) + 1],
-            );
-            let serial_number = match serial_number {
+            )
+            .context("serial_number")
+            {
                 Ok(serial_number) => serial_number,
                 Err(error) => {
                     log::warn!(
-                        "failed decomposing serial number for device {:?} ({}:{}): {}",
+                        "failed decomposing serial number for device {:?} ({}:{}): {:?}",
                         libusb_device_ptr,
                         libusb_device_descriptor.idVendor,
                         libusb_device_descriptor.idProduct,

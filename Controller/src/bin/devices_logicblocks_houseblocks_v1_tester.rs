@@ -89,7 +89,7 @@ fn master_device_discovery(master: &Master) -> Result<Address, Error> {
     })
 }
 fn menu_master_device_discovery(master: &Master) -> Result<(), Error> {
-    match master_device_discovery(master) {
+    match master_device_discovery(master).context("master_device_discovery") {
         Ok(address) => println!("address: {}", address),
         Err(error) => log::error!("error: {:?}", error),
     };
