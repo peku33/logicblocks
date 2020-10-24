@@ -21,6 +21,7 @@
 
 pub mod datatypes;
 pub mod devices;
+pub mod interfaces;
 pub mod modules;
 pub mod signals;
 pub mod stubs;

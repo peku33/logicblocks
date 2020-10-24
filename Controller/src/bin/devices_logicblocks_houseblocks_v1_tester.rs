@@ -4,12 +4,15 @@ use futures::{
     pin_mut, select,
     stream::StreamExt,
 };
-use logicblocks_controller::devices::houseblocks::{
-    avr_v1,
-    houseblocks_v1::{
-        common::{Address, AddressDeviceType, AddressSerial},
-        master::{Master, MasterContext, MasterDescriptor},
+use logicblocks_controller::{
+    devices::houseblocks::{
+        avr_v1,
+        houseblocks_v1::{
+            common::{Address, AddressDeviceType, AddressSerial},
+            master::Master,
+        },
     },
+    interfaces::serial::ftdi::{Descriptor, Global},
 };
 use std::{convert::TryInto, time::Duration};
 
@@ -45,38 +48,24 @@ fn main_error() -> Result<(), Error> {
     Ok(())
 }
 fn menu_masters_context() -> Result<(), Error> {
-    let master_context = MasterContext::new().context("master_context")?;
-    let master_descriptors = master_context
-        .find_master_descriptors()
-        .context("master_descriptors")?;
+    let mut global = Global::new().context("global")?;
+    let descriptors = global.find_descriptors().context("descriptors")?;
 
-    let master_descriptor_names = master_descriptors
+    let descriptor_names = descriptors
         .iter()
-        .map(|master_descriptor| {
-            master_descriptor
-                .serial_number
-                .clone()
-                .into_string()
-                .unwrap()
-        })
+        .map(|descriptor| descriptor.serial_number.clone().into_string().unwrap())
         .collect::<Vec<_>>();
 
     let mut menu = dialoguer::Select::new();
-    let menu = menu
-        .with_prompt("Select Master")
-        .items(&master_descriptor_names);
+    let menu = menu.with_prompt("Select Master").items(&descriptor_names);
 
     while let Some(result) = menu.interact_opt()? {
-        menu_master_context(&master_context, master_descriptors[result].clone())
-            .context("menu_master_context")?;
+        menu_master_context(descriptors[result].clone()).context("menu_master_context")?;
     }
     Ok(())
 }
-fn menu_master_context(
-    _master_context: &MasterContext,
-    master_descriptor: MasterDescriptor,
-) -> Result<(), Error> {
-    let master = Master::new(master_descriptor).context("master")?;
+fn menu_master_context(descriptor: Descriptor) -> Result<(), Error> {
+    let master = Master::new(descriptor);
 
     let mut menu = dialoguer::Select::new();
     let menu = menu
