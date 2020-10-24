@@ -181,7 +181,7 @@ where
         cx: &mut Context,
     ) -> Poll<Option<Self::Item>> {
         self.receiver_inner.waker.register(cx.waker());
-        match self.receiver_inner.queue.pop().ok() {
+        match self.receiver_inner.queue.pop() {
             Some(item) => Poll::Ready(Some(item)),
             None => Poll::Pending,
         }
