@@ -1,6 +1,7 @@
 use futures::future::FutureExt;
 use logicblocks_controller::{
     devices::{self, runner::Runner, DeviceContext, Id as DeviceId},
+    interfaces,
     signals::{exchange::DeviceIdSignalId, Id as SignalId},
     util::select_all_empty::JoinAllEmptyUnit,
     web::{
@@ -19,31 +20,22 @@ async fn main() {
         .filter_module("logicblocks_controller", log::LevelFilter::Debug)
         .init();
 
-    let houseblocks_v1_master_context =
-        devices::houseblocks::houseblocks_v1::master::MasterContext::new().unwrap();
-    let houseblocks_v1_master_descriptors = houseblocks_v1_master_context
-        .find_master_descriptors()
-        .unwrap();
-    let houseblocks_v1_master_descriptors = houseblocks_v1_master_descriptors
+    // Drivers, etc
+    let mut ftdi_global_context = interfaces::serial::ftdi::Global::new().unwrap();
+    let ftdi_descriptors = ftdi_global_context.find_descriptors().unwrap();
+    let ftdi_descriptors = ftdi_descriptors
         .into_iter()
-        .map(|master_descriptor| {
+        .map(|descriptor| {
             (
-                master_descriptor
-                    .serial_number
-                    .to_string_lossy()
-                    .to_string(),
-                master_descriptor,
+                descriptor.serial_number.to_string_lossy().to_string(),
+                descriptor,
             )
         })
         .collect::<HashMap<_, _>>();
 
     let houseblocks_v1_bus_1 = devices::houseblocks::houseblocks_v1::master::Master::new(
-        houseblocks_v1_master_descriptors
-            .get("DN014CBH")
-            .unwrap()
-            .clone(),
-    )
-    .unwrap();
+        ftdi_descriptors.get("DN014CBH").unwrap().clone(),
+    );
 
     let devices = hashmap! {
         1 => DeviceContext::new(
