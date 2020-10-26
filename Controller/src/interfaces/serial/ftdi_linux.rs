@@ -4,7 +4,7 @@ use super::{
     ftdi::{Descriptor, DeviceConfiguration},
     Bits, Configuration, Parity, StopBits,
 };
-use anyhow::{bail, Error};
+use anyhow::{bail, Context, Error};
 use libftdi1_sys::*;
 use scopeguard::defer;
 use std::{cell::RefCell, ffi, mem::MaybeUninit, ptr};
