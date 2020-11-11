@@ -1,4 +1,4 @@
-use super::{DeviceContext, Id as DeviceId};
+use super::{DeviceHandler, Id as DeviceId};
 use crate::{
     signals::{
         exchange::{
@@ -6,47 +6,92 @@ use crate::{
         },
         Device as SignalsDevice,
     },
-    util::select_all_empty::SelectAllEmptyFutureInfinite,
+    util::tokio_cancelable::ScopedSpawn,
     web::{self, sse_aggregated, uri_cursor},
 };
 use anyhow::Context;
-use futures::{future::BoxFuture, pin_mut, select, FutureExt};
+use futures::{
+    future::{BoxFuture, JoinAll},
+    FutureExt,
+};
 use owning_ref::OwningHandle;
 use std::collections::HashMap;
 
-struct RunnerInner<'d> {
-    exchanger: Exchanger<'d>,
+struct RunnerRuntimeDevicesContext<'r, 'd> {
+    devices_run_scoped_spawn: Box<[ScopedSpawn<'r, 'd, !>]>,
+    exchanger_context: OwningHandle<Box<Exchanger<'d>>, Box<ScopedSpawn<'r, 'd, !>>>,
     devices_gui_summary_sse_aggregated_bus: sse_aggregated::Bus,
 }
 
+struct RunnerRuntimeDevices<'d> {
+    runtime: tokio::runtime::Runtime,
+    devices_handler: HashMap<DeviceId, DeviceHandler<'d>>,
+}
+
 pub struct Runner<'d> {
-    inner: OwningHandle<Box<HashMap<DeviceId, DeviceContext<'d>>>, Box<RunnerInner<'d>>>,
+    runtime_devices_context:
+        OwningHandle<Box<RunnerRuntimeDevices<'d>>, Box<RunnerRuntimeDevicesContext<'d, 'd>>>,
 }
 impl<'d> Runner<'d> {
     pub fn new(
-        device_contexts: HashMap<DeviceId, DeviceContext<'d>>,
+        devices_handler: HashMap<DeviceId, DeviceHandler<'d>>,
         connections_requested: ConnectionsRequested,
     ) -> Self {
-        let inner =
-            OwningHandle::new_with_fn(Box::new(device_contexts), |device_contexts_box_ptr| {
-                let device_contexts = unsafe { &*device_contexts_box_ptr };
+        let runtime = tokio::runtime::Builder::new()
+            .enable_all()
+            .threaded_scheduler()
+            .thread_name("Runner.devices")
+            .build()
+            .unwrap();
 
-                let exchanger_devices = device_contexts
+        let runtime_devices_context = OwningHandle::new_with_fn(
+            Box::new(RunnerRuntimeDevices {
+                runtime,
+                devices_handler,
+            }),
+            |runtime_devices_context_ptr| {
+                let runtime_devices_context = unsafe { &*runtime_devices_context_ptr };
+
+                let devices_run_scoped_spawn = runtime_devices_context
+                    .devices_handler
+                    .values()
+                    .map(|device_handler| {
+                        ScopedSpawn::new(
+                            &runtime_devices_context.runtime,
+                            device_handler.device().run(),
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .into_boxed_slice();
+
+                let exchanger_devices = runtime_devices_context
+                    .devices_handler
                     .iter()
-                    .map(|(device_id, device_context)| {
-                        (*device_id, device_context.device().as_signals_device())
+                    .map(|(device_id, device_handler)| {
+                        (*device_id, device_handler.device().as_signals_device())
                     })
                     .collect::<HashMap<DeviceId, &'d dyn SignalsDevice>>();
                 let exchanger = Exchanger::new(exchanger_devices, &connections_requested);
+                let exchanger_context =
+                    OwningHandle::new_with_fn(Box::new(exchanger), |exchanger_ptr| {
+                        let exchanger = unsafe { &*exchanger_ptr };
+
+                        let scoped_spawn = ScopedSpawn::new(
+                            &runtime_devices_context.runtime,
+                            exchanger.run().boxed(),
+                        );
+                        Box::new(scoped_spawn)
+                    });
 
                 let devices_gui_summary_sse_aggregated_node = sse_aggregated::Node {
                     terminal: None,
-                    children: device_contexts
+                    children: runtime_devices_context
+                        .devices_handler
                         .iter()
-                        .map(|(device_id, device_context)| {
+                        .map(|(device_id, device_handler)| {
                             (
                                 sse_aggregated::PathItem::NumberU32(*device_id),
-                                device_context.gui_summary_waker(),
+                                device_handler.gui_summary_waker(),
                             )
                         })
                         .collect(),
@@ -54,36 +99,61 @@ impl<'d> Runner<'d> {
                 let devices_gui_summary_sse_aggregated_bus =
                     sse_aggregated::Bus::new(devices_gui_summary_sse_aggregated_node);
 
-                let inner = RunnerInner {
-                    exchanger,
+                Box::new(RunnerRuntimeDevicesContext {
+                    devices_run_scoped_spawn,
+                    exchanger_context,
                     devices_gui_summary_sse_aggregated_bus,
-                };
-                Box::new(inner)
-            });
+                })
+            },
+        );
 
-        Self { inner }
-    }
-
-    pub async fn run(&self) -> ! {
-        let mut device_contexts_runner = self
-            .inner
-            .as_owner()
-            .values()
-            .map(|device_context| device_context.run())
-            .collect::<SelectAllEmptyFutureInfinite<_>>();
-
-        let exchanger_runner = self.inner.exchanger.run();
-        let exchanger_runner = exchanger_runner.fuse();
-        pin_mut!(exchanger_runner);
-
-        select! {
-            _ = device_contexts_runner => panic!("device_contexts_runner yielded"),
-            _ = exchanger_runner => panic!("exchanger_runner yielded"),
+        Self {
+            runtime_devices_context,
         }
     }
 
-    pub fn close(self) -> HashMap<DeviceId, DeviceContext<'d>> {
-        *self.inner.into_owner()
+    pub async fn finalize(mut self) -> HashMap<DeviceId, DeviceHandler<'d>> {
+        // Cancel exchanger
+        self.runtime_devices_context
+            .exchanger_context
+            .abort()
+            .await
+            .unwrap_none();
+
+        // Cancel running devices
+        self.runtime_devices_context
+            .devices_run_scoped_spawn
+            .iter_mut()
+            .map(|scoped_spawn| scoped_spawn.abort())
+            .collect::<JoinAll<_>>()
+            .await
+            .into_iter()
+            .for_each(|abort_result| abort_result.unwrap_none());
+
+        // Finalize devices
+        self.runtime_devices_context
+            .as_owner()
+            .devices_handler
+            .values()
+            .map(|device_handler| {
+                ScopedSpawn::new(
+                    &self.runtime_devices_context.as_owner().runtime,
+                    device_handler.device().finalize(),
+                )
+            })
+            .collect::<JoinAll<_>>()
+            .await
+            .into_iter()
+            .for_each(|abort_result| abort_result.unwrap());
+
+        let runtime_devices_context = self.runtime_devices_context.into_owner();
+
+        // Shutdown runtime
+        // This is safe, because all join handles are awaited
+        runtime_devices_context.runtime.shutdown_background();
+
+        // Return devices
+        runtime_devices_context.devices_handler
     }
 }
 impl<'p> uri_cursor::Handler for Runner<'p> {
@@ -97,8 +167,13 @@ impl<'p> uri_cursor::Handler for Runner<'p> {
                 uri_cursor::UriCursor::Next("list", uri_cursor) => match **uri_cursor {
                     uri_cursor::UriCursor::Terminal => match *request.method() {
                         http::Method::GET => {
-                            let device_ids =
-                                self.inner.as_owner().keys().copied().collect::<Vec<_>>();
+                            let device_ids = self
+                                .runtime_devices_context
+                                .as_owner()
+                                .devices_handler
+                                .keys()
+                                .copied()
+                                .collect::<Vec<_>>();
                             async move { web::Response::ok_json(device_ids) }.boxed()
                         }
                         _ => async move { web::Response::error_405() }.boxed(),
@@ -110,7 +185,7 @@ impl<'p> uri_cursor::Handler for Runner<'p> {
                     uri_cursor::UriCursor::Terminal => match *request.method() {
                         http::Method::GET => {
                             let sse_stream = self
-                                .inner
+                                .runtime_devices_context
                                 .devices_gui_summary_sse_aggregated_bus
                                 .sse_stream();
                             async move { web::Response::ok_sse_stream(sse_stream) }.boxed()
@@ -127,7 +202,12 @@ impl<'p> uri_cursor::Handler for Runner<'p> {
                                 .boxed()
                         }
                     };
-                    let device_context_run_context = match self.inner.as_owner().get(&device_id) {
+                    let device_context_run_context = match self
+                        .runtime_devices_context
+                        .as_owner()
+                        .devices_handler
+                        .get(&device_id)
+                    {
                         Some(device_context_run_context) => device_context_run_context,
                         None => return async move { web::Response::error_404() }.boxed(),
                     };

@@ -4,13 +4,12 @@ pub mod soft;
 
 use crate::{
     signals,
-    util::{atomic_cell::AtomicCell, waker_stream},
+    util::waker_stream,
     web::{self, sse_aggregated, uri_cursor},
 };
 use async_trait::async_trait;
 use futures::future::{pending, BoxFuture, FutureExt};
 use maplit::hashmap;
-use owning_ref::OwningHandle;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::json;
 use std::{borrow::Cow, fmt};
@@ -36,31 +35,23 @@ pub trait Device: Send + Sync + fmt::Debug {
     async fn finalize(&self) {}
 }
 
-struct DeviceContextInner<'d> {
-    run_future: AtomicCell<BoxFuture<'d, !>>,
-}
-pub struct DeviceContext<'d> {
+pub struct DeviceHandler<'d> {
     name: String,
-    inner: OwningHandle<Box<dyn Device + 'd>, Box<DeviceContextInner<'d>>>,
+    device: Box<dyn Device + 'd>,
 }
-
-impl<'d> DeviceContext<'d> {
+impl<'d> DeviceHandler<'d> {
     pub fn new(
         name: String,
         device: Box<dyn Device + 'd>,
     ) -> Self {
-        let inner = OwningHandle::new_with_fn(device, |device_ptr| unsafe {
-            let run_future = AtomicCell::new((*device_ptr).run());
-            Box::new(DeviceContextInner { run_future })
-        });
-        Self { name, inner }
+        Self { name, device }
     }
 
     pub fn name(&self) -> &String {
         &self.name
     }
     fn device(&self) -> &(dyn Device + 'd) {
-        &**self.inner.as_owner()
+        &*self.device
     }
 
     pub fn gui_summary_waker(&self) -> sse_aggregated::Node {
@@ -70,20 +61,11 @@ impl<'d> DeviceContext<'d> {
         }
     }
 
-    // Could be called many times
-    pub async fn run(&self) -> ! {
-        let mut run_future = self.inner.run_future.lease();
-        (&mut *run_future).await
-    }
-    pub async fn finalize(&self) {
-        self.inner.as_owner().finalize().await;
-    }
-
     pub fn close(self) -> Box<dyn Device + 'd> {
-        self.inner.into_owner()
+        self.device
     }
 }
-impl<'d> uri_cursor::Handler for DeviceContext<'d> {
+impl<'d> uri_cursor::Handler for DeviceHandler<'d> {
     fn handle(
         &self,
         request: web::Request,
