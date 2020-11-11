@@ -115,18 +115,14 @@ async fn main_async() {
     let root_router = MapRouter::new(hashmap! {
         "devices-runner".to_owned() => &device_runner as &(dyn Handler + Sync)
     });
-
     let root_service = RootService::new(&root_router);
-
-    let server = server::serve("0.0.0.0:8080".parse().unwrap(), &root_service);
+    let server = server::Server::new("0.0.0.0:8080".parse().unwrap(), &root_service);
 
     futures::select! {
         _ = tokio::signal::ctrl_c().fuse() => {},
-        _ = server.fuse() => {
-            panic!("server yielded")
-        }
     }
 
+    server.finalize().await;
     device_runner.finalize().await;
 }
 
