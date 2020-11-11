@@ -7,7 +7,7 @@ publish = false
 default-run = "logicblocks-controller"
 
 [dependencies]
-anyhow = "1.0.33"
+anyhow = "1.0.34"
 array-init = "1.0.0"
 arrayvec = "0.5.2"
 async-trait = "0.1.41"
@@ -19,12 +19,12 @@ dialoguer = "0.7.1"
 digest_auth = "0.2.3"
 env_logger = "0.8.1"
 erased-serde = "0.3.12"
-futures = "0.3.7"
+futures = "0.3.8"
 hex = "0.4.2"
 http = "0.2.1"
 http-body = "0.3.1"
-hyper = { version = "0.13.8", features = ["stream"] }
-image = "0.23.10"
+hyper = { version = "0.13.9", features = ["stream"] }
+image = "0.23.11"
 indoc = "1.0.3"
 lazy_static = "1.4.0"
 log = { version = "0.4.11", features = ["release_max_level_info"] }
@@ -32,19 +32,19 @@ maplit = "1.0.2"
 owning_ref = "0.4.1"
 parking_lot = "0.11.0"
 percent-encoding = "2.1.0"
-regex = "1.4.1"
-reqwest = "0.10.8"
+regex = "1.4.2"
+reqwest = { version = "0.10.8", features = ["stream"] }
 rusqlite = { version = "0.24.1", features = ["bundled"] }
 scopeguard = "1.1.0"
 serde = { version = "1.0.117", features = ["derive"] }
 serde_json = "1.0.59"
-tokio = { version = "0.2.22", features = ["time", "process", "macros", "sync", "stream", "signal"] }
-url = "2.1.1"
-web-static-pack = "0.3.4"
+tokio = { version = "0.2.22", features = ["full"] }
+url = "2.2.0"
+web-static-pack = "0.4.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.8.3"
-libc = "0.2.79"
+libc = "0.2.80"
 libftdi1-sys = "1.0.0-alpha3"
 libusb-sys = "0.2.3"
 

@@ -1,103 +1,61 @@
-use anyhow::Error;
 use futures::{
-    future::{
-        abortable, AbortHandle, Abortable, Aborted, BoxFuture, FusedFuture, Future, FutureExt,
-    },
+    future::{abortable, AbortHandle, Aborted, BoxFuture, FusedFuture, Future, FutureExt},
     task::{Context, Poll},
 };
-use std::{marker::PhantomData, mem::transmute, pin::Pin, thread};
-
-pub struct ThreadedInfiniteToError {
-    abort_handle: AbortHandle,
-    join_handle: Option<thread::JoinHandle<()>>,
-}
-impl ThreadedInfiniteToError {
-    pub fn new<F>(
-        thread_name: String,
-        future: F,
-    ) -> Self
-    where
-        F: Future<Output = Error> + Send + 'static,
-    {
-        let (future_abortable, abort_handle) = abortable(future);
-
-        let join_handle = thread::Builder::new()
-            .name(thread_name)
-            .spawn(move || Self::thread_main(future_abortable))
-            .unwrap();
-
-        Self {
-            abort_handle,
-            join_handle: Some(join_handle),
-        }
-    }
-
-    fn thread_main<F>(future_abortable: Abortable<F>)
-    where
-        F: Future<Output = Error> + Send + 'static,
-    {
-        let mut runtime = tokio::runtime::Builder::new()
-            .basic_scheduler()
-            .enable_all()
-            .build()
-            .unwrap();
-
-        match runtime.block_on(future_abortable) {
-            Ok(error) => panic!("future exited with error: {}", error),
-            Err(Aborted) => (),
-        };
-    }
-}
-impl Drop for ThreadedInfiniteToError {
-    fn drop(&mut self) {
-        self.abort_handle.abort();
-        let _ = self.join_handle.take().unwrap().join();
-    }
-}
+use std::{marker::PhantomData, mem::transmute, pin::Pin};
+use tokio::{runtime::Runtime, task::JoinHandle};
 
 struct ScopedSpawnInner<R>
 where
     R: Send + 'static,
 {
     abort_handle: AbortHandle,
-    join_handle: tokio::task::JoinHandle<Result<R, Aborted>>,
+    join_handle: JoinHandle<Result<R, Aborted>>,
 }
-pub struct ScopedSpawn<'a, R>
+pub struct ScopedSpawn<'r, 'a, R>
 where
     R: Send + 'static,
 {
+    runtime: &'r Runtime,
     inner: Option<ScopedSpawnInner<R>>,
-    phantom_data: PhantomData<&'a R>,
+    phantom_future: PhantomData<&'a R>,
 }
-impl<'a, R> ScopedSpawn<'a, R>
+impl<'r, 'a, R> ScopedSpawn<'r, 'a, R>
 where
     R: Send + 'static,
 {
-    pub fn new(future: BoxFuture<'a, R>) -> Self {
+    pub fn new(
+        runtime: &'r Runtime,
+        future: BoxFuture<'a, R>,
+    ) -> Self {
         let future = unsafe { transmute::<BoxFuture<'a, R>, BoxFuture<'static, R>>(future) };
         let (abortable, abort_handle) = abortable(future);
-        let join_handle = tokio::task::spawn(abortable);
+        let join_handle = runtime.spawn(abortable);
         let inner = ScopedSpawnInner {
             abort_handle,
             join_handle,
         };
         Self {
+            runtime,
             inner: Some(inner),
-            phantom_data: PhantomData,
+            phantom_future: PhantomData,
         }
     }
-    pub async fn finalize(&mut self) -> Option<R> {
+    pub async fn abort(&mut self) -> Option<R> {
         let inner = self.inner.as_mut().unwrap();
         inner.abort_handle.abort();
+
         let result = match (&mut inner.join_handle).await.unwrap() {
             Ok(result) => Some(result),
             Err(Aborted) => None,
         };
+
         self.inner.take().unwrap();
+
         result
     }
 }
-impl<'a, R> Future for ScopedSpawn<'a, R>
+impl<'r, 'a, R> Future for ScopedSpawn<'r, 'a, R>
 where
     R: Send + 'static,
 {
@@ -123,7 +81,7 @@ where
         result
     }
 }
-impl<'a, R> FusedFuture for ScopedSpawn<'a, R>
+impl<'r, 'a, R> FusedFuture for ScopedSpawn<'r, 'a, R>
 where
     R: Send + 'static,
 {
@@ -131,13 +89,13 @@ where
         self.inner.is_none()
     }
 }
-impl<'a, R> Drop for ScopedSpawn<'a, R>
+impl<'r, 'a, R> Drop for ScopedSpawn<'r, 'a, R>
 where
     R: Send + 'static,
 {
     fn drop(&mut self) {
         if self.inner.is_some() {
-            panic!("ScopedSpawn should be finalize()d before dropping!");
+            panic!("ScopedSpawn should be aborted() before dropping!");
         }
     }
 }
