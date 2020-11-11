@@ -1,4 +1,3 @@
-pub mod hyper_body_variant;
 pub mod root_service;
 pub mod server;
 pub mod sse;
@@ -11,20 +10,20 @@ use futures::{
     future::BoxFuture,
     stream::{Stream, StreamExt},
 };
-use http::{header, HeaderMap, HeaderValue, Method, StatusCode, Uri};
-use hyper_body_variant::HttpBodyVariant;
+use http::{header, request::Parts, HeaderMap, HeaderValue, Method, StatusCode, Uri};
+use hyper::{Body, Response as HyperResponse};
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, ops::Deref};
 
 pub struct Request {
     remote_address: SocketAddr,
-    http_parts: http::request::Parts,
+    http_parts: Parts,
     body: Bytes,
 }
 impl Request {
     pub fn new(
         remote_address: SocketAddr,
-        http_parts: http::request::Parts,
+        http_parts: Parts,
         body: Bytes,
     ) -> Self {
         Self {
@@ -74,101 +73,92 @@ impl Request {
 }
 
 pub struct Response {
-    hyper_response: hyper::Response<HttpBodyVariant>,
+    hyper_response: HyperResponse<Body>,
 }
 impl Response {
-    pub fn status_code(&self) -> StatusCode {
-        self.hyper_response.status()
+    pub fn from_hyper_response(hyper_response: HyperResponse<Body>) -> Self {
+        Self { hyper_response }
     }
-    pub fn into_hyper_response(self) -> hyper::Response<HttpBodyVariant> {
+    pub fn into_hyper_response(self) -> HyperResponse<Body> {
         self.hyper_response
     }
 
-    pub fn wrap_web_static_pack_response(
-        response: hyper::Response<web_static_pack::hyper_loader::StaticBody>
-    ) -> Response {
-        let (parts, body) = response.into_parts();
-        Response {
-            hyper_response: hyper::Response::from_parts(parts, HttpBodyVariant::from(body)),
-        }
+    pub fn status_code(&self) -> StatusCode {
+        self.hyper_response.status()
     }
 
-    pub fn ok_empty() -> Response {
-        let hyper_response = hyper::Response::builder()
-            .body(HttpBodyVariant::from(hyper::Body::default()))
-            .unwrap();
+    pub fn ok_empty() -> Self {
+        let hyper_response = HyperResponse::builder().body(Body::default()).unwrap();
 
         Response { hyper_response }
     }
     pub fn ok_content_type_body<B>(
-        body: B,
         content_type: &str,
-    ) -> Response
+        body: B,
+    ) -> Self
     where
-        B: Into<hyper::Body>,
+        B: Into<Body>,
     {
-        let hyper_response = hyper::Response::builder()
+        let hyper_response = HyperResponse::builder()
             .header(header::CONTENT_TYPE, content_type)
-            .body(HttpBodyVariant::from(body.into()))
+            .body(body.into())
             .unwrap();
 
         Response { hyper_response }
     }
-    pub fn ok_json<T: Serialize>(value: T) -> Response {
+    pub fn ok_json<T: Serialize>(value: T) -> Self {
         // FIXME: This may fail if serialization fails
         let body = serde_json::to_vec(&value).unwrap();
-        let hyper_response = hyper::Response::builder()
+        let hyper_response = HyperResponse::builder()
             .header(header::CONTENT_TYPE, "application/json")
-            .body(HttpBodyVariant::from(hyper::Body::from(body)))
+            .body(Body::from(body))
             .unwrap();
 
         Response { hyper_response }
     }
     pub fn ok_sse_stream<S: Stream<Item = impl Deref<Target = sse::Event>> + Send + 'static>(
         sse_stream: S
-    ) -> Response {
+    ) -> Self {
         let hyper_body =
-            hyper::Body::wrap_stream(sse_stream.map(|event| Ok::<_, Error>(event.serialize())));
-        let hyper_response = hyper::Response::builder()
+            Body::wrap_stream(sse_stream.map(|event| Ok::<_, Error>(event.to_payload())));
+        let hyper_response = HyperResponse::builder()
             .header(header::CONTENT_TYPE, "text/event-stream")
-            .body(HttpBodyVariant::from(hyper_body))
+            .body(hyper_body)
             .unwrap();
         Response { hyper_response }
     }
 
-    pub fn redirect_302(target: &str) -> Response {
-        let hyper_response = hyper::Response::builder()
+    pub fn redirect_302(target: &str) -> Self {
+        let hyper_response = HyperResponse::builder()
             .status(StatusCode::FOUND)
             .header(header::LOCATION, target)
-            .body(HttpBodyVariant::from(hyper::Body::default()))
+            .body(Body::default())
             .unwrap();
         Response { hyper_response }
     }
 
-    pub fn error(status_code: StatusCode) -> Response {
-        let hyper_response = hyper::Response::builder()
+    pub fn error(status_code: StatusCode) -> Self {
+        let hyper_response = HyperResponse::builder()
             .status(status_code)
-            .body(HttpBodyVariant::from(hyper::Body::default()))
+            .body(Body::default())
             .unwrap();
 
         Response { hyper_response }
     }
-    pub fn error_400_from_error<T: Into<Error>>(error: T) -> Response {
-        let hyper_response = hyper::Response::builder()
+    pub fn error_400_from_error<T: Into<Error>>(error: T) -> Self {
+        let hyper_response = HyperResponse::builder()
             .status(StatusCode::BAD_REQUEST)
-            .body(HttpBodyVariant::from(hyper::Body::from(
-                error.into().to_string(),
-            )))
+            .body(Body::from(error.into().to_string()))
             .unwrap();
         Response { hyper_response }
     }
-    pub fn error_404() -> Response {
+    pub fn error_404() -> Self {
         Self::error(StatusCode::NOT_FOUND)
     }
-    pub fn error_405() -> Response {
+    pub fn error_405() -> Self {
         Self::error(StatusCode::METHOD_NOT_ALLOWED)
     }
-    pub fn error_500() -> Response {
+    pub fn error_500() -> Self {
         Self::error(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }

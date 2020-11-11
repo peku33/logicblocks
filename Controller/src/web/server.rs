@@ -1,4 +1,4 @@
-use super::{hyper_body_variant::HttpBodyVariant, Handler, Request, Response};
+use super::{Handler, Request, Response};
 use hyper::{
     server::conn::AddrStream,
     service::{make_service_fn, service_fn},
@@ -10,7 +10,7 @@ async fn respond(
     handler: &'static (dyn Handler + Sync),
     remote_address: SocketAddr,
     hyper_request: HyperRequest<Body>,
-) -> HyperResponse<HttpBodyVariant> {
+) -> HyperResponse<Body> {
     let (parts, body) = hyper_request.into_parts();
     let body = match hyper::body::to_bytes(body).await {
         Ok(body) => body,

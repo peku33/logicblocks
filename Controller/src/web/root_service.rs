@@ -49,7 +49,7 @@ impl<'a> RootService<'a> {
                 &Uri::from_static("/index.html"),
                 headers,
             ) {
-                Ok(response) => return Response::wrap_web_static_pack_response(response),
+                Ok(response) => return Response::from_hyper_response(response),
                 Err(error) => return Response::error(error.as_http_status_code()),
             };
         }
@@ -59,7 +59,7 @@ impl<'a> RootService<'a> {
             .gui_responder
             .parts_respond_or_error(method, uri, headers)
         {
-            Ok(response) => return Response::wrap_web_static_pack_response(response),
+            Ok(response) => return Response::from_hyper_response(response),
             Err(error) => match error {
                 ResponderError::LoaderPathNotFound => (),
                 _ => return Response::error(error.as_http_status_code()),
