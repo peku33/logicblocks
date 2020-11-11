@@ -6,7 +6,7 @@ pub struct Event {
     pub data: Cow<'static, str>,
 }
 impl Event {
-    pub fn serialize(&self) -> String {
+    pub fn to_payload(&self) -> String {
         let mut buffer = String::new();
 
         if let Some(id) = self.id.as_ref() {
