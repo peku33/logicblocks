@@ -12,7 +12,7 @@ array-init = "1.0.0"
 arrayvec = "0.5.2"
 async-trait = "0.1.41"
 bytes = "0.5.6"
-chrono = "0.4.19"
+chrono = { version = "0.4.19", features = ["alloc", "std", "clock", "serde"] }
 crc_all = "0.2.0"
 crossbeam = "0.8.0"
 dialoguer = "0.7.1"
@@ -36,11 +36,13 @@ regex = "1.4.2"
 reqwest = { version = "0.10.8", features = ["stream"] }
 rusqlite = { version = "0.24.1", features = ["bundled"] }
 scopeguard = "1.1.0"
+semver = "0.11.0"
 serde = { version = "1.0.117", features = ["derive"] }
 serde_json = "1.0.59"
 tokio = { version = "0.2.22", features = ["full"] }
 url = "2.2.0"
 web-static-pack = "0.4.0"
+xmltree = "0.10.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.8.3"
