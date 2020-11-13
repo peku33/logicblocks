@@ -86,7 +86,7 @@ impl Driver {
                     Some(timeout_left_next) => {
                         timeout_left = timeout_left_next;
                     }
-                    None => bail!("Timeout expired"),
+                    None => bail!("timeout expired"),
                 }
                 continue;
             }
@@ -151,7 +151,7 @@ impl Driver {
                     Some(timeout_left_next) => {
                         timeout_left = timeout_left_next;
                     }
-                    None => bail!("Timeout expired"),
+                    None => bail!("timeout expired"),
                 }
                 continue;
             }

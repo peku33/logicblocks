@@ -1,17 +1,15 @@
 pub mod fs;
 pub mod sqlite;
+pub mod surveillance;
 
 use parking_lot::ReentrantMutex;
-use std::any::TypeId;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::mem::transmute;
-use std::ops::Deref;
-use std::raw::TraitObject;
+use std::{
+    any::TypeId, cell::RefCell, collections::HashMap, mem::transmute, ops::Deref, raw::TraitObject,
+};
 
 pub trait Module: Sync + Send + 'static {}
 pub trait ModuleFactory: Module {
-    fn spawn(context: &Context) -> Self;
+    fn spawn(manager: &Manager) -> Self;
 }
 
 pub struct Handle<T>
@@ -19,15 +17,26 @@ where
     T: Module,
 {
     module: &'static T,
-    context: &'static Context,
+    manager: &'static Manager,
 }
-// TODO: Add Clone
+impl<T> Clone for Handle<T>
+where
+    T: Module,
+{
+    fn clone(&self) -> Self {
+        self.manager.inc::<T>();
+        Self {
+            module: self.module,
+            manager: self.manager,
+        }
+    }
+}
 impl<T> Drop for Handle<T>
 where
     T: Module,
 {
     fn drop(&mut self) {
-        self.context.dec::<T>();
+        self.manager.dec::<T>();
     }
 }
 impl<T> Deref for Handle<T>
@@ -40,7 +49,7 @@ where
     }
 }
 
-enum ContextModulesModule {
+enum ManagerModulesModule {
     Initializing,
     Initialized {
         reference_count: usize,
@@ -48,13 +57,13 @@ enum ContextModulesModule {
     },
 }
 
-type ModulesMap = HashMap<TypeId, ContextModulesModule>;
+type ModulesMap = HashMap<TypeId, ManagerModulesModule>;
 type ModulesMapRefCell = RefCell<ModulesMap>;
 
-pub struct Context {
+pub struct Manager {
     modules: ReentrantMutex<ModulesMapRefCell>,
 }
-impl Context {
+impl Manager {
     pub fn new() -> Self {
         Self {
             modules: ReentrantMutex::new(ModulesMapRefCell::new(HashMap::new())),
@@ -75,29 +84,29 @@ impl Context {
         let handle = {
             let mut modules = modules.borrow_mut();
 
-            // Get current ContextModulesModule or initialize with Initializing
+            // Get current ManagerModulesModule or initialize with Initializing
             // If at this point module was registered with Initializing step, we have a loop in resolution
-            let context_modules_module = modules
+            let manager_modules_module = modules
                 .entry(type_id)
-                .and_modify(|context_modules_module| {
-                    if let ContextModulesModule::Initializing = context_modules_module {
-                        panic!("Deadlock found while resolving {:?}", type_id);
+                .and_modify(|manager_modules_module| {
+                    if let ManagerModulesModule::Initializing = manager_modules_module {
+                        panic!("deadlock found while resolving {:?}", type_id);
                     }
                 })
-                .or_insert_with(|| ContextModulesModule::Initializing);
+                .or_insert_with(|| ManagerModulesModule::Initializing);
 
             // Initializing - we have just began initialization (this was checked by .and_notify)
             // Initialized - increase reference count and construct, return
-            match context_modules_module {
+            match manager_modules_module {
                 // The module has just been put into initializing state, it will be completed in second section
-                ContextModulesModule::Initializing => None,
+                ManagerModulesModule::Initializing => None,
                 // The module is already initialized, return the handle
-                ContextModulesModule::Initialized {
+                ManagerModulesModule::Initialized {
                     reference_count,
                     trait_object,
                 } => {
                     // Convert module to 'static
-                    // We can assume this is safe, as Context (owner) always outlives all Handles
+                    // We can assume this is safe, as Manager (owner) always outlives all Handles
                     // This is also checked in Drop
                     let module_static = unsafe {
                         &*(transmute::<_, TraitObject>(&**trait_object).data as *const T)
@@ -106,7 +115,7 @@ impl Context {
                     // Build Handle
                     let handle = Handle {
                         module: module_static,
-                        context: unsafe { transmute(self) },
+                        manager: unsafe { transmute(self) },
                     };
 
                     // Since we are returning new handle to existing item, increase reference count
@@ -135,30 +144,30 @@ impl Context {
             let mut modules = modules.borrow_mut();
 
             // Convert module to 'static
-            // We can assume this is safe, as Context (owner) always outlives all Handles
+            // We can assume this is safe, as Manager (owner) always outlives all Handles
             // This is also checked in Drop
             let module_static = unsafe { transmute(&*module) };
 
             // Build Handle
             let handle = Handle {
                 module: module_static,
-                context: unsafe { transmute(self) },
+                manager: unsafe { transmute(self) },
             };
 
             // Replace Initializing with Initialized
             // The handle above is the 1st instance, so we set reference_count to 1
-            let context_modules_module_previous = modules.insert(
+            let manager_modules_module_previous = modules.insert(
                 type_id,
-                ContextModulesModule::Initialized {
+                ManagerModulesModule::Initialized {
                     reference_count: 1,
                     trait_object: module,
                 },
             );
 
             // Make sure that previous state was correct
-            match context_modules_module_previous {
-                Some(ContextModulesModule::Initializing) => (),
-                _ => panic!("Duplicated / missing context_modules_module_previous?"),
+            match manager_modules_module_previous {
+                Some(ManagerModulesModule::Initializing) => (),
+                _ => panic!("duplicated / missing manager_modules_module_previous?"),
             };
 
             handle
@@ -166,6 +175,27 @@ impl Context {
 
         // Return the final handle
         handle
+    }
+
+    fn inc<T>(&self)
+    where
+        T: Module,
+    {
+        let type_id = TypeId::of::<T>();
+
+        let modules = self.modules.lock();
+        {
+            let mut modules = modules.borrow_mut();
+
+            match modules.get_mut(&type_id) {
+                Some(ManagerModulesModule::Initialized {
+                    reference_count, ..
+                }) => {
+                    *reference_count += 1;
+                }
+                _ => panic!("calling inc() on missing / initializing?"),
+            }
+        }
     }
 
     fn dec<T>(&self)
@@ -187,7 +217,7 @@ impl Context {
 
                 // Check if object should be removed
                 if match modules.get_mut(&type_id) {
-                    Some(ContextModulesModule::Initialized {
+                    Some(ManagerModulesModule::Initialized {
                         reference_count, ..
                     }) => {
                         *reference_count -= 1;
@@ -195,15 +225,15 @@ impl Context {
                         // Return true if remaining reference count is zero
                         *reference_count == 0
                     }
-                    _ => panic!("Calling dec() on missing / initializing?"),
+                    _ => panic!("calling dec() on missing / initializing?"),
                 } {
                     // Yes, so remove it, returning object in Some(...)
                     Some(match modules.remove(&type_id) {
-                        Some(ContextModulesModule::Initialized {
+                        Some(ManagerModulesModule::Initialized {
                             reference_count: 0,
                             trait_object,
                         }) => trait_object,
-                        _ => panic!("Calling dec() on missing / initializing / non-zero?"),
+                        _ => panic!("calling dec() on missing / initializing / non-zero?"),
                     })
                 } else {
                     // No, return None
@@ -216,7 +246,7 @@ impl Context {
         drop(trait_object);
     }
 }
-impl Drop for Context {
+impl Drop for Manager {
     fn drop(&mut self) {
         // Reentrant lock
         let modules = self.modules.lock();
@@ -225,7 +255,7 @@ impl Drop for Context {
         {
             let modules = modules.borrow_mut();
             if !modules.is_empty() {
-                panic!("Not all modules were released before dropping context?")
+                panic!("not all modules were released before dropping context?")
             }
         }
     }

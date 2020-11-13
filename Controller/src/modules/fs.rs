@@ -1,4 +1,4 @@
-use super::{Context, Module, ModuleFactory};
+use super::{Manager, Module, ModuleFactory};
 use std::{
     env::current_dir,
     fs::create_dir_all,
@@ -51,7 +51,7 @@ impl Fs {
 }
 impl Module for Fs {}
 impl ModuleFactory for Fs {
-    fn spawn(_context: &Context) -> Self {
+    fn spawn(_manager: &Manager) -> Self {
         Self::new()
     }
 }

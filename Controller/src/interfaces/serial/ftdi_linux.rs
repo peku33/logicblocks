@@ -335,7 +335,7 @@ fn make_ftdi_bits_type(bits: &Bits) -> ftdi_bits_type {
         Bits::Bits7 => ftdi_bits_type::BITS_7,
         Bits::Bits8 => ftdi_bits_type::BITS_8,
         #[allow(unreachable_patterns)]
-        _ => panic!("Not supported Bits: {:?}", bits),
+        _ => panic!("not supported Bits: {:?}", bits),
     }
 }
 fn make_ftdi_stopbits_type(stop_bits: &StopBits) -> ftdi_stopbits_type {
@@ -344,7 +344,7 @@ fn make_ftdi_stopbits_type(stop_bits: &StopBits) -> ftdi_stopbits_type {
         StopBits::StopBits15 => ftdi_stopbits_type::STOP_BIT_15,
         StopBits::StopBits2 => ftdi_stopbits_type::STOP_BIT_2,
         #[allow(unreachable_patterns)]
-        _ => panic!("Not supported StopBits: {:?}", stop_bits),
+        _ => panic!("not supported StopBits: {:?}", stop_bits),
     }
 }
 fn make_ftdi_parity_type(parity: &Parity) -> ftdi_parity_type {
@@ -355,6 +355,6 @@ fn make_ftdi_parity_type(parity: &Parity) -> ftdi_parity_type {
         Parity::Mark => ftdi_parity_type::MARK,
         Parity::Space => ftdi_parity_type::SPACE,
         #[allow(unreachable_patterns)]
-        _ => panic!("Not supported Parity: {:?}", parity),
+        _ => panic!("not supported Parity: {:?}", parity),
     }
 }

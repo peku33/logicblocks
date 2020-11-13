@@ -17,7 +17,7 @@ where
 {
     fn new(parent: &'a AtomicCell<T>) -> Self {
         if parent.borrowed.swap(true, Ordering::Relaxed) {
-            panic!("Already borrowed");
+            panic!("already borrowed");
         }
         Self { parent }
     }
@@ -57,7 +57,7 @@ where
 {
     fn drop(&mut self) {
         if !self.parent.borrowed.swap(false, Ordering::Relaxed) {
-            panic!("Not borrowed?");
+            panic!("not borrowed?");
         }
     }
 }

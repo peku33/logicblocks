@@ -348,7 +348,7 @@ impl Client {
 
         ensure!(
             Self::model_supported(&model).context("model_supported")?,
-            "This model ({}) is not supported",
+            "this model ({}) is not supported",
             model
         );
 
@@ -364,7 +364,7 @@ impl Client {
 
         ensure!(
             Self::firmware_version_supported(&firmware_version),
-            "This firmware version ({}) is not supported",
+            "this firmware version ({}) is not supported",
             &firmware_version
         );
 
@@ -1121,7 +1121,7 @@ impl<'c> Configurator<'c> {
                 )),
             )
             .await
-            .context("Factory reset")?
+            .context("factory reset")?
             .reboot_required;
         ensure!(!reboot_required, "reboot is not supported here");
         Ok(())

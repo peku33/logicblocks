@@ -1,4 +1,4 @@
-use super::{fs::Fs, Context, Module, ModuleFactory};
+use super::{fs::Fs, Manager, Module, ModuleFactory};
 use crate::util::sqlite_async::SQLiteAsync;
 use anyhow::Error;
 use futures::future::Future;
@@ -24,7 +24,7 @@ impl SQLite {
         sqlite_connection
             .pragma_update(None, "synchronous", &"NORMAL")
             .unwrap();
-        let sqlite_async = SQLiteAsync::new(sqlite_connection, "SQLite (modules)".to_owned());
+        let sqlite_async = SQLiteAsync::new(sqlite_connection, "SQLite.modules".to_owned());
         Self { sqlite_async }
     }
 
@@ -52,8 +52,8 @@ impl SQLite {
 }
 impl Module for SQLite {}
 impl ModuleFactory for SQLite {
-    fn spawn(context: &Context) -> Self {
-        let fs = context.get::<Fs>();
+    fn spawn(manager: &Manager) -> Self {
+        let fs = manager.get::<Fs>();
         Self::new(&fs)
     }
 }
