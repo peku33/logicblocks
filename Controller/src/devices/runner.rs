@@ -16,6 +16,7 @@ use futures::{
 };
 use owning_ref::OwningHandle;
 use std::collections::HashMap;
+use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 
 struct RunnerRuntimeDevicesContext<'r, 'd> {
     devices_run_scoped_spawn: Box<[ScopedSpawn<'r, 'd, !>]>,
@@ -24,7 +25,7 @@ struct RunnerRuntimeDevicesContext<'r, 'd> {
 }
 
 struct RunnerRuntimeDevices<'d> {
-    runtime: tokio::runtime::Runtime,
+    runtime: Runtime,
     devices_handler: HashMap<DeviceId, DeviceHandler<'d>>,
 }
 
@@ -37,7 +38,7 @@ impl<'d> Runner<'d> {
         devices_handler: HashMap<DeviceId, DeviceHandler<'d>>,
         connections_requested: ConnectionsRequested,
     ) -> Self {
-        let runtime = tokio::runtime::Builder::new()
+        let runtime = RuntimeBuilder::new()
             .enable_all()
             .threaded_scheduler()
             .thread_name("Runner.devices")

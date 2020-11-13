@@ -77,9 +77,6 @@ pub enum DeviceState {
     Running,
 }
 
-const POLL_DELAY_MAX: Duration = Duration::from_secs(5);
-const ERROR_RESTART_DELAY: Duration = Duration::from_secs(10);
-
 #[derive(Debug)]
 pub struct Runner<'m, D: Device> {
     driver: Driver<'m>,
@@ -93,6 +90,9 @@ pub struct Runner<'m, D: Device> {
     gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl<'m, D: Device> Runner<'m, D> {
+    const POLL_DELAY_MAX: Duration = Duration::from_secs(5);
+    const ERROR_RESTART_DELAY: Duration = Duration::from_secs(10);
+
     pub fn new(
         master: &'m Master,
         address_serial: AddressSerial,
@@ -177,7 +177,7 @@ impl<'m, D: Device> Runner<'m, D> {
             }
 
             // Delay or wait for poll
-            let mut poll_delay = POLL_DELAY_MAX;
+            let mut poll_delay = Self::POLL_DELAY_MAX;
             if let Some(device_poll_delay) = self.device.poll_delay() {
                 poll_delay = min(poll_delay, device_poll_delay);
             }
@@ -207,7 +207,7 @@ impl<'m, D: Device> Runner<'m, D> {
             self.gui_summary_waker.wake();
             log::error!("device {} failed: {:?}", self.driver.address(), error);
 
-            tokio::time::delay_for(ERROR_RESTART_DELAY).await;
+            tokio::time::delay_for(Self::ERROR_RESTART_DELAY).await;
         }
     }
 
