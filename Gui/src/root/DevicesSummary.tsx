@@ -1,7 +1,7 @@
 import Colors from "components/common/Colors";
 import { getJson } from "lib/Api";
 import React, { useState } from "react";
-import { urlBuild } from "services/LogicDevicesRunner";
+import { endpointBuild } from "services/LogicDevicesRunner";
 import styled from "styled-components";
 import useAsyncEffect from "use-async-effect";
 import DeviceSummary from "./DeviceSummary";
@@ -31,7 +31,7 @@ function useDeviceIds(): number[] | undefined {
 
   useAsyncEffect(
     async (isMounted) => {
-      const deviceIds = await getJson<number[]>(urlBuild("/devices/list"));
+      const deviceIds = await getJson<number[]>(endpointBuild("/devices/list"));
       const deviceIdsSorted = deviceIds.sort((a, b) => a - b);
       if (!isMounted) return;
       setDeviceIds(deviceIdsSorted);
@@ -47,7 +47,7 @@ function useDeviceIds(): number[] | undefined {
 
 const DevicesList = styled.div``;
 const DevicesListItem = styled.div`
-  padding: 0.25rem;
+  padding: 0.5rem;
   border-bottom: solid 1px ${Colors.GREY_LIGHTEST};
   &:last-child {
     border-bottom: none;
