@@ -1,4 +1,6 @@
-export default {
+const Colors = {
+  WHITE: "white",
+
   GREY_LIGHTEST: "#CFCFCF",
   GREY_LIGHT: "#BEBEBE",
   GREY: "#ACACAC",
@@ -11,3 +13,4 @@ export default {
   GREEN: "#A0CFA2",
   BLUE: "#71BEE7",
 };
+export default Colors;

@@ -3,7 +3,7 @@ import MediaQueries from "components/common/MediaQueries";
 import { getSummaryComponent } from "components/devices/Factory";
 import { getJson } from "lib/Api";
 import React, { useState } from "react";
-import { urlBuild } from "services/LogicDevicesRunner";
+import { endpointBuild } from "services/LogicDevicesRunner";
 import styled from "styled-components";
 import useAsyncEffect from "use-async-effect";
 
@@ -47,7 +47,7 @@ function useDeviceContext(deviceId: number): DeviceData | undefined {
 
   useAsyncEffect(
     async (isMounted) => {
-      const deviceData = await getJson<DeviceData>(urlBuild(`/devices/${deviceId}`));
+      const deviceData = await getJson<DeviceData>(endpointBuild(`/devices/${deviceId}`));
       if (!isMounted) return;
       setDeviceData(deviceData);
     },
@@ -68,7 +68,7 @@ const Wrapper = styled.div`
 
   @media ${MediaQueries.COMPUTER_AT_LEAST} {
     grid-template-columns: 1fr 2fr;
-    grid-gap: 1rem;
+    grid-gap: 0.5rem;
   }
 `;
 const DeviceDetails = styled.div``;
@@ -88,7 +88,7 @@ const DeviceComponentWrapper = styled.div`
     border-top: solid 1px ${Colors.GREY_LIGHTEST};
   }
   @media ${MediaQueries.COMPUTER_ONLY} {
-    padding-left: 1rem;
+    padding-left: 0.5rem;
     border-left: solid 1px ${Colors.GREY_LIGHTEST};
   }
 `;

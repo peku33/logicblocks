@@ -1,3 +1,4 @@
+pub mod hikvision;
 pub mod houseblocks;
 pub mod runner;
 pub mod soft;

@@ -1,4 +1,4 @@
-import { Chip, ChipState } from "components/common/Chips";
+import { Chip, ChipType } from "components/common/Chips";
 import React from "react";
 import styled from "styled-components";
 
@@ -15,7 +15,7 @@ const Summary: React.FC<{
 
   return (
     <Wrapper>
-      <Chip chipState={deviceStateToChipState(state?.device_state)}>
+      <Chip type={deviceStateToChipState(state?.device_state)} enabled={true}>
         {state !== undefined ? state.device_state : "Unknown"}
       </Chip>
     </Wrapper>
@@ -28,15 +28,15 @@ const Wrapper = styled.div`
   display: flex;
 `;
 
-function deviceStateToChipState(deviceState: DeviceState | undefined): ChipState {
+function deviceStateToChipState(deviceState: DeviceState | undefined): ChipType {
   switch (deviceState) {
     case undefined:
-      return ChipState.UNDEFINED;
+      return ChipType.INFO;
     case "Error":
-      return ChipState.ERROR;
+      return ChipType.ERROR;
     case "Initializing":
-      return ChipState.WARNING;
+      return ChipType.WARNING;
     case "Running":
-      return ChipState.OK;
+      return ChipType.OK;
   }
 }

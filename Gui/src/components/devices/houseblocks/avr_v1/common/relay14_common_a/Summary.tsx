@@ -1,4 +1,4 @@
-import { Chip, ChipState } from "components/common/Chips";
+import { Chip, ChipType } from "components/common/Chips";
 import MediaQueries from "components/common/MediaQueries";
 import React from "react";
 import styled from "styled-components";
@@ -17,7 +17,7 @@ const Summary: React.FC<{
   return (
     <RelaysGrid>
       {Array.from(Array(OUTPUT_COUNT).keys()).map((index) => (
-        <Chip key={index} chipState={relayStateToChipState(state?.values[index])}>
+        <Chip key={index} type={ChipType.INFO} enabled={state?.values[index] || false}>
           {(index + 1).toString().padStart(2, "0")}
         </Chip>
       ))}
@@ -37,13 +37,3 @@ const RelaysGrid = styled.div`
     grid-template-columns: repeat(14, 1fr);
   }
 `;
-function relayStateToChipState(value: boolean | undefined): ChipState {
-  switch (value) {
-    case undefined:
-      return ChipState.UNDEFINED;
-    case false:
-      return ChipState.DISABLED;
-    case true:
-      return ChipState.ENABLED;
-  }
-}

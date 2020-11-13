@@ -1,5 +1,5 @@
 use super::Base;
-use crate::datatypes::temperature::Temperature;
+use crate::datatypes::{ipc_rtsp_url::IpcRtspUrl, temperature::Temperature};
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt;
 
@@ -10,3 +10,6 @@ impl Value for Option<bool> {}
 
 impl Value for Temperature {}
 impl Value for Option<Temperature> {}
+
+impl Value for IpcRtspUrl {}
+impl Value for Option<IpcRtspUrl> {}
