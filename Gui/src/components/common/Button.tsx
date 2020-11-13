@@ -20,12 +20,32 @@ export const Button = styled.div<{
     background-color: ${(props): string => (props.active ? Colors.GREEN : Colors.GREY_DARK)};
   }
 `;
+export const ButtonLink = styled.a`
+  display: inline-block;
+  padding: 0.5rem 1rem;
+
+  background-color: ${Colors.GREY};
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+
+  @media ${MediaQueries.COMPUTER_AT_LEAST} {
+    padding: 1rem 2rem;
+  }
+
+  :hover {
+    background-color: ${Colors.GREY_DARK};
+  }
+`;
+
 export const ButtonGroup = styled.div`
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: max-content;
 
-  > ${Button} {
+  & > ${Button}, & > ${ButtonLink} {
     :first-child {
       border-radius: 0.25rem 0 0 0.25rem;
     }
