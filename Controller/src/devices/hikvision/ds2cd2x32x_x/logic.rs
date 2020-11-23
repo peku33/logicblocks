@@ -1,4 +1,4 @@
-use super::hardware;
+use super::hardware::{api, configurator, event_stream};
 use crate::{
     datatypes::ipc_rtsp_url::IpcRtspUrl,
     devices::{self, soft::surveillance::ipc::snapshot_device_inner, GuiSummaryProvider},
@@ -30,7 +30,7 @@ const SNAPSHOT_INTERVAL: Duration = Duration::from_secs(60);
 #[derive(Debug)]
 pub enum HardwareConfiguration {
     Full {
-        hardware_configuration: hardware::Configuration,
+        hardware_configuration: configurator::Configuration,
     },
     Skip {
         shared_user_login: String,
@@ -60,14 +60,14 @@ pub struct Events {
     field_detection: bool,
 }
 impl Events {
-    pub fn from_hardware_events(hardware_events: &hardware::Events) -> Self {
+    pub fn from_event_stream_events(hardware_events: &event_stream::Events) -> Self {
         Self {
-            camera_failure: hardware_events.contains(&hardware::Event::CameraFailure),
-            video_loss: hardware_events.contains(&hardware::Event::VideoLoss),
-            tampering_detection: hardware_events.contains(&hardware::Event::TamperingDetection),
-            motion_detection: hardware_events.contains(&hardware::Event::MotionDetection),
-            line_detection: hardware_events.contains(&hardware::Event::LineDetection),
-            field_detection: hardware_events.contains(&hardware::Event::FieldDetection),
+            camera_failure: hardware_events.contains(&event_stream::Event::CameraFailure),
+            video_loss: hardware_events.contains(&event_stream::Event::VideoLoss),
+            tampering_detection: hardware_events.contains(&event_stream::Event::TamperingDetection),
+            motion_detection: hardware_events.contains(&event_stream::Event::MotionDetection),
+            line_detection: hardware_events.contains(&event_stream::Event::LineDetection),
+            field_detection: hardware_events.contains(&event_stream::Event::FieldDetection),
         }
     }
 }
@@ -195,13 +195,13 @@ impl Device {
         self.gui_summary_waker.wake();
 
         // Build client
-        let client = hardware::Client::new(
+        let api = api::Api::new(
             self.configuration.host.clone(),
             self.configuration.admin_password.clone(),
         );
 
         // Check device
-        if let Err(error) = client
+        if let Err(error) = api
             .validate_basic_device_info()
             .await
             .context("validate_basic_device_info")
@@ -216,7 +216,7 @@ impl Device {
                 HardwareConfiguration::Full {
                     hardware_configuration,
                 } => {
-                    let mut configurator = hardware::Configurator::new(&client);
+                    let mut configurator = configurator::Configurator::new(&api);
                     if let Err(error) = configurator
                         .configure(hardware_configuration.clone())
                         .await
@@ -226,7 +226,7 @@ impl Device {
                     }
 
                     (
-                        hardware::Configurator::SHARED_USER_LOGIN,
+                        configurator::Configurator::SHARED_USER_LOGIN,
                         &hardware_configuration.shared_user_password,
                     )
                 }
@@ -238,20 +238,20 @@ impl Device {
 
         // Set device video URLs
         let rtsp_urls = RtspUrls {
-            main: IpcRtspUrl::new(client.rtsp_url_build(
+            main: IpcRtspUrl::new(api.rtsp_url_build(
                 shared_user_login,
                 shared_user_password,
-                hardware::VideoStream::MAIN,
+                api::VideoStream::MAIN,
             )),
-            sub: IpcRtspUrl::new(client.rtsp_url_build(
+            sub: IpcRtspUrl::new(api.rtsp_url_build(
                 shared_user_login,
                 shared_user_password,
-                hardware::VideoStream::SUB,
+                api::VideoStream::SUB,
             )),
         };
 
         // Attach event manager
-        let events_stream_manager = hardware::EventStreamManager::new(&client);
+        let events_stream_manager = event_stream::Manager::new(&api);
         let mut events_stream_manager_receiver = events_stream_manager.receiver();
 
         let events_stream_manager_runner = events_stream_manager.run_once();
@@ -261,7 +261,7 @@ impl Device {
         let events_stream_manager_receiver_runner = (*events_stream_manager_receiver)
             .by_ref()
             .for_each(async move |hardware_events| {
-                let events = Events::from_hardware_events(&hardware_events);
+                let events = Events::from_event_stream_events(&hardware_events);
                 self.events_handle(events);
             });
         pin_mut!(events_stream_manager_receiver_runner);
@@ -271,7 +271,7 @@ impl Device {
         // Attach snapshot manager
         let snapshot_runner = snapshot_device_inner::Runner::new(
             &self.snapshot_manager,
-            || client.snapshot(),
+            || api.snapshot(),
             || self.snapshot_updated_handle(),
             SNAPSHOT_INTERVAL,
         );
