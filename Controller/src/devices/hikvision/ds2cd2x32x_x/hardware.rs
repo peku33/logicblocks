@@ -16,6 +16,8 @@ use regex::Regex;
 use semver::{Version, VersionReq};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
+    fmt,
+    marker::PhantomData,
     ops::DerefMut,
     time::Duration,
 };
@@ -312,6 +314,7 @@ impl Client {
         #[allow(clippy::match_like_matches_macro)]
         let result = match model {
             "DS-2CD2132F-IS" => true,
+            "DS-2CD2532F-IS" => true,
             _ => false,
         };
         Ok(result)
@@ -414,124 +417,301 @@ impl Client {
     }
 }
 
-#[derive(Debug)]
-pub struct MotionDetectionGrid {
-    rows_cols: [[bool; Self::COLUMNS]; Self::ROWS],
+#[derive(Copy, Clone, Debug)]
+pub struct Percentage {
+    value: u8,
 }
-impl MotionDetectionGrid {
-    pub const COLUMNS: usize = 22;
-    pub const ROWS: usize = 18;
-
-    pub fn new(rows_cols: [[bool; Self::COLUMNS]; Self::ROWS]) -> Self {
-        Self { rows_cols }
+impl Percentage {
+    pub fn new(value: u8) -> Result<Self, Error> {
+        ensure!(value <= 100, "value must be at most 100");
+        Ok(Self { value })
     }
+
+    pub fn value(&self) -> u8 {
+        self.value
+    }
+}
+
+pub trait CoordinateSystem: Copy + Clone + fmt::Debug {
+    fn x_min() -> usize;
+    fn x_max() -> usize;
+    fn y_min() -> usize;
+    fn y_max() -> usize;
+}
+#[derive(Copy, Clone, Debug)]
+pub struct CoordinateSystem704x576 {}
+impl CoordinateSystem for CoordinateSystem704x576 {
+    fn x_min() -> usize {
+        0
+    }
+    fn x_max() -> usize {
+        704
+    }
+    fn y_min() -> usize {
+        0
+    }
+    fn y_max() -> usize {
+        576
+    }
+}
+#[derive(Copy, Clone, Debug)]
+pub struct CoordinateSystem1000x1000 {}
+impl CoordinateSystem for CoordinateSystem1000x1000 {
+    fn x_min() -> usize {
+        0
+    }
+    fn x_max() -> usize {
+        1000
+    }
+    fn y_min() -> usize {
+        0
+    }
+    fn y_max() -> usize {
+        1000
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Coordinate<CS: CoordinateSystem> {
+    x: usize,
+    y: usize,
+
+    _p: PhantomData<CS>,
+}
+impl<CS: CoordinateSystem> Coordinate<CS> {
+    pub fn new(
+        x: usize,
+        y: usize,
+    ) -> Result<Self, Error> {
+        ensure!(x >= CS::x_min(), "x must be at least {}", CS::x_min());
+        ensure!(y >= CS::y_min(), "y must be at least {}", CS::y_min());
+
+        ensure!(x <= CS::x_max(), "x must be at most {}", CS::x_max());
+        ensure!(y <= CS::y_max(), "y must be at most {}", CS::y_max());
+
+        Ok(Self {
+            x,
+            y,
+            _p: PhantomData,
+        })
+    }
+
+    pub fn bottom_left() -> Self {
+        Self {
+            x: CS::x_min(),
+            y: CS::y_min(),
+            _p: PhantomData,
+        }
+    }
+
+    pub fn bottom_right() -> Self {
+        Self {
+            x: CS::x_max(),
+            y: CS::y_min(),
+            _p: PhantomData,
+        }
+    }
+
+    pub fn top_right() -> Self {
+        Self {
+            x: CS::x_max(),
+            y: CS::y_max(),
+            _p: PhantomData,
+        }
+    }
+
+    pub fn top_left() -> Self {
+        Self {
+            x: CS::x_min(),
+            y: CS::y_max(),
+            _p: PhantomData,
+        }
+    }
+}
+
+pub trait CoordinateList<CS: CoordinateSystem>: Copy + Clone + fmt::Debug {
+    fn list_name() -> &'static str;
+    fn element_name() -> &'static str;
+    fn coordinates_list(&self) -> Vec<Coordinate<CS>>;
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct RegionSquare<CS: CoordinateSystem> {
+    bottom_left: Coordinate<CS>,
+    top_right: Coordinate<CS>,
+}
+impl<CS: CoordinateSystem> RegionSquare<CS> {
+    pub fn new(
+        bottom_left: Coordinate<CS>,
+        top_right: Coordinate<CS>,
+    ) -> Result<Self, Error> {
+        ensure!(bottom_left.x < top_right.x, "inverted square coords");
+        ensure!(bottom_left.y < top_right.y, "inverted square coords");
+
+        Ok(Self {
+            bottom_left,
+            top_right,
+        })
+    }
+
+    pub fn null() -> Self {
+        Self {
+            bottom_left: Coordinate::bottom_left(),
+            top_right: Coordinate::bottom_left(),
+        }
+    }
+
     pub fn full() -> Self {
         Self {
-            rows_cols: [[true; Self::COLUMNS]; Self::ROWS],
+            bottom_left: Coordinate::bottom_left(),
+            top_right: Coordinate::top_right(),
+        }
+    }
+}
+impl<CS: CoordinateSystem> CoordinateList<CS> for RegionSquare<CS> {
+    fn list_name() -> &'static str {
+        "RegionCoordinatesList"
+    }
+    fn element_name() -> &'static str {
+        "RegionCoordinates"
+    }
+    fn coordinates_list(&self) -> Vec<Coordinate<CS>> {
+        vec![
+            Coordinate::new(self.bottom_left.x, self.bottom_left.y).unwrap(),
+            Coordinate::new(self.top_right.x, self.bottom_left.y).unwrap(),
+            Coordinate::new(self.top_right.x, self.top_right.y).unwrap(),
+            Coordinate::new(self.bottom_left.x, self.top_right.y).unwrap(),
+        ]
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct RegionField4<CS: CoordinateSystem> {
+    pub corners: [Coordinate<CS>; 4],
+}
+impl<CS: CoordinateSystem> RegionField4<CS> {
+    pub fn null() -> Self {
+        Self {
+            corners: [
+                Coordinate::bottom_left(),
+                Coordinate::bottom_left(),
+                Coordinate::bottom_left(),
+                Coordinate::bottom_left(),
+            ],
         }
     }
 
-    fn serialize(&self) -> String {
-        let mut result = String::with_capacity(24 * 18 * 2 / 8);
-        for row in self.rows_cols.iter() {
-            for chunk in row.chunks(8) {
-                let mut mask: u8 = 0;
-                for (offset, bit) in chunk.iter().enumerate() {
-                    if *bit {
-                        mask |= 1 << (7 - offset);
-                    }
-                }
-                let mut mask_hex = [0u8; 2];
-                hex::encode_to_slice(&[mask], &mut mask_hex[..]).unwrap();
-                result.push(mask_hex[0] as char);
-                result.push(mask_hex[1] as char);
-            }
+    pub fn full() -> Self {
+        Self {
+            corners: [
+                Coordinate::bottom_left(),
+                Coordinate::bottom_right(),
+                Coordinate::top_right(),
+                Coordinate::top_left(),
+            ],
         }
-        result
     }
 }
-#[cfg(test)]
-pub mod motion_detection_grid_tests {
-    use super::MotionDetectionGrid;
-
-    #[test]
-    fn test_full() {
-        let motion_detection_grid = MotionDetectionGrid::full();
-        assert_eq!(motion_detection_grid.serialize(), "fffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffcfffffc");
+impl<CS: CoordinateSystem> CoordinateList<CS> for RegionField4<CS> {
+    fn list_name() -> &'static str {
+        "RegionCoordinatesList"
     }
-    #[test]
-    fn test_docs_example() {
-        let mut rows_cols = [[false; MotionDetectionGrid::COLUMNS]; MotionDetectionGrid::ROWS];
-        rows_cols[6][8] = true;
-        rows_cols[6][9] = true;
-        rows_cols[6][10] = true;
-
-        rows_cols[7][8] = true;
-        rows_cols[7][9] = true;
-        rows_cols[7][10] = true;
-        rows_cols[7][11] = true;
-
-        rows_cols[8][8] = true;
-        rows_cols[8][9] = true;
-        rows_cols[8][10] = true;
-        rows_cols[8][11] = true;
-
-        rows_cols[9][8] = true;
-        rows_cols[9][9] = true;
-        rows_cols[9][10] = true;
-        rows_cols[9][11] = true;
-
-        rows_cols[14][0] = true;
-        rows_cols[14][1] = true;
-        rows_cols[14][2] = true;
-        rows_cols[14][3] = true;
-
-        rows_cols[15][0] = true;
-        rows_cols[15][1] = true;
-        rows_cols[15][2] = true;
-        rows_cols[15][3] = true;
-
-        rows_cols[16][0] = true;
-        rows_cols[16][1] = true;
-        rows_cols[16][2] = true;
-        rows_cols[16][3] = true;
-
-        rows_cols[17][0] = true;
-        rows_cols[17][1] = true;
-        rows_cols[17][2] = true;
-        rows_cols[17][3] = true;
-
-        let motion_detection_grid = MotionDetectionGrid::new(rows_cols);
-        assert_eq!(motion_detection_grid.serialize(), "00000000000000000000000000000000000000e00000f00000f00000f000000000000000000000000000f00000f00000f00000f00000");
+    fn element_name() -> &'static str {
+        "RegionCoordinates"
+    }
+    fn coordinates_list(&self) -> Vec<Coordinate<CS>> {
+        self.corners.to_vec()
     }
 }
 
-#[derive(Debug)]
-pub enum MotionDetectionSensitivity {
-    P00,
-    P20,
-    P40,
-    P60,
-    P80,
-    P100,
+#[derive(Copy, Clone, Debug)]
+pub struct Line<CS: CoordinateSystem> {
+    pub from: Coordinate<CS>,
+    pub to: Coordinate<CS>,
+}
+impl<CS: CoordinateSystem> CoordinateList<CS> for Line<CS> {
+    fn list_name() -> &'static str {
+        "CoordinatesList"
+    }
+    fn element_name() -> &'static str {
+        "Coordinates"
+    }
+    fn coordinates_list(&self) -> Vec<Coordinate<CS>> {
+        vec![self.from, self.to]
+    }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
+pub struct PrivacyMask {
+    regions: Vec<RegionSquare<CoordinateSystem704x576>>,
+}
+impl PrivacyMask {
+    const REGIONS_MAX: usize = 4;
+
+    pub fn new(regions: Vec<RegionSquare<CoordinateSystem704x576>>) -> Result<Self, Error> {
+        ensure!(
+            regions.len() <= Self::REGIONS_MAX,
+            "at most {} regions allowed",
+            Self::REGIONS_MAX
+        );
+        Ok(Self { regions })
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct MotionDetectionRegion {
+    pub region: RegionSquare<CoordinateSystem1000x1000>,
+    pub sensitivity: Percentage,
+    pub object_size: Percentage,
+}
+#[derive(Clone, Debug)]
 pub struct MotionDetection {
-    pub grid: MotionDetectionGrid,
-    pub sensitivity: MotionDetectionSensitivity,
-    pub sampling_interval: usize,  // defaults to 2
-    pub trigger_start_msec: usize, // defaults to 500
-    pub trigger_end_msec: usize,   // defaults to 500
+    regions: Vec<MotionDetectionRegion>,
+}
+impl MotionDetection {
+    const REGIONS_MAX: usize = 8;
+
+    pub fn new(regions: Vec<MotionDetectionRegion>) -> Result<Self, Error> {
+        ensure!(
+            regions.len() <= Self::REGIONS_MAX,
+            "number of regions could be at most {}",
+            Self::REGIONS_MAX
+        );
+        Ok(Self { regions })
+    }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
+pub struct FieldDetection {
+    pub region: RegionField4<CoordinateSystem1000x1000>,
+    pub sensitivity: Percentage,
+    pub object_occupation: Percentage,
+    pub time_threshold_s: u8,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum LineDetectionDirection {
+    Both,
+    RightToLeft,
+    LeftToRight,
+}
+#[derive(Copy, Clone, Debug)]
+pub struct LineDetection {
+    pub line: Line<CoordinateSystem1000x1000>,
+    pub direction: LineDetectionDirection,
+    pub sensitivity: Percentage,
+}
+
+#[derive(Clone, Debug)]
 pub struct Configuration {
     pub device_name: String,
     pub device_id: u8,
     pub overlay_text: String,
     pub shared_user_password: String,
+    pub privacy_mask: Option<PrivacyMask>,
     pub motion_detection: Option<MotionDetection>,
+    pub field_detection: Option<FieldDetection>,
+    pub line_detection: Option<LineDetection>,
 }
 
 pub struct Configurator<'c> {
@@ -539,6 +719,27 @@ pub struct Configurator<'c> {
 }
 impl<'c> Configurator<'c> {
     pub const SHARED_USER_LOGIN: &'static str = "logicblocks";
+
+    fn serialize_coordinates_list<CS: CoordinateSystem, C: CoordinateList<CS>>(
+        coordinates_list: C
+    ) -> Element {
+        element_build_children(
+            C::list_name(),
+            coordinates_list
+                .coordinates_list()
+                .into_iter()
+                .map(|coordinate| {
+                    element_build_children(
+                        C::element_name(),
+                        vec![
+                            element_build_text("positionX", coordinate.x.to_string()),
+                            element_build_text("positionY", coordinate.y.to_string()),
+                        ],
+                    )
+                })
+                .collect(),
+        )
+    }
 
     pub fn new(client: &'c Client) -> Self {
         Self { client }
@@ -602,7 +803,7 @@ impl<'c> Configurator<'c> {
                 None,
             )
             .await
-            .context("Factory reset")?
+            .context("put_xml")?
             .reboot_required;
 
         if reboot_required {
@@ -614,7 +815,7 @@ impl<'c> Configurator<'c> {
     }
     async fn system_device_name(
         &mut self,
-        device_name: &str,
+        device_name: String,
         device_id: u8,
     ) -> Result<(), Error> {
         let reboot_required = self
@@ -625,7 +826,7 @@ impl<'c> Configurator<'c> {
                     "DeviceInfo",
                     vec![
                         element_build_text("deviceName", device_name),
-                        element_build_text("telecontrolID", &device_id.to_string()),
+                        element_build_text("telecontrolID", device_id.to_string()),
                     ],
                 )),
             )
@@ -644,8 +845,8 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "Time",
                     vec![
-                        element_build_text("timeMode", "NTP"),
-                        element_build_text("timeZone", "CST+0:00:00"),
+                        element_build_text("timeMode", "NTP".to_string()),
+                        element_build_text("timeZone", "CST+0:00:00".to_string()),
                     ],
                 )),
             )
@@ -664,11 +865,11 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "NTPServer",
                     vec![
-                        element_build_text("id", "1"),
-                        element_build_text("addressingFormatType", "hostname"),
-                        element_build_text("hostName", "pool.ntp.org"),
-                        element_build_text("portNo", "123"),
-                        element_build_text("synchronizeInterval", "1440"),
+                        element_build_text("id", "1".to_string()),
+                        element_build_text("addressingFormatType", "hostname".to_string()),
+                        element_build_text("hostName", "pool.ntp.org".to_string()),
+                        element_build_text("portNo", "123".to_string()),
+                        element_build_text("synchronizeInterval", "1440".to_string()),
                     ],
                 )),
             )
@@ -681,7 +882,7 @@ impl<'c> Configurator<'c> {
     }
     async fn system_shared_user(
         &mut self,
-        password: &str,
+        password: String,
     ) -> Result<(), Error> {
         // Check if user is already added
         let user_ids = self
@@ -732,7 +933,7 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "User",
                     vec![
-                        element_build_text("userName", Self::SHARED_USER_LOGIN),
+                        element_build_text("userName", Self::SHARED_USER_LOGIN.to_string()),
                         element_build_text("password", password),
                     ],
                 )),
@@ -751,11 +952,11 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "UserPermission",
                     vec![
-                        element_build_text("userID", &post_result.id.to_string()),
-                        element_build_text("userType", "viewer"),
+                        element_build_text("userID", post_result.id.to_string()),
+                        element_build_text("userType", "viewer".to_string()),
                         element_build_children(
                             "remotePermission",
-                            vec![element_build_text("preview", "true")],
+                            vec![element_build_text("preview", "true".to_string())],
                         ),
                     ],
                 )),
@@ -770,7 +971,7 @@ impl<'c> Configurator<'c> {
 
     async fn network_upnp_sane(
         &mut self,
-        device_name: &str,
+        device_name: String,
     ) -> Result<(), Error> {
         let reboot_required = self
             .client
@@ -779,7 +980,7 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "UPnP",
                     vec![
-                        element_build_text("enabled", "true"),
+                        element_build_text("enabled", "true".to_string()),
                         element_build_text("name", device_name),
                     ],
                 )),
@@ -799,8 +1000,8 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "ports",
                     vec![
-                        element_build_text("enabled", "false"),
-                        element_build_text("mapmode", "auto"),
+                        element_build_text("enabled", "false".to_string()),
+                        element_build_text("mapmode", "auto".to_string()),
                         element_build_children("portList", vec![]),
                     ],
                 )),
@@ -819,7 +1020,7 @@ impl<'c> Configurator<'c> {
                 "/ISAPI/System/Network/EZVIZ".parse().unwrap(),
                 Some(element_build_children(
                     "EZVIZ",
-                    vec![element_build_text("enabled", "false")],
+                    vec![element_build_text("enabled", "false".to_string())],
                 )),
             )
             .await
@@ -838,21 +1039,21 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "StreamingChannel",
                     vec![
-                        element_build_text("id", "101"),
+                        element_build_text("id", "101".to_string()),
                         element_build_children(
                             "Video",
                             vec![
-                                element_build_text("videoResolutionWidth", "2048"),
-                                element_build_text("videoResolutionHeight", "1536"),
-                                element_build_text("videoQualityControlType", "VBR"),
-                                element_build_text("fixedQuality", "100"),
-                                element_build_text("vbrUpperCap", "8192"),
-                                element_build_text("maxFrameRate", "2000"),
+                                element_build_text("videoResolutionWidth", "2048".to_string()),
+                                element_build_text("videoResolutionHeight", "1536".to_string()),
+                                element_build_text("videoQualityControlType", "VBR".to_string()),
+                                element_build_text("fixedQuality", "100".to_string()),
+                                element_build_text("vbrUpperCap", "8192".to_string()),
+                                element_build_text("maxFrameRate", "2000".to_string()),
                             ],
                         ),
                         element_build_children(
                             "Audio",
-                            vec![element_build_text("enabled", "true")],
+                            vec![element_build_text("enabled", "true".to_string())],
                         ),
                     ],
                 )),
@@ -872,21 +1073,21 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "StreamingChannel",
                     vec![
-                        element_build_text("id", "102"),
+                        element_build_text("id", "102".to_string()),
                         element_build_children(
                             "Video",
                             vec![
-                                element_build_text("videoResolutionWidth", "320"),
-                                element_build_text("videoResolutionHeight", "240"),
-                                element_build_text("videoQualityControlType", "VBR"),
-                                element_build_text("fixedQuality", "60"),
-                                element_build_text("vbrUpperCap", "256"),
-                                element_build_text("maxFrameRate", "2000"),
+                                element_build_text("videoResolutionWidth", "320".to_string()),
+                                element_build_text("videoResolutionHeight", "240".to_string()),
+                                element_build_text("videoQualityControlType", "VBR".to_string()),
+                                element_build_text("fixedQuality", "60".to_string()),
+                                element_build_text("vbrUpperCap", "256".to_string()),
+                                element_build_text("maxFrameRate", "2000".to_string()),
                             ],
                         ),
                         element_build_children(
                             "Audio",
-                            vec![element_build_text("enabled", "true")],
+                            vec![element_build_text("enabled", "true".to_string())],
                         ),
                     ],
                 )),
@@ -907,11 +1108,11 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "TwoWayAudioChannel",
                     vec![
-                        element_build_text("id", "1"),
-                        element_build_text("enabled", "true"),
-                        element_build_text("audioInputType", "MicIn"),
-                        element_build_text("speakerVolume", "100"),
-                        element_build_text("noisereduce", "true"),
+                        element_build_text("id", "1".to_string()),
+                        element_build_text("enabled", "true".to_string()),
+                        element_build_text("audioInputType", "MicIn".to_string()),
+                        element_build_text("speakerVolume", "100".to_string()),
+                        element_build_text("noisereduce", "true".to_string()),
                     ],
                 )),
             )
@@ -925,7 +1126,7 @@ impl<'c> Configurator<'c> {
 
     async fn image_overlay_text(
         &mut self,
-        name: &str,
+        name: String,
     ) -> Result<(), Error> {
         let reboot_required = self
             .client
@@ -934,8 +1135,8 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "VideoInputChannel",
                     vec![
-                        element_build_text("id", "1"),
-                        element_build_text("inputPort", "1"),
+                        element_build_text("id", "1".to_string()),
+                        element_build_text("inputPort", "1".to_string()),
                         element_build_text("name", name),
                     ],
                 )),
@@ -959,14 +1160,58 @@ impl<'c> Configurator<'c> {
                     vec![element_build_children(
                         "DateTimeOverlay",
                         vec![
-                            element_build_text("enabled", "true"),
-                            element_build_text("positionX", "0"),
-                            element_build_text("positionY", "544"),
-                            element_build_text("dateStyle", "YYYY-MM-DD"),
-                            element_build_text("timeStyle", "24hour"),
-                            element_build_text("displayWeek", "false"),
+                            element_build_text("enabled", "true".to_string()),
+                            element_build_text("positionX", "0".to_string()),
+                            element_build_text("positionY", "544".to_string()),
+                            element_build_text("dateStyle", "YYYY-MM-DD".to_string()),
+                            element_build_text("timeStyle", "24hour".to_string()),
+                            element_build_text("displayWeek", "false".to_string()),
                         ],
                     )],
+                )),
+            )
+            .await
+            .context("put_xml")?
+            .reboot_required;
+        ensure!(!reboot_required, "reboot is not supported here");
+
+        Ok(())
+    }
+    pub async fn image_privacy_mask_enable(
+        &mut self,
+        privacy_mask: PrivacyMask,
+    ) -> Result<(), Error> {
+        let mut reboot_required = false;
+
+        reboot_required |= self
+            .client
+            .put_xml(
+                "/ISAPI/System/Video/inputs/channels/1/privacyMask"
+                    .parse()
+                    .unwrap(),
+                Some(element_build_children(
+                    "PrivacyMask",
+                    vec![
+                        element_build_text("enabled", "true".to_string()),
+                        element_build_children(
+                            "PrivacyMaskRegionList",
+                            privacy_mask
+                                .regions
+                                .into_iter()
+                                .enumerate()
+                                .map(|(id, region)| {
+                                    element_build_children(
+                                        "PrivacyMaskRegion",
+                                        vec![
+                                            element_build_text("id", (id + 1).to_string()),
+                                            element_build_text("enabled", "true".to_string()),
+                                            Self::serialize_coordinates_list(region),
+                                        ],
+                                    )
+                                })
+                                .collect(),
+                        ),
+                    ],
                 )),
             )
             .await
@@ -985,10 +1230,10 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "Track",
                     vec![
-                        element_build_text("id", "101"),
-                        element_build_text("Channel", "101"),
-                        element_build_text("Enable", "false"),
-                        element_build_text("LoopEnable", "true"),
+                        element_build_text("id", "101".to_string()),
+                        element_build_text("Channel", "101".to_string()),
+                        element_build_text("Enable", "false".to_string()),
+                        element_build_text("LoopEnable", "true".to_string()),
                     ],
                 )),
             )
@@ -1002,54 +1247,46 @@ impl<'c> Configurator<'c> {
 
     pub async fn detection_motion_enable(
         &mut self,
-        settings: &MotionDetection,
+        motion_detection: MotionDetection,
     ) -> Result<(), Error> {
         let mut reboot_required = false;
 
         reboot_required |= self
             .client
             .put_xml(
-                "/ISAPI/System/Video/inputs/channels/1/motionDetection"
+                "/ISAPI/System/Video/inputs/channels/1/motionDetectionExt"
                     .parse()
                     .unwrap(),
                 Some(element_build_children(
-                    "MotionDetection",
+                    "MotionDetectionExt",
                     vec![
-                        element_build_text("enabled", "true"),
-                        element_build_text("enableHighlight", "false"),
-                        element_build_text(
-                            "samplingInterval",
-                            &settings.sampling_interval.to_string(),
-                        ),
-                        element_build_text(
-                            "startTriggerTime",
-                            &settings.trigger_start_msec.to_string(),
-                        ),
-                        element_build_text(
-                            "endTriggerTime",
-                            &settings.trigger_end_msec.to_string(),
-                        ),
-                        element_build_text("regionType", "grid"),
+                        element_build_text("enabled", "true".to_string()),
+                        element_build_text("activeMode", "expert".to_string()),
                         element_build_children(
-                            "MotionDetectionLayout",
-                            vec![
-                                element_build_text(
-                                    "sensitivityLevel",
-                                    &match settings.sensitivity {
-                                        MotionDetectionSensitivity::P00 => 0,
-                                        MotionDetectionSensitivity::P20 => 20,
-                                        MotionDetectionSensitivity::P40 => 40,
-                                        MotionDetectionSensitivity::P60 => 60,
-                                        MotionDetectionSensitivity::P80 => 80,
-                                        MotionDetectionSensitivity::P100 => 100,
-                                    }
-                                    .to_string(),
-                                ),
-                                element_build_children(
-                                    "layout",
-                                    vec![element_build_text("gridMap", &settings.grid.serialize())],
-                                ),
-                            ],
+                            "MotionDetectionRegionList",
+                            motion_detection
+                                .regions
+                                .into_iter()
+                                .enumerate()
+                                .map(|(id, region)| {
+                                    element_build_children(
+                                        "MotionDetectionRegion",
+                                        vec![
+                                            element_build_text("id", (id + 1).to_string()),
+                                            element_build_text("enabled", "true".to_string()),
+                                            element_build_text(
+                                                "sensitivityLevel",
+                                                region.sensitivity.value().to_string(),
+                                            ),
+                                            element_build_text(
+                                                "objectSize",
+                                                region.object_size.value().to_string(),
+                                            ),
+                                            Self::serialize_coordinates_list(region.region),
+                                        ],
+                                    )
+                                })
+                                .collect(),
                         ),
                     ],
                 )),
@@ -1058,6 +1295,7 @@ impl<'c> Configurator<'c> {
             .context("put_xml")?
             .reboot_required;
         ensure!(!reboot_required, "reboot is not supported here");
+
         Ok(())
     }
     pub async fn detection_tamper_enable(&mut self) -> Result<(), Error> {
@@ -1072,48 +1310,19 @@ impl<'c> Configurator<'c> {
                 Some(element_build_children(
                     "TamperDetection",
                     vec![
-                        element_build_text("enabled", "true"),
+                        element_build_text("enabled", "true".to_string()),
                         element_build_children(
                             "TamperDetectionRegionList",
                             vec![element_build_children(
                                 "TamperDetectionRegion",
                                 vec![
-                                    element_build_text("id", "1"),
-                                    element_build_text("enabled", "true"),
-                                    element_build_text("sensitivityLevel", "100"),
-                                    element_build_children(
-                                        "RegionCoordinatesList",
-                                        vec![
-                                            element_build_children(
-                                                "RegionCoordinates",
-                                                vec![
-                                                    element_build_text("positionX", "0"),
-                                                    element_build_text("positionY", "0"),
-                                                ],
-                                            ),
-                                            element_build_children(
-                                                "RegionCoordinates",
-                                                vec![
-                                                    element_build_text("positionX", "704"),
-                                                    element_build_text("positionY", "0"),
-                                                ],
-                                            ),
-                                            element_build_children(
-                                                "RegionCoordinates",
-                                                vec![
-                                                    element_build_text("positionX", "704"),
-                                                    element_build_text("positionY", "576"),
-                                                ],
-                                            ),
-                                            element_build_children(
-                                                "RegionCoordinates",
-                                                vec![
-                                                    element_build_text("positionX", "0"),
-                                                    element_build_text("positionY", "576"),
-                                                ],
-                                            ),
-                                        ],
-                                    ),
+                                    element_build_text("id", "1".to_string()),
+                                    element_build_text("enabled", "true".to_string()),
+                                    element_build_text("sensitivityLevel", "100".to_string()),
+                                    Self::serialize_coordinates_list(RegionSquare::<
+                                        CoordinateSystem704x576,
+                                    >::full(
+                                    )),
                                 ],
                             )],
                         ),
@@ -1121,15 +1330,127 @@ impl<'c> Configurator<'c> {
                 )),
             )
             .await
-            .context("factory reset")?
+            .context("put_xml")?
             .reboot_required;
         ensure!(!reboot_required, "reboot is not supported here");
+
+        Ok(())
+    }
+    pub async fn detection_field_enable(
+        &mut self,
+        field_detection: FieldDetection,
+    ) -> Result<(), Error> {
+        let mut reboot_required = false;
+
+        reboot_required |= self
+            .client
+            .put_xml(
+                "/ISAPI/Smart/FieldDetection/1".parse().unwrap(),
+                Some(element_build_children(
+                    "FieldDetection",
+                    vec![
+                        element_build_text("id", "1".to_string()),
+                        element_build_text("enabled", "true".to_string()),
+                        element_build_children(
+                            "normalizedScreenSize",
+                            vec![
+                                element_build_text("normalizedScreenWidth", "1000".to_string()),
+                                element_build_text("normalizedScreenHeight", "1000".to_string()),
+                            ],
+                        ),
+                        element_build_children(
+                            "FieldDetectionRegionList",
+                            vec![element_build_children(
+                                "FieldDetectionRegion",
+                                vec![
+                                    element_build_text("id", "1".to_string()),
+                                    element_build_text("enabled", "true".to_string()),
+                                    element_build_text(
+                                        "sensitivityLevel",
+                                        field_detection.sensitivity.value().to_string(),
+                                    ),
+                                    element_build_text(
+                                        "objectOccupation",
+                                        field_detection.object_occupation.value().to_string(),
+                                    ),
+                                    element_build_text(
+                                        "timeThreshold",
+                                        field_detection.time_threshold_s.to_string(),
+                                    ),
+                                    Self::serialize_coordinates_list(field_detection.region),
+                                ],
+                            )],
+                        ),
+                    ],
+                )),
+            )
+            .await
+            .context("put_xml")?
+            .reboot_required;
+        ensure!(!reboot_required, "reboot is not supported here");
+
+        Ok(())
+    }
+    pub async fn detection_line_enable(
+        &mut self,
+        line_detection: LineDetection,
+    ) -> Result<(), Error> {
+        let mut reboot_required = false;
+
+        reboot_required |= self
+            .client
+            .put_xml(
+                "/ISAPI/Smart/LineDetection/1".parse().unwrap(),
+                Some(element_build_children(
+                    "LineDetection",
+                    vec![
+                        element_build_text("id", "1".to_string()),
+                        element_build_text("enabled", "true".to_string()),
+                        element_build_children(
+                            "normalizedScreenSize",
+                            vec![
+                                element_build_text("normalizedScreenWidth", "1000".to_string()),
+                                element_build_text("normalizedScreenHeight", "1000".to_string()),
+                            ],
+                        ),
+                        element_build_children(
+                            "LineItemList",
+                            vec![element_build_children(
+                                "LineItem",
+                                vec![
+                                    element_build_text("id", "1".to_string()),
+                                    element_build_text("enabled", "true".to_string()),
+                                    element_build_text(
+                                        "sensitivityLevel",
+                                        line_detection.sensitivity.value().to_string(),
+                                    ),
+                                    element_build_text(
+                                        "directionSensitivity",
+                                        match line_detection.direction {
+                                            LineDetectionDirection::Both => "any",
+                                            LineDetectionDirection::LeftToRight => "left-right",
+                                            LineDetectionDirection::RightToLeft => "right-left",
+                                        }
+                                        .to_string(),
+                                    ),
+                                    Self::serialize_coordinates_list(line_detection.line),
+                                ],
+                            )],
+                        ),
+                    ],
+                )),
+            )
+            .await
+            .context("put_xml")?
+            .reboot_required;
+        ensure!(!reboot_required, "reboot is not supported here");
+
         Ok(())
     }
 
     pub async fn configure(
         &mut self,
-        configuration: &Configuration,
+        configuration: Configuration,
     ) -> Result<(), Error> {
         // TODO: Progress callback
 
@@ -1137,7 +1458,7 @@ impl<'c> Configurator<'c> {
             .await
             .context("system_factory_reset")?;
 
-        self.system_device_name(&configuration.device_name, configuration.device_id)
+        self.system_device_name(configuration.device_name.clone(), configuration.device_id)
             .await
             .context("system_device_name")?;
 
@@ -1149,11 +1470,11 @@ impl<'c> Configurator<'c> {
             .await
             .context("system_time_ntp")?;
 
-        self.system_shared_user(&configuration.shared_user_password)
+        self.system_shared_user(configuration.shared_user_password)
             .await
             .context("system_shared_user")?;
 
-        self.network_upnp_sane(&configuration.device_name)
+        self.network_upnp_sane(configuration.device_name)
             .await
             .context("network_upnp_sane")?;
 
@@ -1173,11 +1494,11 @@ impl<'c> Configurator<'c> {
             .await
             .context("video_sub_quality")?;
 
-        self.audio() // break
+        self.audio() // line break
             .await
             .context("audio")?;
 
-        self.image_overlay_text(&configuration.overlay_text)
+        self.image_overlay_text(configuration.overlay_text)
             .await
             .context("image_overlay_text")?;
 
@@ -1185,11 +1506,17 @@ impl<'c> Configurator<'c> {
             .await
             .context("image_overlay_date")?;
 
+        if let Some(privacy_mask) = configuration.privacy_mask {
+            self.image_privacy_mask_enable(privacy_mask)
+                .await
+                .context("image_privacy_mask_enable")?;
+        }
+
         self.record_schedule_disable()
             .await
             .context("record_schedule_disable")?;
 
-        if let Some(motion_detection) = configuration.motion_detection.as_ref() {
+        if let Some(motion_detection) = configuration.motion_detection {
             self.detection_motion_enable(motion_detection)
                 .await
                 .context("detection_motion_enable")?;
@@ -1199,16 +1526,28 @@ impl<'c> Configurator<'c> {
             .await
             .context("detection_tamper_enable")?;
 
+        if let Some(field_detection) = configuration.field_detection {
+            self.detection_field_enable(field_detection)
+                .await
+                .context("detection_field_enable")?;
+        }
+
+        if let Some(line_detection) = configuration.line_detection {
+            self.detection_line_enable(line_detection)
+                .await
+                .context("detection_line_enable")?;
+        }
+
         Ok(())
     }
 }
 
 fn element_build_text(
     name: &str,
-    text: &str,
+    text: String,
 ) -> Element {
     let mut element = Element::new(name);
-    element.children.push(XMLNode::Text(text.to_owned()));
+    element.children.push(XMLNode::Text(text));
     element
 }
 fn element_build_children(

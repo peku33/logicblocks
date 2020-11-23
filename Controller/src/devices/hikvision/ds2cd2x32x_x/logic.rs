@@ -218,7 +218,7 @@ impl Device {
                 } => {
                     let mut configurator = hardware::Configurator::new(&client);
                     if let Err(error) = configurator
-                        .configure(hardware_configuration)
+                        .configure(hardware_configuration.clone())
                         .await
                         .context("configure")
                     {
