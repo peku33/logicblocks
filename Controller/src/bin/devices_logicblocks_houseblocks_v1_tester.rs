@@ -8,13 +8,13 @@ use logicblocks_controller::{
     devices::houseblocks::{
         avr_v1,
         houseblocks_v1::{
-            common::{Address, AddressDeviceType, AddressSerial},
+            common::{Address, AddressSerial},
             master::Master,
         },
     },
     interfaces::serial::ftdi::{Descriptor, Global},
 };
-use std::{convert::TryInto, time::Duration};
+use std::time::Duration;
 
 pub fn main() {
     env_logger::Builder::from_default_env()
@@ -97,52 +97,61 @@ fn menu_master_device_discovery(master: &Master) -> Result<(), Error> {
 }
 fn menu_master_avr_v1(master: &Master) -> Result<(), Error> {
     let mut menu = dialoguer::Select::new();
-    let menu = menu
-        .with_prompt("Select device type")
-        .item("d0003_junction_box_minimal_v1")
-        .item("d0006_relay14_opto_a_v1")
-        .item("d0007_relay14_ssr_a_v2");
+    let menu = menu.with_prompt("Select action").item("Run device");
 
     while let Some(result) = menu.interact_opt()? {
         match result {
-            0 => menu_master_avr_v1_d0003_junction_box_minimal_v1(master)
-                .context("menu_master_avr_v1_d0003_junction_box_minimal_v1")?,
-            1 => menu_master_avr_v1_d0006_relay14_opto_a_v1(master)
-                .context("menu_master_avr_v1_d0006_relay14_opto_a_v1")?,
-            2 => menu_master_avr_v1_d0007_relay14_ssr_a_v2(master)
-                .context("menu_master_avr_v1_d0007_relay14_ssr_a_v2")?,
+            0 => {
+                let address = match ask_device_serial(master).context("ask_device_serial")? {
+                    Some(address) => address,
+                    None => continue,
+                };
+                run_by_address(master, address).context("run_by_address")?;
+            }
             _ => panic!(),
         };
     }
 
     Ok(())
 }
-fn ask_device_serial(
-    master: &Master,
-    address_device_type: &AddressDeviceType,
-) -> Result<AddressSerial, Error> {
-    let mut input = dialoguer::Input::<String>::new();
-    let input = input
-        .with_prompt("Serial (empty for auto-discovery)")
-        .allow_empty(true);
+fn ask_device_serial(master: &Master) -> Result<Option<Address>, Error> {
+    let mut menu = dialoguer::Select::new();
+    let menu = menu
+        .with_prompt("Device address")
+        .default(0)
+        .item("Detect automatically");
 
-    let address_serial = input.interact()?;
-    if address_serial.is_empty() {
-        let address = master_device_discovery(master).context("master_device_discovery")?;
-        if address.device_type() != address_device_type {
-            bail!("resolved device type does not match requested device type");
+    while let Some(result) = menu.interact_opt()? {
+        match result {
+            0 => match master_device_discovery(master).context("master_device_discovery") {
+                Ok(address_serial) => {
+                    log::info!("detected address: {}", address_serial);
+                    return Ok(Some(address_serial));
+                }
+                Err(error) => {
+                    log::error!("error while detecting serial: {:?}", error);
+                }
+            },
+            _ => panic!(),
         }
-        Ok(*address.serial())
-    } else {
-        let address_serial =
-            AddressSerial::new(address_serial.as_bytes().try_into()?).context("address_serial")?;
-        Ok(address_serial)
+    }
+    Ok(None)
+}
+fn run_by_address(
+    master: &Master,
+    address: Address,
+) -> Result<(), Error> {
+    match address.device_type() as &[u8] {
+        b"0003" => run_d0003_junction_box_minimal_v1(master, *address.serial()),
+        b"0006" => run_d0006_relay14_opto_a_v1(master, *address.serial()),
+        b"0007" => run_d0007_relay14_ssr_a_v2(master, *address.serial()),
+        _ => bail!("device_type {} is not supported", address.device_type()),
     }
 }
-fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(), Error> {
-    let address_serial =
-        ask_device_serial(master, &AddressDeviceType::new_from_ordinal(3).unwrap())
-            .context("ask_device_serial")?;
+fn run_d0003_junction_box_minimal_v1(
+    master: &Master,
+    address_serial: AddressSerial,
+) -> Result<(), Error> {
     let runner = avr_v1::hardware::runner::Runner::<
         avr_v1::d0003_junction_box_minimal_v1::hardware::Device,
     >::new(master, address_serial);
@@ -244,23 +253,28 @@ fn menu_master_avr_v1_d0003_junction_box_minimal_v1(master: &Master) -> Result<(
     });
     Ok(())
 }
-fn menu_master_avr_v1_d0006_relay14_opto_a_v1(master: &Master) -> Result<(), Error> {
-    menu_master_avr_v1_common_relay14_common::<
-        avr_v1::d0006_relay14_opto_a_v1::hardware::Specification,
-    >(master)
-}
-fn menu_master_avr_v1_d0007_relay14_ssr_a_v2(master: &Master) -> Result<(), Error> {
-    menu_master_avr_v1_common_relay14_common::<
-        avr_v1::d0007_relay14_ssr_a_v2::hardware::Specification,
-    >(master)
-}
-fn menu_master_avr_v1_common_relay14_common<
-    S: avr_v1::common::relay14_common_a::hardware::Specification,
->(
-    master: &Master
+fn run_d0006_relay14_opto_a_v1(
+    master: &Master,
+    address_serial: AddressSerial,
 ) -> Result<(), Error> {
-    let address_serial =
-        ask_device_serial(master, &S::address_device_type()).context("ask_device_serial")?;
+    run_common_relay14_common::<avr_v1::d0006_relay14_opto_a_v1::hardware::Specification>(
+        master,
+        address_serial,
+    )
+}
+fn run_d0007_relay14_ssr_a_v2(
+    master: &Master,
+    address_serial: AddressSerial,
+) -> Result<(), Error> {
+    run_common_relay14_common::<avr_v1::d0007_relay14_ssr_a_v2::hardware::Specification>(
+        master,
+        address_serial,
+    )
+}
+fn run_common_relay14_common<S: avr_v1::common::relay14_common_a::hardware::Specification>(
+    master: &Master,
+    address_serial: AddressSerial,
+) -> Result<(), Error> {
     let runner = avr_v1::hardware::runner::Runner::<
         avr_v1::common::relay14_common_a::hardware::Device<S>,
     >::new(master, address_serial);
