@@ -10,30 +10,31 @@ default-run = "logicblocks-controller"
 anyhow = "1.0.34"
 array-init = "1.0.0"
 arrayvec = "0.5.2"
-async-trait = "0.1.41"
+async-trait = "0.1.42"
 bytes = "0.5.6"
 chrono = { version = "0.4.19", features = ["alloc", "std", "clock", "serde"] }
+clap = "2.33.3"
 crc_all = "0.2.0"
 crossbeam = "0.8.0"
 dialoguer = "0.7.1"
 digest_auth = "0.2.3"
-env_logger = "0.8.1"
+env_logger = "0.8.2"
 erased-serde = "0.3.12"
 futures = "0.3.8"
 hex = "0.4.2"
 http = "0.2.1"
 http-body = "0.3.1"
 hyper = { version = "0.13.9", features = ["stream"] }
-image = "0.23.11"
+image = "0.23.12"
 indoc = "1.0.3"
 lazy_static = "1.4.0"
 log = { version = "0.4.11", features = ["release_max_level_info"] }
 maplit = "1.0.2"
 owning_ref = "0.4.1"
-parking_lot = "0.11.0"
+parking_lot = "0.11.1"
 percent-encoding = "2.1.0"
 regex = "1.4.2"
-reqwest = { version = "0.10.8", features = ["stream"] }
+reqwest = { version = "0.10.9", features = ["stream"] }
 rusqlite = { version = "0.24.1", features = ["bundled"] }
 scopeguard = "1.1.0"
 semver = "0.11.0"
@@ -42,7 +43,7 @@ serde_json = "1.0.59"
 tokio = { version = "0.2.22", features = ["full"] }
 url = "2.2.0"
 web-static-pack = "0.4.0"
-xmltree = "0.10.1"
+xmltree = "0.10.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.8.3"

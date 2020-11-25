@@ -1,6 +1,5 @@
 pub mod fs;
 pub mod sqlite;
-pub mod surveillance;
 
 use parking_lot::ReentrantMutex;
 use std::{

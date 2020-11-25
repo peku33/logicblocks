@@ -11,7 +11,7 @@ impl SQLite {
     pub fn new(fs: &Fs) -> Self {
         let sqlite_file = fs.persistent_data_directory().join("LogicBlocks.sqlite");
 
-        let sqlite_connection = rusqlite::Connection::open(sqlite_file).unwrap();
+        let sqlite_connection = Connection::open(sqlite_file).unwrap();
         sqlite_connection
             .pragma_update(None, "auto_vacuum", &"INCREMENTAL")
             .unwrap();

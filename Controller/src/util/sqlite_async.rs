@@ -35,13 +35,7 @@ impl SQLiteAsync {
         async_operation_receiver: Receiver<AsyncOperation>,
     ) {
         let mut connection = connection;
-        loop {
-            let async_operation = async_operation_receiver.recv();
-            let async_operation = match async_operation {
-                Ok(async_operation) => async_operation,
-                Err(_) => break,
-            };
-
+        while let Ok(async_operation) = async_operation_receiver.recv() {
             async_operation(&mut connection);
         }
     }

@@ -13,14 +13,12 @@ use logicblocks_controller::{
         },
     },
     interfaces::serial::ftdi::{Descriptor, Global},
+    util::logging,
 };
 use std::time::Duration;
 
 pub fn main() {
-    env_logger::Builder::from_default_env()
-        .filter_level(log::LevelFilter::Info)
-        .filter_module("logicblocks_controller", log::LevelFilter::Debug)
-        .init();
+    logging::configure();
 
     main_error().unwrap();
 }
