@@ -1,8 +1,8 @@
-use futures::future::FutureExt;
 use logicblocks_controller::{
     devices::{self, runner::Runner, DeviceHandler, Id as DeviceId},
     interfaces,
     signals::{exchange::DeviceIdSignalId, Id as SignalId},
+    util::logging,
     web::{
         root_service::RootService,
         server,
@@ -13,21 +13,8 @@ use maplit::{hashmap, hashset};
 use std::collections::HashMap;
 
 fn main() {
-    env_logger::Builder::from_default_env()
-        .filter_level(log::LevelFilter::Info)
-        .filter_module("logicblocks_controller", log::LevelFilter::Trace)
-        .init();
+    logging::configure();
 
-    let mut runtime = tokio::runtime::Builder::new()
-        .enable_all()
-        .basic_scheduler()
-        .build()
-        .unwrap();
-
-    runtime.block_on(main_async());
-}
-
-async fn main_async() {
     // Drivers, etc
     let mut ftdi_global_context = interfaces::serial::ftdi::Global::new().unwrap();
     let ftdi_descriptors = ftdi_global_context.find_descriptors().unwrap();
@@ -116,14 +103,20 @@ async fn main_async() {
         "devices-runner".to_owned() => &device_runner as &(dyn Handler + Sync)
     });
     let root_service = RootService::new(&root_router);
-    let server = server::Server::new("0.0.0.0:8080".parse().unwrap(), &root_service);
+    let server = server::ServerRunner::new("0.0.0.0:8080".parse().unwrap(), &root_service);
 
-    futures::select! {
-        _ = tokio::signal::ctrl_c().fuse() => {},
-    }
+    // Wait for exit signal
+    // TODO: Make it a bit smarter, without using runtime, lol
+    let mut runtime = tokio::runtime::Builder::new()
+        .enable_all()
+        .basic_scheduler()
+        .build()
+        .unwrap();
+    runtime.block_on(tokio::signal::ctrl_c()).unwrap();
 
-    server.finalize().await;
-    device_runner.finalize().await;
+    // This is done automatically, for debugging purposes
+    drop(server);
+    drop(device_runner);
 }
 
 fn disi(

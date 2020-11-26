@@ -8,12 +8,16 @@ use super::{
 };
 use crate::{
     devices,
-    util::{optional_async::StreamOrPending, waker_stream},
+    util::{
+        optional_async::{FutureOrPending, StreamOrPending},
+        scoped_async::Runnable,
+        waker_stream,
+    },
 };
 use anyhow::{Context, Error};
 use async_trait::async_trait;
 use futures::{
-    future::{pending, FutureExt},
+    future::{FutureExt, OptionFuture},
     pin_mut, select,
     stream::StreamExt,
 };
@@ -51,12 +55,15 @@ pub trait Properties {
     fn remote(&self) -> Self::Remote;
 }
 
-#[async_trait]
 pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
     fn new() -> Self;
 
     fn device_type_name() -> &'static str;
     fn address_device_type() -> AddressDeviceType;
+
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        None
+    }
 
     type Properties: Properties;
     fn properties(&self) -> &Self::Properties;
@@ -64,10 +71,6 @@ pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
     fn poll_waker_receiver(&self) -> Option<waker_stream::mpsc::ReceiverLease> {
         None
     }
-    async fn run(&self) -> ! {
-        pending().await
-    }
-    async fn finalize(&self) {}
 }
 
 #[derive(Serialize, Copy, Clone, PartialEq, Eq, Debug)]
@@ -216,7 +219,11 @@ impl<'m, D: Device> Runner<'m, D> {
         pin_mut!(driver_runner);
         let mut driver_runner = driver_runner.fuse();
 
-        let device_runner = self.device.run();
+        let device_runner = FutureOrPending::new(
+            self.device
+                .as_runnable()
+                .map(|device_runnable| device_runnable.run()),
+        );
         pin_mut!(device_runner);
         let mut device_runner = device_runner.fuse();
 
@@ -241,9 +248,14 @@ impl<'m, D: Device> Runner<'m, D> {
 
             *self.device_state.lock() = DeviceState::Initializing;
             self.gui_summary_waker.wake();
-        }
+        };
 
-        self.device.finalize().await;
+        OptionFuture::from(
+            self.device
+                .as_runnable()
+                .map(|device_runnable| device_runnable.finalize()),
+        )
+        .await;
     }
 }
 

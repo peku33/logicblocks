@@ -183,7 +183,6 @@ pub mod hardware {
         properties: Properties,
         _phantom: PhantomData<S>,
     }
-    #[async_trait]
     impl<S: Specification> runner::Device for Device<S> {
         fn new() -> Self {
             Self {

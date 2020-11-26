@@ -11,7 +11,6 @@ pub mod logic {
     };
     use array_init::array_init;
     use arrayvec::ArrayVec;
-    use async_trait::async_trait;
     use maplit::hashmap;
     use serde::Serialize;
     use std::time::Duration;
@@ -30,7 +29,6 @@ pub mod logic {
         gui_summary_waker: waker_stream::mpmc::Sender,
     }
 
-    #[async_trait]
     impl logic::Device for Device {
         type HardwareDevice = hardware::Device;
 
@@ -291,7 +289,6 @@ pub mod hardware {
     pub struct Device {
         properties: Properties,
     }
-    #[async_trait]
     impl runner::Device for Device {
         fn new() -> Self {
             Self {
