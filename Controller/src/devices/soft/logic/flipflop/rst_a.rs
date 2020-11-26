@@ -8,7 +8,6 @@ use crate::{
     util::waker_stream,
     web::{self, uri_cursor},
 };
-use async_trait::async_trait;
 use futures::{future::BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
@@ -102,7 +101,6 @@ impl Device {
         }
     }
 }
-#[async_trait]
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
         Cow::from("soft/logic/flipflop/rst_a")

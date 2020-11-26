@@ -7,7 +7,7 @@ use crate::{
         signal::{self, state_source},
         Signals,
     },
-    util::waker_stream,
+    util::{scoped_async::Runnable, waker_stream},
     web,
     web::uri_cursor,
 };
@@ -298,24 +298,8 @@ impl Device {
             snapshot_runner_run_error = snapshot_runner_run => snapshot_runner_run_error,
         }
     }
+
     const ERROR_RESTART_INTERVAL: Duration = Duration::from_secs(10);
-}
-#[async_trait]
-impl devices::Device for Device {
-    fn class(&self) -> Cow<'static, str> {
-        Cow::from("hikvision/ds2cd2x32x_x")
-    }
-
-    fn as_signals_device(&self) -> &dyn signals::Device {
-        self
-    }
-    fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider {
-        self
-    }
-    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
-        Some(self)
-    }
-
     async fn run(&self) -> ! {
         loop {
             let error = self.run_once().await;
@@ -325,6 +309,31 @@ impl devices::Device for Device {
             tokio::time::delay_for(Self::ERROR_RESTART_INTERVAL).await;
         }
     }
+}
+impl devices::Device for Device {
+    fn class(&self) -> Cow<'static, str> {
+        Cow::from("hikvision/ds2cd2x32x_x")
+    }
+
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        Some(self)
+    }
+    fn as_signals_device(&self) -> &dyn signals::Device {
+        self
+    }
+    fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider {
+        self
+    }
+    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
+        Some(self)
+    }
+}
+#[async_trait]
+impl Runnable for Device {
+    async fn run(&self) -> ! {
+        self.run().await
+    }
+
     async fn finalize(&self) {}
 }
 impl signals::Device for Device {
@@ -348,7 +357,6 @@ impl signals::Device for Device {
         }
     }
 }
-
 impl GuiSummaryProvider for Device {
     fn get_value(&self) -> Box<dyn devices::GuiSummary> {
         Box::new(self.device_state.read().clone())

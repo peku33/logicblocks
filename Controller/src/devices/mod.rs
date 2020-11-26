@@ -5,11 +5,10 @@ pub mod soft;
 
 use crate::{
     signals,
-    util::waker_stream,
+    util::{scoped_async::Runnable, waker_stream},
     web::{self, sse_aggregated, uri_cursor},
 };
-use async_trait::async_trait;
-use futures::future::{pending, BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::json;
@@ -20,20 +19,17 @@ pub type Id = u32;
 pub trait Configuration = Serialize + DeserializeOwned;
 pub trait State = Serialize + DeserializeOwned;
 
-#[async_trait]
 pub trait Device: Send + Sync + fmt::Debug {
     fn class(&self) -> Cow<'static, str>;
 
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        None
+    }
     fn as_signals_device(&self) -> &dyn signals::Device;
     fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider;
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
         None
     }
-
-    async fn run(&self) -> ! {
-        pending().await
-    }
-    async fn finalize(&self) {}
 }
 
 pub struct DeviceHandler<'d> {

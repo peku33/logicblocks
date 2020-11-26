@@ -5,15 +5,14 @@ use super::{
 use crate::{
     devices::{self, GuiSummaryProvider},
     signals,
-    util::waker_stream,
+    util::{optional_async::FutureOrPending, scoped_async::Runnable, waker_stream},
     web::uri_cursor,
 };
 use async_trait::async_trait;
-use futures::{future::pending, pin_mut, select, FutureExt, StreamExt};
+use futures::{future::OptionFuture, pin_mut, select, FutureExt, StreamExt};
 use serde::Serialize;
 use std::{borrow::Cow, fmt};
 
-#[async_trait]
 pub trait Device: Sync + Send + fmt::Debug {
     type HardwareDevice: runner::Device;
 
@@ -23,6 +22,9 @@ pub trait Device: Sync + Send + fmt::Debug {
 
     fn class() -> &'static str;
 
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        None
+    }
     fn as_signals_device(&self) -> &dyn signals::Device;
     fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider;
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
@@ -31,11 +33,6 @@ pub trait Device: Sync + Send + fmt::Debug {
 
     fn properties_remote_in_changed(&self);
     fn properties_remote_out_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease;
-
-    async fn run(&self) -> ! {
-        pending().await
-    }
-    async fn finalize(&self) {}
 }
 
 #[derive(Debug)]
@@ -63,27 +60,17 @@ impl<'m, D: Device> Runner<'m, D> {
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
-}
-#[async_trait]
-impl<'m, D: Device> devices::Device for Runner<'m, D> {
-    fn class(&self) -> Cow<'static, str> {
-        let class = format!("houseblocks/avr_v1/{}", D::class());
-        Cow::from(class)
-    }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
-        self.device.as_signals_device()
-    }
-    fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider {
-        self
-    }
-
-    async fn run(&self) -> ! {
+    pub async fn run(&self) -> ! {
         let hardware_runner_run = self.hardware_runner.run();
         pin_mut!(hardware_runner_run);
         let mut hardware_runner_run = hardware_runner_run.fuse();
 
-        let device_run = self.device.run();
+        let device_run = FutureOrPending::new(
+            self.device
+                .as_runnable()
+                .map(|device_runnable| device_runnable.run()),
+        );
         let mut device_run = device_run.fuse();
 
         let mut properties_remote_in_changed_waker = self
@@ -141,12 +128,44 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
             _ = device_gui_summary_waker_forwarder => panic!("device_gui_summary_waker_forwarder yielded"),
         }
     }
-    async fn finalize(&self) {
-        self.device.finalize().await;
+
+    pub async fn finalize(&self) {
+        OptionFuture::from(
+            self.device
+                .as_runnable()
+                .map(|device_runnable| device_runnable.finalize()),
+        )
+        .await;
+
         self.hardware_runner.finalize().await;
     }
 }
+impl<'m, D: Device> devices::Device for Runner<'m, D> {
+    fn class(&self) -> Cow<'static, str> {
+        let class = format!("houseblocks/avr_v1/{}", D::class());
+        Cow::from(class)
+    }
 
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        Some(self)
+    }
+    fn as_signals_device(&self) -> &dyn signals::Device {
+        self.device.as_signals_device()
+    }
+    fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider {
+        self
+    }
+}
+#[async_trait]
+impl<'m, D: Device> Runnable for Runner<'m, D> {
+    async fn run(&self) -> ! {
+        self.run().await
+    }
+
+    async fn finalize(&self) {
+        self.finalize().await
+    }
+}
 #[derive(Serialize)]
 struct GuiSummary {
     device: Box<dyn devices::GuiSummary>,
