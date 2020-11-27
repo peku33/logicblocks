@@ -21,10 +21,10 @@ pub mod logic {
         properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver,
 
         signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-        signal_keys: [state_source::Signal<Option<bool>>; hardware::KEY_COUNT],
+        signal_keys: [state_source::Signal<bool>; hardware::KEY_COUNT],
         signal_leds: [state_target_last::Signal<bool>; hardware::LED_COUNT],
         signal_buzzer: event_target_last::Signal<Duration>,
-        signal_temperature: state_source::Signal<Option<Temperature>>,
+        signal_temperature: state_source::Signal<Temperature>,
 
         gui_summary_waker: waker_stream::mpmc::Sender,
     }
@@ -38,10 +38,10 @@ pub mod logic {
                 properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
                 signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-                signal_keys: array_init(|_| state_source::Signal::new(None)),
-                signal_leds: array_init(|_| state_target_last::Signal::new()),
-                signal_buzzer: event_target_last::Signal::new(),
-                signal_temperature: state_source::Signal::new(None),
+                signal_keys: array_init(|_| state_source::Signal::<bool>::new(None)),
+                signal_leds: array_init(|_| state_target_last::Signal::<bool>::new()),
+                signal_buzzer: event_target_last::Signal::<Duration>::new(),
+                signal_temperature: state_source::Signal::<Temperature>::new(None),
 
                 gui_summary_waker: waker_stream::mpmc::Sender::new(),
             }

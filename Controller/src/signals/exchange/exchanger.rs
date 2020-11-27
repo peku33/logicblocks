@@ -68,14 +68,11 @@ impl<'d> Exchanger<'d> {
             self.connections_running.state().iter_targets()
         {
             let value = match source {
-                Some((_, state_source_remote_base)) => Some(state_source_remote_base.get_last()),
+                Some((_, state_source_remote_base)) => state_source_remote_base.get_last(),
                 None => None,
             };
 
-            if match value {
-                Some(value) => state_target_remote_base.set(&[value]),
-                None => state_target_remote_base.set_none(),
-            } {
+            if state_target_remote_base.set(&[value]) {
                 target_device_ids.insert(target_device_id_signal_id.device_id);
             }
         }

@@ -14,17 +14,15 @@ pub trait Base: Send + Sync {
 }
 
 pub trait StateSourceRemoteBase: RemoteBase {
-    fn take_pending(&self) -> Box<[Box<dyn ValueBase>]>;
-    fn get_last(&self) -> Box<dyn ValueBase>;
+    fn take_pending(&self) -> Box<[Option<Box<dyn ValueBase>>]>;
+    fn get_last(&self) -> Option<Box<dyn ValueBase>>;
 }
 pub trait StateTargetRemoteBase: RemoteBase {
     #[must_use = "use this value to wake signals change notifier"]
     fn set(
         &self,
-        values: &[Box<dyn ValueBase>],
+        values: &[Option<Box<dyn ValueBase>>],
     ) -> bool;
-    #[must_use = "use this value to wake signals change notifier"]
-    fn set_none(&self) -> bool;
 }
 
 pub trait EventSourceRemoteBase: RemoteBase {

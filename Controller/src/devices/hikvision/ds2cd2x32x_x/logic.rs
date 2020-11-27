@@ -94,8 +94,8 @@ pub struct Device {
     gui_summary_waker: waker_stream::mpmc::Sender,
 
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-    signal_rtsp_url_main: state_source::Signal<Option<IpcRtspUrl>>,
-    signal_rtsp_url_sub: state_source::Signal<Option<IpcRtspUrl>>,
+    signal_rtsp_url_main: state_source::Signal<IpcRtspUrl>,
+    signal_rtsp_url_sub: state_source::Signal<IpcRtspUrl>,
     signal_event_camera_failure: state_source::Signal<bool>,
     signal_event_video_loss: state_source::Signal<bool>,
     signal_event_tampering_detection: state_source::Signal<bool>,
@@ -114,14 +114,14 @@ impl Device {
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
 
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_rtsp_url_main: state_source::Signal::new(None),
-            signal_rtsp_url_sub: state_source::Signal::new(None),
-            signal_event_camera_failure: state_source::Signal::new(false),
-            signal_event_video_loss: state_source::Signal::new(false),
-            signal_event_tampering_detection: state_source::Signal::new(false),
-            signal_event_motion_detection: state_source::Signal::new(false),
-            signal_event_line_detection: state_source::Signal::new(false),
-            signal_event_field_detection: state_source::Signal::new(false),
+            signal_rtsp_url_main: state_source::Signal::<IpcRtspUrl>::new(None),
+            signal_rtsp_url_sub: state_source::Signal::<IpcRtspUrl>::new(None),
+            signal_event_camera_failure: state_source::Signal::<bool>::new(Some(false)),
+            signal_event_video_loss: state_source::Signal::<bool>::new(Some(false)),
+            signal_event_tampering_detection: state_source::Signal::<bool>::new(Some(false)),
+            signal_event_motion_detection: state_source::Signal::<bool>::new(Some(false)),
+            signal_event_line_detection: state_source::Signal::<bool>::new(Some(false)),
+            signal_event_field_detection: state_source::Signal::<bool>::new(Some(false)),
         }
     }
 
@@ -152,22 +152,22 @@ impl Device {
         let mut signals_changed = false;
         signals_changed |= self
             .signal_event_camera_failure
-            .set_one(events.camera_failure);
+            .set_one(Some(events.camera_failure));
         signals_changed |= self // break
             .signal_event_video_loss
-            .set_one(events.video_loss);
+            .set_one(Some(events.video_loss));
         signals_changed |= self
             .signal_event_tampering_detection
-            .set_one(events.tampering_detection);
+            .set_one(Some(events.tampering_detection));
         signals_changed |= self
             .signal_event_motion_detection
-            .set_one(events.motion_detection);
+            .set_one(Some(events.motion_detection));
         signals_changed |= self
             .signal_event_line_detection
-            .set_one(events.line_detection);
+            .set_one(Some(events.line_detection));
         signals_changed |= self
             .signal_event_field_detection
-            .set_one(events.field_detection);
+            .set_one(Some(events.field_detection));
         if signals_changed {
             self.signal_sources_changed_waker.wake();
         }
@@ -181,12 +181,12 @@ impl Device {
 
         let _ = self.signal_rtsp_url_main.set_one(None);
         let _ = self.signal_rtsp_url_sub.set_one(None);
-        let _ = self.signal_event_camera_failure.set_one(false);
-        let _ = self.signal_event_video_loss.set_one(false);
-        let _ = self.signal_event_tampering_detection.set_one(false);
-        let _ = self.signal_event_motion_detection.set_one(false);
-        let _ = self.signal_event_line_detection.set_one(false);
-        let _ = self.signal_event_field_detection.set_one(false);
+        let _ = self.signal_event_camera_failure.set_one(None);
+        let _ = self.signal_event_video_loss.set_one(None);
+        let _ = self.signal_event_tampering_detection.set_one(None);
+        let _ = self.signal_event_motion_detection.set_one(None);
+        let _ = self.signal_event_line_detection.set_one(None);
+        let _ = self.signal_event_field_detection.set_one(None);
         self.signal_sources_changed_waker.wake();
     }
 
