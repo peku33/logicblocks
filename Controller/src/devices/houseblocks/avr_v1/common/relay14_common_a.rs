@@ -33,7 +33,7 @@ pub mod logic {
                 properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
                 signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-                signal_outputs: array_init(|_| state_target_last::Signal::new()),
+                signal_outputs: array_init(|_| state_target_last::Signal::<bool>::new()),
 
                 gui_summary_waker: waker_stream::mpmc::Sender::new(),
 

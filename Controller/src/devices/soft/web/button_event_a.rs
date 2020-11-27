@@ -11,12 +11,10 @@ use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use std::borrow::Cow;
 
-type SignalOutput = event_source::Signal<()>;
-
 #[derive(Debug)]
 pub struct Device {
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-    signal_output: SignalOutput,
+    signal_output: event_source::Signal<()>,
 
     gui_summary_waker: waker_stream::mpmc::Sender,
 }
@@ -31,7 +29,7 @@ impl Device {
     pub fn new() -> Self {
         Self {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_output: SignalOutput::new(),
+            signal_output: event_source::Signal::<()>::new(),
 
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }

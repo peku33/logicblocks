@@ -12,14 +12,12 @@ pub struct Configuration {
     pub name: String,
 }
 
-type SignalInput<V> = event_target_queued::Signal<V>;
-
 #[derive(Debug)]
 pub struct Device<V: Value + Clone> {
     configuration: Configuration,
 
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-    signal_input: SignalInput<V>,
+    signal_input: event_target_queued::Signal<V>,
 
     gui_summary_waker: waker_stream::mpmc::Sender,
 }
@@ -29,7 +27,7 @@ impl<V: Value + Clone> Device<V> {
             configuration,
 
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_input: SignalInput::new(),
+            signal_input: event_target_queued::Signal::<V>::new(),
 
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }

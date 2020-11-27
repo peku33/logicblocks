@@ -10,8 +10,8 @@ use std::{
 
 #[derive(Debug)]
 struct Inner<V: Value + Clone> {
-    last: V,
-    pending: Vec<V>,
+    last: Option<V>,
+    pending: Vec<Option<V>>,
 }
 
 #[derive(Debug)]
@@ -19,7 +19,7 @@ pub struct Signal<V: Value + Clone> {
     inner: RwLock<Inner<V>>,
 }
 impl<V: Value + Clone> Signal<V> {
-    pub fn new(initial: V) -> Self {
+    pub fn new(initial: Option<V>) -> Self {
         let inner = Inner {
             last: initial,
             pending: Vec::new(),
@@ -30,14 +30,14 @@ impl<V: Value + Clone> Signal<V> {
         }
     }
 
-    pub fn get_last(&self) -> V {
+    pub fn get_last(&self) -> Option<V> {
         self.inner.read().last.clone()
     }
 
     #[must_use = "use this value to wake signals change notifier"]
     pub fn set_one(
         &self,
-        value: V,
+        value: Option<V>,
     ) -> bool {
         let mut lock = self.inner.write();
 
@@ -54,7 +54,7 @@ impl<V: Value + Clone> Signal<V> {
     #[must_use = "use this value to wake signals change notifier"]
     pub fn set_many(
         &self,
-        values: Box<[V]>,
+        values: Box<[Option<V>]>,
     ) -> bool {
         if values.is_empty() {
             return false;
@@ -86,13 +86,13 @@ impl<V: Value + Clone> Base for Signal<V> {
     }
 }
 impl<V: Value + Clone> StateSourceRemoteBase for Signal<V> {
-    fn take_pending(&self) -> Box<[Box<dyn ValueBase>]> {
+    fn take_pending(&self) -> Box<[Option<Box<dyn ValueBase>>]> {
         let mut lock = self.inner.write();
 
         let pending = replace(&mut lock.pending, Vec::new());
         let pending = pending
             .into_iter()
-            .map(|value| Box::new(value) as Box<dyn ValueBase>)
+            .map(|value| value.map(|value| Box::new(value) as Box<dyn ValueBase>))
             .collect::<Box<[_]>>();
 
         drop(lock);
@@ -100,9 +100,12 @@ impl<V: Value + Clone> StateSourceRemoteBase for Signal<V> {
         pending
     }
 
-    fn get_last(&self) -> Box<dyn ValueBase> {
-        let value = self.inner.read().last.clone();
-        Box::new(value)
+    fn get_last(&self) -> Option<Box<dyn ValueBase>> {
+        self.inner
+            .read()
+            .last
+            .clone()
+            .map(|value| Box::new(value) as Box<dyn ValueBase>)
     }
 }
 impl<V: Value + Clone> RemoteBase for Signal<V> {

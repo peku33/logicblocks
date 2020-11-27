@@ -75,36 +75,21 @@ impl<V: Value + Clone> StateTargetRemoteBase for Signal<V> {
     #[must_use = "use this value to wake signals change notifier"]
     fn set(
         &self,
-        values: &[Box<dyn ValueBase>],
+        values: &[Option<Box<dyn ValueBase>>],
     ) -> bool {
         let value = values.iter().last().unwrap();
-        let value = value.downcast_ref::<V>().unwrap().clone();
+        let value = value
+            .as_ref()
+            .map(|value| value.downcast_ref::<V>().unwrap().clone());
 
         let mut lock = self.value_pending.write();
 
-        if lock.value.contains(&value) {
+        if lock.value == value {
             return false;
         }
 
         *lock = ValuePending {
-            value: Some(value),
-            pending: true,
-        };
-
-        drop(lock);
-
-        true
-    }
-    #[must_use = "use this value to wake signals change notifier"]
-    fn set_none(&self) -> bool {
-        let mut lock = self.value_pending.write();
-
-        if lock.value.is_none() {
-            return false;
-        }
-
-        *lock = ValuePending {
-            value: None,
+            value,
             pending: true,
         };
 

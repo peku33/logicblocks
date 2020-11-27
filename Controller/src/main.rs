@@ -59,16 +59,6 @@ fn main() {
         100 => DeviceHandler::new(
             "".to_owned(),
             Box::new(
-                devices::soft::logic::value::or_default::Device::new(
-                    devices::soft::logic::value::or_default::Configuration {
-                        default: true,
-                    }
-                ),
-            ),
-        ),
-        101 => DeviceHandler::new(
-            "".to_owned(),
-            Box::new(
                 devices::soft::logic::boolean::slope_a::Device::new(
                     devices::soft::logic::boolean::slope_a::Configuration {
                         edge: devices::soft::logic::boolean::slope_a::Edge::Falling,
@@ -76,14 +66,13 @@ fn main() {
                 ),
             ),
         ),
-        102 => DeviceHandler::new(
+        101 => DeviceHandler::new(
             "".to_owned(),
             Box::new(
                 devices::soft::logic::flipflop::rst_a::Device::new(
                     devices::soft::logic::flipflop::rst_a::Configuration {
                         initial_value: false,
                     },
-                    None,
                 ),
             ),
         ),
@@ -91,9 +80,8 @@ fn main() {
 
     let connections = hashmap! {
         disi(1, 10) => hashset! { disi(100, 0) },
-        disi(100, 1) => hashset! { disi(101, 0) },
-        disi(101, 1) => hashset! { disi(102, 3) },
-        disi(102, 0) => hashset! { disi(2, 0) },
+        disi(100, 1) => hashset! { disi(101, 3) },
+        disi(101, 0) => hashset! { disi(2, 0) },
     };
 
     let device_runner = Runner::new(devices, connections);
@@ -103,7 +91,7 @@ fn main() {
         "devices-runner".to_owned() => &device_runner as &(dyn Handler + Sync)
     });
     let root_service = RootService::new(&root_router);
-    let server = server::ServerRunner::new("0.0.0.0:8080".parse().unwrap(), &root_service);
+    let server_runner = server::ServerRunner::new("0.0.0.0:8080".parse().unwrap(), &root_service);
 
     // Wait for exit signal
     // TODO: Make it a bit smarter, without using runtime, lol
@@ -115,7 +103,7 @@ fn main() {
     runtime.block_on(tokio::signal::ctrl_c()).unwrap();
 
     // This is done automatically, for debugging purposes
-    drop(server);
+    drop(server_runner);
     drop(device_runner);
 }
 

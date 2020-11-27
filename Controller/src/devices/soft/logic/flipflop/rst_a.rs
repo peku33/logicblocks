@@ -17,10 +17,6 @@ use std::borrow::Cow;
 pub struct Configuration {
     pub initial_value: bool,
 }
-#[derive(Serialize, Deserialize, Debug)]
-pub struct State {
-    value: bool,
-}
 
 #[derive(Debug)]
 pub struct Device {
@@ -33,21 +29,14 @@ pub struct Device {
     gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
-    pub fn new(
-        configuration: Configuration,
-        state: Option<State>,
-    ) -> Self {
-        let state = state.unwrap_or(State {
-            value: configuration.initial_value,
-        });
-
+    pub fn new(configuration: Configuration) -> Self {
         Self {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
-            signal_output: state_source::Signal::new(state.value),
-            signal_r: event_target_last::Signal::new(),
-            signal_s: event_target_last::Signal::new(),
-            signal_t: event_target_last::Signal::new(),
+            signal_output: state_source::Signal::<bool>::new(Some(configuration.initial_value)),
+            signal_r: event_target_last::Signal::<()>::new(),
+            signal_s: event_target_last::Signal::<()>::new(),
+            signal_t: event_target_last::Signal::<()>::new(),
 
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
@@ -83,19 +72,22 @@ impl Device {
     }
 
     pub fn r(&self) {
-        if self.signal_output.set_one(false) {
+        if self.signal_output.set_one(Some(false)) {
             self.signal_sources_changed_waker.wake();
             self.gui_summary_waker.wake();
         }
     }
     pub fn s(&self) {
-        if self.signal_output.set_one(true) {
+        if self.signal_output.set_one(Some(true)) {
             self.signal_sources_changed_waker.wake();
             self.gui_summary_waker.wake();
         }
     }
     pub fn t(&self) {
-        if self.signal_output.set_one(!self.signal_output.get_last()) {
+        if self
+            .signal_output
+            .set_one(Some(!self.signal_output.get_last().unwrap()))
+        {
             self.signal_sources_changed_waker.wake();
             self.gui_summary_waker.wake();
         }
@@ -143,7 +135,7 @@ struct GuiSummary {
 impl devices::GuiSummaryProvider for Device {
     fn get_value(&self) -> Box<dyn devices::GuiSummary> {
         Box::new(GuiSummary {
-            value: self.signal_output.get_last(),
+            value: self.signal_output.get_last().unwrap(),
         })
     }
 

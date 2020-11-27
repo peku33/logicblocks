@@ -8,37 +8,22 @@ use crate::{
     util::waker_stream,
 };
 use maplit::hashmap;
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-
-type SignalInput = state_target_queued::Signal<bool>;
-type SignalOutput = state_source::Signal<bool>;
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Configuration {
-    pub default_state: bool,
-}
 
 #[derive(Debug)]
 pub struct Device {
-    configuration: Configuration,
-
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-    signal_input: SignalInput,
-    signal_output: SignalOutput,
+    signal_input: state_target_queued::Signal<bool>,
+    signal_output: state_source::Signal<bool>,
 
     gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
-    pub fn new(configuration: Configuration) -> Self {
-        let default_state = configuration.default_state;
-
+    pub fn new() -> Self {
         Self {
-            configuration,
-
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_input: SignalInput::new(),
-            signal_output: SignalOutput::new(default_state),
+            signal_input: state_target_queued::Signal::<bool>::new(),
+            signal_output: state_source::Signal::<bool>::new(None),
 
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
@@ -63,10 +48,7 @@ impl signals::Device for Device {
         let values = values
             .into_vec()
             .into_iter()
-            .map(|value| match value {
-                Some(value) => !value,
-                None => self.configuration.default_state,
-            })
+            .map(|value| value.map(|value| !value))
             .collect::<Box<[_]>>();
 
         if self.signal_output.set_many(values) {
