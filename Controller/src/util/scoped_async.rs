@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use futures::future::{abortable, AbortHandle, Aborted, BoxFuture, JoinAll};
 use std::mem::transmute;
-use tokio::{runtime::Handle, task::JoinHandle};
+use tokio::{
+    runtime::{Handle, Runtime},
+    task::JoinHandle,
+};
 
 #[async_trait]
 pub trait Runnable: Send + Sync {
@@ -22,9 +25,11 @@ pub struct ScopedRunnerSync<'r, 'u> {
 }
 impl<'r, 'u> ScopedRunnerSync<'r, 'u> {
     pub fn new(
-        runtime: &'r Handle,
+        runtime: &'r Runtime,
         runnable: &'u dyn Runnable,
     ) -> Self {
+        let runtime = runtime.handle();
+
         // Create run() future
         let run_future = runnable.run();
 
@@ -75,9 +80,11 @@ pub struct ScopedRunnersSync<'r, 'u> {
 }
 impl<'r, 'u> ScopedRunnersSync<'r, 'u> {
     pub fn new(
-        runtime: &'r Handle,
+        runtime: &'r Runtime,
         runnables: &[&'u dyn Runnable],
     ) -> Self {
+        let runtime = runtime.handle();
+
         let runnable_run_contexts = runnables
             .iter()
             .copied()

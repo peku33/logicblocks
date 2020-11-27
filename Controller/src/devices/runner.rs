@@ -89,7 +89,7 @@ impl<'d> Runner<'d> {
                         let exchange_context_owner = unsafe { &*exchange_context_owner_ptr };
 
                         let exchanger_scoped_runner = ScopedRunnerSync::new(
-                            runtime_devices_context.runtime.handle(),
+                            &runtime_devices_context.runtime,
                             &exchange_context_owner.exchanger,
                         );
 
@@ -106,7 +106,7 @@ impl<'d> Runner<'d> {
                     .filter_map(|device_handler| device_handler.device().as_runnable())
                     .collect::<Box<[_]>>();
                 let devices_handler_scoped_runner = ScopedRunnersSync::new(
-                    runtime_devices_context.runtime.handle(),
+                    &runtime_devices_context.runtime,
                     &devices_handler_runnables,
                 );
 

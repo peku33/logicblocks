@@ -112,7 +112,7 @@ impl<'h> ServerRunner<'h> {
 
                 let server_runner_context_handle = ServerRunnerContextHandle {
                     server_scoped_runner: ScopedRunnerSync::new(
-                        server_runner_context_owner.runtime.handle(),
+                        &server_runner_context_owner.runtime,
                         &server_runner_context_owner.server,
                     ),
                 };
