@@ -1,7 +1,13 @@
 use super::hardware::{api, configurator, event_stream};
 use crate::{
     datatypes::ipc_rtsp_url::IpcRtspUrl,
-    devices::{self, soft::surveillance::ipc::snapshot_device_inner, GuiSummaryProvider},
+    devices::{
+        self,
+        soft::surveillance::snapshot::logic_device_inner::{
+            Manager as SnapshotManager, Runner as SnapshotRunner,
+        },
+        GuiSummaryProvider,
+    },
     signals::{
         self,
         signal::{self, state_source},
@@ -89,7 +95,7 @@ pub struct Device {
     configuration: Configuration,
 
     device_state: RwLock<DeviceState>,
-    snapshot_manager: snapshot_device_inner::Manager,
+    snapshot_manager: SnapshotManager,
 
     gui_summary_waker: waker_stream::mpmc::Sender,
 
@@ -109,7 +115,7 @@ impl Device {
             configuration,
 
             device_state: RwLock::new(DeviceState::Initializing),
-            snapshot_manager: snapshot_device_inner::Manager::new(),
+            snapshot_manager: SnapshotManager::new(),
 
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
 
@@ -269,7 +275,7 @@ impl Device {
             events_stream_manager_receiver_runner.fuse();
 
         // Attach snapshot manager
-        let snapshot_runner = snapshot_device_inner::Runner::new(
+        let snapshot_runner = SnapshotRunner::new(
             &self.snapshot_manager,
             || api.snapshot(),
             || self.snapshot_updated_handle(),

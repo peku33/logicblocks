@@ -1032,7 +1032,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "url",
  "web-static-pack",
  "xmltree",
 ]

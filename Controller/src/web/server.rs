@@ -1,5 +1,5 @@
 use super::{Handler, Request, Response};
-use crate::util::scoped_async::{Runnable, ScopedRunnerSync};
+use crate::util::scoped_async::{Runnable, RunnableSpawnSync};
 use async_trait::async_trait;
 use hyper::{
     server::conn::AddrStream,
@@ -82,7 +82,7 @@ struct ServerRunnerContextOwner<'h> {
     server: Server<'h>,
 }
 struct ServerRunnerContextHandle<'r, 'u> {
-    server_scoped_runner: ScopedRunnerSync<'r, 'u>,
+    server_runnable_spawn: RunnableSpawnSync<'r, 'u>,
 }
 
 pub struct ServerRunner<'h> {
@@ -111,7 +111,7 @@ impl<'h> ServerRunner<'h> {
                 let server_runner_context_owner = unsafe { &*server_runner_context_owner_ptr };
 
                 let server_runner_context_handle = ServerRunnerContextHandle {
-                    server_scoped_runner: ScopedRunnerSync::new(
+                    server_runnable_spawn: RunnableSpawnSync::new(
                         &server_runner_context_owner.runtime,
                         &server_runner_context_owner.server,
                     ),

@@ -1,1 +1,1 @@
-pub mod ipc;
+pub mod snapshot;

@@ -1,9 +1,9 @@
 use futures::stream::BoxStream;
-use std::{io::Error, path::Path};
+use std::{ffi::OsString, io::Error, path::Path};
 
 #[derive(Debug)]
 pub struct EventOwned {
-    pub name: Option<String>,
+    pub name: Option<OsString>,
 }
 pub struct Inotify {}
 impl Inotify {

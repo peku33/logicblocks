@@ -82,6 +82,9 @@ where
     pub fn lease(&self) -> AtomicCellLease<T> {
         AtomicCellLease::new(self)
     }
+    pub fn get(&mut self) -> &mut T {
+        unsafe { &mut *self.inner.get() }
+    }
     pub fn into_inner(self) -> T {
         self.inner.into_inner()
     }

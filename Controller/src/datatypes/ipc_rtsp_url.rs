@@ -1,7 +1,7 @@
 use anyhow::Error;
 use http::uri::Uri;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::{convert::TryFrom, fmt, fmt::Display};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 #[serde(try_from = "IpcRtspUrlSerde")]
@@ -12,6 +12,14 @@ pub struct IpcRtspUrl {
 impl IpcRtspUrl {
     pub fn new(uri: Uri) -> Self {
         Self { uri }
+    }
+}
+impl Display for IpcRtspUrl {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        f.write_str(self.uri.to_string().as_str())
     }
 }
 impl TryFrom<IpcRtspUrlSerde> for IpcRtspUrl {

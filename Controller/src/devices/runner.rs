@@ -6,7 +6,7 @@ use crate::{
         },
         Device as SignalsDevice,
     },
-    util::scoped_async::{ScopedRunnerSync, ScopedRunnersSync},
+    util::scoped_async::{RunnableSpawnSync, RunnablesSpawnSync},
     web::{self, sse_aggregated, uri_cursor},
 };
 use anyhow::Context;
@@ -16,14 +16,14 @@ use std::collections::HashMap;
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 
 struct ExchangerContextHandle<'r, 'd> {
-    exchanger_scoped_runner: ScopedRunnerSync<'r, 'd>,
+    exchanger_runnable_spawn: RunnableSpawnSync<'r, 'd>,
 }
 struct ExchangerContextOwner<'d> {
     exchanger: Exchanger<'d>,
 }
 
 struct RuntimeDevicesContextHandle<'r, 'd> {
-    devices_handler_scoped_runner: ScopedRunnersSync<'r, 'd>,
+    devices_handler_scoped_runner: RunnablesSpawnSync<'r, 'd>,
     exchanger_context:
         OwningHandle<Box<ExchangerContextOwner<'d>>, Box<ExchangerContextHandle<'r, 'd>>>,
     devices_gui_summary_sse_aggregated_bus: sse_aggregated::Bus,
@@ -45,7 +45,7 @@ impl<'d> Runner<'d> {
         let runtime = RuntimeBuilder::new()
             .enable_all()
             .threaded_scheduler()
-            .thread_name("Runner.devices")
+            .thread_name("Devices")
             .build()
             .unwrap();
 
@@ -88,13 +88,13 @@ impl<'d> Runner<'d> {
                     |exchange_context_owner_ptr| {
                         let exchange_context_owner = unsafe { &*exchange_context_owner_ptr };
 
-                        let exchanger_scoped_runner = ScopedRunnerSync::new(
+                        let exchanger_runnable_spawn = RunnableSpawnSync::new(
                             &runtime_devices_context.runtime,
                             &exchange_context_owner.exchanger,
                         );
 
                         Box::new(ExchangerContextHandle {
-                            exchanger_scoped_runner,
+                            exchanger_runnable_spawn,
                         })
                     },
                 );
@@ -105,7 +105,7 @@ impl<'d> Runner<'d> {
                     .values()
                     .filter_map(|device_handler| device_handler.device().as_runnable())
                     .collect::<Box<[_]>>();
-                let devices_handler_scoped_runner = ScopedRunnersSync::new(
+                let devices_handler_scoped_runner = RunnablesSpawnSync::new(
                     &runtime_devices_context.runtime,
                     &devices_handler_runnables,
                 );
