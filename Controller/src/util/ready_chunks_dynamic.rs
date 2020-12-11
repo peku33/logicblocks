@@ -1,7 +1,4 @@
-use futures::{
-    stream::{Fuse, FusedStream},
-    Stream, StreamExt,
-};
+use futures::stream::{Fuse, FusedStream, Stream, StreamExt};
 use std::{
     mem::replace,
     pin::Pin,

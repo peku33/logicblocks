@@ -8,7 +8,7 @@ use crate::{
     util::waker_stream,
     web::{self, uri_cursor},
 };
-use futures::{future::BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;

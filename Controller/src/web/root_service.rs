@@ -2,7 +2,7 @@ use super::{
     uri_cursor::{Handler as UriCursorHandler, UriCursor},
     Handler, Request, Response,
 };
-use futures::{future::BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use http::{HeaderMap, Method, Uri};
 
 #[cfg(feature = "ci-packed-gui")]

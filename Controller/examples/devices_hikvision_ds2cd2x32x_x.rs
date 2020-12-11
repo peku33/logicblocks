@@ -3,7 +3,7 @@
 
 use anyhow::{Context, Error};
 use clap::{App, Arg, SubCommand};
-use futures::{pin_mut, select, FutureExt, StreamExt};
+use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use http::uri::Authority;
 use logicblocks_controller::{
     devices::hikvision::ds2cd2x32x_x::hardware::{

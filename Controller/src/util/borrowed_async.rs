@@ -1,8 +1,7 @@
 use futures::{
     future::{FusedFuture, Future},
-    stream::FusedStream,
+    stream::{FusedStream, Stream},
     task::{Context, Poll},
-    Stream,
 };
 use std::{ops::DerefMut, pin::Pin};
 

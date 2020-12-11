@@ -6,7 +6,7 @@ use crate::{
     },
     web::{self, sse_aggregated, uri_cursor},
 };
-use futures::{future::BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use parking_lot::Mutex;
 use serde::Serialize;
