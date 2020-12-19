@@ -10,12 +10,17 @@ use super::{
 use crate::{
     devices::Id as DeviceId,
     util::{
-        borrowed_async::DerefStream, ready_chunks_dynamic::ReadyChunksDynamicExt,
-        scoped_async::Runnable,
+        borrowed_async::DerefStream,
+        ready_chunks_dynamic::ReadyChunksDynamicExt,
+        scoped_async::{ExitFlag, Exited, Runnable},
     },
 };
 use async_trait::async_trait;
-use futures::{pin_mut, select, stream::SelectAll, StreamExt};
+use futures::{
+    future::FutureExt,
+    pin_mut, select,
+    stream::{SelectAll, StreamExt},
+};
 use std::collections::{HashMap, HashSet};
 
 pub struct Exchanger<'d> {
@@ -146,11 +151,21 @@ impl<'d> Exchanger<'d> {
 }
 #[async_trait]
 impl<'d> Runnable for Exchanger<'d> {
-    async fn run(&self) -> ! {
-        self.run().await
-    }
+    async fn run(
+        &self,
+        mut exit_flag: ExitFlag,
+    ) -> Exited {
+        let run_future = self.run();
+        pin_mut!(run_future);
+        let mut run_future = run_future.fuse();
 
-    async fn finalize(&self) {}
+        select! {
+            _ = run_future => panic!("run_future yielded"),
+            () = exit_flag => {},
+        }
+
+        Exited
+    }
 }
 
 fn connections_requested_to_connections_running<'d>(

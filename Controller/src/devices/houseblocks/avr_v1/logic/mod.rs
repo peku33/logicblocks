@@ -5,11 +5,18 @@ use super::{
 use crate::{
     devices::{self, GuiSummaryProvider},
     signals,
-    util::{optional_async::FutureOrPending, scoped_async::Runnable, waker_stream},
+    util::{
+        scoped_async::{ExitFlag, Exited, Runnable},
+        waker_stream,
+    },
     web::uri_cursor,
 };
 use async_trait::async_trait;
-use futures::{future::OptionFuture, pin_mut, select, FutureExt, StreamExt};
+use futures::{
+    future::{join, FutureExt, OptionFuture},
+    pin_mut, select,
+    stream::StreamExt,
+};
 use serde::Serialize;
 use std::{borrow::Cow, fmt};
 
@@ -61,17 +68,17 @@ impl<'m, D: Device> Runner<'m, D> {
         }
     }
 
-    pub async fn run(&self) -> ! {
-        let hardware_runner_run = self.hardware_runner.run();
-        pin_mut!(hardware_runner_run);
-        let mut hardware_runner_run = hardware_runner_run.fuse();
+    pub async fn run(
+        &self,
+        exit_flag: ExitFlag,
+    ) -> Exited {
+        let hardware_runner_run = self.hardware_runner.run(exit_flag.clone());
 
-        let device_run = FutureOrPending::new(
+        let device_run = OptionFuture::from(
             self.device
                 .as_runnable()
-                .map(|device_runnable| device_runnable.run()),
+                .map(|device_runnable| device_runnable.run(exit_flag.clone())),
         );
-        let mut device_run = device_run.fuse();
 
         let mut properties_remote_in_changed_waker = self
             .hardware_runner
@@ -120,24 +127,14 @@ impl<'m, D: Device> Runner<'m, D> {
         let mut device_gui_summary_waker_forwarder = device_gui_summary_waker_forwarder.fuse();
 
         select! {
-            _ = hardware_runner_run => panic!("hardware_runner_run yielded"),
-            _ = device_run => panic!("device_run yielded"),
+            _ = join(hardware_runner_run, device_run).fuse() => {},
             _ = properties_remote_in_changed_waker_forwarder => panic!("properties_remote_in_changed_waker_forwarder yielded"),
             _ = properties_remote_out_changed_waker_forwarder => panic!("properties_remote_out_changed_waker_forwarder yielded"),
             _ = hardware_runner_gui_summary_waker_forwarder => panic!("hardware_runner_gui_summary_waker_forwarder yielded"),
             _ = device_gui_summary_waker_forwarder => panic!("device_gui_summary_waker_forwarder yielded"),
         }
-    }
 
-    pub async fn finalize(&self) {
-        OptionFuture::from(
-            self.device
-                .as_runnable()
-                .map(|device_runnable| device_runnable.finalize()),
-        )
-        .await;
-
-        self.hardware_runner.finalize().await;
+        Exited
     }
 }
 impl<'m, D: Device> devices::Device for Runner<'m, D> {
@@ -158,12 +155,11 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
 }
 #[async_trait]
 impl<'m, D: Device> Runnable for Runner<'m, D> {
-    async fn run(&self) -> ! {
-        self.run().await
-    }
-
-    async fn finalize(&self) {
-        self.finalize().await
+    async fn run(
+        &self,
+        exit_flag: ExitFlag,
+    ) -> Exited {
+        self.run(exit_flag).await
     }
 }
 #[derive(Serialize)]

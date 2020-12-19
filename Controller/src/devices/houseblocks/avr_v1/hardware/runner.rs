@@ -9,8 +9,8 @@ use super::{
 use crate::{
     devices,
     util::{
-        optional_async::{FutureOrPending, StreamOrPending},
-        scoped_async::Runnable,
+        optional_async::StreamOrPending,
+        scoped_async::{ExitFlag, Exited, Runnable},
         waker_stream,
     },
 };
@@ -18,7 +18,7 @@ use anyhow::{Context, Error};
 use async_trait::async_trait;
 use futures::{
     future::{FutureExt, OptionFuture},
-    pin_mut, select,
+    join, select,
     stream::StreamExt,
 };
 use parking_lot::Mutex;
@@ -131,27 +131,24 @@ impl<'m, D: Device> Runner<'m, D> {
         self.properties_remote_out_change_waker.wake();
     }
 
-    async fn driver_run_once(&self) -> Error {
+    async fn driver_run_once(
+        &self,
+        mut exit_flag: ExitFlag,
+    ) -> Result<Exited, Error> {
         *self.device_state.lock() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
 
         // Hardware initializing & avr_v1
-        if let Err(error) = self.driver.prepare().await.context("initial prepare") {
-            return error;
-        }
+        self.driver.prepare().await.context("initial prepare")?;
 
         // Device is prepared in application mode, we can start application driver
         let application_driver = ApplicationDriver::new(&self.driver);
 
         // User mode initializing
-        if let Err(error) = self
-            .device
+        self.device
             .initialize(&application_driver)
             .await
-            .context("initialize")
-        {
-            return error;
-        }
+            .context("initialize")?;
         if self.device.properties().in_any_user_pending() {
             self.properties_remote_in_change_waker.wake();
         }
@@ -172,9 +169,10 @@ impl<'m, D: Device> Runner<'m, D> {
 
         loop {
             // Poll
-            if let Err(error) = self.device.poll(&application_driver).await.context("poll") {
-                return error;
-            }
+            self.device
+                .poll(&application_driver)
+                .await
+                .context("poll")?;
             if self.device.properties().in_any_user_pending() {
                 self.properties_remote_in_change_waker.wake();
             }
@@ -191,15 +189,43 @@ impl<'m, D: Device> Runner<'m, D> {
                 () = poll_timer => {},
                 () = device_poll_waker.select_next_some() => {},
                 () = properties_remote_out_change_waker.select_next_some() => {},
+                () = exit_flag => break,
             };
         }
-    }
-    async fn driver_run_infinite(&self) -> ! {
+
+        // Finalize
+        self.device
+            .deinitialize(&application_driver)
+            .await
+            .context("deinitialize")?;
+        if self.device.properties().in_any_user_pending() {
+            self.properties_remote_in_change_waker.wake();
+        }
+
         *self.device_state.lock() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
 
+        Ok(Exited)
+    }
+    async fn driver_run(
+        &self,
+        exit_flag: ExitFlag,
+    ) -> Exited {
+        // Prepare
+        *self.device_state.lock() = DeviceState::Initializing;
+        self.gui_summary_waker.wake();
+
+        // Run
         loop {
-            let error = self.driver_run_once().await.context("driver_run_once");
+            let error = match self
+                .driver_run_once(exit_flag.clone())
+                .await
+                .context("driver_run_once")
+            {
+                Ok(Exited) => break,
+                Err(error) => error,
+            };
+            log::error!("device {} failed: {:?}", self.driver.address(), error);
 
             self.device.failed();
             if self.device.properties().in_any_user_pending() {
@@ -208,54 +234,28 @@ impl<'m, D: Device> Runner<'m, D> {
 
             *self.device_state.lock() = DeviceState::Error;
             self.gui_summary_waker.wake();
-            log::error!("device {} failed: {:?}", self.driver.address(), error);
 
             tokio::time::delay_for(Self::ERROR_RESTART_DELAY).await;
         }
+
+        Exited
     }
 
-    pub async fn run(&self) -> ! {
-        let driver_runner = self.driver_run_infinite();
-        pin_mut!(driver_runner);
-        let mut driver_runner = driver_runner.fuse();
+    pub async fn run(
+        &self,
+        exit_flag: ExitFlag,
+    ) -> Exited {
+        let driver_runner = self.driver_run(exit_flag.clone());
 
-        let device_runner = FutureOrPending::new(
+        let device_runner = OptionFuture::from(
             self.device
                 .as_runnable()
-                .map(|device_runnable| device_runnable.run()),
+                .map(|device_runnable| device_runnable.run(exit_flag.clone())),
         );
-        pin_mut!(device_runner);
-        let mut device_runner = device_runner.fuse();
 
-        select! {
-            _ = driver_runner => panic!("driver_runner yielded"),
-            _ = device_runner => panic!("device_runner yielded"),
-        }
-    }
-    pub async fn finalize(&self) {
-        let device_state = *self.device_state.lock();
-        if device_state == DeviceState::Initializing || device_state == DeviceState::Running {
-            let application_driver = ApplicationDriver::new(&self.driver);
+        join!(driver_runner, device_runner);
 
-            let _ = self
-                .device
-                .deinitialize(&application_driver)
-                .await
-                .context("deinitialize");
-            if self.device.properties().in_any_user_pending() {
-                self.properties_remote_in_change_waker.wake();
-            }
-
-            *self.device_state.lock() = DeviceState::Initializing;
-            self.gui_summary_waker.wake();
-        };
-
-        OptionFuture::from(
-            self.device
-                .as_runnable()
-                .map(|device_runnable| device_runnable.finalize()),
-        )
-        .await;
+        Exited
     }
 }
 

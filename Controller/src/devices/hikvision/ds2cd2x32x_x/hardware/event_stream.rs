@@ -127,16 +127,13 @@ impl<'a> Manager<'a> {
         self.events_sender.broadcast(events).unwrap();
     }
 
-    pub async fn run_once(&self) -> Error {
-        let data_stream = match self
+    pub async fn run_once(&self) -> Result<!, Error> {
+        let data_stream = self
             .api
             .request_mixed_stream("/ISAPI/Event/notification/alertStream".parse().unwrap())
             .await
-            .context("request_mixed_stream")
-        {
-            Ok(stream) => stream,
-            Err(error) => return error,
-        };
+            .context("request_mixed_stream")?;
+
         // TODO: Add timeout
         let data_stream_runner = data_stream
             .err_into::<Error>()
@@ -175,8 +172,8 @@ impl<'a> Manager<'a> {
         let mut events_disabler_runner = events_disabler_runner.fuse();
 
         select! {
-            data_stream_runner_error = data_stream_runner => data_stream_runner_error,
-            _ = events_disabler_runner => panic!("events_disabler_runner"),
+            data_stream_runner_error = data_stream_runner => bail!(data_stream_runner_error),
+            _ = events_disabler_runner => bail!("events_disabler_runner"),
         }
     }
     pub async fn run(&self) -> ! {

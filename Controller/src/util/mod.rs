@@ -1,4 +1,5 @@
 pub mod anyhow_multiple_error;
+pub mod async_flag;
 pub mod atomic_cell;
 pub mod borrowed_async;
 pub mod bus;

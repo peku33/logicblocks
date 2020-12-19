@@ -296,14 +296,14 @@ impl Api {
         })
     }
 
-    fn model_supported(model: &str) -> Result<bool, Error> {
+    fn model_supported(model: &str) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         let result = match model {
             "DS-2CD2132F-IS" => true,
             "DS-2CD2532F-IS" => true,
             _ => false,
         };
-        Ok(result)
+        result
     }
     fn firmware_version_supported(firmware_version: &Version) -> bool {
         let supported_versions = vec![VersionReq::parse("^5.2.0").unwrap()];
@@ -336,7 +336,7 @@ impl Api {
             .context("model")?;
 
         ensure!(
-            Self::model_supported(&model).context("model_supported")?,
+            Self::model_supported(&model),
             "this model ({}) is not supported",
             model
         );

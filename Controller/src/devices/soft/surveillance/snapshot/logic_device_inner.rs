@@ -2,8 +2,8 @@ use crate::{web, web::uri_cursor};
 use anyhow::{Context, Error};
 use bytes::Bytes;
 use futures::{
-    future::{BoxFuture, FutureExt},
-    join, Future,
+    future::{BoxFuture, Future, FutureExt},
+    join,
 };
 use image::{imageops::FilterType, DynamicImage, ImageOutputFormat};
 use parking_lot::RwLock;
@@ -168,15 +168,10 @@ where
         }
     }
 
-    pub async fn run_once(&self) -> Error {
+    pub async fn run_once(&self) -> Result<!, Error> {
         loop {
-            let image = match (self.getter)().await.context("getter") {
-                Ok(image) => image,
-                Err(error) => return error,
-            };
-            if let Err(error) = self.manager.image_set(&image).await.context("image_set") {
-                return error;
-            }
+            let image = (self.getter)().await.context("getter")?;
+            self.manager.image_set(&image).await.context("image_set")?;
 
             (self.updated)();
 

@@ -1,6 +1,8 @@
+#![feature(async_closure)]
+
 use anyhow::{bail, Context, Error};
 use futures::{
-    future::{Future, FutureExt},
+    future::{join, Future, FutureExt},
     pin_mut, select,
     stream::StreamExt,
 };
@@ -13,7 +15,7 @@ use logicblocks_controller::{
         },
     },
     interfaces::serial::ftdi::{Descriptor, Global},
-    util::logging,
+    util::{async_flag::Sender, logging},
 };
 use std::time::Duration;
 
@@ -73,7 +75,7 @@ fn menu_master_context(descriptor: Descriptor) -> Result<(), Error> {
 
     while let Some(result) = menu.interact_opt()? {
         match result {
-            0 => menu_master_device_discovery(&master).context("menu_master_device_discovery")?,
+            0 => menu_master_device_discovery(&master),
             1 => menu_master_avr_v1(&master).context("menu_master_avr_v1")?,
             _ => panic!(),
         };
@@ -86,12 +88,11 @@ fn master_device_discovery(master: &Master) -> Result<Address, Error> {
         transaction.await
     })
 }
-fn menu_master_device_discovery(master: &Master) -> Result<(), Error> {
+fn menu_master_device_discovery(master: &Master) {
     match master_device_discovery(master).context("master_device_discovery") {
         Ok(address) => println!("address: {}", address),
         Err(error) => log::error!("error: {:?}", error),
     };
-    Ok(())
 }
 fn menu_master_avr_v1(master: &Master) -> Result<(), Error> {
     let mut menu = dialoguer::Select::new();
@@ -140,16 +141,25 @@ fn run_by_address(
     address: Address,
 ) -> Result<(), Error> {
     match address.device_type() as &[u8] {
-        b"0003" => run_d0003_junction_box_minimal_v1(master, *address.serial()),
-        b"0006" => run_d0006_relay14_opto_a_v1(master, *address.serial()),
-        b"0007" => run_d0007_relay14_ssr_a_v2(master, *address.serial()),
+        b"0003" => {
+            run_d0003_junction_box_minimal_v1(master, *address.serial());
+            Ok(())
+        }
+        b"0006" => {
+            run_d0006_relay14_opto_a_v1(master, *address.serial());
+            Ok(())
+        }
+        b"0007" => {
+            run_d0007_relay14_ssr_a_v2(master, *address.serial());
+            Ok(())
+        }
         _ => bail!("device_type {} is not supported", address.device_type()),
     }
 }
 fn run_d0003_junction_box_minimal_v1(
     master: &Master,
     address_serial: AddressSerial,
-) -> Result<(), Error> {
+) {
     let runner = avr_v1::hardware::runner::Runner::<
         avr_v1::d0003_junction_box_minimal_v1::hardware::Device,
     >::new(master, address_serial);
@@ -163,9 +173,13 @@ fn run_d0003_junction_box_minimal_v1(
                 temperature,
             } = runner_ref.properties_remote();
 
-            let runner_run = runner_ref.run();
-            pin_mut!(runner_run);
-            let mut runner_run = runner_run.fuse();
+            let exit_flag_sender = Sender::new();
+
+            let run_future = runner_ref.run(exit_flag_sender.receiver());
+
+            let abort_runner = tokio::signal::ctrl_c().then(async move |_| {
+                exit_flag_sender.signal();
+            });
 
             let keys_changed = || {
                 let keys = match keys.take_pending() {
@@ -234,27 +248,20 @@ fn run_d0003_junction_box_minimal_v1(
             pin_mut!(properties_remote_in_changed_runner);
             let mut properties_remote_in_changed_runner = properties_remote_in_changed_runner.fuse();
 
-            let mut ctrlc = tokio::signal::ctrl_c().boxed().fuse();
-
-            loop {
-                select! {
-                    _ = runner_run => panic!("runner_run yielded"),
-                    _ = leds_runner => panic!("leds_runner"),
-                    _ = buzzer_runner => panic!("leds_runner"),
-                    _ = properties_remote_in_changed_runner => panic!("properties_remote_in_changed_runner yielded"),
-                    _ = ctrlc => break,
-                }
+            select! {
+                _ = join(abort_runner, run_future).fuse() => {},
+                _ = leds_runner => panic!("leds_runner"),
+                _ = buzzer_runner => panic!("leds_runner"),
+                _ = properties_remote_in_changed_runner => panic!("properties_remote_in_changed_runner yielded"),
             }
         }
         .await;
-        runner.finalize().await;
     });
-    Ok(())
 }
 fn run_d0006_relay14_opto_a_v1(
     master: &Master,
     address_serial: AddressSerial,
-) -> Result<(), Error> {
+) {
     run_common_relay14_common::<avr_v1::d0006_relay14_opto_a_v1::hardware::Specification>(
         master,
         address_serial,
@@ -263,7 +270,7 @@ fn run_d0006_relay14_opto_a_v1(
 fn run_d0007_relay14_ssr_a_v2(
     master: &Master,
     address_serial: AddressSerial,
-) -> Result<(), Error> {
+) {
     run_common_relay14_common::<avr_v1::d0007_relay14_ssr_a_v2::hardware::Specification>(
         master,
         address_serial,
@@ -272,7 +279,7 @@ fn run_d0007_relay14_ssr_a_v2(
 fn run_common_relay14_common<S: avr_v1::common::relay14_common_a::hardware::Specification>(
     master: &Master,
     address_serial: AddressSerial,
-) -> Result<(), Error> {
+) {
     let runner = avr_v1::hardware::runner::Runner::<
         avr_v1::common::relay14_common_a::hardware::Device<S>,
     >::new(master, address_serial);
@@ -282,9 +289,13 @@ fn run_common_relay14_common<S: avr_v1::common::relay14_common_a::hardware::Spec
             let avr_v1::common::relay14_common_a::hardware::PropertiesRemote { outputs } =
                 runner_ref.properties_remote();
 
-            let runner_run = runner_ref.run();
-            pin_mut!(runner_run);
-            let mut runner_run = runner_run.fuse();
+            let exit_flag_sender = Sender::new();
+
+            let run_future = runner_ref.run(exit_flag_sender.receiver());
+
+            let abort_runner = tokio::signal::ctrl_c().then(async move |_| {
+                exit_flag_sender.signal();
+            });
 
             let outputs_runner = async {
                 let mut output_index = 0;
@@ -307,18 +318,11 @@ fn run_common_relay14_common<S: avr_v1::common::relay14_common_a::hardware::Spec
             pin_mut!(outputs_runner);
             let mut outputs_runner = outputs_runner.fuse();
 
-            let mut ctrlc = tokio::signal::ctrl_c().boxed().fuse();
-
-            loop {
-                select! {
-                    _ = runner_run => panic!("runner_run yielded"),
-                    _ = outputs_runner => panic!("outputs_runner yielded"),
-                    _ = ctrlc => break,
-                }
+            select! {
+                _ = join(abort_runner, run_future).fuse() => {},
+                _ = outputs_runner => panic!("outputs_runner yielded"),
             }
         }
         .await;
-        runner.finalize().await;
     });
-    Ok(())
 }

@@ -1,6 +1,7 @@
 use super::{Handler, Request, Response};
-use crate::util::scoped_async::{Runnable, RunnableSpawnSync};
+use crate::util::scoped_async::{ExitFlag, Exited, Runnable, ScopedRuntime};
 use async_trait::async_trait;
+use futures::{future::FutureExt, pin_mut, select};
 use hyper::{
     server::conn::AddrStream,
     service::{make_service_fn, service_fn},
@@ -8,13 +9,19 @@ use hyper::{
 };
 use owning_ref::OwningHandle;
 use std::{convert::Infallible, mem::transmute, net::SocketAddr};
-use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 
 pub struct Server<'h> {
     bind: SocketAddr,
     handler: &'h (dyn Handler + Sync),
 }
 impl<'h> Server<'h> {
+    pub fn new(
+        bind: SocketAddr,
+        handler: &'h (dyn Handler + Sync),
+    ) -> Self {
+        Self { bind, handler }
+    }
+
     async fn respond(
         &self,
         remote_address: SocketAddr,
@@ -62,64 +69,45 @@ impl<'h> Server<'h> {
         });
 
         let server = HyperServer::bind(&self.bind).serve(make_service);
+
         match server.await {
-            Ok(()) => panic!("server yielded without error"),
-            Err(error) => panic!("server yielded with error: {:?}", error),
+            Ok(()) => panic!("server exited with no error"),
+            Err(error) => panic!("server exited with error: {:?}", error),
         }
     }
 }
 #[async_trait]
 impl<'h> Runnable for Server<'h> {
-    async fn run(&self) -> ! {
-        unsafe { self.run().await }
+    async fn run(
+        &self,
+        mut exit_flag: ExitFlag,
+    ) -> Exited {
+        let run_future = unsafe { self.run() };
+        pin_mut!(run_future);
+        let mut run_future = run_future.fuse();
+
+        select! {
+            _ = run_future => panic!("run_future yielded"),
+            () = exit_flag => Exited,
+        }
     }
-
-    async fn finalize(&self) {}
-}
-
-struct ServerRunnerContextOwner<'h> {
-    runtime: Runtime,
-    server: Server<'h>,
-}
-struct ServerRunnerContextHandle<'r, 'u> {
-    server_runnable_spawn: RunnableSpawnSync<'r, 'u>,
 }
 
 pub struct ServerRunner<'h> {
-    context:
-        OwningHandle<Box<ServerRunnerContextOwner<'h>>, Box<ServerRunnerContextHandle<'h, 'h>>>,
+    context: OwningHandle<Box<Server<'h>>, Box<ScopedRuntime<&'h Server<'h>>>>,
 }
 impl<'h> ServerRunner<'h> {
     pub fn new(
         bind: SocketAddr,
         handler: &'h (dyn Handler + Sync),
     ) -> Self {
-        let runtime = RuntimeBuilder::new()
-            .enable_all()
-            .threaded_scheduler()
-            .thread_name("Server.web")
-            .build()
-            .unwrap();
-
-        let server = Server { bind, handler };
-
-        let server_runner_context_owner = ServerRunnerContextOwner { runtime, server };
-
-        let context = OwningHandle::new_with_fn(
-            Box::new(server_runner_context_owner),
-            |server_runner_context_owner_ptr| {
-                let server_runner_context_owner = unsafe { &*server_runner_context_owner_ptr };
-
-                let server_runner_context_handle = ServerRunnerContextHandle {
-                    server_runnable_spawn: RunnableSpawnSync::new(
-                        &server_runner_context_owner.runtime,
-                        &server_runner_context_owner.server,
-                    ),
-                };
-                Box::new(server_runner_context_handle)
-            },
-        );
-
+        let server = Server::new(bind, handler);
+        let context = OwningHandle::new_with_fn(Box::new(server), |server_ptr| {
+            let server = unsafe { &*server_ptr };
+            let scoped_runtime = ScopedRuntime::new(server, "Server.web".to_string());
+            scoped_runtime.spawn_runnable_detached(|server| *server);
+            Box::new(scoped_runtime)
+        });
         Self { context }
     }
 }

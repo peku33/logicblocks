@@ -6,61 +6,45 @@ use crate::{
         },
         Device as SignalsDevice,
     },
-    util::scoped_async::{RunnableSpawnSync, RunnablesSpawnSync},
+    util::scoped_async::ScopedRuntime,
     web::{self, sse_aggregated, uri_cursor},
 };
 use anyhow::Context;
-use futures::{future::BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use owning_ref::OwningHandle;
 use std::collections::HashMap;
-use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 
-struct ExchangerContextHandle<'r, 'd> {
-    exchanger_runnable_spawn: RunnableSpawnSync<'r, 'd>,
+struct RunnerContextChildChild<'d> {
+    scoped_runtime: ScopedRuntime<(&'d RunnerContextOwner<'d>, &'d RunnerContextChildOwner<'d>)>,
 }
-struct ExchangerContextOwner<'d> {
+struct RunnerContextChildOwner<'d> {
     exchanger: Exchanger<'d>,
-}
-
-struct RuntimeDevicesContextHandle<'r, 'd> {
-    devices_handler_scoped_runner: RunnablesSpawnSync<'r, 'd>,
-    exchanger_context:
-        OwningHandle<Box<ExchangerContextOwner<'d>>, Box<ExchangerContextHandle<'r, 'd>>>,
     devices_gui_summary_sse_aggregated_bus: sse_aggregated::Bus,
 }
-struct RuntimeDevicesContextOwner<'d> {
-    runtime: Runtime,
+struct RunnerContextChild<'d> {
+    context: OwningHandle<Box<RunnerContextChildOwner<'d>>, Box<RunnerContextChildChild<'d>>>,
+}
+struct RunnerContextOwner<'d> {
     devices_handler: HashMap<DeviceId, DeviceHandler<'d>>,
 }
 
 pub struct Runner<'d> {
-    runtime_devices_context:
-        OwningHandle<Box<RuntimeDevicesContextOwner<'d>>, Box<RuntimeDevicesContextHandle<'d, 'd>>>,
+    context: OwningHandle<Box<RunnerContextOwner<'d>>, Box<RunnerContextChild<'d>>>,
 }
 impl<'d> Runner<'d> {
     pub fn new(
         devices_handler: HashMap<DeviceId, DeviceHandler<'d>>,
         connections_requested: ConnectionsRequested,
     ) -> Self {
-        let runtime = RuntimeBuilder::new()
-            .enable_all()
-            .threaded_scheduler()
-            .thread_name("Devices")
-            .build()
-            .unwrap();
-
-        let runtime_devices_context = OwningHandle::new_with_fn(
-            Box::new(RuntimeDevicesContextOwner {
-                runtime,
-                devices_handler,
-            }),
-            |runtime_devices_context_ptr| {
-                let runtime_devices_context = unsafe { &*runtime_devices_context_ptr };
+        let context = OwningHandle::new_with_fn(
+            Box::new(RunnerContextOwner { devices_handler }),
+            |context_owner_ptr| {
+                let context_owner = unsafe { &*context_owner_ptr };
 
                 // devices_gui_summary_sse_aggregated_bus
                 let devices_gui_summary_sse_aggregated_node = sse_aggregated::Node {
                     terminal: None,
-                    children: runtime_devices_context
+                    children: context_owner
                         .devices_handler
                         .iter()
                         .map(|(device_id, device_handler)| {
@@ -74,8 +58,8 @@ impl<'d> Runner<'d> {
                 let devices_gui_summary_sse_aggregated_bus =
                     sse_aggregated::Bus::new(devices_gui_summary_sse_aggregated_node);
 
-                // exchanger_context
-                let exchanger_devices = runtime_devices_context
+                // exchanger
+                let exchanger_devices = context_owner
                     .devices_handler
                     .iter()
                     .map(|(device_id, device_handler)| {
@@ -83,44 +67,43 @@ impl<'d> Runner<'d> {
                     })
                     .collect::<HashMap<DeviceId, &'d dyn SignalsDevice>>();
                 let exchanger = Exchanger::new(exchanger_devices, &connections_requested);
-                let exchanger_context = OwningHandle::new_with_fn(
-                    Box::new(ExchangerContextOwner { exchanger }),
-                    |exchange_context_owner_ptr| {
-                        let exchange_context_owner = unsafe { &*exchange_context_owner_ptr };
 
-                        let exchanger_runnable_spawn = RunnableSpawnSync::new(
-                            &runtime_devices_context.runtime,
-                            &exchange_context_owner.exchanger,
+                let context = OwningHandle::new_with_fn(
+                    Box::new(RunnerContextChildOwner {
+                        exchanger,
+                        devices_gui_summary_sse_aggregated_bus,
+                    }),
+                    |context_child_owner_ptr| {
+                        let context_child_owner = unsafe { &*context_child_owner_ptr };
+
+                        let scoped_runtime = ScopedRuntime::new(
+                            (context_owner, context_child_owner),
+                            "Devices.runner".to_string(),
                         );
 
-                        Box::new(ExchangerContextHandle {
-                            exchanger_runnable_spawn,
-                        })
+                        // Run devices
+                        scoped_runtime.spawn_runnables_object_detached(|(context_owner, _)| {
+                            context_owner
+                                .devices_handler
+                                .values()
+                                .filter_map(|device_handler| device_handler.device().as_runnable())
+                                .collect::<Box<[_]>>()
+                        });
+
+                        // Run exchanger
+                        scoped_runtime.spawn_runnable_detached(|(_, context_child_owner)| {
+                            &context_child_owner.exchanger
+                        });
+
+                        Box::new(RunnerContextChildChild { scoped_runtime })
                     },
                 );
 
-                // devices_handler_scoped_runner
-                let devices_handler_runnables = runtime_devices_context
-                    .devices_handler
-                    .values()
-                    .filter_map(|device_handler| device_handler.device().as_runnable())
-                    .collect::<Box<[_]>>();
-                let devices_handler_scoped_runner = RunnablesSpawnSync::new(
-                    &runtime_devices_context.runtime,
-                    &devices_handler_runnables,
-                );
-
-                Box::new(RuntimeDevicesContextHandle {
-                    devices_handler_scoped_runner,
-                    exchanger_context,
-                    devices_gui_summary_sse_aggregated_bus,
-                })
+                Box::new(RunnerContextChild { context })
             },
         );
 
-        Self {
-            runtime_devices_context,
-        }
+        Self { context }
     }
 }
 impl<'p> uri_cursor::Handler for Runner<'p> {
@@ -135,7 +118,7 @@ impl<'p> uri_cursor::Handler for Runner<'p> {
                     uri_cursor::UriCursor::Terminal => match *request.method() {
                         http::Method::GET => {
                             let device_ids = self
-                                .runtime_devices_context
+                                .context
                                 .as_owner()
                                 .devices_handler
                                 .keys()
@@ -152,7 +135,9 @@ impl<'p> uri_cursor::Handler for Runner<'p> {
                     uri_cursor::UriCursor::Terminal => match *request.method() {
                         http::Method::GET => {
                             let sse_stream = self
-                                .runtime_devices_context
+                                .context
+                                .context
+                                .as_owner()
                                 .devices_gui_summary_sse_aggregated_bus
                                 .sse_stream();
                             async move { web::Response::ok_sse_stream(sse_stream) }.boxed()
@@ -169,15 +154,11 @@ impl<'p> uri_cursor::Handler for Runner<'p> {
                                 .boxed()
                         }
                     };
-                    let device_context_run_context = match self
-                        .runtime_devices_context
-                        .as_owner()
-                        .devices_handler
-                        .get(&device_id)
-                    {
-                        Some(device_context_run_context) => device_context_run_context,
-                        None => return async move { web::Response::error_404() }.boxed(),
-                    };
+                    let device_context_run_context =
+                        match self.context.as_owner().devices_handler.get(&device_id) {
+                            Some(device_context_run_context) => device_context_run_context,
+                            None => return async move { web::Response::error_404() }.boxed(),
+                        };
                     device_context_run_context.handle(request, &*uri_cursor)
                 }
                 _ => async move { web::Response::error_404() }.boxed(),

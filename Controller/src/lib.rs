@@ -4,6 +4,7 @@
 #![feature(exact_size_is_empty)]
 #![feature(generic_associated_types)]
 #![feature(hash_drain_filter)]
+#![feature(map_into_keys_values)]
 #![feature(never_type)]
 #![feature(option_expect_none)]
 #![feature(option_result_contains)]

@@ -13,7 +13,10 @@ use crate::{
         signal::{self, state_source},
         Signals,
     },
-    util::{scoped_async::Runnable, waker_stream},
+    util::{
+        scoped_async::{ExitFlag, Exited, Runnable},
+        waker_stream,
+    },
     web,
     web::uri_cursor,
 };
@@ -196,7 +199,7 @@ impl Device {
         self.signal_sources_changed_waker.wake();
     }
 
-    async fn run_once(&self) -> Error {
+    async fn run_once(&self) -> Result<!, Error> {
         *self.device_state.write() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
 
@@ -207,13 +210,9 @@ impl Device {
         );
 
         // Check device
-        if let Err(error) = api
-            .validate_basic_device_info()
+        api.validate_basic_device_info()
             .await
-            .context("validate_basic_device_info")
-        {
-            return error;
-        }
+            .context("validate_basic_device_info")?;
 
         // Set device configuration
         // Get rtsp data based on configuration type
@@ -223,13 +222,10 @@ impl Device {
                     hardware_configuration,
                 } => {
                     let mut configurator = configurator::Configurator::new(&api);
-                    if let Err(error) = configurator
+                    configurator
                         .configure(hardware_configuration.clone())
                         .await
-                        .context("configure")
-                    {
-                        return error;
-                    }
+                        .context("configure")?;
 
                     (
                         configurator::Configurator::SHARED_USER_LOGIN,
@@ -336,11 +332,21 @@ impl devices::Device for Device {
 }
 #[async_trait]
 impl Runnable for Device {
-    async fn run(&self) -> ! {
-        self.run().await
-    }
+    async fn run(
+        &self,
+        mut exit_flag: ExitFlag,
+    ) -> Exited {
+        let run_future = self.run();
+        pin_mut!(run_future);
+        let mut run_future = run_future.fuse();
 
-    async fn finalize(&self) {}
+        select! {
+            _ = run_future => panic!("run_future yielded"),
+            () = exit_flag => {},
+        }
+
+        Exited
+    }
 }
 impl signals::Device for Device {
     fn signal_targets_changed_wake(&self) {
