@@ -1,9 +1,9 @@
 pub mod anyhow_multiple_error;
 pub mod async_flag;
 pub mod atomic_cell;
+pub mod atomic_cell_erased;
 pub mod borrowed_async;
 pub mod bus;
-pub mod erased_ref;
 pub mod logging;
 pub mod optional_async;
 pub mod ready_chunks_dynamic;

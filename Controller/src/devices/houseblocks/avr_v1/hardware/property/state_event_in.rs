@@ -1,7 +1,7 @@
 use super::Base;
 use crate::{
     util::{
-        erased_ref::{ErasedRef, ErasedRefLease},
+        atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
         waker_stream,
     },
     web::{self, sse_aggregated, uri_cursor},
@@ -40,7 +40,7 @@ where
     S: PartialEq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
-    inner: ErasedRef<Inner<S, E>>,
+    inner: AtomicCellErased<Inner<S, E>>,
 }
 impl<S, E> Property<S, E>
 where
@@ -60,7 +60,7 @@ where
             state,
             sse_aggregated_waker,
         };
-        let inner = ErasedRef::new(inner);
+        let inner = AtomicCellErased::new(inner);
 
         Self { inner }
     }
@@ -181,7 +181,7 @@ where
     S: PartialEq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
-    inner: ErasedRefLease<Inner<S, E>>,
+    inner: AtomicCellErasedLease<Inner<S, E>>,
 }
 impl<S, E> Stream<S, E>
 where

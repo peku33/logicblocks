@@ -11,15 +11,15 @@ struct Inner<T> {
     lease_count: AtomicUsize,
 }
 
-pub struct ErasedRef<T> {
+pub struct AtomicCellErased<T> {
     inner: Pin<Box<Inner<T>>>,
 }
-impl<T: fmt::Debug> fmt::Debug for ErasedRef<T> {
+impl<T: fmt::Debug> fmt::Debug for AtomicCellErased<T> {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        f.debug_struct("ErasedRef")
+        f.debug_struct("AtomicCellErased")
             .field("value", &self.inner.value)
             .field(
                 "lease_count",
@@ -28,7 +28,7 @@ impl<T: fmt::Debug> fmt::Debug for ErasedRef<T> {
             .finish()
     }
 }
-impl<T> ErasedRef<T> {
+impl<T> AtomicCellErased<T> {
     pub fn new(value: T) -> Self {
         let inner = Inner {
             value,
@@ -38,52 +38,52 @@ impl<T> ErasedRef<T> {
         Self { inner }
     }
 
-    pub fn lease(&self) -> ErasedRefLease<T> {
-        ErasedRefLease::new(self)
+    pub fn lease(&self) -> AtomicCellErasedLease<T> {
+        AtomicCellErasedLease::new(self)
     }
 }
-impl<T> Deref for ErasedRef<T> {
+impl<T> Deref for AtomicCellErased<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.inner.value
     }
 }
-impl<T> Drop for ErasedRef<T> {
+impl<T> Drop for AtomicCellErased<T> {
     fn drop(&mut self) {
         if self.inner.lease_count.load(Ordering::Relaxed) != 0 {
-            panic!("dropping ErasedRef while ErasedRefLease still exists");
+            panic!("dropping AtomicCellErased while AtomicCellErasedLease still exists");
         }
     }
 }
 
-pub struct ErasedRefLease<T> {
+pub struct AtomicCellErasedLease<T> {
     inner: *const Inner<T>,
 }
-unsafe impl<T: Send> Send for ErasedRefLease<T> {}
-unsafe impl<T: Sync> Sync for ErasedRefLease<T> {}
-impl<T> ErasedRefLease<T> {
-    fn new(parent: &ErasedRef<T>) -> Self {
+unsafe impl<T: Send> Send for AtomicCellErasedLease<T> {}
+unsafe impl<T: Sync> Sync for AtomicCellErasedLease<T> {}
+impl<T> AtomicCellErasedLease<T> {
+    fn new(parent: &AtomicCellErased<T>) -> Self {
         parent.inner.lease_count.fetch_add(1, Ordering::Relaxed);
 
         let inner: *const Inner<T> = &*parent.inner;
         Self { inner }
     }
 }
-impl<T: fmt::Debug> fmt::Debug for ErasedRefLease<T> {
+impl<T: fmt::Debug> fmt::Debug for AtomicCellErasedLease<T> {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         let inner = unsafe { &(*self.inner) };
 
-        f.debug_struct("ErasedRefLease")
+        f.debug_struct("AtomicCellErasedLease")
             .field("value", &inner.value)
             .field("lease_count", &inner.lease_count.load(Ordering::Relaxed))
             .finish()
     }
 }
-impl<T> Deref for ErasedRefLease<T> {
+impl<T> Deref for AtomicCellErasedLease<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -91,7 +91,7 @@ impl<T> Deref for ErasedRefLease<T> {
         &inner.value
     }
 }
-impl<T> Drop for ErasedRefLease<T> {
+impl<T> Drop for AtomicCellErasedLease<T> {
     fn drop(&mut self) {
         let inner = unsafe { &(*self.inner) };
         inner.lease_count.fetch_sub(1, Ordering::Relaxed);

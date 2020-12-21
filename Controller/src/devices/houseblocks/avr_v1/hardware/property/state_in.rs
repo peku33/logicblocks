@@ -1,7 +1,7 @@
 use super::Base;
 use crate::{
     util::{
-        erased_ref::{ErasedRef, ErasedRefLease},
+        atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
         waker_stream,
     },
     web::{self, sse_aggregated, uri_cursor},
@@ -26,7 +26,7 @@ struct Inner<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
 
 #[derive(Debug)]
 pub struct Property<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
-    inner: ErasedRef<Inner<T>>,
+    inner: AtomicCellErased<Inner<T>>,
 }
 impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn new() -> Self {
@@ -41,7 +41,7 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
             state,
             sse_aggregated_waker,
         };
-        let inner = ErasedRef::new(inner);
+        let inner = AtomicCellErased::new(inner);
 
         Self { inner }
     }
@@ -152,7 +152,7 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> sse_aggregated::N
 
 #[derive(Debug)]
 pub struct Stream<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
-    inner: ErasedRefLease<Inner<T>>,
+    inner: AtomicCellErasedLease<Inner<T>>,
 }
 impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
     fn new(parent: &Property<T>) -> Self {

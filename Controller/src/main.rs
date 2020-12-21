@@ -15,6 +15,12 @@ use std::collections::HashMap;
 fn main() {
     logging::configure();
 
+    let mut runtime = tokio::runtime::Builder::new()
+        .enable_all()
+        .basic_scheduler()
+        .build()
+        .unwrap();
+
     // Drivers, etc
     let mut ftdi_global_context = interfaces::serial::ftdi::Global::new().unwrap();
     let ftdi_descriptors = ftdi_global_context.find_descriptors().unwrap();
@@ -91,20 +97,10 @@ fn main() {
         "devices-runner".to_owned() => &device_runner as &(dyn Handler + Sync)
     });
     let root_service = RootService::new(&root_router);
-    let server_runner = server::ServerRunner::new("0.0.0.0:8080".parse().unwrap(), &root_service);
+    let _server_runner = server::ServerRunner::new("0.0.0.0:8080".parse().unwrap(), &root_service);
 
     // Wait for exit signal
-    // TODO: Make it a bit smarter, without using runtime, lol
-    let mut runtime = tokio::runtime::Builder::new()
-        .enable_all()
-        .basic_scheduler()
-        .build()
-        .unwrap();
     runtime.block_on(tokio::signal::ctrl_c()).unwrap();
-
-    // This is done automatically, for debugging purposes
-    drop(server_runner);
-    drop(device_runner);
 }
 
 fn disi(

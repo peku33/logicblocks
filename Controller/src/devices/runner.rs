@@ -79,6 +79,8 @@ impl<'d> Runner<'d> {
                         let scoped_runtime = ScopedRuntime::new(
                             (context_owner, context_child_owner),
                             "Devices.runner".to_string(),
+                            None,
+                            None,
                         );
 
                         // Run devices
@@ -106,7 +108,7 @@ impl<'d> Runner<'d> {
         Self { context }
     }
 }
-impl<'p> uri_cursor::Handler for Runner<'p> {
+impl<'d> uri_cursor::Handler for Runner<'d> {
     fn handle(
         &self,
         request: web::Request,

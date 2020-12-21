@@ -104,7 +104,8 @@ impl<'h> ServerRunner<'h> {
         let server = Server::new(bind, handler);
         let context = OwningHandle::new_with_fn(Box::new(server), |server_ptr| {
             let server = unsafe { &*server_ptr };
-            let scoped_runtime = ScopedRuntime::new(server, "Server.web".to_string());
+            let scoped_runtime =
+                ScopedRuntime::new(server, "Server.web".to_string(), Some(2), Some(8));
             scoped_runtime.spawn_runnable_detached(|server| *server);
             Box::new(scoped_runtime)
         });
