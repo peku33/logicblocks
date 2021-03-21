@@ -2,7 +2,6 @@ pub mod anyhow_multiple_error;
 pub mod async_flag;
 pub mod atomic_cell;
 pub mod atomic_cell_erased;
-pub mod borrowed_async;
 pub mod bus;
 pub mod logging;
 pub mod optional_async;

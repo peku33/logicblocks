@@ -10,7 +10,6 @@ use super::{
 use crate::{
     devices::Id as DeviceId,
     util::{
-        borrowed_async::DerefStream,
         ready_chunks_dynamic::ReadyChunksDynamicExt,
         scoped_async::{ExitFlag, Exited, Runnable},
     },
@@ -42,12 +41,20 @@ impl<'d> Exchanger<'d> {
     }
 
     pub async fn run(&self) -> ! {
-        let device_signal_sources_changed_runner = self
+        let mut device_signal_sources_changed_wakers = self
             .devices
             .iter()
             .map(move |(device_id, device)| {
+                (*device_id, device.signal_sources_changed_waker_receiver())
+            })
+            .collect::<HashMap<DeviceId, _>>();
+
+        let device_signal_sources_changed_runner = device_signal_sources_changed_wakers
+            .iter_mut()
+            .map(move |(device_id, device_signal_sources_changed_waker)| {
                 let device_id = *device_id;
-                DerefStream::new(device.signal_sources_changed_waker_receiver())
+                device_signal_sources_changed_waker
+                    .by_ref()
                     .map(move |()| device_id)
             })
             .collect::<SelectAll<_>>()
