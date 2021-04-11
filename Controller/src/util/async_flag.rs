@@ -34,7 +34,7 @@ impl Inner {
     }
 
     pub fn signal(&self) {
-        debug_assert!(
+        assert!(
             !self.signaled.swap(true, Ordering::Relaxed),
             "flag already signaled",
         );
