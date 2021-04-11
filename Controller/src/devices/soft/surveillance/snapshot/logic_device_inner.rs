@@ -175,7 +175,7 @@ where
 
             (self.updated)();
 
-            tokio::time::delay_for(self.interval).await;
+            tokio::time::sleep(self.interval).await;
         }
     }
 }

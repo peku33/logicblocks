@@ -9,3 +9,6 @@
 # Data inside project
 /data
 /temporary
+
+# Locally used examples
+/examples/test*

@@ -38,8 +38,8 @@ pub struct BasicDeviceInfo {
 
 #[derive(Debug)]
 pub enum VideoStream {
-    MAIN,
-    SUB,
+    Main,
+    Sub,
 }
 
 #[derive(Debug)]
@@ -394,8 +394,8 @@ impl Api {
             percent_encoding::utf8_percent_encode(password, percent_encoding::NON_ALPHANUMERIC),
             &self.host,
             match stream {
-                VideoStream::MAIN => 101,
-                VideoStream::SUB => 102,
+                VideoStream::Main => 101,
+                VideoStream::Sub => 102,
             }
         )
         .parse()

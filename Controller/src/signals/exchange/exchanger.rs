@@ -10,8 +10,9 @@ use super::{
 use crate::{
     devices::Id as DeviceId,
     util::{
+        async_flag,
         ready_chunks_dynamic::ReadyChunksDynamicExt,
-        scoped_async::{ExitFlag, Exited, Runnable},
+        runtime::{Exited, Runnable},
     },
 };
 use async_trait::async_trait;
@@ -160,7 +161,7 @@ impl<'d> Exchanger<'d> {
 impl<'d> Runnable for Exchanger<'d> {
     async fn run(
         &self,
-        mut exit_flag: ExitFlag,
+        mut exit_flag: async_flag::Receiver,
     ) -> Exited {
         let run_future = self.run();
         pin_mut!(run_future);

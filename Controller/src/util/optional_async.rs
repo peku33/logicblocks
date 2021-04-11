@@ -18,6 +18,10 @@ impl<F: Future> FutureOrPending<F> {
     pub fn pending() -> Self {
         Self { inner: None }
     }
+
+    pub fn into_inner(self) -> Option<F> {
+        self.inner
+    }
 }
 impl<F: Future> Future for FutureOrPending<F> {
     type Output = F::Output;

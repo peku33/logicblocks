@@ -3,14 +3,16 @@ pub mod logic {
     use crate::{
         datatypes::temperature::Temperature,
         devices,
-        signals::{
-            self,
-            signal::{self, event_target_last, state_source, state_target_last},
+        signals::{self, signal},
+        util::{
+            async_flag,
+            runtime::{Exited, Runnable},
+            waker_stream,
         },
-        util::waker_stream,
     };
     use array_init::array_init;
     use arrayvec::ArrayVec;
+    use async_trait::async_trait;
     use maplit::hashmap;
     use serde::Serialize;
     use std::time::Duration;
@@ -21,10 +23,10 @@ pub mod logic {
         properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver,
 
         signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-        signal_keys: [state_source::Signal<bool>; hardware::KEY_COUNT],
-        signal_leds: [state_target_last::Signal<bool>; hardware::LED_COUNT],
-        signal_buzzer: event_target_last::Signal<Duration>,
-        signal_temperature: state_source::Signal<Temperature>,
+        signal_keys: [signal::state_source::Signal<bool>; hardware::KEY_COUNT],
+        signal_leds: [signal::state_target_last::Signal<bool>; hardware::LED_COUNT],
+        signal_buzzer: signal::event_target_last::Signal<Duration>,
+        signal_temperature: signal::state_source::Signal<Temperature>,
 
         gui_summary_waker: waker_stream::mpmc::Sender,
     }
@@ -38,10 +40,10 @@ pub mod logic {
                 properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
                 signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-                signal_keys: array_init(|_| state_source::Signal::<bool>::new(None)),
-                signal_leds: array_init(|_| state_target_last::Signal::<bool>::new()),
-                signal_buzzer: event_target_last::Signal::<Duration>::new(),
-                signal_temperature: state_source::Signal::<Temperature>::new(None),
+                signal_keys: array_init(|_| signal::state_source::Signal::<bool>::new(None)),
+                signal_leds: array_init(|_| signal::state_target_last::Signal::<bool>::new()),
+                signal_buzzer: signal::event_target_last::Signal::<Duration>::new(),
+                signal_temperature: signal::state_source::Signal::<Temperature>::new(None),
 
                 gui_summary_waker: waker_stream::mpmc::Sender::new(),
             }
@@ -50,11 +52,8 @@ pub mod logic {
             "junction_box_minimal_v1"
         }
 
-        fn as_signals_device(&self) -> &dyn signals::Device {
-            self
-        }
-        fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
-            self
+        fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+            Some(self)
         }
 
         fn properties_remote_in_changed(&self) {
@@ -126,6 +125,16 @@ pub mod logic {
             self.properties_remote_out_changed_waker.receiver()
         }
     }
+    #[async_trait]
+    impl Runnable for Device {
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            exit_flag.await;
+            Exited
+        }
+    }
     impl signals::Device for Device {
         fn signal_targets_changed_wake(&self) {
             let mut properties_remote_changed = false;
@@ -135,12 +144,12 @@ pub mod logic {
                 .signal_leds
                 .iter()
                 .map(|signal_led| signal_led.take_last())
-                .collect::<ArrayVec<[_; hardware::LED_COUNT]>>();
+                .collect::<ArrayVec<_, { hardware::LED_COUNT }>>();
             if leds_last.iter().any(|led_last| led_last.pending) {
                 let leds = leds_last
                     .iter()
                     .map(|led_last| led_last.value.unwrap_or(false))
-                    .collect::<ArrayVec<[_; hardware::LED_COUNT]>>()
+                    .collect::<ArrayVec<_, { hardware::LED_COUNT }>>()
                     .into_inner()
                     .unwrap();
 
@@ -191,7 +200,7 @@ pub mod logic {
         temperature: Option<Temperature>,
     }
     impl devices::GuiSummaryProvider for Device {
-        fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+        fn value(&self) -> Box<dyn devices::GuiSummary> {
             Box::new(GuiSummary {
                 temperature: self
                     .properties_remote
@@ -202,7 +211,7 @@ pub mod logic {
             })
         }
 
-        fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+        fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
             self.gui_summary_waker.receiver_factory()
         }
     }
@@ -218,6 +227,10 @@ pub mod hardware {
             property, runner,
             serializer::Serializer,
         },
+    };
+    use crate::util::{
+        async_flag,
+        runtime::{Exited, Runnable},
     };
     use anyhow::{bail, Context, Error};
     use arrayvec::ArrayVec;
@@ -306,6 +319,16 @@ pub mod hardware {
         type Properties = Properties;
         fn properties(&self) -> &Self::Properties {
             &self.properties
+        }
+    }
+    #[async_trait]
+    impl Runnable for Device {
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            exit_flag.await;
+            Exited
         }
     }
     #[async_trait]
@@ -418,7 +441,7 @@ pub mod hardware {
             &self,
             serializer: &mut Serializer,
         ) {
-            let mut values = ArrayVec::<[bool; 8]>::new();
+            let mut values = ArrayVec::<bool, 8>::new();
             values.try_extend_from_slice(&self.values).unwrap();
             values.push(false);
             values.push(false);
@@ -587,7 +610,7 @@ pub mod hardware {
         pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
             let keys = (0..KEY_COUNT)
                 .map(|_| BusResponseKey::parse(parser))
-                .collect::<Result<ArrayVec<[_; KEY_COUNT]>, _>>()?
+                .collect::<Result<ArrayVec<_, { KEY_COUNT }>, _>>()?
                 .into_inner()
                 .unwrap();
             Ok(Self { keys })
@@ -597,7 +620,7 @@ pub mod hardware {
             self.keys
                 .iter()
                 .map(|key| key.value())
-                .collect::<ArrayVec<[_; KEY_COUNT]>>()
+                .collect::<ArrayVec<_, { KEY_COUNT }>>()
                 .into_inner()
                 .unwrap()
         }
@@ -605,7 +628,7 @@ pub mod hardware {
             self.keys
                 .iter()
                 .map(|key| key.changes_count())
-                .collect::<ArrayVec<[_; KEY_COUNT]>>()
+                .collect::<ArrayVec<_, { KEY_COUNT }>>()
                 .into_inner()
                 .unwrap()
         }

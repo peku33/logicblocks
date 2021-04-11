@@ -49,7 +49,7 @@ impl Serializer {
     }
     pub fn push_bool_array_8(
         &mut self,
-        value: ArrayVec<[bool; 8]>,
+        value: ArrayVec<bool, 8>,
     ) {
         let mut bits = 0u8;
         for (index, item) in value.into_iter().enumerate() {
@@ -61,7 +61,7 @@ impl Serializer {
     }
     pub fn push_bool_array_16(
         &mut self,
-        value: ArrayVec<[bool; 16]>,
+        value: ArrayVec<bool, 16>,
     ) {
         let mut bits = 0u16;
         for (index, item) in value.into_iter().enumerate() {

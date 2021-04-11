@@ -1,11 +1,11 @@
 use anyhow::Error;
 use http::uri::Uri;
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, fmt, fmt::Display};
+use std::{convert::TryFrom, fmt, fmt::Display, str::FromStr};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
-#[serde(try_from = "IpcRtspUrlSerde")]
-#[serde(into = "IpcRtspUrlSerde")]
+#[serde(try_from = "String")]
+#[serde(into = "String")]
 pub struct IpcRtspUrl {
     uri: Uri,
 }
@@ -22,24 +22,23 @@ impl Display for IpcRtspUrl {
         f.write_str(self.uri.to_string().as_str())
     }
 }
-impl TryFrom<IpcRtspUrlSerde> for IpcRtspUrl {
-    type Error = Error;
+impl FromStr for IpcRtspUrl {
+    type Err = Error;
 
-    fn try_from(value: IpcRtspUrlSerde) -> Result<Self, Self::Error> {
-        let uri: Uri = value.uri.parse()?;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let uri: Uri = value.parse()?;
         Ok(Self { uri })
     }
 }
-impl Into<IpcRtspUrlSerde> for IpcRtspUrl {
-    fn into(self) -> IpcRtspUrlSerde {
-        IpcRtspUrlSerde {
-            uri: self.uri.to_string(),
-        }
+impl TryFrom<String> for IpcRtspUrl {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        value.parse()
     }
 }
-
-#[derive(Serialize, Deserialize)]
-#[serde(transparent)]
-struct IpcRtspUrlSerde {
-    uri: String,
+impl Into<String> for IpcRtspUrl {
+    fn into(self) -> String {
+        self.to_string()
+    }
 }

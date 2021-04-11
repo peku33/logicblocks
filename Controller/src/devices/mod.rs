@@ -5,14 +5,19 @@ pub mod soft;
 
 use crate::{
     signals,
-    util::{scoped_async::Runnable, waker_stream},
+    util::{
+        async_flag,
+        runtime::{Exited, Runnable},
+        waker_stream,
+    },
     web::{self, sse_aggregated, uri_cursor},
 };
+use async_trait::async_trait;
 use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::json;
-use std::{borrow::Cow, fmt};
+use std::{borrow::Cow, fmt, ops::Deref};
 
 pub type Id = u32;
 
@@ -22,21 +27,21 @@ pub trait State = Serialize + DeserializeOwned;
 pub trait Device: Send + Sync + fmt::Debug {
     fn class(&self) -> Cow<'static, str>;
 
-    fn as_runnable(&self) -> Option<&dyn Runnable> {
+    fn as_runnable(&self) -> &dyn Runnable;
+    fn as_signals_device(&self) -> &dyn signals::Device;
+    fn as_gui_summary_provider(&self) -> Option<&dyn GuiSummaryProvider> {
         None
     }
-    fn as_signals_device(&self) -> &dyn signals::Device;
-    fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider;
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
         None
     }
 }
 
-pub struct DeviceHandler<'d> {
+pub struct DeviceWrapper<'d> {
     name: String,
     device: Box<dyn Device + 'd>,
 }
-impl<'d> DeviceHandler<'d> {
+impl<'d> DeviceWrapper<'d> {
     pub fn new(
         name: String,
         device: Box<dyn Device + 'd>,
@@ -47,22 +52,44 @@ impl<'d> DeviceHandler<'d> {
     pub fn name(&self) -> &String {
         &self.name
     }
-    fn device(&self) -> &(dyn Device + 'd) {
-        &*self.device
-    }
 
     pub fn gui_summary_waker(&self) -> sse_aggregated::Node {
         sse_aggregated::Node {
-            terminal: Some(self.device().as_gui_summary_provider().get_waker()),
+            terminal: self
+                .as_gui_summary_provider()
+                .map(|gui_summary_provider| gui_summary_provider.waker()),
             children: hashmap! {},
         }
+    }
+
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.device.as_runnable().run(exit_flag).await
     }
 
     pub fn close(self) -> Box<dyn Device + 'd> {
         self.device
     }
 }
-impl<'d> uri_cursor::Handler for DeviceHandler<'d> {
+impl<'d> Deref for DeviceWrapper<'d> {
+    type Target = dyn Device + 'd;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.device
+    }
+}
+#[async_trait]
+impl<'d> Runnable for DeviceWrapper<'d> {
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.run(exit_flag).await
+    }
+}
+impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
     fn handle(
         &self,
         request: web::Request,
@@ -72,7 +99,7 @@ impl<'d> uri_cursor::Handler for DeviceHandler<'d> {
             uri_cursor::UriCursor::Terminal => match *request.method() {
                 http::Method::GET => {
                     let name = self.name().clone();
-                    let class = self.device().class();
+                    let class = self.class();
                     async move {
                         let response = json!({
                             "name": name,
@@ -84,22 +111,25 @@ impl<'d> uri_cursor::Handler for DeviceHandler<'d> {
                 }
                 _ => async move { web::Response::error_405() }.boxed(),
             },
-            uri_cursor::UriCursor::Next("gui-summary", uri_cursor) => match **uri_cursor {
-                uri_cursor::UriCursor::Terminal => match *request.method() {
-                    http::Method::GET => {
-                        let value = self.device().as_gui_summary_provider().get_value();
-                        async move { web::Response::ok_json(value) }.boxed()
-                    }
-                    _ => async move { web::Response::error_405() }.boxed(),
-                },
-                _ => async move { web::Response::error_404() }.boxed(),
-            },
-            uri_cursor::UriCursor::Next("device", uri_cursor) => {
-                match self.device().as_web_handler() {
-                    Some(handler) => handler.handle(request, uri_cursor),
+            uri_cursor::UriCursor::Next("gui-summary", uri_cursor) => {
+                match self.as_gui_summary_provider() {
+                    Some(gui_summary_provider) => match **uri_cursor {
+                        uri_cursor::UriCursor::Terminal => match *request.method() {
+                            http::Method::GET => {
+                                let value = gui_summary_provider.value();
+                                async move { web::Response::ok_json(value) }.boxed()
+                            }
+                            _ => async move { web::Response::error_405() }.boxed(),
+                        },
+                        _ => async move { web::Response::error_404() }.boxed(),
+                    },
                     None => async move { web::Response::error_404() }.boxed(),
                 }
             }
+            uri_cursor::UriCursor::Next("device", uri_cursor) => match self.as_web_handler() {
+                Some(handler) => handler.handle(request, uri_cursor),
+                None => async move { web::Response::error_404() }.boxed(),
+            },
             _ => async move { web::Response::error_404() }.boxed(),
         }
     }
@@ -107,6 +137,6 @@ impl<'d> uri_cursor::Handler for DeviceHandler<'d> {
 
 pub trait GuiSummary = erased_serde::Serialize + Send + Sync;
 pub trait GuiSummaryProvider {
-    fn get_value(&self) -> Box<dyn GuiSummary>;
-    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory;
+    fn value(&self) -> Box<dyn GuiSummary>;
+    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory;
 }

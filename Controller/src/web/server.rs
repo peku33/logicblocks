@@ -1,5 +1,9 @@
 use super::{Handler, Request, Response};
-use crate::util::scoped_async::{ExitFlag, Exited, Runnable, ScopedRuntime};
+use crate::util::{
+    async_flag,
+    runtime::{Exited, FinalizeGuard, Runnable, Runtime, RuntimeScopeRunnable},
+};
+use anyhow::Context;
 use async_trait::async_trait;
 use futures::{future::FutureExt, pin_mut, select};
 use hyper::{
@@ -7,8 +11,12 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Request as HyperRequest, Response as HyperResponse, Server as HyperServer,
 };
-use owning_ref::OwningHandle;
-use std::{convert::Infallible, mem::transmute, net::SocketAddr};
+use ouroboros::self_referencing;
+use std::{
+    convert::Infallible,
+    mem::{transmute, ManuallyDrop},
+    net::SocketAddr,
+};
 
 pub struct Server<'h> {
     bind: SocketAddr,
@@ -28,7 +36,7 @@ impl<'h> Server<'h> {
         hyper_request: HyperRequest<Body>,
     ) -> HyperResponse<Body> {
         let (parts, body) = hyper_request.into_parts();
-        let body = match hyper::body::to_bytes(body).await {
+        let body = match hyper::body::to_bytes(body).await.context("to_bytes") {
             Ok(body) => body,
             Err(error) => return Response::error_400_from_error(error).into_hyper_response(),
         };
@@ -80,7 +88,7 @@ impl<'h> Server<'h> {
 impl<'h> Runnable for Server<'h> {
     async fn run(
         &self,
-        mut exit_flag: ExitFlag,
+        mut exit_flag: async_flag::Receiver,
     ) -> Exited {
         let run_future = unsafe { self.run() };
         pin_mut!(run_future);
@@ -93,8 +101,18 @@ impl<'h> Runnable for Server<'h> {
     }
 }
 
+#[self_referencing]
+struct ServerRunnerInner<'h> {
+    server: Box<Server<'h>>,
+    runtime: Box<Runtime>,
+
+    #[borrows(server, runtime)]
+    #[not_covariant]
+    server_runtime_scope_runnable: ManuallyDrop<RuntimeScopeRunnable<'this, 'this, Server<'h>>>,
+}
 pub struct ServerRunner<'h> {
-    context: OwningHandle<Box<Server<'h>>, Box<ScopedRuntime<&'h Server<'h>>>>,
+    inner: ServerRunnerInner<'h>,
+    finalize_guard: FinalizeGuard,
 }
 impl<'h> ServerRunner<'h> {
     pub fn new(
@@ -102,13 +120,53 @@ impl<'h> ServerRunner<'h> {
         handler: &'h (dyn Handler + Sync),
     ) -> Self {
         let server = Server::new(bind, handler);
-        let context = OwningHandle::new_with_fn(Box::new(server), |server_ptr| {
-            let server = unsafe { &*server_ptr };
-            let scoped_runtime =
-                ScopedRuntime::new(server, "Server.web".to_string(), Some(2), Some(8));
-            scoped_runtime.spawn_runnable_detached(|server| *server);
-            Box::new(scoped_runtime)
-        });
-        Self { context }
+        let server = Box::new(server);
+
+        let runtime = Runtime::new("web", 2, 2);
+        let runtime = Box::new(runtime);
+
+        let inner = ServerRunnerInnerBuilder {
+            server,
+            runtime,
+
+            server_runtime_scope_runnable_builder: move |server, runtime| {
+                let server_runtime_scope_runnable = RuntimeScopeRunnable::new(runtime, server);
+                let server_runtime_scope_runnable =
+                    ManuallyDrop::new(server_runtime_scope_runnable);
+                server_runtime_scope_runnable
+            },
+        }
+        .build();
+
+        let finalize_guard = FinalizeGuard::new();
+
+        Self {
+            inner,
+            finalize_guard,
+        }
+    }
+
+    pub async fn finalize(mut self) {
+        let server_runtime_scope_runnable =
+            self.inner
+                .with_server_runtime_scope_runnable_mut(|server_runtime_scope_runnable| {
+                    let server_runtime_scope_runnable = unsafe {
+                        transmute::<
+                            &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, Server<'_>>>,
+                            &mut ManuallyDrop<
+                                RuntimeScopeRunnable<'static, 'static, Server<'static>>,
+                            >,
+                        >(server_runtime_scope_runnable)
+                    };
+                    let server_runtime_scope_runnable =
+                        unsafe { ManuallyDrop::take(server_runtime_scope_runnable) };
+                    server_runtime_scope_runnable
+                });
+        server_runtime_scope_runnable.finalize().await;
+
+        self.finalize_guard.finalized();
+
+        let inner_heads = self.inner.into_heads();
+        drop(inner_heads);
     }
 }

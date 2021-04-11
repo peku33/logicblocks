@@ -1,13 +1,14 @@
 use crate::{
     devices,
-    signals::{
-        self,
-        signal::{self, event_target_last, state_source},
-        Signals,
+    signals::{self, signal},
+    util::{
+        async_flag,
+        runtime::{Exited, Runnable},
+        waker_stream,
     },
-    util::waker_stream,
     web::{self, uri_cursor},
 };
+use async_trait::async_trait;
 use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
@@ -21,10 +22,10 @@ pub struct Configuration {
 #[derive(Debug)]
 pub struct Device {
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-    signal_output: state_source::Signal<bool>,
-    signal_r: event_target_last::Signal<()>,
-    signal_s: event_target_last::Signal<()>,
-    signal_t: event_target_last::Signal<()>,
+    signal_output: signal::state_source::Signal<bool>,
+    signal_r: signal::event_target_last::Signal<()>,
+    signal_s: signal::event_target_last::Signal<()>,
+    signal_t: signal::event_target_last::Signal<()>,
 
     gui_summary_waker: waker_stream::mpmc::Sender,
 }
@@ -33,10 +34,12 @@ impl Device {
         Self {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
-            signal_output: state_source::Signal::<bool>::new(Some(configuration.initial_value)),
-            signal_r: event_target_last::Signal::<()>::new(),
-            signal_s: event_target_last::Signal::<()>::new(),
-            signal_t: event_target_last::Signal::<()>::new(),
+            signal_output: signal::state_source::Signal::<bool>::new(Some(
+                configuration.initial_value,
+            )),
+            signal_r: signal::event_target_last::Signal::<()>::new(),
+            signal_s: signal::event_target_last::Signal::<()>::new(),
+            signal_t: signal::event_target_last::Signal::<()>::new(),
 
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
@@ -98,14 +101,27 @@ impl devices::Device for Device {
         Cow::from("soft/logic/flipflop/rst_a")
     }
 
+    fn as_runnable(&self) -> &dyn Runnable {
+        self
+    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
     }
-    fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
-        self
+    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+        Some(self)
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
         Some(self)
+    }
+}
+#[async_trait]
+impl Runnable for Device {
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        exit_flag.await;
+        Exited
     }
 }
 impl signals::Device for Device {
@@ -119,7 +135,7 @@ impl signals::Device for Device {
     fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
         self.signal_sources_changed_waker.receiver()
     }
-    fn signals(&self) -> Signals {
+    fn signals(&self) -> signals::Signals {
         hashmap! {
             0 => &self.signal_output as &dyn signal::Base,
             1 => &self.signal_r as &dyn signal::Base,
@@ -133,13 +149,13 @@ struct GuiSummary {
     value: bool,
 }
 impl devices::GuiSummaryProvider for Device {
-    fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+    fn value(&self) -> Box<dyn devices::GuiSummary> {
         Box::new(GuiSummary {
             value: self.signal_output.get_last().unwrap(),
         })
     }
 
-    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
         self.gui_summary_waker.receiver_factory()
     }
 }

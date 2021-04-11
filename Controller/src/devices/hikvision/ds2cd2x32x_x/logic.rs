@@ -8,13 +8,10 @@ use crate::{
         },
         GuiSummaryProvider,
     },
-    signals::{
-        self,
-        signal::{self, state_source},
-        Signals,
-    },
+    signals::{self, signal},
     util::{
-        scoped_async::{ExitFlag, Exited, Runnable},
+        async_flag,
+        runtime::{Exited, Runnable},
         waker_stream,
     },
     web,
@@ -103,14 +100,14 @@ pub struct Device {
     gui_summary_waker: waker_stream::mpmc::Sender,
 
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-    signal_rtsp_url_main: state_source::Signal<IpcRtspUrl>,
-    signal_rtsp_url_sub: state_source::Signal<IpcRtspUrl>,
-    signal_event_camera_failure: state_source::Signal<bool>,
-    signal_event_video_loss: state_source::Signal<bool>,
-    signal_event_tampering_detection: state_source::Signal<bool>,
-    signal_event_motion_detection: state_source::Signal<bool>,
-    signal_event_line_detection: state_source::Signal<bool>,
-    signal_event_field_detection: state_source::Signal<bool>,
+    signal_rtsp_url_main: signal::state_source::Signal<IpcRtspUrl>,
+    signal_rtsp_url_sub: signal::state_source::Signal<IpcRtspUrl>,
+    signal_event_camera_failure: signal::state_source::Signal<bool>,
+    signal_event_video_loss: signal::state_source::Signal<bool>,
+    signal_event_tampering_detection: signal::state_source::Signal<bool>,
+    signal_event_motion_detection: signal::state_source::Signal<bool>,
+    signal_event_line_detection: signal::state_source::Signal<bool>,
+    signal_event_field_detection: signal::state_source::Signal<bool>,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -123,14 +120,16 @@ impl Device {
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
 
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_rtsp_url_main: state_source::Signal::<IpcRtspUrl>::new(None),
-            signal_rtsp_url_sub: state_source::Signal::<IpcRtspUrl>::new(None),
-            signal_event_camera_failure: state_source::Signal::<bool>::new(Some(false)),
-            signal_event_video_loss: state_source::Signal::<bool>::new(Some(false)),
-            signal_event_tampering_detection: state_source::Signal::<bool>::new(Some(false)),
-            signal_event_motion_detection: state_source::Signal::<bool>::new(Some(false)),
-            signal_event_line_detection: state_source::Signal::<bool>::new(Some(false)),
-            signal_event_field_detection: state_source::Signal::<bool>::new(Some(false)),
+            signal_rtsp_url_main: signal::state_source::Signal::<IpcRtspUrl>::new(None),
+            signal_rtsp_url_sub: signal::state_source::Signal::<IpcRtspUrl>::new(None),
+            signal_event_camera_failure: signal::state_source::Signal::<bool>::new(Some(false)),
+            signal_event_video_loss: signal::state_source::Signal::<bool>::new(Some(false)),
+            signal_event_tampering_detection: signal::state_source::Signal::<bool>::new(Some(
+                false,
+            )),
+            signal_event_motion_detection: signal::state_source::Signal::<bool>::new(Some(false)),
+            signal_event_line_detection: signal::state_source::Signal::<bool>::new(Some(false)),
+            signal_event_field_detection: signal::state_source::Signal::<bool>::new(Some(false)),
         }
     }
 
@@ -243,24 +242,25 @@ impl Device {
             main: IpcRtspUrl::new(api.rtsp_url_build(
                 shared_user_login,
                 shared_user_password,
-                api::VideoStream::MAIN,
+                api::VideoStream::Main,
             )),
             sub: IpcRtspUrl::new(api.rtsp_url_build(
                 shared_user_login,
                 shared_user_password,
-                api::VideoStream::SUB,
+                api::VideoStream::Sub,
             )),
         };
 
         // Attach event manager
         let events_stream_manager = event_stream::Manager::new(&api);
-        let mut events_stream_manager_receiver = events_stream_manager.receiver();
+        let mut events_stream_manager_receiver =
+            tokio_stream::wrappers::WatchStream::new(events_stream_manager.receiver());
 
         let events_stream_manager_runner = events_stream_manager.run_once();
         pin_mut!(events_stream_manager_runner);
         let mut events_stream_manager_runner = events_stream_manager_runner.fuse();
 
-        let events_stream_manager_receiver_runner = (*events_stream_manager_receiver)
+        let events_stream_manager_receiver_runner = events_stream_manager_receiver
             .by_ref()
             .for_each(async move |hardware_events| {
                 let events = Events::from_event_stream_events(&hardware_events);
@@ -277,9 +277,9 @@ impl Device {
             || self.snapshot_updated_handle(),
             SNAPSHOT_INTERVAL,
         );
-        let snapshot_runner_run = snapshot_runner.run_once();
-        pin_mut!(snapshot_runner_run);
-        let mut snapshot_runner_run = snapshot_runner_run.fuse();
+        let snapshot_runner_runner = snapshot_runner.run_once();
+        pin_mut!(snapshot_runner_runner);
+        let mut snapshot_runner_runner = snapshot_runner_runner.fuse();
 
         // Mark device as ready
         *self.device_state.write() = DeviceState::Running {
@@ -297,18 +297,18 @@ impl Device {
         select! {
             events_stream_manager_runner_error = events_stream_manager_runner => events_stream_manager_runner_error,
             _ = events_stream_manager_receiver_runner => panic!("events_stream_manager_receiver_runner yielded"),
-            snapshot_runner_run_error = snapshot_runner_run => snapshot_runner_run_error,
+            snapshot_runner_runner_error = snapshot_runner_runner => snapshot_runner_runner_error,
         }
     }
 
     const ERROR_RESTART_INTERVAL: Duration = Duration::from_secs(10);
     async fn run(&self) -> ! {
         loop {
-            let error = self.run_once().await;
+            let error = self.run_once().await.context("run_once");
             self.failed();
 
             log::error!("device {} failed: {:?}", self.configuration.host, error);
-            tokio::time::delay_for(Self::ERROR_RESTART_INTERVAL).await;
+            tokio::time::sleep(Self::ERROR_RESTART_INTERVAL).await;
         }
     }
 }
@@ -317,14 +317,14 @@ impl devices::Device for Device {
         Cow::from("hikvision/ds2cd2x32x_x")
     }
 
-    fn as_runnable(&self) -> Option<&dyn Runnable> {
-        Some(self)
+    fn as_runnable(&self) -> &dyn Runnable {
+        self
     }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
     }
-    fn as_gui_summary_provider(&self) -> &dyn GuiSummaryProvider {
-        self
+    fn as_gui_summary_provider(&self) -> Option<&dyn GuiSummaryProvider> {
+        Some(self)
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
         Some(self)
@@ -334,7 +334,7 @@ impl devices::Device for Device {
 impl Runnable for Device {
     async fn run(
         &self,
-        mut exit_flag: ExitFlag,
+        mut exit_flag: async_flag::Receiver,
     ) -> Exited {
         let run_future = self.run();
         pin_mut!(run_future);
@@ -355,7 +355,7 @@ impl signals::Device for Device {
     fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
         self.signal_sources_changed_waker.receiver()
     }
-    fn signals(&self) -> Signals {
+    fn signals(&self) -> signals::Signals {
         hashmap! {
             0 => &self.signal_rtsp_url_main as &dyn signal::Base,
             1 => &self.signal_rtsp_url_sub as &dyn signal::Base,
@@ -370,10 +370,10 @@ impl signals::Device for Device {
     }
 }
 impl GuiSummaryProvider for Device {
-    fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+    fn value(&self) -> Box<dyn devices::GuiSummary> {
         Box::new(self.device_state.read().clone())
     }
-    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
         self.gui_summary_waker.receiver_factory()
     }
 }

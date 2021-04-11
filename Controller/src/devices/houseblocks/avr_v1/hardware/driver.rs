@@ -49,7 +49,8 @@ impl<'m> Driver<'m> {
     ) -> Result<(), Error> {
         self.master
             .transaction_out(service_mode, self.address, payload)
-            .await?;
+            .await
+            .context("transaction_out")?;
 
         Ok(())
     }
@@ -63,7 +64,8 @@ impl<'m> Driver<'m> {
         let result = self
             .master
             .transaction_out_in(service_mode, self.address, payload, timeout)
-            .await?;
+            .await
+            .context("transaction_out_in")?;
 
         Ok(result)
     }
@@ -79,7 +81,8 @@ impl<'m> Driver<'m> {
                 Payload::new(Box::from(*b"")).unwrap(),
                 TIMEOUT_DEFAULT,
             )
-            .await?;
+            .await
+            .context("transaction_out_in")?;
 
         if response.deref() != &b""[..] {
             bail!("invalid healthcheck response");
@@ -92,9 +95,10 @@ impl<'m> Driver<'m> {
         service_mode: bool,
     ) -> Result<(), Error> {
         self.transaction_out(service_mode, Payload::new(Box::from(*b"!")).unwrap())
-            .await?;
+            .await
+            .context("transaction_out")?;
 
-        tokio::time::delay_for(TIMEOUT_DEFAULT).await;
+        tokio::time::sleep(TIMEOUT_DEFAULT).await;
         Ok(())
     }
 
@@ -108,7 +112,8 @@ impl<'m> Driver<'m> {
                 Payload::new(Box::from(*b"@")).unwrap(),
                 TIMEOUT_DEFAULT,
             )
-            .await?;
+            .await
+            .context("transaction_out_in")?;
 
         let mut parser = ParserPayload::new(&response);
         let wdt = parser.expect_bool().context("wdt")?;
@@ -135,7 +140,8 @@ impl<'m> Driver<'m> {
                 Payload::new(Box::from(*b"#")).unwrap(),
                 TIMEOUT_DEFAULT,
             )
-            .await?;
+            .await
+            .context("transaction_out_in")?;
 
         let mut parser = ParserPayload::new(&response);
         let avr_v1 = parser.expect_u16().context("avr_v1")?;
@@ -156,7 +162,8 @@ impl<'m> Driver<'m> {
                 Payload::new(Box::new(*b"C")).unwrap(),
                 TIMEOUT_DEFAULT,
             )
-            .await?;
+            .await
+            .context("transaction_out_in")?;
 
         let mut parser = ParserPayload::new(&response);
         let checksum = parser.expect_u16().context("checksum")?;
@@ -166,9 +173,10 @@ impl<'m> Driver<'m> {
     }
     async fn service_mode_jump_to_application_mode(&self) -> Result<(), Error> {
         self.transaction_out(true, Payload::new(Box::from(*b"R")).unwrap())
-            .await?;
+            .await
+            .context("transaction_out")?;
 
-        tokio::time::delay_for(Duration::from_millis(250)).await;
+        tokio::time::sleep(Duration::from_millis(250)).await;
         Ok(())
     }
 
@@ -192,6 +200,7 @@ impl<'m> Driver<'m> {
             .await
             .context("service mode read application checksum")?;
         log::trace!("application_checksum: {}", application_checksum);
+
         // TODO: Push new firmware
 
         // Reboot to application section

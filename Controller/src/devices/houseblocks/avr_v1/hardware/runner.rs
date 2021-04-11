@@ -9,18 +9,15 @@ use super::{
 use crate::{
     devices,
     util::{
+        async_flag,
         optional_async::StreamOrPending,
-        scoped_async::{ExitFlag, Exited, Runnable},
+        runtime::{Exited, Runnable},
         waker_stream,
     },
 };
 use anyhow::{Context, Error};
 use async_trait::async_trait;
-use futures::{
-    future::{FutureExt, OptionFuture},
-    join, select,
-    stream::StreamExt,
-};
+use futures::{future::FutureExt, join, select, stream::StreamExt};
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::{cmp::min, collections::HashMap, fmt, time::Duration};
@@ -55,15 +52,11 @@ pub trait Properties {
     fn remote(&self) -> Self::Remote;
 }
 
-pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
+pub trait Device: Runnable + BusDevice + Sync + Send + Sized + fmt::Debug {
     fn new() -> Self;
 
     fn device_type_name() -> &'static str;
     fn address_device_type() -> AddressDeviceType;
-
-    fn as_runnable(&self) -> Option<&dyn Runnable> {
-        None
-    }
 
     type Properties: Properties;
     fn properties(&self) -> &Self::Properties;
@@ -133,7 +126,7 @@ impl<'m, D: Device> Runner<'m, D> {
 
     async fn driver_run_once(
         &self,
-        mut exit_flag: ExitFlag,
+        mut exit_flag: async_flag::Receiver,
     ) -> Result<Exited, Error> {
         *self.device_state.lock() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
@@ -182,11 +175,9 @@ impl<'m, D: Device> Runner<'m, D> {
             if let Some(device_poll_delay) = self.device.poll_delay() {
                 poll_delay = min(poll_delay, device_poll_delay);
             }
-            let poll_timer = tokio::time::delay_for(poll_delay);
-            let mut poll_timer = poll_timer.fuse();
 
             select! {
-                () = poll_timer => {},
+                () = tokio::time::sleep(poll_delay).fuse() => {},
                 () = device_poll_waker.select_next_some() => {},
                 () = properties_remote_out_change_waker.select_next_some() => {},
                 () = exit_flag => break,
@@ -209,13 +200,8 @@ impl<'m, D: Device> Runner<'m, D> {
     }
     async fn driver_run(
         &self,
-        exit_flag: ExitFlag,
+        mut exit_flag: async_flag::Receiver,
     ) -> Exited {
-        // Prepare
-        *self.device_state.lock() = DeviceState::Initializing;
-        self.gui_summary_waker.wake();
-
-        // Run
         loop {
             let error = match self
                 .driver_run_once(exit_flag.clone())
@@ -235,7 +221,10 @@ impl<'m, D: Device> Runner<'m, D> {
             *self.device_state.lock() = DeviceState::Error;
             self.gui_summary_waker.wake();
 
-            tokio::time::delay_for(Self::ERROR_RESTART_DELAY).await;
+            select! {
+                () = tokio::time::sleep(Self::ERROR_RESTART_DELAY).fuse() => {},
+                () = exit_flag => break,
+            }
         }
 
         Exited
@@ -243,17 +232,13 @@ impl<'m, D: Device> Runner<'m, D> {
 
     pub async fn run(
         &self,
-        exit_flag: ExitFlag,
+        exit_flag: async_flag::Receiver,
     ) -> Exited {
+        // TODO: check whether this should be exited sequentially
         let driver_runner = self.driver_run(exit_flag.clone());
+        let device_runner = self.device.run(exit_flag.clone());
 
-        let device_runner = OptionFuture::from(
-            self.device
-                .as_runnable()
-                .map(|device_runnable| device_runnable.run(exit_flag.clone())),
-        );
-
-        join!(driver_runner, device_runner);
+        let _: (Exited, Exited) = join!(driver_runner, device_runner);
 
         Exited
     }
@@ -264,13 +249,13 @@ struct GuiSummary {
     device_state: DeviceState,
 }
 impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
-    fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+    fn value(&self) -> Box<dyn devices::GuiSummary> {
         Box::new(GuiSummary {
             device_state: *self.device_state.lock(),
         })
     }
 
-    fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
         self.gui_summary_waker.receiver_factory()
     }
 }

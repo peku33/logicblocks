@@ -10,7 +10,6 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    ops::DerefMut,
     time::Duration,
 };
 use tokio::sync::watch;
@@ -38,7 +37,7 @@ pub struct Manager<'a> {
     events_active: AtomicCell<HashMap<Event, usize>>, // Event -> Ticks left
 
     events_sender: watch::Sender<Events>,
-    events_receiver: AtomicCell<watch::Receiver<Events>>,
+    events_receiver: watch::Receiver<Events>,
 }
 impl<'a> Manager<'a> {
     const EVENT_STREAM_TIMEOUT: Duration = Duration::from_secs(1);
@@ -49,18 +48,24 @@ impl<'a> Manager<'a> {
     pub fn new(api: &'a Api) -> Self {
         let (events_sender, events_receiver) = watch::channel(Events::new());
 
+        let mixed_content_extractor = MixedContentExtractor::new();
+        let mixed_content_extractor = AtomicCell::new(mixed_content_extractor);
+
+        let events_active = HashMap::new();
+        let events_active = AtomicCell::new(events_active);
+
         Self {
             api,
-            mixed_content_extractor: AtomicCell::new(MixedContentExtractor::new()),
-            events_active: AtomicCell::new(HashMap::new()),
+            mixed_content_extractor,
+            events_active,
 
             events_sender,
-            events_receiver: AtomicCell::new(events_receiver),
+            events_receiver,
         }
     }
 
-    pub fn receiver(&self) -> impl DerefMut<Target = watch::Receiver<Events>> + '_ {
-        self.events_receiver.lease()
+    pub fn receiver(&self) -> watch::Receiver<Events> {
+        self.events_receiver.clone()
     }
 
     fn parse_event_state_update(element: Element) -> Result<EventStateUpdate, Error> {
@@ -124,7 +129,7 @@ impl<'a> Manager<'a> {
             .cloned()
             .collect::<Events>();
 
-        self.events_sender.broadcast(events).unwrap();
+        self.events_sender.send(events).unwrap();
     }
 
     pub async fn run_once(&self) -> Result<!, Error> {
@@ -153,21 +158,23 @@ impl<'a> Manager<'a> {
                 }
                 Ok(())
             })
-            .map(|result| match result {
+            .map(|result| match result.context("data_stream_runner") {
                 Ok(()) => anyhow!("data_stream completed"),
                 Err(error) => error,
             });
         pin_mut!(data_stream_runner);
         let mut data_stream_runner = data_stream_runner.fuse();
 
-        let events_disabler_runner = tokio::time::interval(Self::EVENT_DISABLE_TICK_INTERVAL)
-            .for_each(async move |_time_point| {
-                let mut events_changed = false;
-                events_changed |= self.handle_events_disabler();
-                if events_changed {
-                    self.propagate_events();
-                }
-            });
+        let events_disabler_runner = tokio_stream::wrappers::IntervalStream::new(
+            tokio::time::interval(Self::EVENT_DISABLE_TICK_INTERVAL),
+        )
+        .for_each(async move |_time_point| {
+            let mut events_changed = false;
+            events_changed |= self.handle_events_disabler();
+            if events_changed {
+                self.propagate_events();
+            }
+        });
         pin_mut!(events_disabler_runner);
         let mut events_disabler_runner = events_disabler_runner.fuse();
 
@@ -180,7 +187,7 @@ impl<'a> Manager<'a> {
         loop {
             let error = self.run_once().await.context("run_once");
             log::error!("device failed: {:?}", error);
-            tokio::time::delay_for(Self::ERROR_RESTART_DELAY).await;
+            tokio::time::sleep(Self::ERROR_RESTART_DELAY).await;
         }
     }
 }
@@ -190,9 +197,8 @@ struct MixedContentExtractor {
 }
 impl MixedContentExtractor {
     pub fn new() -> Self {
-        Self {
-            buffer: VecDeque::new(),
-        }
+        let buffer = VecDeque::new();
+        Self { buffer }
     }
 
     pub fn push(
@@ -242,7 +248,9 @@ impl MixedContentExtractor {
             let element = match Element::parse(
                 (&buffer[start_index + header.end()..start_index + header.end() + content_length])
                     .as_bytes(),
-            ) {
+            )
+            .context("parse")
+            {
                 Ok(element) => element,
                 Err(error) => {
                     log::warn!("failed to parse element: {:?}", error);

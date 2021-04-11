@@ -23,10 +23,13 @@ struct Common {
 }
 impl Common {
     pub fn new() -> Self {
-        Self {
-            version: AtomicUsize::new(0),
-            receivers: RwLock::new(HashSet::new()),
-        }
+        let version = 0;
+        let version = AtomicUsize::new(version);
+
+        let receivers = HashSet::new();
+        let receivers = RwLock::new(receivers);
+
+        Self { version, receivers }
     }
     pub fn wake(&self) {
         self.version.fetch_add(1, Ordering::Relaxed);
@@ -92,10 +95,9 @@ impl Receiver {
         let version = common.version.load(Ordering::Relaxed);
         let version = AtomicUsize::new(version);
 
-        let inner = ReceiverInner {
+        let inner = Box::new(ReceiverInner {
             waker: AtomicWaker::new(),
-        };
-        let inner = Box::new(inner);
+        });
 
         common
             .receivers

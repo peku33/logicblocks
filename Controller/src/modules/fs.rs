@@ -1,10 +1,10 @@
-use super::{Manager, Module, ModuleFactory};
 use std::{
     env::current_dir,
     fs::create_dir_all,
     path::{Path, PathBuf},
 };
 
+#[derive(Debug)]
 pub struct Fs {
     persistent_data_directory: PathBuf,
     persistent_storage_directory: PathBuf,
@@ -13,24 +13,29 @@ pub struct Fs {
 impl Fs {
     pub fn new() -> Self {
         // TODO: Make this instance dependant
-        let persistent_root = current_dir().unwrap().join(Path::new("data"));
+        let persistent_root = current_dir().unwrap().join("data");
         create_dir_all(&persistent_root).unwrap();
 
         // TODO: Make this instance dependant
         let temporary_root = if cfg!(unix) {
-            Path::new("/dev/shm/LogicBlocks").to_path_buf()
+            if let Ok(temporary_root) = std::env::var("XDG_RUNTIME_DIR") {
+                PathBuf::from(temporary_root)
+            } else {
+                Path::new("/dev/shm").to_path_buf()
+            }
         } else {
-            current_dir().unwrap().join(Path::new("temporary"))
+            current_dir().unwrap().join("temporary")
         };
+        let temporary_root = temporary_root.join("logicblocks");
         create_dir_all(&temporary_root).unwrap();
 
-        let persistent_data_directory = persistent_root.join(Path::new("data"));
+        let persistent_data_directory = persistent_root.join("data");
         create_dir_all(&persistent_data_directory).unwrap();
 
-        let persistent_storage_directory = persistent_root.join(Path::new("storage"));
+        let persistent_storage_directory = persistent_root.join("storage");
         create_dir_all(&persistent_storage_directory).unwrap();
 
-        let temporary_storage_directory = temporary_root.join(Path::new("storage"));
+        let temporary_storage_directory = temporary_root.join("storage");
         create_dir_all(&temporary_storage_directory).unwrap();
 
         Self {
@@ -47,11 +52,5 @@ impl Fs {
     }
     pub fn temporary_storage_directory(&self) -> &Path {
         &self.temporary_storage_directory
-    }
-}
-impl Module for Fs {}
-impl ModuleFactory for Fs {
-    fn spawn(_manager: &Manager) -> Self {
-        Self::new()
     }
 }

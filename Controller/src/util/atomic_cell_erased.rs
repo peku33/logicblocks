@@ -1,3 +1,4 @@
+use stable_deref_trait::StableDeref;
 use std::{
     fmt,
     ops::Deref,
@@ -5,7 +6,6 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-#[derive(Debug)]
 struct Inner<T> {
     value: T,
     lease_count: AtomicUsize,
@@ -14,26 +14,12 @@ struct Inner<T> {
 pub struct AtomicCellErased<T> {
     inner: Pin<Box<Inner<T>>>,
 }
-impl<T: fmt::Debug> fmt::Debug for AtomicCellErased<T> {
-    fn fmt(
-        &self,
-        f: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        f.debug_struct("AtomicCellErased")
-            .field("value", &self.inner.value)
-            .field(
-                "lease_count",
-                &self.inner.lease_count.load(Ordering::Relaxed),
-            )
-            .finish()
-    }
-}
 impl<T> AtomicCellErased<T> {
     pub fn new(value: T) -> Self {
-        let inner = Inner {
-            value,
-            lease_count: AtomicUsize::new(0),
-        };
+        let lease_count = 0;
+        let lease_count = AtomicUsize::new(lease_count);
+
+        let inner = Inner { value, lease_count };
         let inner = Box::pin(inner);
         Self { inner }
     }
@@ -47,6 +33,21 @@ impl<T> Deref for AtomicCellErased<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.inner.value
+    }
+}
+unsafe impl<T> StableDeref for AtomicCellErased<T> {}
+impl<T: fmt::Debug> fmt::Debug for AtomicCellErased<T> {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        f.debug_struct("AtomicCellErased")
+            .field("value", &self.inner.value)
+            .field(
+                "lease_count",
+                &self.inner.lease_count.load(Ordering::Relaxed),
+            )
+            .finish()
     }
 }
 impl<T> Drop for AtomicCellErased<T> {
@@ -70,6 +71,15 @@ impl<T> AtomicCellErasedLease<T> {
         Self { inner }
     }
 }
+impl<T> Deref for AtomicCellErasedLease<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        let inner = unsafe { &(*self.inner) };
+        &inner.value
+    }
+}
+unsafe impl<T> StableDeref for AtomicCellErasedLease<T> {}
 impl<T: fmt::Debug> fmt::Debug for AtomicCellErasedLease<T> {
     fn fmt(
         &self,
@@ -81,14 +91,6 @@ impl<T: fmt::Debug> fmt::Debug for AtomicCellErasedLease<T> {
             .field("value", &inner.value)
             .field("lease_count", &inner.lease_count.load(Ordering::Relaxed))
             .finish()
-    }
-}
-impl<T> Deref for AtomicCellErasedLease<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        let inner = unsafe { &(*self.inner) };
-        &inner.value
     }
 }
 impl<T> Drop for AtomicCellErasedLease<T> {

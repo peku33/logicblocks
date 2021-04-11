@@ -1,8 +1,17 @@
 pub mod logic {
     use super::{super::super::logic, hardware};
-    use crate::{devices, signals, signals::signal::state_target_last, util::waker_stream};
+    use crate::{
+        devices,
+        signals::{self, signal},
+        util::{
+            async_flag,
+            runtime::{Exited, Runnable},
+            waker_stream,
+        },
+    };
     use array_init::array_init;
     use arrayvec::ArrayVec;
+    use async_trait::async_trait;
     use serde::Serialize;
     use std::{fmt, marker::PhantomData};
 
@@ -18,7 +27,7 @@ pub mod logic {
         properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver,
 
         signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-        signal_outputs: [state_target_last::Signal<bool>; hardware::OUTPUT_COUNT],
+        signal_outputs: [signal::state_target_last::Signal<bool>; hardware::OUTPUT_COUNT],
 
         gui_summary_waker: waker_stream::mpmc::Sender,
 
@@ -33,7 +42,7 @@ pub mod logic {
                 properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
                 signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-                signal_outputs: array_init(|_| state_target_last::Signal::<bool>::new()),
+                signal_outputs: array_init(|_| signal::state_target_last::Signal::<bool>::new()),
 
                 gui_summary_waker: waker_stream::mpmc::Sender::new(),
 
@@ -45,11 +54,8 @@ pub mod logic {
             S::class()
         }
 
-        fn as_signals_device(&self) -> &dyn signals::Device {
-            self
-        }
-        fn as_gui_summary_provider(&self) -> &dyn devices::GuiSummaryProvider {
-            self
+        fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+            Some(self)
         }
         fn properties_remote_in_changed(&self) {
             // We have no "in" properties
@@ -58,6 +64,16 @@ pub mod logic {
             &self
         ) -> waker_stream::mpsc::ReceiverLease {
             self.properties_remote_out_changed_waker.receiver()
+        }
+    }
+    #[async_trait]
+    impl<S: Specification> Runnable for Device<S> {
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            exit_flag.await;
+            Exited
         }
     }
     impl<S: Specification> signals::Device for Device<S> {
@@ -70,12 +86,12 @@ pub mod logic {
                 .signal_outputs
                 .iter()
                 .map(|signal_output| signal_output.take_last())
-                .collect::<ArrayVec<[_; hardware::OUTPUT_COUNT]>>();
+                .collect::<ArrayVec<_, { hardware::OUTPUT_COUNT }>>();
             if outputs_last.iter().any(|output_last| output_last.pending) {
                 let outputs = outputs_last
                     .iter()
                     .map(|output_last| output_last.value.unwrap_or(false))
-                    .collect::<ArrayVec<[_; hardware::OUTPUT_COUNT]>>()
+                    .collect::<ArrayVec<_, { hardware::OUTPUT_COUNT }>>()
                     .into_inner()
                     .unwrap();
 
@@ -109,13 +125,13 @@ pub mod logic {
         values: [bool; hardware::OUTPUT_COUNT],
     }
     impl<S: Specification> devices::GuiSummaryProvider for Device<S> {
-        fn get_value(&self) -> Box<dyn devices::GuiSummary> {
+        fn value(&self) -> Box<dyn devices::GuiSummary> {
             Box::new(GuiSummary {
                 values: self.properties_remote.outputs.get_last(),
             })
         }
 
-        fn get_waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+        fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
             self.gui_summary_waker.receiver_factory()
         }
     }
@@ -129,6 +145,10 @@ pub mod hardware {
             property, runner,
             serializer::Serializer,
         },
+    };
+    use crate::util::{
+        async_flag,
+        runtime::{Exited, Runnable},
     };
     use anyhow::{Context, Error};
     use arrayvec::ArrayVec;
@@ -203,6 +223,16 @@ pub mod hardware {
         }
     }
     #[async_trait]
+    impl<S: Specification> Runnable for Device<S> {
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            exit_flag.await;
+            Exited
+        }
+    }
+    #[async_trait]
     impl<S: Specification> runner::BusDevice for Device<S> {
         async fn initialize(
             &self,
@@ -264,7 +294,7 @@ pub mod hardware {
             &self,
             serializer: &mut Serializer,
         ) {
-            let mut values = ArrayVec::<[bool; 16]>::new();
+            let mut values = ArrayVec::<bool, 16>::new();
             values.try_extend_from_slice(&self.values).unwrap();
             values.push(false);
             values.push(false);

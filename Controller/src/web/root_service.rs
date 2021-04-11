@@ -6,27 +6,37 @@ use futures::future::{BoxFuture, FutureExt};
 use http::{HeaderMap, Method, Uri};
 
 #[cfg(feature = "ci-packed-gui")]
-use owning_ref::OwningHandle;
+use ouroboros::self_referencing;
 #[cfg(feature = "ci-packed-gui")]
 use web_static_pack::hyper_loader::{Responder, ResponderError};
 #[cfg(feature = "ci-packed-gui")]
 use web_static_pack::loader::Loader;
 
+#[cfg(feature = "ci-packed-gui")]
+#[self_referencing]
+struct GuiResponderInner {
+    loader: Box<Loader>,
+
+    #[borrows(loader)]
+    responder: Responder<'this>,
+}
+
 pub struct RootService<'a> {
     api_handler: &'a (dyn UriCursorHandler + Sync),
 
     #[cfg(feature = "ci-packed-gui")]
-    gui_responder: OwningHandle<Box<Loader>, Box<Responder<'static>>>,
+    gui_responder: GuiResponderInner,
 }
 impl<'a> RootService<'a> {
     pub fn new(api_handler: &'a (dyn UriCursorHandler + Sync)) -> Self {
         #[cfg(feature = "ci-packed-gui")]
-        let gui_responder = OwningHandle::new_with_fn(
-            Box::new(
+        let gui_responder = GuiResponderInnerBuilder {
+            loader: Box::new(
                 Loader::new(std::include_bytes!(std::env!("CI_WEB_STATIC_PACK_GUI"))).unwrap(),
             ),
-            |loader_ptr| unsafe { Box::new(Responder::new(&*loader_ptr)) },
-        );
+            responder_builder: |loader| Responder::new(loader),
+        }
+        .build();
 
         Self {
             api_handler,
@@ -44,7 +54,7 @@ impl<'a> RootService<'a> {
     ) -> Response {
         // If path is /, use index.html
         if uri.path() == "/" {
-            match self.gui_responder.parts_respond_or_error(
+            match self.gui_responder.responder.parts_respond_or_error(
                 method,
                 &Uri::from_static("/index.html"),
                 headers,
@@ -57,6 +67,7 @@ impl<'a> RootService<'a> {
         // Try actual file
         match self
             .gui_responder
+            .responder
             .parts_respond_or_error(method, uri, headers)
         {
             Ok(response) => return Response::from_hyper_response(response),

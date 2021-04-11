@@ -51,10 +51,7 @@ impl<'a> ParserPayload<'a> {
 }
 impl<'a> Parser for ParserPayload<'a> {
     fn get_byte(&mut self) -> Option<u8> {
-        match self.iterator.next() {
-            Some(byte_) => Some(*byte_),
-            None => None,
-        }
+        self.iterator.next().copied()
     }
     fn expect_end(&self) -> Result<(), Error> {
         if !self.iterator.is_empty() {

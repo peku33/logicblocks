@@ -18,6 +18,7 @@ use logicblocks_controller::{
     util::{async_flag::Sender, logging},
 };
 use std::time::Duration;
+use tokio::signal::ctrl_c;
 
 pub fn main() {
     logging::configure();
@@ -25,8 +26,7 @@ pub fn main() {
     main_error().unwrap();
 }
 fn execute_on_tokio<F: Future>(f: F) -> F::Output {
-    let mut runtime = tokio::runtime::Builder::new()
-        .basic_scheduler()
+    let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
@@ -177,7 +177,7 @@ fn run_d0003_junction_box_minimal_v1(
 
             let run_future = runner_ref.run(exit_flag_sender.receiver());
 
-            let abort_runner = tokio::signal::ctrl_c().then(async move |_| {
+            let abort_runner = ctrl_c().then(async move |_| {
                 exit_flag_sender.signal();
             });
 
@@ -205,7 +205,7 @@ fn run_d0003_junction_box_minimal_v1(
                         runner_ref.properties_remote_out_change_waker_wake();
                     }
 
-                    tokio::time::delay_for(Duration::from_secs(1)).await;
+                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
             };
             pin_mut!(leds_runner);
@@ -218,7 +218,7 @@ fn run_d0003_junction_box_minimal_v1(
                         runner_ref.properties_remote_out_change_waker_wake();
                     }
 
-                    tokio::time::delay_for(Duration::from_secs(5)).await;
+                    tokio::time::sleep(Duration::from_secs(5)).await;
                 }
             };
             pin_mut!(buzzer_runner);
@@ -293,7 +293,7 @@ fn run_common_relay14_common<S: avr_v1::common::relay14_common_a::hardware::Spec
 
             let run_future = runner_ref.run(exit_flag_sender.receiver());
 
-            let abort_runner = tokio::signal::ctrl_c().then(async move |_| {
+            let abort_runner = ctrl_c().then(async move |_| {
                 exit_flag_sender.signal();
             });
 
@@ -312,7 +312,7 @@ fn run_common_relay14_common<S: avr_v1::common::relay14_common_a::hardware::Spec
                     if outputs.set(output_values) {
                         runner_ref.properties_remote_out_change_waker_wake();
                     }
-                    tokio::time::delay_for(Duration::from_secs(1)).await;
+                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
             };
             pin_mut!(outputs_runner);

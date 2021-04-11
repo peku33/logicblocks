@@ -76,7 +76,10 @@ where
 {
     pub fn new(inner: T) -> Self {
         let inner = UnsafeCell::new(inner);
-        let borrowed = AtomicBool::new(false);
+
+        let borrowed = false;
+        let borrowed = AtomicBool::new(borrowed);
+
         Self { inner, borrowed }
     }
     pub fn lease(&self) -> AtomicCellLease<T> {

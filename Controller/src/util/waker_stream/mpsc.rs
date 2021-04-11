@@ -16,10 +16,12 @@ pub struct Common {
 }
 impl Common {
     fn new() -> Self {
-        Self {
-            signaled: AtomicBool::new(false),
-            waker: AtomicWaker::new(),
-        }
+        let signaled = false;
+        let signaled = AtomicBool::new(signaled);
+
+        let waker = AtomicWaker::new();
+
+        Self { signaled, waker }
     }
 }
 

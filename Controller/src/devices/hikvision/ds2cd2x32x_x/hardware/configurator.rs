@@ -344,7 +344,7 @@ impl<'a> Configurator<'a> {
             if self.healthcheck().await.is_err() {
                 return Ok(());
             }
-            tokio::time::delay_for(Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
         bail!("device didn't went away in designated time");
     }
@@ -353,7 +353,7 @@ impl<'a> Configurator<'a> {
             if self.healthcheck().await.is_ok() {
                 return Ok(());
             }
-            tokio::time::delay_for(Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
         // TODO: Return last failure
         bail!("device didn't went up in designated time");

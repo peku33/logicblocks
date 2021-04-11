@@ -107,7 +107,6 @@ impl Response {
         Response { hyper_response }
     }
     pub fn ok_json<T: Serialize>(value: T) -> Self {
-        // FIXME: This may fail if serialization fails
         let body = serde_json::to_vec(&value).unwrap();
         let hyper_response = HyperResponse::builder()
             .header(header::CONTENT_TYPE, "application/json")

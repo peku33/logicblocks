@@ -268,7 +268,7 @@ impl Master {
             })
             .unwrap();
 
-        result_receiver.await?
+        result_receiver.await.context("result_receiver")?
     }
     pub async fn transaction_out_in(
         &self,
@@ -291,7 +291,8 @@ impl Master {
                 result_sender,
             })
             .unwrap();
-        result_receiver.await?
+
+        result_receiver.await.context("result_receiver")?
     }
     pub async fn transaction_device_discovery(&self) -> Result<Address, Error> {
         let (result_sender, result_receiver) = oneshot::channel();
@@ -302,7 +303,7 @@ impl Master {
             .send(Transaction::DeviceDiscovery { result_sender })
             .unwrap();
 
-        result_receiver.await?
+        result_receiver.await.context("result_receiver")?
     }
 
     fn thread_main(
