@@ -74,7 +74,7 @@ impl<'d> Runner<'d> {
                 let exchanger_devices = device_wrappers
                     .iter()
                     .map(|(device_id, device_wrapper)| {
-                        let signals_device = device_wrapper.as_signals_device();
+                        let signals_device = device_wrapper.device().as_signals_device();
                         let device_id = *device_id;
                         (device_id, signals_device)
                     })

@@ -17,7 +17,7 @@ use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::json;
-use std::{borrow::Cow, fmt, ops::Deref};
+use std::{borrow::Cow, fmt};
 
 pub type Id = u32;
 
@@ -52,10 +52,14 @@ impl<'d> DeviceWrapper<'d> {
     pub fn name(&self) -> &String {
         &self.name
     }
+    pub fn device(&self) -> &dyn Device {
+        &*self.device
+    }
 
     pub fn gui_summary_waker(&self) -> sse_aggregated::Node {
         sse_aggregated::Node {
             terminal: self
+                .device()
                 .as_gui_summary_provider()
                 .map(|gui_summary_provider| gui_summary_provider.waker()),
             children: hashmap! {},
@@ -71,13 +75,6 @@ impl<'d> DeviceWrapper<'d> {
 
     pub fn close(self) -> Box<dyn Device + 'd> {
         self.device
-    }
-}
-impl<'d> Deref for DeviceWrapper<'d> {
-    type Target = dyn Device + 'd;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.device
     }
 }
 #[async_trait]
@@ -99,7 +96,7 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
             uri_cursor::UriCursor::Terminal => match *request.method() {
                 http::Method::GET => {
                     let name = self.name().clone();
-                    let class = self.class();
+                    let class = self.device().class();
                     async move {
                         let response = json!({
                             "name": name,
@@ -112,7 +109,7 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
                 _ => async move { web::Response::error_405() }.boxed(),
             },
             uri_cursor::UriCursor::Next("gui-summary", uri_cursor) => {
-                match self.as_gui_summary_provider() {
+                match self.device().as_gui_summary_provider() {
                     Some(gui_summary_provider) => match **uri_cursor {
                         uri_cursor::UriCursor::Terminal => match *request.method() {
                             http::Method::GET => {
@@ -126,10 +123,12 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
                     None => async move { web::Response::error_404() }.boxed(),
                 }
             }
-            uri_cursor::UriCursor::Next("device", uri_cursor) => match self.as_web_handler() {
-                Some(handler) => handler.handle(request, uri_cursor),
-                None => async move { web::Response::error_404() }.boxed(),
-            },
+            uri_cursor::UriCursor::Next("device", uri_cursor) => {
+                match self.device().as_web_handler() {
+                    Some(handler) => handler.handle(request, uri_cursor),
+                    None => async move { web::Response::error_404() }.boxed(),
+                }
+            }
             _ => async move { web::Response::error_404() }.boxed(),
         }
     }
