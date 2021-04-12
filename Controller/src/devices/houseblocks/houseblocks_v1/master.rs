@@ -232,9 +232,8 @@ impl Master {
         let worker_ftdi_descriptor = ftdi_descriptor.clone();
         let worker_thread = thread::Builder::new()
             .name(format!(
-                "{} ({})",
-                ftdi_descriptor.serial_number.to_string_lossy(),
-                module_path!()
+                "{}/houseblocks_v1/master",
+                ftdi_descriptor.serial_number.to_str().unwrap()
             ))
             .spawn(move || {
                 Self::thread_main(worker_ftdi_descriptor, transaction_receiver);
