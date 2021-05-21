@@ -128,7 +128,6 @@ impl Api {
         Ok(response)
     }
 
-    const BOUNDARY_STREAM_TIMEOUT: Duration = Duration::from_secs(10);
     pub async fn http_request_boundary_stream(
         &self,
         path_and_query: PathAndQuery,
@@ -140,9 +139,7 @@ impl Api {
             .build()
             .unwrap();
 
-        let mut request =
-            reqwest::Request::new(http::Method::GET, url.to_string().parse().unwrap());
-        *request.timeout_mut() = Some(Self::BOUNDARY_STREAM_TIMEOUT);
+        let request = reqwest::Request::new(http::Method::GET, url.to_string().parse().unwrap());
 
         let response = self.http_request(request).await.context("http_request")?;
 
