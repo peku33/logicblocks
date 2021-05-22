@@ -69,7 +69,7 @@ impl State {
     }
 }
 #[cfg(test)]
-mod test_state {
+mod tests_state {
     use super::*;
 
     #[test]

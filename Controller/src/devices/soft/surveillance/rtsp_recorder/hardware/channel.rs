@@ -253,7 +253,7 @@ impl fmt::Display for Channel {
 }
 
 #[cfg(test)]
-mod test_detection_level_tracker {
+mod tests_detection_level_tracker {
     use super::DetectionLevelTracker;
     use crate::datatypes::ratio::Ratio;
 

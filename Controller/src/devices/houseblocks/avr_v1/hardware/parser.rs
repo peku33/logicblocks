@@ -61,7 +61,7 @@ impl<'a> Parser for ParserPayload<'a> {
     }
 }
 #[cfg(test)]
-mod test_parser_payload {
+mod tests_parser_payload {
     use super::{super::super::super::houseblocks_v1::common::Payload, Parser, ParserPayload};
 
     #[test]

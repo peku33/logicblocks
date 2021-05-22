@@ -1868,7 +1868,7 @@ fn patch_nested_event_handler(
 }
 
 #[cfg(test)]
-pub mod test_grid22x18 {
+mod test_sgrid22x18 {
     use super::{Coordinate, Grid22x18, Point, RegionSquare};
 
     #[test]

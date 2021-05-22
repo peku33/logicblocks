@@ -73,7 +73,7 @@ impl Serializer {
     }
 }
 #[cfg(test)]
-mod test_serializer {
+mod tests_serializer {
     use super::{super::super::super::houseblocks_v1::common::Payload, Serializer};
     #[test]
     fn empty() {

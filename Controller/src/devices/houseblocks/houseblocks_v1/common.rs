@@ -32,7 +32,7 @@ impl fmt::Display for AddressDeviceType {
     }
 }
 #[cfg(test)]
-mod test_address_device_type {
+mod tests_address_device_type {
     use super::*;
 
     #[test]
@@ -74,7 +74,7 @@ impl fmt::Display for AddressSerial {
     }
 }
 #[cfg(test)]
-mod test_address_serial {
+mod tests_address_serial {
     use super::*;
 
     #[test]
@@ -147,7 +147,7 @@ impl fmt::Display for Payload {
     }
 }
 #[cfg(test)]
-mod test_payload {
+mod tests_payload {
     use super::*;
 
     #[test]
@@ -286,7 +286,7 @@ impl Frame {
     }
 }
 #[cfg(test)]
-mod test_frame {
+mod tests_frame {
     use super::*;
 
     #[test]

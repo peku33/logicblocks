@@ -532,7 +532,7 @@ pub mod hardware {
     }
 
     #[cfg(test)]
-    mod test_bus_request {
+    mod tests_bus_request {
         use super::{
             super::super::super::houseblocks_v1::common::Payload, BusRequest, BusRequestBuzzer,
             BusRequestLeds,
@@ -706,7 +706,7 @@ pub mod hardware {
     }
 
     #[cfg(test)]
-    mod test_bus_response {
+    mod tests_bus_response {
         use super::{super::super::super::houseblocks_v1::common::Payload, BusResponse};
         use crate::datatypes::temperature::{Temperature, Unit as TemperatureUnit};
 

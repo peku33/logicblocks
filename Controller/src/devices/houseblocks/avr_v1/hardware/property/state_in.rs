@@ -189,7 +189,7 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]
