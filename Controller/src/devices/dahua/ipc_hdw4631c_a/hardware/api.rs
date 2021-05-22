@@ -548,7 +548,7 @@ impl Api {
         Ok(basic_device_info)
     }
 
-    const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(10);
+    const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(15);
     pub async fn snapshot(&self) -> Result<DynamicImage, Error> {
         let url = uri::Builder::new()
             .scheme(Scheme::HTTP)
