@@ -14,6 +14,7 @@
 #![feature(try_blocks)]
 #![warn(clippy::all)]
 #![allow(clippy::bool_assert_comparison)]
+#![allow(clippy::large_enum_variant)]
 #![allow(clippy::from_over_into)] // https://github.com/rust-lang/rust-clippy/issues/6607
 #![allow(clippy::let_and_return)]
 #![allow(clippy::mem_replace_with_default)]
