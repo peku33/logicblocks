@@ -122,14 +122,12 @@ impl Device {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
             signal_rtsp_url_main: signal::state_source::Signal::<IpcRtspUrl>::new(None),
             signal_rtsp_url_sub: signal::state_source::Signal::<IpcRtspUrl>::new(None),
-            signal_event_camera_failure: signal::state_source::Signal::<bool>::new(Some(false)),
-            signal_event_video_loss: signal::state_source::Signal::<bool>::new(Some(false)),
-            signal_event_tampering_detection: signal::state_source::Signal::<bool>::new(Some(
-                false,
-            )),
-            signal_event_motion_detection: signal::state_source::Signal::<bool>::new(Some(false)),
-            signal_event_line_detection: signal::state_source::Signal::<bool>::new(Some(false)),
-            signal_event_field_detection: signal::state_source::Signal::<bool>::new(Some(false)),
+            signal_event_camera_failure: signal::state_source::Signal::<bool>::new(None),
+            signal_event_video_loss: signal::state_source::Signal::<bool>::new(None),
+            signal_event_tampering_detection: signal::state_source::Signal::<bool>::new(None),
+            signal_event_motion_detection: signal::state_source::Signal::<bool>::new(None),
+            signal_event_line_detection: signal::state_source::Signal::<bool>::new(None),
+            signal_event_field_detection: signal::state_source::Signal::<bool>::new(None),
         }
     }
 
