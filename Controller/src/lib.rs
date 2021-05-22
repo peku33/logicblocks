@@ -23,6 +23,7 @@
 #![allow(incomplete_features)]
 #![recursion_limit = "256"]
 
+pub mod app;
 pub mod datatypes;
 pub mod devices;
 pub mod interfaces;
