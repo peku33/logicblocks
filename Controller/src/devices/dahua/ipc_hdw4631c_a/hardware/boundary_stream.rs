@@ -39,7 +39,7 @@ impl Extractor {
 
         let element_match = capture.get(0).unwrap();
         if element_match.start() != 0 {
-            log::debug!("boundary not started on the beginning. noise?");
+            log::trace!("boundary not started on the beginning. noise?");
         }
         let element_end = element_match.end();
 
