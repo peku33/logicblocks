@@ -148,9 +148,9 @@ impl Recorder {
             .args(&["-sn", "-dn"])
             .args(&["-threads", "1"])
             // input options
+            .args(&["-f", "rtsp"])
             .args(&["-use_wallclock_as_timestamps", "1"])
             .args(&["-fflags", "+genpts"])
-            .args(&["-f", "rtsp"])
             .args(&["-stimeout", "1000000"])
             .args(&["-i", rtsp_url.to_string().as_str()])
             // i/o options

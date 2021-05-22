@@ -48,7 +48,7 @@ function useDeviceContext(deviceId: number): DeviceData | undefined {
   useAsyncEffect(
     async (isMounted) => {
       const deviceData = await getJson<DeviceData>(endpointBuild(`/devices/${deviceId}`));
-      if (!isMounted) return;
+      if (!isMounted()) return;
       setDeviceData(deviceData);
     },
     () => {

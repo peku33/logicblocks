@@ -16,11 +16,12 @@ export function useObservableState<S>(
   useAsyncEffect(
     async (isMounted) => {
       const state = await getJson<S>(getJsonUrl);
-      if (!isMounted) return;
+      if (!isMounted()) return;
       setState(state);
     },
     () => {
-      setState(undefined);
+      // FIXME: dont call setState(undefined) if only version was changed
+      // setState(undefined);
     },
     [getJsonUrl, sseAggregatedStreamClient, ...sseAggregatedStreamPath, version],
   );
