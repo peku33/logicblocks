@@ -148,7 +148,7 @@ impl<'f> Manager<'f> {
                                 enabled
                         "
                     ))?
-                    .query_map([], |row| {
+                    .query_map([], move |row| {
                         let channel_id = row.get::<_, i64>(0)? as usize;
                         let name = row.get::<_, String>(1)?;
                         Ok((channel_id, name))
@@ -303,7 +303,7 @@ impl<'f> Manager<'f> {
                                 size_bytes DESC
                         "
                     ))?
-                    .query_map([], |row| {
+                    .query_map([], move |row| {
                         let recording_id = row.get::<_, i64>(0)? as usize;
                         let path_storage_relative = row.get::<_, String>(1)?;
                         Ok((recording_id, path_storage_relative))

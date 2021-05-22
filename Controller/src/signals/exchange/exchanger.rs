@@ -348,9 +348,9 @@ fn connections_requested_to_connections_running<'d>(
 
         let source_device_id_signal_id = source_device_id_signal_ids.into_iter().next().unwrap();
 
-        connection_state_candidates_inverted_pruned
+        assert!(connection_state_candidates_inverted_pruned
             .insert(target_device_id_signal_id, source_device_id_signal_id)
-            .unwrap_none();
+            .is_none());
     }
     connections_state.set_connections(connection_state_candidates_inverted_pruned);
 

@@ -129,7 +129,7 @@ impl<'d> Runner<'d> {
 
         let devices_wrapper_runtime_scope_runnable =
             self.inner.with_devices_wrapper_runtime_scope_runnable_mut(
-                |devices_wrapper_runtime_scope_runnable| {
+                move |devices_wrapper_runtime_scope_runnable| {
                     let devices_wrapper_runtime_scope_runnable = unsafe {
                         transmute::<
                             &mut ManuallyDrop<

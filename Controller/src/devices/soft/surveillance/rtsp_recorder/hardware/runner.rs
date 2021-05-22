@@ -371,7 +371,7 @@ impl<'r> RunnerChannelRunner<'r> {
     pub async fn finalize(mut self) -> RunnerChannel {
         let runner_channel_runtime_scope_runnable =
             self.inner.with_runner_channel_runtime_scope_runnable_mut(
-                |runner_channel_runtime_scope_runnable| {
+                move |runner_channel_runtime_scope_runnable| {
                     let runner_channel_runtime_scope_runnable = unsafe {
                         transmute::<
                             &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, RunnerChannel>>,

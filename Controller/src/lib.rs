@@ -5,7 +5,6 @@
 #![feature(generic_associated_types)]
 #![feature(hash_drain_filter)]
 #![feature(inherent_associated_types)]
-#![feature(map_into_keys_values)]
 #![feature(never_type)]
 #![feature(option_result_contains)]
 #![feature(raw_vec_internals)]

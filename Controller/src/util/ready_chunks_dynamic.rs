@@ -35,10 +35,11 @@ where
     ) -> Poll<Option<Self::Item>> {
         let self_ = unsafe { self.get_unchecked_mut() };
 
-        let mut inner = unsafe { Pin::new_unchecked(&mut self_.inner) };
-
         loop {
-            match inner.as_mut().poll_next(cx) {
+            match unsafe { Pin::new_unchecked(&mut self_.inner) }
+                .as_mut()
+                .poll_next(cx)
+            {
                 Poll::Pending => {
                     if self_.buffer.is_empty() {
                         return Poll::Pending;

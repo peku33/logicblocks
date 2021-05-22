@@ -346,7 +346,7 @@ impl Api {
             .ok_or_else(|| anyhow!("missing firmwareVersion"))?
             .get_text()
             .ok_or_else(|| anyhow!("missing firmwareVersion text"))?
-            .strip_prefix("V")
+            .strip_prefix('V')
             .ok_or_else(|| anyhow!("missing firmwareVersion prefix"))?
             .parse()
             .context("firmware_version")?;
