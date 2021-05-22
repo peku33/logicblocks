@@ -33,7 +33,7 @@ function useDeviceIds(): number[] | undefined {
     async (isMounted) => {
       const deviceIds = await getJson<number[]>(endpointBuild("/devices/list"));
       const deviceIdsSorted = deviceIds.sort((a, b) => a - b);
-      if (!isMounted) return;
+      if (!isMounted()) return;
       setDeviceIds(deviceIdsSorted);
     },
     () => {
