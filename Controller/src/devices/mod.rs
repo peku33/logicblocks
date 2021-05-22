@@ -1,4 +1,5 @@
 pub mod dahua;
+pub mod helpers;
 pub mod hikvision;
 pub mod houseblocks;
 pub mod runner;
