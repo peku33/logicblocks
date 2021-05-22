@@ -39,7 +39,7 @@ struct CommandConfigure {
     device_name: String,
     device_id: u8,
     shared_user_password: String,
-    #[clap(long, parse(try_from_str))]
+    #[clap(parse(try_from_str))]
     video_upside_down: bool,
     channel_title: String,
 }
