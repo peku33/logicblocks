@@ -1,13 +1,14 @@
+use super::boundary_stream;
 use anyhow::{anyhow, bail, ensure, Context, Error};
 use bytes::Bytes;
-use futures::stream::Stream;
+use futures::stream::{BoxStream, Stream, StreamExt};
 use http::{
     uri::{self, Authority, PathAndQuery, Scheme},
     Method, Uri,
 };
 use image::DynamicImage;
 use semver::{Version, VersionReq};
-use std::time::Duration;
+use std::{pin::Pin, task, time::Duration};
 use xmltree::Element;
 
 #[derive(Debug)]
@@ -194,10 +195,10 @@ impl Api {
 
         Ok(output)
     }
-    pub async fn request_mixed_stream(
+    pub async fn request_boundary_stream(
         &self,
         path_and_query: PathAndQuery,
-    ) -> Result<impl Stream<Item = reqwest::Result<Bytes>>, Error> {
+    ) -> Result<BoundaryStreamExtractor, Error> {
         let request = self
             .reqwest_client
             .request(Method::GET, &self.url_build(path_and_query).to_string())
@@ -211,17 +212,18 @@ impl Api {
             .error_for_status()
             .context("error_for_status")?;
 
-        let headers = response.headers();
-        ensure!(
-            headers.get(http::header::CONTENT_TYPE).contains(
-                &http::header::HeaderValue::from_static("multipart/mixed; boundary=boundary")
-            ),
-            "invalid content type for mixed stream"
-        );
+        let content_type = response
+            .headers()
+            .get(http::header::CONTENT_TYPE)
+            .ok_or_else(|| anyhow!("missing content type"))?;
 
-        let stream = response.bytes_stream();
+        ensure!(content_type == "multipart/mixed; boundary=boundary");
 
-        Ok(stream)
+        let data_stream = response.bytes_stream().boxed();
+
+        let boundary_stream_extractor = BoundaryStreamExtractor::new(data_stream);
+
+        Ok(boundary_stream_extractor)
     }
 
     pub async fn get_xml(
@@ -400,5 +402,66 @@ impl Api {
         )
         .parse()
         .unwrap()
+    }
+}
+
+pub struct BoundaryStreamExtractor {
+    data_stream: BoxStream<'static, reqwest::Result<Bytes>>,
+    data_stream_terminated: bool,
+    extractor: boundary_stream::Extractor,
+}
+impl BoundaryStreamExtractor {
+    fn new(data_stream: BoxStream<'static, reqwest::Result<Bytes>>) -> Self {
+        let data_stream_terminated = false;
+        let extractor = boundary_stream::Extractor::new();
+        Self {
+            data_stream,
+            data_stream_terminated,
+            extractor,
+        }
+    }
+}
+impl Stream for BoundaryStreamExtractor {
+    type Item = Result<Element, Error>;
+
+    fn poll_next(
+        self: Pin<&mut Self>,
+        cx: &mut task::Context<'_>,
+    ) -> task::Poll<Option<Self::Item>> {
+        let self_ = unsafe { self.get_unchecked_mut() };
+
+        if !self_.data_stream_terminated {
+            match Pin::new(&mut self_.data_stream).poll_next(cx) {
+                task::Poll::Ready(Some(item)) => match item.context("item") {
+                    Ok(chunk) => match std::str::from_utf8(&chunk).context("from_utf8") {
+                        Ok(chunk) => {
+                            self_.extractor.push(chunk);
+                        }
+                        Err(error) => {
+                            return task::Poll::Ready(Some(Err(error)));
+                        }
+                    },
+                    Err(error) => {
+                        return task::Poll::Ready(Some(Err(error)));
+                    }
+                },
+                task::Poll::Ready(None) => {
+                    self_.data_stream_terminated = true;
+                }
+                task::Poll::Pending => {}
+            }
+        }
+
+        match self_.extractor.try_extract().context("try_extract") {
+            Ok(Some(item)) => task::Poll::Ready(Some(Ok(item))),
+            Ok(None) => {
+                if self_.data_stream_terminated {
+                    task::Poll::Ready(None)
+                } else {
+                    task::Poll::Pending
+                }
+            }
+            Err(error) => task::Poll::Ready(Some(Err(error))),
+        }
     }
 }
