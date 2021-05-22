@@ -506,30 +506,38 @@ impl<'a> Configurator<'a> {
     }
 
     pub async fn system_factory_reset(&mut self) -> Result<(), Error> {
-        if let Err(_error) = self
-            .api
-            .rpc2(
-                "configManager.restoreExcept".to_string(),
-                json!({ "names": ["Network"] }),
-            )
-            .await
-            .context("rpc2")
-        {
-            log::warn!(
-                "error while resetting to factory settings, this is likely false positive (device bug)"
-            );
-        }
+        loop {
+            let mut again = false;
+            if let Err(_error) = self
+                .api
+                .rpc2(
+                    "configManager.restoreExcept".to_string(),
+                    json!({ "names": ["Network"] }),
+                )
+                .await
+                .context("rpc2")
+            {
+                again = true;
+                log::warn!(
+                    "error while resetting to factory settings, this is likely false positive (device bug)"
+                );
+            }
 
-        // system restart MAY require reboot
-        let rebooted = self.wait_for_power_down().await.is_ok();
-        if rebooted {
-            self.wait_for_power_up()
-                .await
-                .context("wait_for_power_up")?;
-        } else {
-            self.reboot_wait_for_ready()
-                .await
-                .context("reboot_wait_for_ready")?
+            // system restart MAY require reboot
+            let rebooted = self.wait_for_power_down().await.is_ok();
+            if rebooted {
+                self.wait_for_power_up()
+                    .await
+                    .context("wait_for_power_up")?;
+            } else {
+                self.reboot_wait_for_ready()
+                    .await
+                    .context("reboot_wait_for_ready")?
+            }
+
+            if !again {
+                break;
+            }
         }
 
         Ok(())
@@ -992,7 +1000,7 @@ impl<'a> Configurator<'a> {
             patch_object(
                 video,
                 hashmap! {
-                    "Compression" => json!("H.265"),
+                    "Compression" => json!("H.264"),
                     "Width" => json!(3072),
                     "Height" => json!(2048),
                     "CustomResolutionName" => json!("3072x2048"),
@@ -1045,14 +1053,14 @@ impl<'a> Configurator<'a> {
             patch_object(
                 video,
                 hashmap! {
-                    "Compression" => json!("H.265"),
+                    "Compression" => json!("H.264"),
                     "Width" => json!(352),
                     "Height" => json!(240),
                     "CustomResolutionName" => json!("CIF"),
                     "BitRateControl" => json!("VBR"),
                     "BitRate" => json!(128),
                     "Quality" => json!(2),
-                    "FPS" => json!(15),
+                    "FPS" => json!(5),
                     "GOP" => json!(40),
                     "Profile" => json!("Main"),
                 },
@@ -1098,14 +1106,14 @@ impl<'a> Configurator<'a> {
             patch_object(
                 video,
                 hashmap! {
-                    "Compression" => json!("H.265"),
+                    "Compression" => json!("H.264"),
                     "Width" => json!(704),
                     "Height" => json!(480),
                     "CustomResolutionName" => json!("D1"),
                     "BitRateControl" => json!("VBR"),
                     "BitRate" => json!(512),
                     "Quality" => json!(4),
-                    "FPS" => json!(20),
+                    "FPS" => json!(10),
                     "GOP" => json!(40),
                     "Profile" => json!("Main"),
                 },
