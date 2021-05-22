@@ -82,7 +82,8 @@ impl<'f> Manager<'f> {
                     CREATE TABLE IF NOT EXISTS storage_groups (
                         storage_group_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
-                        size_bytes_max INTEGER NOT NULL
+                        size_bytes_max INTEGER NOT NULL,
+                        detection_level_to_second_ratio REAL NOT NULL
                     );
 
                     CREATE TABLE IF NOT EXISTS channels (
@@ -97,12 +98,10 @@ impl<'f> Manager<'f> {
                         channel_id REFERENCES channels(channel_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
                         timestamp_start INTEGER NOT NULL,
                         timestamp_end INTEGER NOT NULL,
-                        detection_level INTEGER NULL,
+                        detection_level REAL NOT NULL,
                         path_storage_relative TEXT NOT NULL,
                         size_bytes INTEGER NOT NULL
                     );
-                    CREATE INDEX IF NOT EXISTS recordings__timestamp_end ON recordings (timestamp_end);
-                    CREATE INDEX IF NOT EXISTS recordings__detection_level ON recordings (detection_level);
                 "))?;
                 Ok(())
             })
@@ -286,7 +285,10 @@ impl<'f> Manager<'f> {
                                         PARTITION BY
                                             storage_group_id
                                         ORDER BY
-                                            detection_level DESC, timestamp_end DESC
+                                            (
+                                                detection_level * detection_level_to_second_ratio +
+                                                (CAST(STRFTIME('%s', CURRENT_TIMESTAMP) AS INTEGER) - CAST(STRFTIME('%s', timestamp_end) AS INTEGER))
+                                            ) DESC
                                         ROWS
                                             UNBOUNDED PRECEDING
                                     ) AS size_bytes_rolling
@@ -350,12 +352,12 @@ impl<'f> Manager<'f> {
             .collect::<JoinAll<_>>()
             .await
             .into_iter()
-            .filter_map(|(recording_id, result)| match result.context("remove") {
-                Ok(()) => Some(recording_id),
-                Err(error) => {
+            .map(|(recording_id, result)| {
+                if let Err(error) = result.context("remove") {
                     log::error!("{}: cleanup: {:?} (#{})", self, error, recording_id);
-                    None
                 }
+
+                recording_id
             })
             .collect::<HashSet<usize>>();
 
