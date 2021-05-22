@@ -987,7 +987,7 @@ impl<'a> Configurator<'a> {
                     "Bitrate" => json!(64),
                     "Compression" => json!("AAC"),
                     "Depth" => json!(16),
-                    "Frequency" => json!(48000),
+                    "Frequency" => json!(32000),
                 },
             )
             .context("patch_object audio")?;
