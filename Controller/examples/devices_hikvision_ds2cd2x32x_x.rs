@@ -38,8 +38,10 @@ enum ArgumentsSubcommand {
 struct CommandConfigure {
     device_name: String,
     device_id: u8,
-    overlay_text: String,
     shared_user_password: String,
+    #[clap(parse(try_from_str))]
+    video_upside_down: bool,
+    overlay_text: Option<String>,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -63,13 +65,14 @@ async fn main() -> Result<(), Error> {
             .configure(Configuration {
                 device_name: command_configure.device_name,
                 device_id: command_configure.device_id,
-                overlay_text: command_configure.overlay_text,
                 shared_user_password: command_configure.shared_user_password,
+                video_upside_down: command_configure.video_upside_down,
+                overlay_text: command_configure.overlay_text,
                 privacy_mask: None,
                 motion_detection: Some(
                     MotionDetection::new(vec![MotionDetectionRegion {
                         region: RegionSquare::full(),
-                        sensitivity: Percentage::new(100).unwrap(),
+                        sensitivity: Percentage::new(50).unwrap(),
                         object_size: Percentage::new(0).unwrap(),
                     }])
                     .unwrap(),

@@ -292,8 +292,9 @@ pub struct LineDetection {
 pub struct Configuration {
     pub device_name: String,
     pub device_id: u8,
-    pub overlay_text: String,
     pub shared_user_password: String,
+    pub video_upside_down: bool,
+    pub overlay_text: Option<String>,
     pub privacy_mask: Option<PrivacyMask>,
     pub motion_detection: Option<MotionDetection>,
     pub field_detection: Option<FieldDetection>,
@@ -305,27 +306,6 @@ pub struct Configurator<'a> {
 }
 impl<'a> Configurator<'a> {
     pub const SHARED_USER_LOGIN: &'static str = "logicblocks";
-
-    fn serialize_coordinates_list<CS: CoordinateSystem, C: CoordinateList<CS>>(
-        coordinates_list: C
-    ) -> Element {
-        element_build_children(
-            C::list_name(),
-            coordinates_list
-                .coordinates_list()
-                .into_iter()
-                .map(|coordinate| {
-                    element_build_children(
-                        C::element_name(),
-                        vec![
-                            element_build_text("positionX", coordinate.x.to_string()),
-                            element_build_text("positionY", coordinate.y.to_string()),
-                        ],
-                    )
-                })
-                .collect(),
-        )
-    }
 
     pub fn new(api: &'a Api) -> Self {
         Self { api }
@@ -379,7 +359,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
 
-    async fn system_factory_reset(&mut self) -> Result<(), Error> {
+    pub async fn system_factory_reset(&mut self) -> Result<(), Error> {
         let mut reboot_required = false;
 
         reboot_required |= self
@@ -399,10 +379,10 @@ impl<'a> Configurator<'a> {
         }
         Ok(())
     }
-    async fn system_device_name(
+    pub async fn system_device_id_name(
         &mut self,
-        device_name: String,
         device_id: u8,
+        device_name: String,
     ) -> Result<(), Error> {
         let reboot_required = self
             .api
@@ -423,7 +403,7 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
-    async fn system_time_gmt(&mut self) -> Result<(), Error> {
+    pub async fn system_time_gmt(&mut self) -> Result<(), Error> {
         let reboot_required = self
             .api
             .put_xml(
@@ -443,7 +423,7 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
-    async fn system_time_ntp(&mut self) -> Result<(), Error> {
+    pub async fn system_time_ntp(&mut self) -> Result<(), Error> {
         let reboot_required = self
             .api
             .put_xml(
@@ -466,7 +446,7 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
-    async fn system_shared_user(
+    pub async fn system_shared_user(
         &mut self,
         password: String,
     ) -> Result<(), Error> {
@@ -555,7 +535,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
 
-    async fn network_upnp_sane(
+    pub async fn network_upnp_sane(
         &mut self,
         device_name: String,
     ) -> Result<(), Error> {
@@ -578,7 +558,7 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
-    async fn network_port_mapping_disable(&mut self) -> Result<(), Error> {
+    pub async fn network_port_mapping_disable(&mut self) -> Result<(), Error> {
         let reboot_required = self
             .api
             .put_xml(
@@ -599,7 +579,7 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
-    async fn network_ezviz_disable(&mut self) -> Result<(), Error> {
+    pub async fn network_ezviz_disable(&mut self) -> Result<(), Error> {
         let reboot_required = self
             .api
             .put_xml(
@@ -617,7 +597,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
 
-    async fn video_main_quality(&mut self) -> Result<(), Error> {
+    pub async fn video_main_quality(&mut self) -> Result<(), Error> {
         let reboot_required = self
             .api
             .put_xml(
@@ -651,7 +631,7 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
-    async fn video_sub_quality(&mut self) -> Result<(), Error> {
+    pub async fn video_sub_quality(&mut self) -> Result<(), Error> {
         let reboot_required = self
             .api
             .put_xml(
@@ -685,8 +665,34 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
+    pub async fn video_upside_down(
+        &mut self,
+        upside_down: bool,
+    ) -> Result<(), Error> {
+        let reboot_required = self
+            .api
+            .put_xml(
+                "/ISAPI/Image/channels/1/imageFlip".parse().unwrap(),
+                Some(element_build_children(
+                    "ImageFlip",
+                    vec![
+                        element_build_text(
+                            "enabled",
+                            (if upside_down { "true" } else { "false" }).to_owned(),
+                        ),
+                        element_build_text("ImageFlipStyle", "UPDOWN".to_owned()),
+                    ],
+                )),
+            )
+            .await
+            .context("put_xml")?
+            .reboot_required;
+        ensure!(!reboot_required, "reboot is not supported here");
 
-    async fn audio(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
+
+    pub async fn audio(&mut self) -> Result<(), Error> {
         let reboot_required = self
             .api
             .put_xml(
@@ -710,10 +716,36 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
 
-    async fn image_overlay_text(
+    pub async fn image_overlay_text(
         &mut self,
-        name: String,
+        name: Option<String>,
     ) -> Result<(), Error> {
+        let reboot_required = self
+            .api
+            .put_xml(
+                "/ISAPI/System/Video/inputs/channels/1/overlays"
+                    .parse()
+                    .unwrap(),
+                Some(element_build_children(
+                    "VideoOverlay",
+                    vec![element_build_children(
+                        "channelNameOverlay",
+                        vec![
+                            element_build_text(
+                                "enabled",
+                                (if name.is_some() { "true" } else { "false" }).to_owned(),
+                            ),
+                            element_build_text("positionX", "512".to_owned()),
+                            element_build_text("positionY", "64".to_owned()),
+                        ],
+                    )],
+                )),
+            )
+            .await
+            .context("put_xml")?
+            .reboot_required;
+        ensure!(!reboot_required, "reboot is not supported here");
+
         let reboot_required = self
             .api
             .put_xml(
@@ -723,7 +755,7 @@ impl<'a> Configurator<'a> {
                     vec![
                         element_build_text("id", "1".to_owned()),
                         element_build_text("inputPort", "1".to_owned()),
-                        element_build_text("name", name),
+                        element_build_text("name", name.unwrap_or_else(|| "".to_string())),
                     ],
                 )),
             )
@@ -734,7 +766,7 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
-    async fn image_overlay_date(&mut self) -> Result<(), Error> {
+    pub async fn image_overlay_date(&mut self) -> Result<(), Error> {
         let reboot_required = self
             .api
             .put_xml(
@@ -791,7 +823,7 @@ impl<'a> Configurator<'a> {
                                         vec![
                                             element_build_text("id", (id + 1).to_string()),
                                             element_build_text("enabled", "true".to_owned()),
-                                            Self::serialize_coordinates_list(region),
+                                            serialize_coordinates_list(region),
                                         ],
                                     )
                                 })
@@ -808,7 +840,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
 
-    async fn record_schedule_disable(&mut self) -> Result<(), Error> {
+    pub async fn record_schedule_disable(&mut self) -> Result<(), Error> {
         let reboot_required = self
             .api
             .put_xml(
@@ -868,7 +900,7 @@ impl<'a> Configurator<'a> {
                                                 "objectSize",
                                                 region.object_size.value().to_string(),
                                             ),
-                                            Self::serialize_coordinates_list(region.region),
+                                            serialize_coordinates_list(region.region),
                                         ],
                                     )
                                 })
@@ -905,7 +937,7 @@ impl<'a> Configurator<'a> {
                                     element_build_text("id", "1".to_owned()),
                                     element_build_text("enabled", "true".to_owned()),
                                     element_build_text("sensitivityLevel", "100".to_owned()),
-                                    Self::serialize_coordinates_list(RegionSquare::<
+                                    serialize_coordinates_list(RegionSquare::<
                                         CoordinateSystem704x576,
                                     >::full(
                                     )),
@@ -963,7 +995,7 @@ impl<'a> Configurator<'a> {
                                         "timeThreshold",
                                         field_detection.time_threshold_s.to_string(),
                                     ),
-                                    Self::serialize_coordinates_list(field_detection.region),
+                                    serialize_coordinates_list(field_detection.region),
                                 ],
                             )],
                         ),
@@ -1019,7 +1051,7 @@ impl<'a> Configurator<'a> {
                                         }
                                         .to_owned(),
                                     ),
-                                    Self::serialize_coordinates_list(line_detection.line),
+                                    serialize_coordinates_list(line_detection.line),
                                 ],
                             )],
                         ),
@@ -1044,9 +1076,9 @@ impl<'a> Configurator<'a> {
             .await
             .context("system_factory_reset")?;
 
-        self.system_device_name(configuration.device_name.clone(), configuration.device_id)
+        self.system_device_id_name(configuration.device_id, configuration.device_name.clone())
             .await
-            .context("system_device_name")?;
+            .context("system_device_id_name")?;
 
         self.system_time_gmt() // break
             .await
@@ -1079,6 +1111,10 @@ impl<'a> Configurator<'a> {
         self.video_sub_quality()
             .await
             .context("video_sub_quality")?;
+
+        self.video_upside_down(configuration.video_upside_down)
+            .await
+            .context("video_upside_down")?;
 
         self.audio() // line break
             .await
@@ -1143,4 +1179,25 @@ fn element_build_children(
     let mut element = Element::new(name);
     element.children = children.into_iter().map(XMLNode::Element).collect();
     element
+}
+
+fn serialize_coordinates_list<CS: CoordinateSystem, C: CoordinateList<CS>>(
+    coordinates_list: C
+) -> Element {
+    element_build_children(
+        C::list_name(),
+        coordinates_list
+            .coordinates_list()
+            .into_iter()
+            .map(|coordinate| {
+                element_build_children(
+                    C::element_name(),
+                    vec![
+                        element_build_text("positionX", coordinate.x.to_string()),
+                        element_build_text("positionY", coordinate.y.to_string()),
+                    ],
+                )
+            })
+            .collect(),
+    )
 }
