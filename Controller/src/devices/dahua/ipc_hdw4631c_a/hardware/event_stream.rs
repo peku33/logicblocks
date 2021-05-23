@@ -72,11 +72,12 @@ impl<'a> Manager<'a> {
             "AudioMutation" => Ok(Some(Event::AudioMutation)),
             "SceneChange" => Ok(Some(Event::SceneChange)),
             "VideoMotion" => {
-                let data_object = data
-                    .as_ref()
-                    .ok_or_else(|| anyhow!("missing data for event"))?
-                    .as_object()
-                    .ok_or_else(|| anyhow!("expected object"))?;
+                let data = match data {
+                    Some(data) => data,
+                    None => return Ok(None),
+                };
+
+                let data_object = data.as_object().ok_or_else(|| anyhow!("expected object"))?;
 
                 let regions = data_object
                     .get("RegionName")
