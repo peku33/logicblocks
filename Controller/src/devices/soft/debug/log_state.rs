@@ -59,7 +59,7 @@ impl<V: Value + Clone> Runnable for Device<V> {
 impl<V: Value + Clone> signals::Device for Device<V> {
     fn signal_targets_changed_wake(&self) {
         let values = self.signal_input.take_pending();
-        log::debug!("{}: {:?}", self.configuration.name, values);
+        log::info!("{}: {:?}", self.configuration.name, values);
     }
     fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
         self.signal_sources_changed_waker.receiver()
