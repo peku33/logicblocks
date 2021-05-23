@@ -1,5 +1,8 @@
 use super::{Device, DeviceWrapper, Id as DeviceId};
-use crate::signals::{exchange::DeviceIdSignalId, Id as SignalId};
+use crate::signals::{
+    exchange::{connections_requested::Connections, DeviceIdSignalId},
+    Id as SignalId,
+};
 use std::collections::{HashMap, HashSet};
 
 pub struct Devices<'d> {
@@ -43,11 +46,11 @@ impl<'d> Devices<'d> {
 }
 
 pub struct Signals {
-    inner: HashMap<DeviceIdSignalId, HashSet<DeviceIdSignalId>>,
+    inner: Connections,
 }
 impl Signals {
     pub fn new() -> Self {
-        let inner = HashMap::new();
+        let inner = Connections::new();
 
         Self { inner }
     }
@@ -79,7 +82,7 @@ impl Signals {
             },
         )
     }
-    pub fn into_signals(self) -> HashMap<DeviceIdSignalId, HashSet<DeviceIdSignalId>> {
+    pub fn into_signals(self) -> Connections {
         self.inner
     }
 }
