@@ -148,8 +148,8 @@ impl<'f> Manager<'f> {
                         "
                     ))?
                     .query_map([], move |row| {
-                        let channel_id = row.get::<_, i64>(0)? as usize;
-                        let name = row.get::<_, String>(1)?;
+                        let channel_id = row.get_ref_unwrap(0).as_i64()? as usize;
+                        let name = row.get_ref_unwrap(1).as_str()?.to_owned();
                         Ok((channel_id, name))
                     })?
                     .collect::<rusqlite::Result<_>>()?;
@@ -268,7 +268,7 @@ impl<'f> Manager<'f> {
         // find recordings to remove
         let recordings_to_remove = self
             .sqlite
-            .query(move |connection| -> Result<Box<[(usize, String)]>, Error> {
+            .query(move |connection| -> Result<Box<[(usize, PathBuf)]>, Error> {
                 let recordings_to_remove = connection
                     .prepare(indoc!(
                         "
@@ -306,8 +306,8 @@ impl<'f> Manager<'f> {
                         "
                     ))?
                     .query_map([], move |row| {
-                        let recording_id = row.get::<_, i64>(0)? as usize;
-                        let path_storage_relative = row.get::<_, String>(1)?;
+                        let recording_id = row.get_ref_unwrap(0).as_i64()? as usize;
+                        let path_storage_relative = PathBuf::from(row.get_ref_unwrap(1).as_str()?);
                         Ok((recording_id, path_storage_relative))
                     })?
                     .collect::<rusqlite::Result<_>>()?;
@@ -332,7 +332,7 @@ impl<'f> Manager<'f> {
                 async move |(recording_id, path_storage_relative)| -> (usize, Result<(), Error>) {
                     let result: Result<(), Error> = try {
                         // remove file
-                        let path_storage = storage_directory_root_path.join(path_storage_relative);
+                        let path_storage = storage_directory_root_path.join(&path_storage_relative);
                         fs::remove_file(&path_storage)
                             .await
                             .context("remove_file")?;
@@ -341,7 +341,7 @@ impl<'f> Manager<'f> {
                         // FIXME: may race with pushing new segment
                         remove_all_dir_empty(
                             storage_directory_root_path,
-                            path_storage.parent().unwrap(),
+                            path_storage_relative.parent().unwrap(),
                         )
                         .await
                         .context("remove_all_dir_empty")?;
