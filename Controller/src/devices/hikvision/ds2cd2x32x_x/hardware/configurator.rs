@@ -411,8 +411,8 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "Time",
                     vec![
-                        element_build_text("timeMode", "NTP".to_owned()),
-                        element_build_text("timeZone", "CST+0:00:00".to_owned()),
+                        element_build_text("timeMode", "NTP"),
+                        element_build_text("timeZone", "CST+0:00:00"),
                     ],
                 )),
             )
@@ -431,11 +431,11 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "NTPServer",
                     vec![
-                        element_build_text("id", "1".to_owned()),
-                        element_build_text("addressingFormatType", "hostname".to_owned()),
-                        element_build_text("hostName", "pool.ntp.org".to_owned()),
-                        element_build_text("portNo", "123".to_owned()),
-                        element_build_text("synchronizeInterval", "1440".to_owned()),
+                        element_build_text("id", "1"),
+                        element_build_text("addressingFormatType", "hostname"),
+                        element_build_text("hostName", "pool.ntp.org"),
+                        element_build_text("portNo", "123"),
+                        element_build_text("synchronizeInterval", "1440"),
                     ],
                 )),
             )
@@ -499,7 +499,7 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "User",
                     vec![
-                        element_build_text("userName", Self::SHARED_USER_LOGIN.to_owned()),
+                        element_build_text("userName", Self::SHARED_USER_LOGIN),
                         element_build_text("password", password),
                     ],
                 )),
@@ -519,10 +519,10 @@ impl<'a> Configurator<'a> {
                     "UserPermission",
                     vec![
                         element_build_text("userID", post_result.id.to_string()),
-                        element_build_text("userType", "viewer".to_owned()),
+                        element_build_text("userType", "viewer"),
                         element_build_children(
                             "remotePermission",
-                            vec![element_build_text("preview", "true".to_owned())],
+                            vec![element_build_text("preview", "true")],
                         ),
                     ],
                 )),
@@ -546,7 +546,7 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "UPnP",
                     vec![
-                        element_build_text("enabled", "true".to_owned()),
+                        element_build_text("enabled", "true"),
                         element_build_text("name", device_name),
                     ],
                 )),
@@ -566,8 +566,8 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "ports",
                     vec![
-                        element_build_text("enabled", "false".to_owned()),
-                        element_build_text("mapmode", "auto".to_owned()),
+                        element_build_text("enabled", "false"),
+                        element_build_text("mapmode", "auto"),
                         element_build_children("portList", vec![]),
                     ],
                 )),
@@ -586,7 +586,7 @@ impl<'a> Configurator<'a> {
                 "/ISAPI/System/Network/EZVIZ".parse().unwrap(),
                 Some(element_build_children(
                     "EZVIZ",
-                    vec![element_build_text("enabled", "false".to_owned())],
+                    vec![element_build_text("enabled", "false")],
                 )),
             )
             .await
@@ -605,21 +605,21 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "StreamingChannel",
                     vec![
-                        element_build_text("id", "101".to_owned()),
+                        element_build_text("id", "101"),
                         element_build_children(
                             "Video",
                             vec![
-                                element_build_text("videoResolutionWidth", "2048".to_owned()),
-                                element_build_text("videoResolutionHeight", "1536".to_owned()),
-                                element_build_text("videoQualityControlType", "VBR".to_owned()),
-                                element_build_text("fixedQuality", "100".to_owned()),
-                                element_build_text("vbrUpperCap", "8192".to_owned()),
-                                element_build_text("maxFrameRate", "2000".to_owned()),
+                                element_build_text("videoResolutionWidth", "2048"),
+                                element_build_text("videoResolutionHeight", "1536"),
+                                element_build_text("videoQualityControlType", "VBR"),
+                                element_build_text("fixedQuality", "100"),
+                                element_build_text("vbrUpperCap", "8192"),
+                                element_build_text("maxFrameRate", "2000"),
                             ],
                         ),
                         element_build_children(
                             "Audio",
-                            vec![element_build_text("enabled", "true".to_owned())],
+                            vec![element_build_text("enabled", "true")],
                         ),
                     ],
                 )),
@@ -639,21 +639,21 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "StreamingChannel",
                     vec![
-                        element_build_text("id", "102".to_owned()),
+                        element_build_text("id", "102"),
                         element_build_children(
                             "Video",
                             vec![
-                                element_build_text("videoResolutionWidth", "320".to_owned()),
-                                element_build_text("videoResolutionHeight", "240".to_owned()),
-                                element_build_text("videoQualityControlType", "VBR".to_owned()),
-                                element_build_text("fixedQuality", "60".to_owned()),
-                                element_build_text("vbrUpperCap", "256".to_owned()),
-                                element_build_text("maxFrameRate", "2000".to_owned()),
+                                element_build_text("videoResolutionWidth", "320"),
+                                element_build_text("videoResolutionHeight", "240"),
+                                element_build_text("videoQualityControlType", "VBR"),
+                                element_build_text("fixedQuality", "60"),
+                                element_build_text("vbrUpperCap", "256"),
+                                element_build_text("maxFrameRate", "2000"),
                             ],
                         ),
                         element_build_children(
                             "Audio",
-                            vec![element_build_text("enabled", "true".to_owned())],
+                            vec![element_build_text("enabled", "true")],
                         ),
                     ],
                 )),
@@ -676,11 +676,8 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "ImageFlip",
                     vec![
-                        element_build_text(
-                            "enabled",
-                            (if upside_down { "true" } else { "false" }).to_owned(),
-                        ),
-                        element_build_text("ImageFlipStyle", "UPDOWN".to_owned()),
+                        element_build_text("enabled", if upside_down { "true" } else { "false" }),
+                        element_build_text("ImageFlipStyle", "UPDOWN"),
                     ],
                 )),
             )
@@ -700,11 +697,11 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "TwoWayAudioChannel",
                     vec![
-                        element_build_text("id", "1".to_owned()),
-                        element_build_text("enabled", "true".to_owned()),
-                        element_build_text("audioInputType", "MicIn".to_owned()),
-                        element_build_text("speakerVolume", "100".to_owned()),
-                        element_build_text("noisereduce", "true".to_owned()),
+                        element_build_text("id", "1"),
+                        element_build_text("enabled", "true"),
+                        element_build_text("audioInputType", "MicIn"),
+                        element_build_text("speakerVolume", "100"),
+                        element_build_text("noisereduce", "true"),
                     ],
                 )),
             )
@@ -733,10 +730,10 @@ impl<'a> Configurator<'a> {
                         vec![
                             element_build_text(
                                 "enabled",
-                                (if name.is_some() { "true" } else { "false" }).to_owned(),
+                                if name.is_some() { "true" } else { "false" },
                             ),
-                            element_build_text("positionX", "512".to_owned()),
-                            element_build_text("positionY", "64".to_owned()),
+                            element_build_text("positionX", "512"),
+                            element_build_text("positionY", "64"),
                         ],
                     )],
                 )),
@@ -753,9 +750,9 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "VideoInputChannel",
                     vec![
-                        element_build_text("id", "1".to_owned()),
-                        element_build_text("inputPort", "1".to_owned()),
-                        element_build_text("name", name.unwrap_or_else(|| "".to_string())),
+                        element_build_text("id", "1"),
+                        element_build_text("inputPort", "1"),
+                        element_build_text("name", name.as_deref().unwrap_or("")),
                     ],
                 )),
             )
@@ -778,12 +775,12 @@ impl<'a> Configurator<'a> {
                     vec![element_build_children(
                         "DateTimeOverlay",
                         vec![
-                            element_build_text("enabled", "true".to_owned()),
-                            element_build_text("positionX", "0".to_owned()),
-                            element_build_text("positionY", "544".to_owned()),
-                            element_build_text("dateStyle", "YYYY-MM-DD".to_owned()),
-                            element_build_text("timeStyle", "24hour".to_owned()),
-                            element_build_text("displayWeek", "false".to_owned()),
+                            element_build_text("enabled", "true"),
+                            element_build_text("positionX", "0"),
+                            element_build_text("positionY", "544"),
+                            element_build_text("dateStyle", "YYYY-MM-DD"),
+                            element_build_text("timeStyle", "24hour"),
+                            element_build_text("displayWeek", "false"),
                         ],
                     )],
                 )),
@@ -810,7 +807,7 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "PrivacyMask",
                     vec![
-                        element_build_text("enabled", "true".to_owned()),
+                        element_build_text("enabled", "true"),
                         element_build_children(
                             "PrivacyMaskRegionList",
                             privacy_mask
@@ -822,7 +819,7 @@ impl<'a> Configurator<'a> {
                                         "PrivacyMaskRegion",
                                         vec![
                                             element_build_text("id", (id + 1).to_string()),
-                                            element_build_text("enabled", "true".to_owned()),
+                                            element_build_text("enabled", "true"),
                                             serialize_coordinates_list(region),
                                         ],
                                     )
@@ -848,10 +845,10 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "Track",
                     vec![
-                        element_build_text("id", "101".to_owned()),
-                        element_build_text("Channel", "101".to_owned()),
-                        element_build_text("Enable", "false".to_owned()),
-                        element_build_text("LoopEnable", "true".to_owned()),
+                        element_build_text("id", "101"),
+                        element_build_text("Channel", "101"),
+                        element_build_text("Enable", "false"),
+                        element_build_text("LoopEnable", "true"),
                     ],
                 )),
             )
@@ -878,8 +875,8 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "MotionDetectionExt",
                     vec![
-                        element_build_text("enabled", "true".to_owned()),
-                        element_build_text("activeMode", "expert".to_owned()),
+                        element_build_text("enabled", "true"),
+                        element_build_text("activeMode", "expert"),
                         element_build_children(
                             "MotionDetectionRegionList",
                             motion_detection
@@ -891,7 +888,7 @@ impl<'a> Configurator<'a> {
                                         "MotionDetectionRegion",
                                         vec![
                                             element_build_text("id", (id + 1).to_string()),
-                                            element_build_text("enabled", "true".to_owned()),
+                                            element_build_text("enabled", "true"),
                                             element_build_text(
                                                 "sensitivityLevel",
                                                 region.sensitivity.value().to_string(),
@@ -928,15 +925,15 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "TamperDetection",
                     vec![
-                        element_build_text("enabled", "true".to_owned()),
+                        element_build_text("enabled", "true"),
                         element_build_children(
                             "TamperDetectionRegionList",
                             vec![element_build_children(
                                 "TamperDetectionRegion",
                                 vec![
-                                    element_build_text("id", "1".to_owned()),
-                                    element_build_text("enabled", "true".to_owned()),
-                                    element_build_text("sensitivityLevel", "100".to_owned()),
+                                    element_build_text("id", "1"),
+                                    element_build_text("enabled", "true"),
+                                    element_build_text("sensitivityLevel", "100"),
                                     serialize_coordinates_list(RegionSquare::<
                                         CoordinateSystem704x576,
                                     >::full(
@@ -967,13 +964,13 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "FieldDetection",
                     vec![
-                        element_build_text("id", "1".to_owned()),
-                        element_build_text("enabled", "true".to_owned()),
+                        element_build_text("id", "1"),
+                        element_build_text("enabled", "true"),
                         element_build_children(
                             "normalizedScreenSize",
                             vec![
-                                element_build_text("normalizedScreenWidth", "1000".to_owned()),
-                                element_build_text("normalizedScreenHeight", "1000".to_owned()),
+                                element_build_text("normalizedScreenWidth", "1000"),
+                                element_build_text("normalizedScreenHeight", "1000"),
                             ],
                         ),
                         element_build_children(
@@ -981,8 +978,8 @@ impl<'a> Configurator<'a> {
                             vec![element_build_children(
                                 "FieldDetectionRegion",
                                 vec![
-                                    element_build_text("id", "1".to_owned()),
-                                    element_build_text("enabled", "true".to_owned()),
+                                    element_build_text("id", "1"),
+                                    element_build_text("enabled", "true"),
                                     element_build_text(
                                         "sensitivityLevel",
                                         field_detection.sensitivity.value().to_string(),
@@ -1022,13 +1019,13 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "LineDetection",
                     vec![
-                        element_build_text("id", "1".to_owned()),
-                        element_build_text("enabled", "true".to_owned()),
+                        element_build_text("id", "1"),
+                        element_build_text("enabled", "true"),
                         element_build_children(
                             "normalizedScreenSize",
                             vec![
-                                element_build_text("normalizedScreenWidth", "1000".to_owned()),
-                                element_build_text("normalizedScreenHeight", "1000".to_owned()),
+                                element_build_text("normalizedScreenWidth", "1000"),
+                                element_build_text("normalizedScreenHeight", "1000"),
                             ],
                         ),
                         element_build_children(
@@ -1036,8 +1033,8 @@ impl<'a> Configurator<'a> {
                             vec![element_build_children(
                                 "LineItem",
                                 vec![
-                                    element_build_text("id", "1".to_owned()),
-                                    element_build_text("enabled", "true".to_owned()),
+                                    element_build_text("id", "1"),
+                                    element_build_text("enabled", "true"),
                                     element_build_text(
                                         "sensitivityLevel",
                                         line_detection.sensitivity.value().to_string(),
@@ -1048,8 +1045,7 @@ impl<'a> Configurator<'a> {
                                             LineDetectionDirection::Both => "any",
                                             LineDetectionDirection::LeftToRight => "left-right",
                                             LineDetectionDirection::RightToLeft => "right-left",
-                                        }
-                                        .to_owned(),
+                                        },
                                     ),
                                     serialize_coordinates_list(line_detection.line),
                                 ],
@@ -1166,10 +1162,10 @@ impl<'a> Configurator<'a> {
 
 fn element_build_text(
     name: &str,
-    text: String,
+    text: impl ToString,
 ) -> Element {
     let mut element = Element::new(name);
-    element.children.push(XMLNode::Text(text));
+    element.children.push(XMLNode::Text(text.to_string()));
     element
 }
 fn element_build_children(

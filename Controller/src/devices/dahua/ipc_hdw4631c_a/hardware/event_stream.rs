@@ -294,7 +294,7 @@ mod tests_manager {
             event_state_update,
             Some(EventStateUpdate {
                 event: Event::VideoMotion {
-                    region: "MD1".to_string()
+                    region: "MD1".to_owned()
                 },
                 active: true,
             })

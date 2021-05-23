@@ -71,7 +71,7 @@ async fn main() -> Result<(), Error> {
                 privacy_mask: None,
                 motion_detection: Some(MotionDetection::single(MotionDetectionRegion {
                     grid: Grid22x18::full(),
-                    name: "Motion Detection".to_string(),
+                    name: "Motion Detection".to_owned(),
                     sensitivity: Percentage::new(50).unwrap(),
                     threshold: Percentage::new(5).unwrap(),
                 })),

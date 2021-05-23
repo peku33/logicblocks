@@ -173,7 +173,7 @@ impl Api {
             rpc_request
                 .as_object_mut()
                 .unwrap()
-                .insert("session".to_string(), serde_json::Value::String(session));
+                .insert("session".to_owned(), serde_json::Value::String(session));
         }
         let rpc_request = rpc_request;
 
@@ -231,7 +231,7 @@ impl Api {
         let session = response
             .get("session")
             .and_then(|session| session.as_str())
-            .map(|session| session.to_string());
+            .map(|session| session.to_owned());
 
         let response = Rpc2Response {
             result,
@@ -244,7 +244,7 @@ impl Api {
 
     async fn rpc2_login_prepare_password(&self) -> Result<(String, String), Error> {
         let request = Rpc2Request {
-            method: "global.login".to_string(),
+            method: "global.login".to_owned(),
             params: json!({
                 "userName": "admin",
                 "password": "",
@@ -336,7 +336,7 @@ impl Api {
         session: &str,
     ) -> Result<u64, Error> {
         let request = Rpc2Request {
-            method: "global.login".to_string(),
+            method: "global.login".to_owned(),
             params: json!({
                 "userName": "admin",
                 "password": password_digest,
@@ -344,7 +344,7 @@ impl Api {
                 "authorityType": "Default",
                 "passwordType": "Default",
             }),
-            session: Some(session.to_string()),
+            session: Some(session.to_owned()),
         };
 
         let response = self
@@ -403,7 +403,7 @@ impl Api {
     }
     pub async fn rpc2(
         &self,
-        method: String,
+        method: impl ToString,
         params: serde_json::Value,
     ) -> Result<Option<serde_json::Value>, Error> {
         const RETRY_COUNT: usize = 3;
@@ -423,9 +423,9 @@ impl Api {
 
             // try making the request
             let request = Rpc2Request {
-                method: method.clone(),
+                method: method.to_string(),
                 params: params.clone(),
-                session: Some(session.to_string()),
+                session: Some(session.to_owned()),
             };
             let response = self
                 .rpc2_request("/RPC2".parse().unwrap(), request)
@@ -470,10 +470,7 @@ impl Api {
     }
     pub async fn validate_basic_device_info(&self) -> Result<BasicDeviceInfo, Error> {
         let device_type = self
-            .rpc2(
-                "magicBox.getDeviceType".to_string(),
-                serde_json::Value::Null,
-            )
+            .rpc2("magicBox.getDeviceType", serde_json::Value::Null)
             .await
             .context("rpc2")?;
         let device_type = device_type
@@ -484,7 +481,7 @@ impl Api {
             .ok_or_else(|| anyhow!("missing type"))?
             .as_str()
             .ok_or_else(|| anyhow!("expected string"))?
-            .to_string();
+            .to_owned();
         ensure!(
             Self::device_type_supported(&device_type),
             "this device type ({}) is not supported",
@@ -492,10 +489,7 @@ impl Api {
         );
 
         let software_version = self
-            .rpc2(
-                "magicBox.getSoftwareVersion".to_string(),
-                serde_json::Value::Null,
-            )
+            .rpc2("magicBox.getSoftwareVersion", serde_json::Value::Null)
             .await
             .context("rpc2")?;
         let software_version = software_version
@@ -510,13 +504,13 @@ impl Api {
             .ok_or_else(|| anyhow!("missing version"))?
             .as_str()
             .ok_or_else(|| anyhow!("expected string"))?
-            .to_string();
+            .to_owned();
         let web_version = software_version
             .get("WebVersion")
             .ok_or_else(|| anyhow!("missing web version"))?
             .as_str()
             .ok_or_else(|| anyhow!("expected string"))?
-            .to_string();
+            .to_owned();
         ensure!(
             Self::web_version_supported(&web_version),
             "this version ({}) is not supported",
@@ -524,7 +518,7 @@ impl Api {
         );
 
         let serial_number = self
-            .rpc2("magicBox.getSerialNo".to_string(), serde_json::Value::Null)
+            .rpc2("magicBox.getSerialNo", serde_json::Value::Null)
             .await
             .context("rpc2")?;
         let serial_number = serial_number
@@ -535,7 +529,7 @@ impl Api {
             .ok_or_else(|| anyhow!("missing sn"))?
             .as_str()
             .ok_or_else(|| anyhow!("expected string"))?
-            .to_string();
+            .to_owned();
 
         let basic_device_info = BasicDeviceInfo {
             device_type,

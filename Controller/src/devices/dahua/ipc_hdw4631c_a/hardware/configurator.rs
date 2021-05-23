@@ -328,7 +328,7 @@ impl<'a> Configurator<'a> {
     pub async fn serial_number_get(&mut self) -> Result<String, Error> {
         let result = self
             .api
-            .rpc2("magicBox.getSerialNo".to_string(), serde_json::Value::Null)
+            .rpc2("magicBox.getSerialNo", serde_json::Value::Null)
             .await
             .context("rpc2")?
             .ok_or_else(|| anyhow!("missing params"))?;
@@ -341,7 +341,7 @@ impl<'a> Configurator<'a> {
             .as_str()
             .ok_or_else(|| anyhow!("expected string"))?;
 
-        Ok(serial_number.to_string())
+        Ok(serial_number.to_owned())
     }
 
     async fn config_get(
@@ -350,10 +350,7 @@ impl<'a> Configurator<'a> {
     ) -> Result<serde_json::Value, Error> {
         let params = self
             .api
-            .rpc2(
-                "configManager.getConfig".to_string(),
-                json!({ "name": name }),
-            )
+            .rpc2("configManager.getConfig", json!({ "name": name }))
             .await
             .context("rpc2 getConfig")?
             .ok_or_else(|| anyhow!("missing params"))?;
@@ -373,7 +370,7 @@ impl<'a> Configurator<'a> {
         let result = self
             .api
             .rpc2(
-                "configManager.setConfig".to_string(),
+                "configManager.setConfig",
                 json!({
                     "name": name,
                     "table": table,
@@ -491,7 +488,7 @@ impl<'a> Configurator<'a> {
     }
     pub async fn reboot(&mut self) -> Result<(), Error> {
         self.api
-            .rpc2("magicBox.reboot".to_string(), serde_json::Value::Null)
+            .rpc2("magicBox.reboot", serde_json::Value::Null)
             .await
             .context("rpc2")?;
         Ok(())
@@ -511,7 +508,7 @@ impl<'a> Configurator<'a> {
             if let Err(_error) = self
                 .api
                 .rpc2(
-                    "configManager.restoreExcept".to_string(),
+                    "configManager.restoreExcept",
                     json!({ "names": ["Network"] }),
                 )
                 .await
@@ -550,10 +547,7 @@ impl<'a> Configurator<'a> {
         // check existing users
         let user_infos = self
             .api
-            .rpc2(
-                "userManager.getUserInfoAll".to_string(),
-                serde_json::Value::Null,
-            )
+            .rpc2("userManager.getUserInfoAll", serde_json::Value::Null)
             .await
             .context("rpc2 get user info")?
             .ok_or_else(|| anyhow!("missing params"))?;
@@ -594,7 +588,7 @@ impl<'a> Configurator<'a> {
         if shared_user_exists {
             self.api
                 .rpc2(
-                    "userManager.deleteUser".to_string(),
+                    "userManager.deleteUser",
                     json!({
                         "name": Self::SHARED_USER_LOGIN,
                     }),
@@ -626,7 +620,7 @@ impl<'a> Configurator<'a> {
 
         self.api
             .rpc2(
-                "userManager.addUser".to_string(),
+                "userManager.addUser",
                 json!({
                     "user": {
                         "Id": user_id_max,

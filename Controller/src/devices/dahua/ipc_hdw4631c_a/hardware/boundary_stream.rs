@@ -84,8 +84,8 @@ mod tests_extractor {
         assert!(buffer.try_extract().unwrap().is_none());
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
         assert_eq!(
-            buffer.try_extract().unwrap().unwrap(),
-            "Code=AudioMutation;action=Start;index=0".to_owned(),
+            &buffer.try_extract().unwrap().unwrap(),
+            "Code=AudioMutation;action=Start;index=0",
         );
         assert!(buffer.try_extract().unwrap().is_none());
     }
@@ -95,8 +95,8 @@ mod tests_extractor {
         assert!(buffer.try_extract().unwrap().is_none());
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
         assert_eq!(
-            buffer.try_extract().unwrap().unwrap(),
-            "Code=AudioMutation;action=Start;index=0".to_owned(),
+            &buffer.try_extract().unwrap().unwrap(),
+            "Code=AudioMutation;action=Start;index=0"
         );
         assert!(buffer.try_extract().unwrap().is_none());
     }
@@ -106,12 +106,12 @@ mod tests_extractor {
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:38\r\nCode=AudioMutation;action=Stop;index=0\r\n\r\n");
         assert_eq!(
-            buffer.try_extract().unwrap().unwrap(),
-            "Code=AudioMutation;action=Start;index=0".to_owned(),
+            &buffer.try_extract().unwrap().unwrap(),
+            "Code=AudioMutation;action=Start;index=0"
         );
         assert_eq!(
-            buffer.try_extract().unwrap().unwrap(),
-            "Code=AudioMutation;action=Stop;index=0".to_owned(),
+            &buffer.try_extract().unwrap().unwrap(),
+            "Code=AudioMutation;action=Stop;index=0",
         );
         assert!(buffer.try_extract().unwrap().is_none());
     }
@@ -121,12 +121,12 @@ mod tests_extractor {
         buffer.push("someshittttt--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\nsomeshit2");
         buffer.push("moreshitheeere--myboundary\r\nContent-Type: text/plain\r\nContent-Length:38\r\n\r\nCode=AudioMutation;action=Stop;index=0\r\n\r\nandhere");
         assert_eq!(
-            buffer.try_extract().unwrap().unwrap(),
-            "Code=AudioMutation;action=Start;index=0".to_owned(),
+            &buffer.try_extract().unwrap().unwrap(),
+            "Code=AudioMutation;action=Start;index=0",
         );
         assert_eq!(
-            buffer.try_extract().unwrap().unwrap(),
-            "Code=AudioMutation;action=Stop;index=0".to_owned()
+            &buffer.try_extract().unwrap().unwrap(),
+            "Code=AudioMutation;action=Stop;index=0",
         );
         assert!(buffer.try_extract().unwrap().is_none());
     }
@@ -137,8 +137,8 @@ mod tests_extractor {
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:40\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
         assert_eq!(
-            buffer.try_extract().unwrap().unwrap(),
-            "Code=AudioMutation;action=Start;index=0".to_owned(),
+            &buffer.try_extract().unwrap().unwrap(),
+            "Code=AudioMutation;action=Start;index=0",
         );
         assert!(buffer.try_extract().is_err());
         assert!(buffer.try_extract().unwrap().is_none());
