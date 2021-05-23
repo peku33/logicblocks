@@ -13,19 +13,13 @@ use async_trait::async_trait;
 use chrono::{Datelike, Timelike};
 use futures::{
     channel::mpsc,
-    future::{FutureExt, JoinAll},
+    future::FutureExt,
     join, select,
     stream::{StreamExt, TryStreamExt},
 };
 use indoc::indoc;
 use modules::{fs::Fs, sqlite::SQLite};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-    path::PathBuf,
-    rc::Rc,
-    time::Duration,
-};
+use std::{collections::HashMap, fmt, path::PathBuf, rc::Rc, time::Duration};
 use tokio::fs;
 
 const CLEANUP_INTERVAL: Duration = Duration::from_secs(60 * 5);
@@ -325,41 +319,30 @@ impl<'f> Manager<'f> {
         // remove
         let storage_directory_root_path = self.storage_directory_root_path_build();
         let storage_directory_root_path = &storage_directory_root_path;
-        let removed_recording_ids = recordings_to_remove
-            .into_vec()
-            .into_iter()
-            .map(
-                async move |(recording_id, path_storage_relative)| -> (usize, Result<(), Error>) {
-                    let result: Result<(), Error> = try {
-                        // remove file
-                        let path_storage = storage_directory_root_path.join(&path_storage_relative);
-                        fs::remove_file(&path_storage)
-                            .await
-                            .context("remove_file")?;
+        for (recording_id, path_storage_relative) in recordings_to_remove.iter() {
+            let result: Result<(), Error> = try {
+                // remove file
+                let path_storage = storage_directory_root_path.join(&path_storage_relative);
+                fs::remove_file(&path_storage)
+                    .await
+                    .context("remove_file")?;
 
-                        // remove parent directories
-                        // FIXME: may race with pushing new segment
-                        remove_all_dir_empty(
-                            storage_directory_root_path,
-                            path_storage_relative.parent().unwrap(),
-                        )
-                        .await
-                        .context("remove_all_dir_empty")?;
-                    };
-                    (recording_id, result)
-                },
-            )
-            .collect::<JoinAll<_>>()
-            .await
-            .into_iter()
-            .map(|(recording_id, result)| {
-                if let Err(error) = result.context("remove") {
+                // remove parent directories
+                // FIXME: may race with pushing new segment
+                remove_all_dir_empty(
+                    storage_directory_root_path,
+                    path_storage_relative.parent().unwrap(),
+                )
+                .await
+                .context("remove_all_dir_empty")?;
+            };
+            match result {
+                Ok(()) => {}
+                Err(error) => {
                     log::error!("{}: cleanup: {:?} (#{})", self, error, recording_id);
                 }
-
-                recording_id
-            })
-            .collect::<HashSet<usize>>();
+            }
+        }
 
         // store information about removed
         self.sqlite
@@ -374,9 +357,11 @@ impl<'f> Manager<'f> {
                         "
                     ))?
                     .execute(rusqlite::params![Rc::new(
-                        removed_recording_ids
+                        recordings_to_remove
                             .iter()
-                            .map(|recording_id| rusqlite::types::Value::from(*recording_id as i64))
+                            .map(|(recording_id, _)| rusqlite::types::Value::from(
+                                *recording_id as i64
+                            ))
                             .collect::<Vec<_>>()
                     )])?;
 
