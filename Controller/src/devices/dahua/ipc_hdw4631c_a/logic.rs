@@ -281,7 +281,7 @@ impl Device {
         // snapshot runner
         let snapshot_runner = SnapshotRunner::new(
             &self.snapshot_manager,
-            || api.snapshot(),
+            || api.snapshot_retry(1),
             || self.snapshot_updated_handle(),
             SNAPSHOT_INTERVAL,
         );

@@ -541,7 +541,7 @@ impl Api {
         Ok(basic_device_info)
     }
 
-    const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(15);
+    const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(5);
     pub async fn snapshot(&self) -> Result<DynamicImage, Error> {
         let url = uri::Builder::new()
             .scheme(Scheme::HTTP)
@@ -573,6 +573,22 @@ impl Api {
         .context("spawn_blocking")??;
 
         Ok(content)
+    }
+    pub async fn snapshot_retry(
+        &self,
+        retries_max: usize,
+    ) -> Result<DynamicImage, Error> {
+        let mut retries_left = retries_max;
+        loop {
+            let result = self.snapshot().await.context("snapshot");
+            if let Err(error) = result.as_ref() {
+                log::warn!("error while getting snapshot: {:?}", error);
+            }
+            if result.is_ok() || retries_left == 0 {
+                return result;
+            }
+            retries_left -= 1;
+        }
     }
 
     pub fn rtsp_url_build(
