@@ -286,8 +286,8 @@ impl<'f> Manager<'f> {
                                             storage_group_id
                                         ORDER BY
                                             (
-                                                detection_level * detection_level_to_second_ratio +
-                                                (CAST(STRFTIME('%s', CURRENT_TIMESTAMP) AS INTEGER) - CAST(STRFTIME('%s', timestamp_end) AS INTEGER))
+                                                (detection_level * detection_level_to_second_ratio) -
+                                                (CAST(STRFTIME('%s', CURRENT_TIMESTAMP) AS INTEGER) - timestamp_end)
                                             ) DESC
                                         ROWS
                                             UNBOUNDED PRECEDING
