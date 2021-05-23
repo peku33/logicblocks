@@ -1817,6 +1817,8 @@ fn patch_nested_event_handler(
             "TipEnable" => json!(false),
             "TourEnable" => json!(false),
             "VoiceEnable" => json!(false),
+
+            "Dejitter" => json!(5),
         },
     )
     .context("patch_object EventHandler")?;

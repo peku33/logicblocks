@@ -73,7 +73,7 @@ async fn main() -> Result<(), Error> {
                     grid: Grid22x18::full(),
                     name: "Motion Detection".to_owned(),
                     sensitivity: Percentage::new(50).unwrap(),
-                    threshold: Percentage::new(5).unwrap(),
+                    threshold: Percentage::new(25).unwrap(),
                 })),
                 scene_moved_detection: Some(SceneMovedDetection {
                     sensitivity: Sensitivity::new(5).unwrap(),
