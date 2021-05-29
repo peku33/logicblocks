@@ -18,6 +18,7 @@ struct GuiResponderInner {
     loader: Box<Loader>,
 
     #[borrows(loader)]
+    #[not_covariant]
     responder: Responder<'this>,
 }
 
@@ -52,9 +53,15 @@ impl<'a> RootService<'a> {
         uri: &Uri,
         headers: &HeaderMap,
     ) -> Response {
+        let responder: &Responder<'static> =
+            self.gui_responder.with_responder(|responder| unsafe {
+                #[allow(clippy::transmute_ptr_to_ptr)]
+                std::mem::transmute::<&Responder<'_>, &Responder<'static>>(responder)
+            });
+
         // If path is /, use index.html
         if uri.path() == "/" {
-            match self.gui_responder.responder.parts_respond_or_error(
+            match responder.parts_respond_or_error(
                 method,
                 &Uri::from_static("/index.html"),
                 headers,
@@ -65,11 +72,7 @@ impl<'a> RootService<'a> {
         }
 
         // Try actual file
-        match self
-            .gui_responder
-            .responder
-            .parts_respond_or_error(method, uri, headers)
-        {
+        match responder.parts_respond_or_error(method, uri, headers) {
             Ok(response) => return Response::from_hyper_response(response),
             Err(error) => match error {
                 ResponderError::LoaderPathNotFound => (),
