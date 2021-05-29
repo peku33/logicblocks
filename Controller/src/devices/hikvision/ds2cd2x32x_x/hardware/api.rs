@@ -299,12 +299,7 @@ impl Api {
     }
 
     fn model_supported(model: &str) -> bool {
-        #[allow(clippy::match_like_matches_macro)]
-        let result = match model {
-            "DS-2CD2132F-IS" => true,
-            "DS-2CD2532F-IS" => true,
-            _ => false,
-        };
+        let result = matches!(model, "DS-2CD2132F-IS" | "DS-2CD2532F-IS");
         result
     }
     fn firmware_version_supported(firmware_version: &Version) -> bool {

@@ -60,7 +60,7 @@ async fn main() -> Result<(), Error> {
 
     if let Some(ArgumentsSubcommand::Configure(command_configure)) = arguments.subcommand {
         log::info!("starting configuration");
-        let mut configurator = Configurator::new(&api);
+        let mut configurator = Configurator::new(&api, &basic_device_info);
         configurator
             .configure(Configuration {
                 device_name: command_configure.device_name,

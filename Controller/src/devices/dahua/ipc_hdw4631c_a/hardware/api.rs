@@ -11,21 +11,43 @@ use http::{
     Uri,
 };
 use image::DynamicImage;
+use itertools::Itertools;
 use md5::{Digest, Md5};
 use serde_json::json;
 use std::{
+    fmt,
     pin::Pin,
     sync::atomic::{AtomicU64, Ordering},
     task,
     time::Duration,
 };
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct WebVersion {
+    pub major: u8,
+    pub minor: u8,
+    pub revision: u8,
+    pub build: usize,
+}
+impl fmt::Display for WebVersion {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{}.{}.{}.{}",
+            self.major, self.minor, self.revision, self.build
+        )
+    }
+}
+
 #[derive(Debug)]
 pub struct BasicDeviceInfo {
-    device_type: String,
-    version: String,
-    web_version: String,
-    serial_number: String,
+    pub device_type: String,
+    pub version: String,
+    pub web_version: WebVersion,
+    pub serial_number: String,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -454,19 +476,43 @@ impl Api {
     }
 
     // procedures
-    fn device_type_supported(device_type: &str) -> bool {
-        #[allow(clippy::match_like_matches_macro)]
-        match device_type {
-            "IPC-HDW4631C-A" => true,
-            _ => false,
-        }
+    fn parse_web_version_string(version: &str) -> Result<WebVersion, Error> {
+        let version = version.strip_prefix('V').unwrap_or(version);
+        let (major, minor, revision, build) = version
+            .split('.')
+            .collect_tuple()
+            .ok_or_else(|| anyhow!("invalid version string"))?;
+
+        let major = major.parse::<u8>()?;
+        let minor = minor.parse::<u8>()?;
+        let revision = revision.parse::<u8>()?;
+        let build = build.parse::<usize>()?;
+
+        Ok(WebVersion {
+            major,
+            minor,
+            revision,
+            build,
+        })
     }
-    fn web_version_supported(web_version: &str) -> bool {
-        #[allow(clippy::match_like_matches_macro)]
-        match web_version {
-            "V3.2.1.582554" => true,
-            _ => false,
-        }
+    fn device_type_supported(device_type: &str) -> bool {
+        matches!(device_type, "IPC-HDW4631C-A")
+    }
+    fn web_version_supported(web_version: &WebVersion) -> bool {
+        matches!(
+            web_version,
+            WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 561950,
+            } | WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 582554,
+            }
+        )
     }
     pub async fn validate_basic_device_info(&self) -> Result<BasicDeviceInfo, Error> {
         let device_type = self
@@ -509,8 +555,8 @@ impl Api {
             .get("WebVersion")
             .ok_or_else(|| anyhow!("missing web version"))?
             .as_str()
-            .ok_or_else(|| anyhow!("expected string"))?
-            .to_owned();
+            .ok_or_else(|| anyhow!("expected string"))?;
+        let web_version = Self::parse_web_version_string(web_version)?;
         ensure!(
             Self::web_version_supported(&web_version),
             "this version ({}) is not supported",
@@ -574,6 +620,7 @@ impl Api {
 
         Ok(content)
     }
+    const SNAPSHOT_RETRY_INTERVAL: Duration = Duration::from_secs(5);
     pub async fn snapshot_retry(
         &self,
         retries_max: usize,
@@ -587,6 +634,7 @@ impl Api {
             if result.is_ok() || retries_left == 0 {
                 return result;
             }
+            tokio::time::sleep(Self::SNAPSHOT_RETRY_INTERVAL).await;
             retries_left -= 1;
         }
     }

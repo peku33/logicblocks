@@ -1,4 +1,4 @@
-use super::api::Api;
+use super::api::{Api, BasicDeviceInfo, WebVersion};
 use anyhow::{anyhow, bail, ensure, Context, Error};
 use arrayvec::ArrayVec;
 use maplit::hashmap;
@@ -310,12 +310,19 @@ pub struct Configuration {
 
 pub struct Configurator<'a> {
     api: &'a Api,
+    basic_device_info: &'a BasicDeviceInfo,
 }
 impl<'a> Configurator<'a> {
     pub const SHARED_USER_LOGIN: &'static str = "logicblocks";
 
-    pub fn new(api: &'a Api) -> Self {
-        Self { api }
+    pub fn new(
+        api: &'a Api,
+        basic_device_info: &'a BasicDeviceInfo,
+    ) -> Self {
+        Self {
+            api,
+            basic_device_info,
+        }
     }
 
     pub async fn healthcheck(&mut self) -> Result<(), Error> {
@@ -324,24 +331,6 @@ impl<'a> Configurator<'a> {
             .await
             .context("basic_device_info")?;
         Ok(())
-    }
-    pub async fn serial_number_get(&mut self) -> Result<String, Error> {
-        let result = self
-            .api
-            .rpc2("magicBox.getSerialNo", serde_json::Value::Null)
-            .await
-            .context("rpc2")?
-            .ok_or_else(|| anyhow!("missing params"))?;
-
-        let serial_number = result
-            .as_object()
-            .ok_or_else(|| anyhow!("expected object"))?
-            .get("sn")
-            .ok_or_else(|| anyhow!("missing sn"))?
-            .as_str()
-            .ok_or_else(|| anyhow!("expected string"))?;
-
-        Ok(serial_number.to_owned())
     }
 
     async fn config_get(
@@ -600,11 +589,7 @@ impl<'a> Configurator<'a> {
         }
 
         // create new user
-        let serial_number = self
-            .serial_number_get()
-            .await
-            .context("serial_number_get")?;
-        let realm = format!("Login to {}", serial_number);
+        let realm = format!("Login to {}", self.basic_device_info.serial_number);
 
         let realm_phase = {
             let mut d = Md5::new();
@@ -645,14 +630,23 @@ impl<'a> Configurator<'a> {
         // wtf which one is correct, both works
 
         // this one is listed in "All" configuration
-        self.config_patch_object(
-            "ARP: Ping",
-            hashmap! {
-                "SettingIP" => json!(false),
-            },
-        )
-        .await
-        .context("config_patch_object")?;
+        if self.basic_device_info.web_version
+            >= (WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 582554,
+            })
+        {
+            self.config_patch_object(
+                "ARP: Ping",
+                hashmap! {
+                    "SettingIP" => json!(false),
+                },
+            )
+            .await
+            .context("config_patch_object colon")?;
+        }
 
         // this one is set by GUI
         self.config_patch_object(
@@ -674,7 +668,7 @@ impl<'a> Configurator<'a> {
             },
         )
         .await
-        .context("config_patch_object")?;
+        .context("config_patch_object and")?;
 
         Ok(())
     }
@@ -779,26 +773,44 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn system_onvif_disable(&mut self) -> Result<(), Error> {
-        self.config_patch_object(
-            "VSP_ONVIF",
-            hashmap! {
-                "ServiceStart" => json!(false),
-            },
-        )
-        .await
-        .context("config_patch_object")?;
+        if self.basic_device_info.web_version
+            >= (WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 582554,
+            })
+        {
+            self.config_patch_object(
+                "VSP_ONVIF",
+                hashmap! {
+                    "ServiceStart" => json!(false),
+                },
+            )
+            .await
+            .context("config_patch_object")?;
+        }
 
         Ok(())
     }
     pub async fn system_genetec_disable(&mut self) -> Result<(), Error> {
-        self.config_patch_object(
-            "VSP_GENETEC",
-            hashmap! {
-                "ServiceStart" => json!(false),
-            },
-        )
-        .await
-        .context("config_patch_object")?;
+        if self.basic_device_info.web_version
+            >= (WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 582554,
+            })
+        {
+            self.config_patch_object(
+                "VSP_GENETEC",
+                hashmap! {
+                    "ServiceStart" => json!(false),
+                },
+            )
+            .await
+            .context("config_patch_object")?;
+        }
 
         Ok(())
     }
@@ -815,14 +827,23 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn system_mobile_phone_platform_disable(&mut self) -> Result<(), Error> {
-        self.config_patch_object(
-            "MobilePhoneApplication",
-            hashmap! {
-                "PushNotificationEnable" => json!(false),
-            },
-        )
-        .await
-        .context("config_patch_object")?;
+        if self.basic_device_info.web_version
+            >= (WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 582554,
+            })
+        {
+            self.config_patch_object(
+                "MobilePhoneApplication",
+                hashmap! {
+                    "PushNotificationEnable" => json!(false),
+                },
+            )
+            .await
+            .context("config_patch_object")?;
+        }
 
         Ok(())
     }

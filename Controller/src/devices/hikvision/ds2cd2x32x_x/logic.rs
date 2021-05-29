@@ -207,7 +207,8 @@ impl Device {
         );
 
         // Check device
-        api.validate_basic_device_info()
+        let basic_device_info = api
+            .validate_basic_device_info()
             .await
             .context("validate_basic_device_info")?;
 
@@ -218,7 +219,8 @@ impl Device {
                 HardwareConfiguration::Full {
                     hardware_configuration,
                 } => {
-                    let mut configurator = configurator::Configurator::new(&api);
+                    let mut configurator =
+                        configurator::Configurator::new(&api, &basic_device_info);
                     configurator
                         .configure(hardware_configuration.clone())
                         .await

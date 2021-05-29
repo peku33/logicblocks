@@ -60,7 +60,7 @@ async fn main() -> Result<(), Error> {
 
     if let Some(ArgumentsSubcommand::Configure(command_configure)) = arguments.subcommand {
         log::info!("starting configuration");
-        let mut configurator = Configurator::new(&api);
+        let mut configurator = Configurator::new(&api, &basic_device_info);
         configurator
             .configure(Configuration {
                 device_id: command_configure.device_id,
@@ -72,8 +72,8 @@ async fn main() -> Result<(), Error> {
                 motion_detection: Some(MotionDetection::single(MotionDetectionRegion {
                     grid: Grid22x18::full(),
                     name: "Motion Detection".to_owned(),
-                    sensitivity: Percentage::new(50).unwrap(),
-                    threshold: Percentage::new(25).unwrap(),
+                    sensitivity: Percentage::new(75).unwrap(),
+                    threshold: Percentage::new(10).unwrap(),
                 })),
                 scene_moved_detection: Some(SceneMovedDetection {
                     sensitivity: Sensitivity::new(5).unwrap(),

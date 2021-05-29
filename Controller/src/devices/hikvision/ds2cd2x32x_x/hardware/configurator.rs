@@ -1,4 +1,4 @@
-use super::api::Api;
+use super::api::{Api, BasicDeviceInfo};
 use anyhow::{bail, ensure, Context, Error};
 use std::{fmt, marker::PhantomData, time::Duration};
 use xmltree::{Element, XMLNode};
@@ -303,12 +303,19 @@ pub struct Configuration {
 
 pub struct Configurator<'a> {
     api: &'a Api,
+    basic_device_info: &'a BasicDeviceInfo,
 }
 impl<'a> Configurator<'a> {
     pub const SHARED_USER_LOGIN: &'static str = "logicblocks";
 
-    pub fn new(api: &'a Api) -> Self {
-        Self { api }
+    pub fn new(
+        api: &'a Api,
+        basic_device_info: &'a BasicDeviceInfo,
+    ) -> Self {
+        Self {
+            api,
+            basic_device_info,
+        }
     }
 
     pub async fn healthcheck(&mut self) -> Result<(), Error> {
