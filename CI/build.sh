@@ -26,7 +26,7 @@ echo "Creating GUI Pack <"
 # Build Controller
 echo "Building Controller >"
 cd $ROOT_DIR/Controller
-CI_WEB_STATIC_PACK_GUI=$WEB_STATIC_PACK_GUI cargo build --release --locked --features ci
+CI_WEB_STATIC_PACK_GUI=$WEB_STATIC_PACK_GUI cargo build --release --locked --features ci --examples
 echo "Building Controller <"
 
 echo "All done!"
