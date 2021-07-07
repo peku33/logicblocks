@@ -126,7 +126,7 @@ impl Api {
 
             // camera does not support context reusing, lol?
             let mut www_authenticate_header =
-                WwwAuthenticateHeader::parse(&www_authenticate_header).context("parse")?;
+                WwwAuthenticateHeader::parse(www_authenticate_header).context("parse")?;
             let digest_auth_context =
                 AuthContext::new("admin", &self.admin_password, request.url().as_str());
             let authorization_header = www_authenticate_header

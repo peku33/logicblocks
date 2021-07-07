@@ -8,7 +8,6 @@
 #![feature(never_type)]
 #![feature(option_result_contains)]
 #![feature(raw_vec_internals)]
-#![feature(raw)]
 #![feature(trait_alias)]
 #![feature(try_blocks)]
 #![warn(clippy::all)]
