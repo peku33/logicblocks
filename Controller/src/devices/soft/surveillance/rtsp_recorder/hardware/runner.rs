@@ -142,7 +142,7 @@ impl<'r, 'f> Runner<'r, 'f> {
 #[self_referencing]
 #[derive(Debug)]
 struct ManagerRunnerInner<'r, 'f: 'r> {
-    manager: Box<Manager<'f>>,
+    manager: Manager<'f>,
 
     #[borrows(manager)]
     #[not_covariant]
@@ -161,7 +161,7 @@ impl<'r, 'f> ManagerRunner<'r, 'f> {
         manager: Manager<'f>,
     ) -> Self {
         let inner = ManagerRunnerInnerBuilder {
-            manager: Box::new(manager),
+            manager,
             manager_runtime_scope_runnable_builder: |manager| {
                 let manager_runtime_scope_runnable = RuntimeScopeRunnable::new(runtime, manager);
                 let manager_runtime_scope_runnable =
@@ -202,7 +202,7 @@ impl<'r, 'f> ManagerRunner<'r, 'f> {
         self.finalize_guard.finalized();
 
         let inner = self.inner.into_heads();
-        *inner.manager
+        inner.manager
     }
 }
 
@@ -325,7 +325,7 @@ impl Runnable for RunnerChannel {
 #[self_referencing]
 #[derive(Debug)]
 struct RunnerChannelRunnerInner<'r> {
-    runner_channel: Box<RunnerChannel>,
+    runner_channel: RunnerChannel,
 
     #[borrows(runner_channel)]
     #[not_covariant]
@@ -345,7 +345,7 @@ impl<'r> RunnerChannelRunner<'r> {
         runner_channel: RunnerChannel,
     ) -> Self {
         let inner = RunnerChannelRunnerInnerBuilder {
-            runner_channel: Box::new(runner_channel),
+            runner_channel,
             runner_channel_runtime_scope_runnable_builder: |runner_channel| {
                 let runner_channel_runtime_scope_runnable =
                     RuntimeScopeRunnable::new(runtime, runner_channel);
@@ -390,19 +390,19 @@ impl<'r> RunnerChannelRunner<'r> {
         self.finalize_guard.finalized();
 
         let inner_heads = self.inner.into_heads();
-        *inner_heads.runner_channel
+        inner_heads.runner_channel
     }
 }
 
 // Module
-#[self_referencing(chain_hack)]
+#[self_referencing]
 #[derive(Debug)]
 struct RunnerModuleInner<'f> {
-    runtime: Box<Runtime>,
+    runtime: Runtime,
 
     #[borrows(runtime)]
     #[not_covariant]
-    runner: Box<ManuallyDrop<Runner<'this, 'f>>>,
+    runner: ManuallyDrop<Runner<'this, 'f>>,
 
     #[borrows(runtime, runner)]
     #[not_covariant]
@@ -421,19 +421,20 @@ impl<'f> RunnerModule<'f> {
         fs: &'f Fs,
     ) -> Self {
         let runtime = Runtime::new("rtsp_recorder", 1, 1);
-        let runtime = Box::new(runtime);
 
         let inner = RunnerModuleInnerBuilder {
             runtime,
 
             runner_builder: |runtime| {
                 let runner = Runner::new(runtime, name, fs);
-                Box::new(ManuallyDrop::new(runner))
+                let runner = ManuallyDrop::new(runner);
+                runner
             },
 
             runner_runtime_scope_builder: |runtime, runner| {
                 let runner_runtime_scope = RuntimeScope::new(runtime, &**runner);
-                ManuallyDrop::new(runner_runtime_scope)
+                let runner_runtime_scope = ManuallyDrop::new(runner_runtime_scope);
+                runner_runtime_scope
             },
         }
         .build();
