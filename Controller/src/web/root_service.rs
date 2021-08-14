@@ -15,7 +15,7 @@ use web_static_pack::loader::Loader;
 #[cfg(feature = "ci-packed-gui")]
 #[self_referencing]
 struct GuiResponderInner {
-    loader: Box<Loader>,
+    loader: Loader,
 
     #[borrows(loader)]
     #[not_covariant]
@@ -32,9 +32,7 @@ impl<'a> RootService<'a> {
     pub fn new(api_handler: &'a (dyn UriCursorHandler + Sync)) -> Self {
         #[cfg(feature = "ci-packed-gui")]
         let gui_responder = GuiResponderInnerBuilder {
-            loader: Box::new(
-                Loader::new(std::include_bytes!(std::env!("CI_WEB_STATIC_PACK_GUI"))).unwrap(),
-            ),
+            loader: Loader::new(std::include_bytes!(std::env!("CI_WEB_STATIC_PACK_GUI"))).unwrap(),
             responder_builder: |loader| Responder::new(loader),
         }
         .build();

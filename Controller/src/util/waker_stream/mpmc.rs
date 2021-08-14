@@ -95,9 +95,10 @@ impl Receiver {
         let version = common.version.load(Ordering::Relaxed);
         let version = AtomicUsize::new(version);
 
-        let inner = Box::new(ReceiverInner {
+        let inner = ReceiverInner {
             waker: AtomicWaker::new(),
-        });
+        };
+        let inner = Box::new(inner);
 
         common
             .receivers

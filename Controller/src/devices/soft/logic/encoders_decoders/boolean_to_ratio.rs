@@ -116,14 +116,17 @@ impl signals::Device for Device {
         // 1 + n - inputs
 
         let signal_output_iter = std::array::IntoIter::new([
-            (0u16, &self.signal_output as &dyn signal::Base), // line break
+            (0, &self.signal_output as &dyn signal::Base), // line break
         ]);
         let signals_input_iter =
             self.signals_input
                 .iter()
                 .enumerate()
                 .map(|(input_id, signal_input)| {
-                    ((1 + input_id) as u16, signal_input as &dyn signal::Base)
+                    (
+                        (1 + input_id) as signals::Id,
+                        signal_input as &dyn signal::Base,
+                    )
                 });
 
         std::iter::empty()

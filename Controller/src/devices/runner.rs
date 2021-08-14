@@ -14,14 +14,14 @@ use std::{
     mem::{transmute, ManuallyDrop},
 };
 
-#[self_referencing(chain_hack)]
+#[self_referencing]
 struct RunnerInner<'d> {
-    runtime: Box<Runtime>,
-    device_wrappers: Box<HashMap<DeviceId, DeviceWrapper<'d>>>,
+    runtime: Runtime,
+    device_wrappers: HashMap<DeviceId, DeviceWrapper<'d>>,
 
     #[borrows(device_wrappers)]
     #[not_covariant]
-    exchanger: Box<Exchanger<'this>>,
+    exchanger: Exchanger<'this>,
 
     // #[borrows(device_wrappers)]
     // #[not_covariant]
@@ -48,9 +48,6 @@ impl<'d> Runner<'d> {
         connections_requested: &ConnectionsRequested,
     ) -> Self {
         let runtime = Runtime::new("devices", 4, 4);
-        let runtime = Box::new(runtime);
-
-        let device_wrappers = Box::new(device_wrappers);
 
         let devices_gui_summary_sse_aggregated_node = sse_aggregated::Node {
             terminal: None,
@@ -80,7 +77,7 @@ impl<'d> Runner<'d> {
                     })
                     .collect::<HashMap<_, _>>();
                 let exchanger = Exchanger::new(exchanger_devices, connections_requested);
-                Box::new(exchanger)
+                exchanger
             },
             devices_gui_summary_sse_aggregated_bus,
             devices_wrapper_runtime_scope_runnable_builder: |runtime, device_wrappers| {
@@ -163,7 +160,7 @@ impl<'d> Runner<'d> {
         self.finalize_guard.finalized();
 
         let inner_heads = self.inner.into_heads();
-        *inner_heads.device_wrappers
+        inner_heads.device_wrappers
     }
 }
 impl<'d> uri_cursor::Handler for Runner<'d> {

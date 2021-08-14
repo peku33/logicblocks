@@ -1,5 +1,6 @@
 #![feature(associated_type_defaults)]
 #![feature(async_closure)]
+#![feature(div_duration)]
 #![feature(drain_filter)]
 #![feature(exact_size_is_empty)]
 #![feature(generic_associated_types)]

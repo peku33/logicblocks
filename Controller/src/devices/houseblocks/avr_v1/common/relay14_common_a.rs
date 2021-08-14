@@ -115,7 +115,12 @@ pub mod logic {
             self.signal_outputs
                 .iter()
                 .enumerate()
-                .map(|(index, signal)| (index as signals::Id, signal as &dyn signals::signal::Base))
+                .map(|(signal_id, signal)| {
+                    (
+                        signal_id as signals::Id,
+                        signal as &dyn signals::signal::Base,
+                    )
+                })
                 .collect::<signals::Signals>()
         }
     }
@@ -126,9 +131,11 @@ pub mod logic {
     }
     impl<S: Specification> devices::GuiSummaryProvider for Device<S> {
         fn value(&self) -> Box<dyn devices::GuiSummary> {
-            Box::new(GuiSummary {
+            let value = GuiSummary {
                 values: self.properties_remote.outputs.get_last(),
-            })
+            };
+            let value = Box::new(value);
+            value
         }
 
         fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {

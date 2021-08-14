@@ -197,7 +197,7 @@ impl Frame {
             Self::CRC_FINAL_XOR,
             Self::CRC_REFLECT,
         );
-        crc16.update(slice::from_ref(&char_direction));
+        crc16.update(slice::from_ref(char_direction));
         crc16.update(&address.device_type);
         crc16.update(&address.serial);
         crc16.update(payload);
@@ -207,11 +207,11 @@ impl Frame {
 
         let frame = [
             slice::from_ref(&Self::CHAR_BEGIN),
-            slice::from_ref(&char_direction),
+            slice::from_ref(char_direction),
             &address.device_type,
             &address.serial,
-            &crc16,
-            &payload,
+            crc16,
+            payload,
             slice::from_ref(&Self::CHAR_END),
         ]
         .concat();

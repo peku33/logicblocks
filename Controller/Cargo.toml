@@ -7,10 +7,10 @@ publish = false
 default-run = "logicblocks-controller"
 
 [dependencies]
-anyhow = "1.0.41"
+anyhow = "1.0.42"
 array-init = "2.0.0"
 arrayvec = "0.7.1"
-async-trait = "0.1.50"
+async-trait = "0.1.51"
 bytes = "1.0.1"
 chrono = { version = "0.4.19", features = ["serde"] }
 clap = "3.0.0-beta.2"
@@ -18,12 +18,12 @@ crc_all = "0.2.0"
 crossbeam = "0.8.1"
 dialoguer = "0.8.0"
 digest_auth = "0.3.0"
-env_logger = "0.8.4"
+env_logger = "0.9.0"
 erased-serde = "0.3.16"
-futures = "0.3.15"
+futures = "0.3.16"
 hex = "0.4.3"
 http = "0.2.4"
-hyper = { version = "0.14.10", features = ["full"] }
+hyper = { version = "0.14.11", features = ["full"] }
 image = { version = "0.23.14", default-features = false, features = ["jpeg"] } 
 indoc = "1.0.3"
 itertools = "0.10.1"
@@ -31,7 +31,7 @@ lazy_static = "1.4.0"
 log = { version = "0.4.14", features = ["release_max_level_info"] }
 maplit = "1.0.2"
 md-5 = "0.9.1"
-ouroboros = "0.9.5"
+ouroboros = "0.10.1"
 parking_lot = "0.11.1"
 percent-encoding = "2.1.0"
 rand = "0.8.4"
@@ -39,11 +39,11 @@ regex = "1.5.4"
 reqwest = { version = "0.11.4", features = ["json", "stream"] }
 rusqlite = { version = "0.25.3", features = ["bundled", "array"] }
 scopeguard = "1.1.0"
-semver = "1.0.3"
-serde = { version = "1.0.126", features = ["derive"] }
-serde_json = "1.0.64"
+semver = "1.0.4"
+serde = { version = "1.0.127", features = ["derive"] }
+serde_json = "1.0.66"
 stable_deref_trait = "1.2.0"
-tokio = { version = "1.8.1", features = ["full"] }
+tokio = { version = "1.9.0", features = ["full"] }
 tokio-stream = { version = "0.1.7", features = ["fs", "time", "io-util", "sync"] }
 tokio-util = "0.6.7"
 web-static-pack = "0.4.1"
@@ -51,7 +51,7 @@ xmltree = "0.10.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.9.3"
-libc = "0.2.98"
+libc = "0.2.99"
 libftdi1-sys = "1.0.0"
 libusb-sys = "0.2.3"
 

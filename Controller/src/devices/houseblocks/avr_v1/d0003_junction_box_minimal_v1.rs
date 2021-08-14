@@ -201,14 +201,16 @@ pub mod logic {
     }
     impl devices::GuiSummaryProvider for Device {
         fn value(&self) -> Box<dyn devices::GuiSummary> {
-            Box::new(GuiSummary {
+            let value = GuiSummary {
                 temperature: self
                     .properties_remote
                     .temperature
                     .get_last()
                     .map(|temperature| temperature.temperature())
                     .flatten(),
-            })
+            };
+            let value = Box::new(value);
+            value
         }
 
         fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {

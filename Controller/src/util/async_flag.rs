@@ -234,6 +234,11 @@ impl<'s> Future for LocalReceiver<'s> {
         }
     }
 }
+impl<'s> FusedFuture for LocalReceiver<'s> {
+    fn is_terminated(&self) -> bool {
+        self.sender.signaled.load(Ordering::Relaxed)
+    }
+}
 impl<'s> Drop for LocalReceiver<'s> {
     fn drop(&mut self) {
         assert!(self

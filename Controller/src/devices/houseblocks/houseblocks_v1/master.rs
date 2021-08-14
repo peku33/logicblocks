@@ -186,7 +186,7 @@ impl Driver {
         address: &Address,
         out_payload: &Payload,
     ) -> Result<(), Error> {
-        self.phase_frame_out(service_mode, &address, &out_payload)
+        self.phase_frame_out(service_mode, address, out_payload)
             .context("phase_frame_out")?;
         Ok(())
     }
@@ -197,10 +197,10 @@ impl Driver {
         out_payload: &Payload,
         in_timeout: &Duration,
     ) -> Result<Payload, Error> {
-        self.phase_frame_out(service_mode, &address, &out_payload)
+        self.phase_frame_out(service_mode, address, out_payload)
             .context("phase_frame_out")?;
         let in_frame = self
-            .phase_frame_in(service_mode, &address, &in_timeout)
+            .phase_frame_in(service_mode, address, in_timeout)
             .context("phase_frame_in")?;
         Ok(in_frame)
     }

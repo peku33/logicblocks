@@ -103,8 +103,8 @@ impl<'h> Runnable for Server<'h> {
 
 #[self_referencing]
 struct ServerRunnerInner<'h> {
-    server: Box<Server<'h>>,
-    runtime: Box<Runtime>,
+    server: Server<'h>,
+    runtime: Runtime,
 
     #[borrows(server, runtime)]
     #[not_covariant]
@@ -120,10 +120,8 @@ impl<'h> ServerRunner<'h> {
         handler: &'h (dyn Handler + Sync),
     ) -> Self {
         let server = Server::new(bind, handler);
-        let server = Box::new(server);
 
         let runtime = Runtime::new("web", 2, 2);
-        let runtime = Box::new(runtime);
 
         let inner = ServerRunnerInnerBuilder {
             server,

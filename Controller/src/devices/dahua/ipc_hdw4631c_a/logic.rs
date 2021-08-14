@@ -6,7 +6,6 @@ use crate::{
         soft::surveillance::snapshot::logic_device_inner::{
             Manager as SnapshotManager, Runner as SnapshotRunner,
         },
-        GuiSummaryProvider,
     },
     signals::{self, signal},
     util::{
@@ -335,7 +334,7 @@ impl devices::Device for Device {
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn GuiSummaryProvider> {
+    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         Some(self)
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
@@ -380,7 +379,7 @@ impl signals::Device for Device {
         }
     }
 }
-impl GuiSummaryProvider for Device {
+impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
         Box::new(self.device_state.read().clone())
     }

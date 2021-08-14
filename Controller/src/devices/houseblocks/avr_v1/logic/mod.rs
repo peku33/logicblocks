@@ -27,7 +27,7 @@ pub trait Device: Runnable + signals::Device + Sync + Send + fmt::Debug {
 
     fn class() -> &'static str;
 
-    fn as_gui_summary_provider(&self) -> Option<&dyn GuiSummaryProvider> {
+    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         None
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
@@ -159,7 +159,7 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn GuiSummaryProvider> {
+    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         Some(self)
     }
 }
@@ -190,15 +190,17 @@ struct GuiSummary {
     device: Box<dyn devices::GuiSummary>,
     hardware_runner: Box<dyn devices::GuiSummary>,
 }
-impl<'m, D: Device> GuiSummaryProvider for Runner<'m, D> {
+impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
-        Box::new(GuiSummary {
+        let value = GuiSummary {
             device: match self.device.as_gui_summary_provider() {
                 Some(gui_summary_provider) => gui_summary_provider.value(),
                 None => Box::new(()),
             },
             hardware_runner: self.hardware_runner.value(),
-        })
+        };
+        let value = Box::new(value);
+        value
     }
 
     fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
