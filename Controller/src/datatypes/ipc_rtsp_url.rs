@@ -6,20 +6,13 @@ use std::{convert::TryFrom, fmt, fmt::Display, str::FromStr};
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 #[serde(try_from = "String")]
 #[serde(into = "String")]
-pub struct IpcRtspUrl {
-    uri: Uri,
-}
-impl IpcRtspUrl {
-    pub fn new(uri: Uri) -> Self {
-        Self { uri }
-    }
-}
+pub struct IpcRtspUrl(pub Uri);
 impl Display for IpcRtspUrl {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        f.write_str(self.uri.to_string().as_str())
+        f.write_str(self.0.to_string().as_str())
     }
 }
 impl FromStr for IpcRtspUrl {
@@ -27,7 +20,7 @@ impl FromStr for IpcRtspUrl {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let uri: Uri = value.parse()?;
-        Ok(Self { uri })
+        Ok(Self(uri))
     }
 }
 impl TryFrom<String> for IpcRtspUrl {

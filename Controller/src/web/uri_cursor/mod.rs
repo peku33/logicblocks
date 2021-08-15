@@ -36,4 +36,15 @@ impl<'p> UriCursor<'p> {
             None => UriCursor::Next(path, Box::new(UriCursor::Terminal)),
         }
     }
+
+    pub fn as_last(&self) -> Option<&str> {
+        let (url, next) = match self {
+            Self::Terminal => return None,
+            Self::Next(url, next) => (url, next),
+        };
+        if let Self::Next(_, _) = &**next {
+            return None;
+        }
+        Some(url)
+    }
 }

@@ -237,6 +237,7 @@ pub mod hardware {
     use anyhow::{bail, Context, Error};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
+    use derive_more::Constructor;
     use maplit::hashmap;
     use std::{
         cmp::{max, min},
@@ -353,17 +354,17 @@ pub mod hardware {
             let leds_pending = self.properties.leds.device_pending();
             let buzzer_pending = self.properties.buzzer.device_pending();
 
-            let stage_1_request = BusRequest::new(
-                true,
-                false,
-                leds_pending
+            let stage_1_request = BusRequest {
+                poll_request: true,
+                keys_request: false,
+                leds: leds_pending
                     .as_ref()
                     .map(|leds_pending| BusRequestLeds::new(**leds_pending)),
-                buzzer_pending.as_ref().map(|buzzer_pending| {
+                buzzer: buzzer_pending.as_ref().map(|buzzer_pending| {
                     BusRequestBuzzer::from_duration_milliseconds(**buzzer_pending)
                 }),
-                false,
-            );
+                temperature_request: false,
+            };
             let stage_1_request_payload = stage_1_request.into_payload();
             let stage_1_response_payload = driver
                 .transaction_out_in(stage_1_request_payload, None)
@@ -384,13 +385,14 @@ pub mod hardware {
                 Some(stage_1_response_poll) => stage_1_response_poll,
                 None => return Ok(()),
             };
-            let stage_2_request = BusRequest::new(
-                false,
-                stage_1_response_poll.keys || self.properties.keys.device_must_read(),
-                None,
-                None,
-                stage_1_response_poll.temperature || self.properties.temperature.device_must_read(),
-            );
+            let stage_2_request = BusRequest {
+                poll_request: false,
+                keys_request: stage_1_response_poll.keys || self.properties.keys.device_must_read(),
+                leds: None,
+                buzzer: None,
+                temperature_request: stage_1_response_poll.temperature
+                    || self.properties.temperature.device_must_read(),
+            };
             let stage_2_request_payload = stage_2_request.into_payload();
             let stage_2_response_payload = driver
                 .transaction_out_in(stage_2_request_payload, None)
@@ -430,15 +432,11 @@ pub mod hardware {
     }
 
     // Bus
-    #[derive(Debug)]
+    #[derive(Constructor, Debug)]
     struct BusRequestLeds {
         values: [bool; LED_COUNT],
     }
     impl BusRequestLeds {
-        pub fn new(values: [bool; LED_COUNT]) -> Self {
-            Self { values }
-        }
-
         pub fn serialize(
             &self,
             serializer: &mut Serializer,
@@ -456,9 +454,6 @@ pub mod hardware {
         ticks: u8,
     }
     impl BusRequestBuzzer {
-        pub fn new(ticks: u8) -> Self {
-            Self { ticks }
-        }
         pub fn from_duration_milliseconds(duration: Duration) -> Self {
             let ticks = max(
                 min(
@@ -467,7 +462,7 @@ pub mod hardware {
                 ) as u8,
                 1u8,
             );
-            Self::new(ticks)
+            Self { ticks }
         }
 
         pub fn serialize(
@@ -487,22 +482,6 @@ pub mod hardware {
         temperature_request: bool,
     }
     impl BusRequest {
-        pub fn new(
-            poll_request: bool,
-            keys_request: bool,
-            leds: Option<BusRequestLeds>,
-            buzzer: Option<BusRequestBuzzer>,
-            temperature_request: bool,
-        ) -> Self {
-            Self {
-                poll_request,
-                keys_request,
-                leds,
-                buzzer,
-                temperature_request,
-            }
-        }
-
         pub fn into_payload(self) -> Payload {
             let mut serializer = Serializer::new();
             self.serialize(&mut serializer);

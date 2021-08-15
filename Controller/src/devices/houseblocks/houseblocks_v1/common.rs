@@ -1,6 +1,6 @@
 use anyhow::{bail, Error};
 use crc_all::Crc;
-use std::{convert::TryInto, fmt, ops::Deref, slice};
+use std::{convert::TryInto, fmt, slice};
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct AddressDeviceType([u8; Self::LENGTH]);
@@ -16,11 +16,9 @@ impl AddressDeviceType {
         let device_type_string = format!("{:0>4}", ordinal);
         Ok(Self(device_type_string.as_bytes()[..].try_into()?))
     }
-}
-impl Deref for AddressDeviceType {
-    type Target = [u8];
-    fn deref(&self) -> &Self::Target {
-        self.0.as_ref()
+
+    pub fn as_bytes(&self) -> &[u8; Self::LENGTH] {
+        &self.0
     }
 }
 impl fmt::Display for AddressDeviceType {
@@ -28,7 +26,7 @@ impl fmt::Display for AddressDeviceType {
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        f.write_str(std::str::from_utf8(self).unwrap())
+        f.write_str(std::str::from_utf8(self.as_bytes()).unwrap())
     }
 }
 #[cfg(test)]
@@ -58,11 +56,9 @@ impl AddressSerial {
         }
         Ok(Self(serial))
     }
-}
-impl Deref for AddressSerial {
-    type Target = [u8];
-    fn deref(&self) -> &Self::Target {
-        self.0.as_ref()
+
+    pub fn as_bytes(&self) -> &[u8; Self::LENGTH] {
+        &self.0
     }
 }
 impl fmt::Display for AddressSerial {
@@ -70,7 +66,7 @@ impl fmt::Display for AddressSerial {
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        f.write_str(std::str::from_utf8(self).unwrap())
+        f.write_str(std::str::from_utf8(self.as_bytes()).unwrap())
     }
 }
 #[cfg(test)]
@@ -92,33 +88,15 @@ mod tests_address_serial {
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct Address {
-    device_type: AddressDeviceType,
-    serial: AddressSerial,
-}
-impl Address {
-    pub fn new(
-        device_type: AddressDeviceType,
-        serial: AddressSerial,
-    ) -> Self {
-        Self {
-            device_type,
-            serial,
-        }
-    }
-
-    pub fn device_type(&self) -> &AddressDeviceType {
-        &self.device_type
-    }
-    pub fn serial(&self) -> &AddressSerial {
-        &self.serial
-    }
+    pub device_type: AddressDeviceType,
+    pub serial: AddressSerial,
 }
 impl fmt::Display for Address {
     fn fmt(
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        write!(f, "{} {}", self.device_type(), self.serial())
+        write!(f, "{} {}", self.device_type, self.serial)
     }
 }
 
@@ -131,11 +109,9 @@ impl Payload {
         }
         Ok(Self(data))
     }
-}
-impl Deref for Payload {
-    type Target = [u8];
-    fn deref(&self) -> &Self::Target {
-        self.0.as_ref()
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
     }
 }
 impl fmt::Display for Payload {
@@ -198,9 +174,9 @@ impl Frame {
             Self::CRC_REFLECT,
         );
         crc16.update(slice::from_ref(char_direction));
-        crc16.update(&address.device_type);
-        crc16.update(&address.serial);
-        crc16.update(payload);
+        crc16.update(address.device_type.as_bytes());
+        crc16.update(address.serial.as_bytes());
+        crc16.update(payload.as_bytes());
         let crc16 = crc16.finish();
         let crc16 = hex::encode_upper(crc16.to_be_bytes());
         let crc16 = crc16.as_bytes();
@@ -208,10 +184,10 @@ impl Frame {
         let frame = [
             slice::from_ref(&Self::CHAR_BEGIN),
             slice::from_ref(char_direction),
-            &address.device_type,
-            &address.serial,
+            address.device_type.as_bytes(),
+            address.serial.as_bytes(),
             crc16,
-            payload,
+            payload.as_bytes(),
             slice::from_ref(&Self::CHAR_END),
         ]
         .concat();
@@ -269,9 +245,9 @@ impl Frame {
             Self::CRC_REFLECT,
         );
         crc16_expected.update(slice::from_ref(&frame[1]));
-        crc16_expected.update(&address.device_type);
-        crc16_expected.update(&address.serial);
-        crc16_expected.update(&payload);
+        crc16_expected.update(address.device_type.as_bytes());
+        crc16_expected.update(address.serial.as_bytes());
+        crc16_expected.update(payload.as_bytes());
         let crc16_expected = crc16_expected.finish();
 
         if crc16_expected != crc16_received {
@@ -294,10 +270,10 @@ mod tests_frame {
         assert_eq!(
             Frame::out_build(
                 false,
-                &Address::new(
-                    AddressDeviceType::new(*b"0001").unwrap(),
-                    AddressSerial::new(*b"98765432").unwrap(),
-                ),
+                &Address {
+                    device_type: AddressDeviceType::new(*b"0001").unwrap(),
+                    serial: AddressSerial::new(*b"98765432").unwrap(),
+                },
                 &Payload::new(Box::from(*b"ChujDupaKamieniKupa")).unwrap(),
             )
             .as_ref(),
@@ -309,10 +285,10 @@ mod tests_frame {
         assert_eq!(
             Frame::out_build(
                 true,
-                &Address::new(
-                    AddressDeviceType::new(*b"0006").unwrap(),
-                    AddressSerial::new(*b"90083461").unwrap(),
-                ),
+                &Address {
+                    device_type: AddressDeviceType::new(*b"0006").unwrap(),
+                    serial: AddressSerial::new(*b"90083461").unwrap(),
+                },
                 &Payload::new(Box::from(*b"#")).unwrap(),
             )
             .as_ref(),
@@ -324,10 +300,10 @@ mod tests_frame {
         let frame = Frame::in_parse(
             b"",
             false,
-            &Address::new(
-                AddressDeviceType::new(*b"0001").unwrap(),
-                AddressSerial::new(*b"98765432").unwrap(),
-            ),
+            &Address {
+                device_type: AddressDeviceType::new(*b"0001").unwrap(),
+                serial: AddressSerial::new(*b"98765432").unwrap(),
+            },
         );
         assert!(frame.is_err());
     }
@@ -337,10 +313,10 @@ mod tests_frame {
             Frame::in_parse(
                 b"\n<A721ChujDupaKamieniKupa\r",
                 false,
-                &Address::new(
-                    AddressDeviceType::new(*b"0001").unwrap(),
-                    AddressSerial::new(*b"98765432").unwrap(),
-                ),
+                &Address {
+                    device_type: AddressDeviceType::new(*b"0001").unwrap(),
+                    serial: AddressSerial::new(*b"98765432").unwrap(),
+                },
             )
             .unwrap(),
             Payload::new(Box::from(*b"ChujDupaKamieniKupa")).unwrap(),

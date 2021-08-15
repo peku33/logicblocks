@@ -140,20 +140,20 @@ fn run_by_address(
     master: &Master,
     address: Address,
 ) -> Result<(), Error> {
-    match address.device_type() as &[u8] {
+    match address.device_type.as_bytes() {
         b"0003" => {
-            run_d0003_junction_box_minimal_v1(master, *address.serial());
+            run_d0003_junction_box_minimal_v1(master, address.serial);
             Ok(())
         }
         b"0006" => {
-            run_d0006_relay14_opto_a_v1(master, *address.serial());
+            run_d0006_relay14_opto_a_v1(master, address.serial);
             Ok(())
         }
         b"0007" => {
-            run_d0007_relay14_ssr_a_v2(master, *address.serial());
+            run_d0007_relay14_ssr_a_v2(master, address.serial);
             Ok(())
         }
-        _ => bail!("device_type {} is not supported", address.device_type()),
+        _ => bail!("device_type {} is not supported", address.device_type),
     }
 }
 fn run_d0003_junction_box_minimal_v1(

@@ -167,36 +167,27 @@ impl uri_cursor::Handler for Device {
         request: web::Request,
         uri_cursor: &uri_cursor::UriCursor,
     ) -> BoxFuture<'static, web::Response> {
-        match uri_cursor {
-            uri_cursor::UriCursor::Next("r", uri_cursor) => match **uri_cursor {
-                uri_cursor::UriCursor::Terminal => match *request.method() {
-                    http::Method::POST => {
-                        self.r();
-                        async move { web::Response::ok_empty() }.boxed()
-                    }
-                    _ => async move { web::Response::error_405() }.boxed(),
-                },
-                _ => async move { web::Response::error_404() }.boxed(),
+        match uri_cursor.as_last() {
+            Some("r") => match *request.method() {
+                http::Method::POST => {
+                    self.r();
+                    async move { web::Response::ok_empty() }.boxed()
+                }
+                _ => async move { web::Response::error_405() }.boxed(),
             },
-            uri_cursor::UriCursor::Next("s", uri_cursor) => match **uri_cursor {
-                uri_cursor::UriCursor::Terminal => match *request.method() {
-                    http::Method::POST => {
-                        self.s();
-                        async move { web::Response::ok_empty() }.boxed()
-                    }
-                    _ => async move { web::Response::error_405() }.boxed(),
-                },
-                _ => async move { web::Response::error_404() }.boxed(),
+            Some("s") => match *request.method() {
+                http::Method::POST => {
+                    self.s();
+                    async move { web::Response::ok_empty() }.boxed()
+                }
+                _ => async move { web::Response::error_405() }.boxed(),
             },
-            uri_cursor::UriCursor::Next("t", uri_cursor) => match **uri_cursor {
-                uri_cursor::UriCursor::Terminal => match *request.method() {
-                    http::Method::POST => {
-                        self.t();
-                        async move { web::Response::ok_empty() }.boxed()
-                    }
-                    _ => async move { web::Response::error_405() }.boxed(),
-                },
-                _ => async move { web::Response::error_404() }.boxed(),
+            Some("t") => match *request.method() {
+                http::Method::POST => {
+                    self.t();
+                    async move { web::Response::ok_empty() }.boxed()
+                }
+                _ => async move { web::Response::error_405() }.boxed(),
             },
             _ => async move { web::Response::error_404() }.boxed(),
         }

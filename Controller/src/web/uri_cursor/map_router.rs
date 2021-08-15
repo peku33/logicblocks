@@ -2,16 +2,13 @@ use super::{
     super::{Request, Response},
     Handler, UriCursor,
 };
+use derive_more::Constructor;
 use futures::future::{BoxFuture, FutureExt};
 use std::collections::HashMap;
 
+#[derive(Constructor)]
 pub struct MapRouter<'h> {
     handlers: HashMap<String, &'h (dyn Handler + Sync)>,
-}
-impl<'h> MapRouter<'h> {
-    pub fn new(handlers: HashMap<String, &'h (dyn Handler + Sync)>) -> Self {
-        Self { handlers }
-    }
 }
 impl<'h> Handler for MapRouter<'h> {
     fn handle(

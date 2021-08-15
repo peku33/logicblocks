@@ -160,6 +160,7 @@ pub mod hardware {
     use anyhow::{Context, Error};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
+    use derive_more::Constructor;
     use maplit::hashmap;
     use std::{collections::HashMap, fmt, marker::PhantomData, time::Duration};
 
@@ -290,13 +291,11 @@ pub mod hardware {
         }
     }
 
+    #[derive(Constructor)]
     struct BusRequestOutputs {
         values: [bool; OUTPUT_COUNT],
     }
     impl BusRequestOutputs {
-        pub fn new(values: [bool; OUTPUT_COUNT]) -> Self {
-            Self { values }
-        }
         pub fn serialize(
             &self,
             serializer: &mut Serializer,
@@ -309,14 +308,11 @@ pub mod hardware {
         }
     }
 
+    #[derive(Constructor)]
     struct BusRequest {
         outputs: Option<BusRequestOutputs>,
     }
     impl BusRequest {
-        pub fn new(outputs: Option<BusRequestOutputs>) -> Self {
-            Self { outputs }
-        }
-
         pub fn into_payload(self) -> Payload {
             let mut serializer = Serializer::new();
             self.serialize(&mut serializer);

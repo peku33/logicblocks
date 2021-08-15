@@ -45,7 +45,7 @@ pub struct ParserPayload<'a> {
 impl<'a> ParserPayload<'a> {
     pub fn new(payload: &'a Payload) -> Self {
         Self {
-            iterator: payload.iter(),
+            iterator: payload.as_bytes().iter(),
         }
     }
 }

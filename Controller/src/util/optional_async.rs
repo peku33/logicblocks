@@ -1,17 +1,15 @@
+use derive_more::Constructor;
 use futures::{future::Future, stream::Stream};
 use std::{
     pin::Pin,
     task::{Context, Poll},
 };
 
+#[derive(Constructor)]
 pub struct FutureOrPending<F: Future> {
     inner: Option<F>,
 }
 impl<F: Future> FutureOrPending<F> {
-    pub fn new(inner: Option<F>) -> Self {
-        Self { inner }
-    }
-
     pub fn future(inner: F) -> Self {
         Self { inner: Some(inner) }
     }
@@ -39,14 +37,11 @@ impl<F: Future> Future for FutureOrPending<F> {
     }
 }
 
+#[derive(Constructor)]
 pub struct StreamOrPending<S: Stream> {
     inner: Option<S>,
 }
 impl<S: Stream> StreamOrPending<S> {
-    pub fn new(inner: Option<S>) -> Self {
-        Self { inner }
-    }
-
     pub fn future(inner: S) -> Self {
         Self { inner: Some(inner) }
     }

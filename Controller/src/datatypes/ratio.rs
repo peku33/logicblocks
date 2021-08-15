@@ -5,24 +5,20 @@ use std::convert::TryFrom;
 #[derive(Serialize, Deserialize, PartialOrd, PartialEq, Copy, Clone, Debug)]
 #[serde(try_from = "f64")]
 #[serde(into = "f64")]
-pub struct Ratio {
-    value: f64,
-}
+pub struct Ratio(f64);
 impl Ratio {
-    pub const fn full() -> Self {
-        Self { value: 1.0 }
+    pub const fn zero() -> Self {
+        Self(0.0)
     }
     pub const fn epsilon() -> Self {
-        Self {
-            value: f64::EPSILON,
-        }
+        Self(f64::EPSILON)
     }
-    pub const fn zero() -> Self {
-        Self { value: 0.0 }
+    pub const fn full() -> Self {
+        Self(1.0)
     }
 
     pub fn as_f64(&self) -> f64 {
-        self.value
+        self.0
     }
 }
 impl TryFrom<f64> for Ratio {
@@ -34,11 +30,11 @@ impl TryFrom<f64> for Ratio {
             (0.0..=1.0).contains(&value),
             "value must be between 0.0 and 1.0"
         );
-        Ok(Self { value })
+        Ok(Self(value))
     }
 }
 impl Into<f64> for Ratio {
     fn into(self) -> f64 {
-        self.value
+        self.0
     }
 }

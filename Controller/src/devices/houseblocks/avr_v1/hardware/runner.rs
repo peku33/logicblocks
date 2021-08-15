@@ -95,7 +95,10 @@ impl<'m, D: Device> Runner<'m, D> {
     ) -> Self {
         let driver = Driver::new(
             master,
-            Address::new(D::address_device_type(), address_serial),
+            Address {
+                device_type: D::address_device_type(),
+                serial: address_serial,
+            },
         );
         let device = D::new();
 

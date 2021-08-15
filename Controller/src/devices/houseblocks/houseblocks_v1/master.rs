@@ -174,7 +174,10 @@ impl Driver {
                         .unwrap(),
                 )
                 .context("address_serial")?;
-                let address = Address::new(address_device_type, address_serial);
+                let address = Address {
+                    device_type: address_device_type,
+                    serial: address_serial,
+                };
                 return Ok(address);
             }
         }

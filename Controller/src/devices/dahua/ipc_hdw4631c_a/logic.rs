@@ -243,17 +243,17 @@ impl Device {
             };
 
         let rtsp_urls = RtspUrls {
-            main: IpcRtspUrl::new(api.rtsp_url_build(
+            main: IpcRtspUrl(api.rtsp_url_build(
                 shared_user_login,
                 shared_user_password,
                 api::VideoStream::Main,
             )),
-            sub1: IpcRtspUrl::new(api.rtsp_url_build(
+            sub1: IpcRtspUrl(api.rtsp_url_build(
                 shared_user_login,
                 shared_user_password,
                 api::VideoStream::Sub1,
             )),
-            sub2: IpcRtspUrl::new(api.rtsp_url_build(
+            sub2: IpcRtspUrl(api.rtsp_url_build(
                 shared_user_login,
                 shared_user_password,
                 api::VideoStream::Sub2,

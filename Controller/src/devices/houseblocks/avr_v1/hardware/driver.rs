@@ -6,7 +6,8 @@ use super::{
     parser::{Parser, ParserPayload},
 };
 use anyhow::{bail, Context, Error};
-use std::{ops::Deref, time::Duration};
+use derive_more::Constructor;
+use std::time::Duration;
 
 const TIMEOUT_DEFAULT: Duration = Duration::from_millis(250);
 
@@ -24,19 +25,12 @@ pub struct Version {
     application: u16,
 }
 
-#[derive(Debug)]
+#[derive(Constructor, Debug)]
 pub struct Driver<'m> {
     master: &'m Master,
     address: Address,
 }
 impl<'m> Driver<'m> {
-    pub fn new(
-        master: &'m Master,
-        address: Address,
-    ) -> Self {
-        Self { master, address }
-    }
-
     pub fn address(&self) -> &Address {
         &self.address
     }
@@ -84,7 +78,7 @@ impl<'m> Driver<'m> {
             .await
             .context("transaction_out_in")?;
 
-        if response.deref() != &b""[..] {
+        if response.as_bytes() != &b""[..] {
             bail!("invalid healthcheck response");
         }
         Ok(())
@@ -217,14 +211,11 @@ impl<'m> Driver<'m> {
     }
 }
 
+#[derive(Constructor)]
 pub struct ApplicationDriver<'d> {
     driver: &'d Driver<'d>,
 }
 impl<'d> ApplicationDriver<'d> {
-    pub fn new(driver: &'d Driver<'d>) -> Self {
-        Self { driver }
-    }
-
     pub async fn transaction_out(
         &self,
         payload: Payload,

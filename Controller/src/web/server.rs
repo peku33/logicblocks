@@ -5,6 +5,7 @@ use crate::util::{
 };
 use anyhow::Context;
 use async_trait::async_trait;
+use derive_more::Constructor;
 use futures::{future::FutureExt, pin_mut, select};
 use hyper::{
     server::conn::AddrStream,
@@ -18,18 +19,12 @@ use std::{
     net::SocketAddr,
 };
 
+#[derive(Constructor)]
 pub struct Server<'h> {
     bind: SocketAddr,
     handler: &'h (dyn Handler + Sync),
 }
 impl<'h> Server<'h> {
-    pub fn new(
-        bind: SocketAddr,
-        handler: &'h (dyn Handler + Sync),
-    ) -> Self {
-        Self { bind, handler }
-    }
-
     async fn respond(
         &self,
         remote_address: SocketAddr,

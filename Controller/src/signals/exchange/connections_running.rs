@@ -25,23 +25,6 @@ pub struct Connections<'d>
 where
     DeviceIdSignalId: hash::Hash + PartialEq + Eq + Copy + Clone + fmt::Debug,
 {
-    state: State<'d>,
-    event: Event<'d>,
-}
-impl<'d> Connections<'d>
-where
-    DeviceIdSignalId: hash::Hash + PartialEq + Eq + Copy + Clone + fmt::Debug,
-{
-    pub fn new(
-        state: State<'d>,
-        event: Event<'d>,
-    ) -> Self {
-        Self { state, event }
-    }
-    pub fn state(&self) -> &State<'d> {
-        &self.state
-    }
-    pub fn event(&self) -> &Event<'d> {
-        &self.event
-    }
+    pub state: State<'d>,
+    pub event: Event<'d>,
 }

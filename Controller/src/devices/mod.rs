@@ -15,6 +15,7 @@ use crate::{
     web::{self, sse_aggregated, uri_cursor},
 };
 use async_trait::async_trait;
+use derive_more::Constructor;
 use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::{de::DeserializeOwned, Serialize};
@@ -39,18 +40,12 @@ pub trait Device: Send + Sync + fmt::Debug {
     }
 }
 
+#[derive(Constructor)]
 pub struct DeviceWrapper<'d> {
     name: String,
     device: Box<dyn Device + 'd>,
 }
 impl<'d> DeviceWrapper<'d> {
-    pub fn new(
-        name: String,
-        device: Box<dyn Device + 'd>,
-    ) -> Self {
-        Self { name, device }
-    }
-
     pub fn name(&self) -> &String {
         &self.name
     }

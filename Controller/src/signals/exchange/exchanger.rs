@@ -78,7 +78,7 @@ impl<'d> Exchanger<'d> {
         let mut target_device_ids: HashSet<DeviceId> = HashSet::new();
 
         for ((target_device_id_signal_id, state_target_remote_base), source) in
-            self.connections_running.state().iter_targets()
+            self.connections_running.state.iter_targets()
         {
             let value = match source {
                 Some((_, state_source_remote_base)) => state_source_remote_base.get_last(),
@@ -106,7 +106,7 @@ impl<'d> Exchanger<'d> {
 
         // State
         for ((source_device_id_signal_id, state_source_remote_base), targets) in
-            self.connections_running.state().iter_sources()
+            self.connections_running.state.iter_sources()
         {
             if let Some(device_ids) = device_ids.as_ref() {
                 if !device_ids.contains(&source_device_id_signal_id.device_id) {
@@ -128,7 +128,7 @@ impl<'d> Exchanger<'d> {
 
         // Event
         for ((source_device_id_signal_id, state_source_remote_base), targets) in
-            self.connections_running.event().iter_sources()
+            self.connections_running.event.iter_sources()
         {
             if let Some(device_ids) = device_ids.as_ref() {
                 if !device_ids.contains(&source_device_id_signal_id.device_id) {
@@ -356,5 +356,8 @@ fn connections_requested_to_connections_running<'d>(
 
     connections_event.set_connections(connection_event_candidates);
 
-    ConnectionsRunning::new(connections_state, connections_event)
+    ConnectionsRunning {
+        state: connections_state,
+        event: connections_event,
+    }
 }

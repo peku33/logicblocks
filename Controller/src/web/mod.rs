@@ -6,6 +6,7 @@ pub mod uri_cursor;
 
 use anyhow::{bail, Error};
 use bytes::Bytes;
+use derive_more::Constructor;
 use futures::{
     future::BoxFuture,
     stream::{Stream, StreamExt},
@@ -15,24 +16,13 @@ use hyper::{Body, Response as HyperResponse};
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, ops::Deref};
 
+#[derive(Constructor, Debug)]
 pub struct Request {
     remote_address: SocketAddr,
     http_parts: Parts,
     body: Bytes,
 }
 impl Request {
-    pub fn new(
-        remote_address: SocketAddr,
-        http_parts: Parts,
-        body: Bytes,
-    ) -> Self {
-        Self {
-            remote_address,
-            http_parts,
-            body,
-        }
-    }
-
     pub fn method(&self) -> &Method {
         &self.http_parts.method
     }
@@ -60,15 +50,6 @@ impl Request {
         let json = serde_json::from_slice(&self.body)?;
 
         Ok(json)
-    }
-
-    pub fn body_parse_json_validate<'a, T: Deserialize<'a>, F: FnOnce(T) -> Result<T, Error>>(
-        &'a self,
-        f: F,
-    ) -> Result<T, Error> {
-        let value = self.body_parse_json()?;
-        let value = f(value)?;
-        Ok(value)
     }
 }
 
