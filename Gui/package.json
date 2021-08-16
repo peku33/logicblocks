@@ -48,7 +48,9 @@
         "jsx": true
       }
     },
-    "rules": {},
+    "rules": {
+      "prettier/prettier": "warn"
+    },
     "overrides": [
       {
         "files": [
