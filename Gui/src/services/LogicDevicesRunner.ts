@@ -1,4 +1,4 @@
-import { getJson, postEmpty } from "lib/Api";
+import { getJson, postEmpty, postJsonEmpty } from "lib/Api";
 import { useObservableState } from "lib/ObservableState";
 import Client from "lib/SSEAggregatedStream";
 
@@ -21,4 +21,7 @@ export async function deviceGetJson<T>(deviceId: number, endpoint: string): Prom
 }
 export async function devicePostEmpty(deviceId: number, endpoint: string): Promise<void> {
   return await postEmpty(deviceEndpointBuild(deviceId, endpoint));
+}
+export async function devicePostJsonEmpty<D>(deviceId: number, endpoint: string, data: D): Promise<void> {
+  return await postJsonEmpty(deviceEndpointBuild(deviceId, endpoint), data);
 }
