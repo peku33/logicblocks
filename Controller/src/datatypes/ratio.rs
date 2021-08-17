@@ -2,20 +2,7 @@ use anyhow::{ensure, Error};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    PartialOrd,
-    Add,
-    Sub,
-    AddAssign,
-    SubAssign,
-    Sum,
-    Debug,
-    Serialize,
-    Deserialize,
-)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 #[serde(try_from = "f64")]
 #[serde(into = "f64")]
 pub struct Ratio(f64);

@@ -3,6 +3,7 @@ use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
+// FIXME: Sub must ensure the value does not go sub-0
 #[derive(
     Clone,
     Copy,
@@ -38,7 +39,7 @@ impl TryFrom<f64> for Multiplier {
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         ensure!(value.is_finite(), "value must be finite");
-        ensure!(value >= 0.0, "value must be between 0.0 and 1.0");
+        ensure!(value >= 0.0, "value must be greater then 0.0");
         Ok(Self(value))
     }
 }
