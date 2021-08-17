@@ -55,13 +55,13 @@ impl Device {
         let counts_known = inputs_values
             .iter()
             .filter(|last| last.value.is_some())
-            .count() as f64;
+            .count();
         let counts_one = inputs_values
             .iter()
             .filter(|last| last.value.contains(&true))
-            .count() as f64;
+            .count();
 
-        let ratio = counts_one / counts_known;
+        let ratio = (counts_one as f64) / (counts_known as f64);
         let ratio: Option<Ratio> = if ratio.is_finite() {
             Some(Ratio::try_from(ratio).unwrap())
         } else {
