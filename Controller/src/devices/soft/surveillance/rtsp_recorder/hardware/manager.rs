@@ -1,5 +1,6 @@
 use super::channel::ChannelSegment;
 use crate::{
+    datatypes::ratio::Ratio,
     modules,
     util::{
         async_flag,
@@ -19,7 +20,7 @@ use futures::{
 };
 use indoc::indoc;
 use modules::{fs::Fs, sqlite::SQLite};
-use std::{collections::HashMap, fmt, path::PathBuf, rc::Rc, time::Duration};
+use std::{collections::HashMap, convert::TryInto, fmt, path::PathBuf, rc::Rc, time::Duration};
 use tokio::fs;
 
 const CLEANUP_INTERVAL: Duration = Duration::from_secs(60 * 5);
@@ -29,6 +30,7 @@ pub type ChannelId = usize;
 #[derive(Debug)]
 pub struct ChannelData {
     pub name: String,
+    pub detection_threshold: Ratio,
 }
 
 #[derive(Debug)]
@@ -84,7 +86,8 @@ impl<'f> Manager<'f> {
                         channel_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
                         storage_group_id REFERENCES storage_groups(storage_group_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-                        enabled INTEGER NOT NULL
+                        enabled INTEGER NOT NULL,
+                        detection_threshold REAL NOT NULL
                     );
 
                     CREATE TABLE IF NOT EXISTS recordings (
@@ -128,32 +131,46 @@ impl<'f> Manager<'f> {
     pub async fn channels_data_get(&self) -> Result<HashMap<ChannelId, ChannelData>, Error> {
         let channels = self
             .sqlite
-            .query(move |connection| -> Result<Box<[(usize, String)]>, Error> {
-                let channels = connection
-                    .prepare(indoc!(
-                        "
+            .query(
+                #[allow(clippy::type_complexity)]
+                move |connection| -> Result<Box<[(usize, String, Ratio)]>, Error> {
+                    let channels = connection
+                        .prepare(indoc!(
+                            "
                             SELECT
                                 channel_id,
-                                name
+                                name,
+                                detection_threshold
                             FROM
                                 channels
                             WHERE
                                 enabled
                         "
-                    ))?
-                    .query_map([], move |row| {
-                        let channel_id = row.get_ref_unwrap(0).as_i64()? as usize;
-                        let name = row.get_ref_unwrap(1).as_str()?.to_owned();
-                        Ok((channel_id, name))
-                    })?
-                    .collect::<rusqlite::Result<_>>()?;
-                Ok(channels)
-            })
+                        ))?
+                        .query_map([], move |row| {
+                            let channel_id = row.get_ref_unwrap(0).as_i64()? as usize;
+                            let name = row.get_ref_unwrap(1).as_str()?.to_owned();
+                            let detection_threshold =
+                                row.get_ref_unwrap(2).as_f64()?.try_into().unwrap();
+                            Ok((channel_id, name, detection_threshold))
+                        })?
+                        .collect::<rusqlite::Result<_>>()?;
+                    Ok(channels)
+                },
+            )
             .await
             .context("query")?
             .into_vec()
             .into_iter()
-            .map(|(channel_id, name)| (channel_id, ChannelData { name }))
+            .map(|(channel_id, name, detection_threshold)| {
+                (
+                    channel_id,
+                    ChannelData {
+                        name,
+                        detection_threshold,
+                    },
+                )
+            })
             .collect::<HashMap<_, _>>();
 
         Ok(channels)

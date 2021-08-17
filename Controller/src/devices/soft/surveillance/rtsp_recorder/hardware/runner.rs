@@ -3,7 +3,6 @@ use super::{
     manager::{ChannelId, ChannelIdSegment, Manager},
 };
 use crate::{
-    datatypes::ratio::Ratio,
     modules::fs::Fs,
     util::{
         async_flag,
@@ -27,7 +26,6 @@ use std::{
 use tokio::sync::{RwLock, RwLockReadGuard};
 
 pub const SEGMENT_TIME: Duration = Duration::from_secs(60);
-pub const DETECTION_THRESHOLD: Ratio = Ratio::epsilon();
 
 type RunnerChannelRunners<'r> = HashMap<ChannelId, RunnerChannelRunner<'r>>;
 
@@ -113,7 +111,7 @@ impl<'r, 'f> Runner<'r, 'f> {
                     None,
                     SEGMENT_TIME,
                     temporary_storage_directory,
-                    DETECTION_THRESHOLD,
+                    channel_data.detection_threshold,
                 );
                 let runner_channel = RunnerChannel::new(
                     channel_id,
