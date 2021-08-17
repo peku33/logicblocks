@@ -9,7 +9,7 @@ use crate::util::anyhow_multiple_error::AnyhowMultipleError;
 use anyhow::{bail, Context, Error};
 use std::{ffi, fmt, fmt::Display, thread, time::Duration};
 
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Descriptor {
     pub vid: u16,
     pub pid: u16,

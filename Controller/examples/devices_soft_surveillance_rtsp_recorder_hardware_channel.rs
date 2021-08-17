@@ -16,7 +16,7 @@ use rand::Rng;
 use std::{convert::TryInto, path::PathBuf, time::Duration};
 use tokio::{fs, signal::ctrl_c};
 
-#[derive(Clap, Debug)]
+#[derive(Debug, Clap)]
 #[clap(name = "devices.soft.surveillance.rtsp_recorder.hardware.channel")]
 struct Arguments {
     rtsp_url: IpcRtspUrl,

@@ -6,7 +6,7 @@ pub mod exchanger;
 use super::Id as SignalId;
 use crate::devices::Id as DeviceId;
 
-#[derive(Hash, PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct DeviceIdSignalId {
     pub device_id: DeviceId,
     pub signal_id: SignalId,

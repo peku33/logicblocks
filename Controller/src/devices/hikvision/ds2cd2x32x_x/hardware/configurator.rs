@@ -3,7 +3,7 @@ use anyhow::{bail, ensure, Context, Error};
 use std::{fmt, marker::PhantomData, time::Duration};
 use xmltree::{Element, XMLNode};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Percentage {
     value: u8,
 }
@@ -24,7 +24,7 @@ pub trait CoordinateSystem: Copy + Clone + fmt::Debug {
     fn y_min() -> usize;
     fn y_max() -> usize;
 }
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct CoordinateSystem704x576 {}
 impl CoordinateSystem for CoordinateSystem704x576 {
     fn x_min() -> usize {
@@ -40,7 +40,7 @@ impl CoordinateSystem for CoordinateSystem704x576 {
         576
     }
 }
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct CoordinateSystem1000x1000 {}
 impl CoordinateSystem for CoordinateSystem1000x1000 {
     fn x_min() -> usize {
@@ -57,7 +57,7 @@ impl CoordinateSystem for CoordinateSystem1000x1000 {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Coordinate<CS: CoordinateSystem> {
     x: usize,
     y: usize,
@@ -121,7 +121,7 @@ pub trait CoordinateList<CS: CoordinateSystem>: Copy + Clone + fmt::Debug {
     fn coordinates_list(&self) -> Vec<Coordinate<CS>>;
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct RegionSquare<CS: CoordinateSystem> {
     bottom_left: Coordinate<CS>,
     top_right: Coordinate<CS>,
@@ -171,7 +171,7 @@ impl<CS: CoordinateSystem> CoordinateList<CS> for RegionSquare<CS> {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct RegionField4<CS: CoordinateSystem> {
     pub corners: [Coordinate<CS>; 4],
 }
@@ -210,7 +210,7 @@ impl<CS: CoordinateSystem> CoordinateList<CS> for RegionField4<CS> {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Line<CS: CoordinateSystem> {
     pub from: Coordinate<CS>,
     pub to: Coordinate<CS>,
@@ -244,7 +244,7 @@ impl PrivacyMask {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct MotionDetectionRegion {
     pub region: RegionSquare<CoordinateSystem1000x1000>,
     pub sensitivity: Percentage,
@@ -267,7 +267,7 @@ impl MotionDetection {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct FieldDetection {
     pub region: RegionField4<CoordinateSystem1000x1000>,
     pub sensitivity: Percentage,
@@ -275,13 +275,13 @@ pub struct FieldDetection {
     pub time_threshold_s: u8,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum LineDetectionDirection {
     Both,
     RightToLeft,
     LeftToRight,
 }
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct LineDetection {
     pub line: Line<CoordinateSystem1000x1000>,
     pub direction: LineDetectionDirection,

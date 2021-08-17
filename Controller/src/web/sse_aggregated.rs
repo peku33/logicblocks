@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum PathItem {
     NumberU32(u32),
     String(String),

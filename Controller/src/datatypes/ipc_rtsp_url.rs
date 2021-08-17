@@ -3,7 +3,7 @@ use http::uri::Uri;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt, fmt::Display, str::FromStr};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(try_from = "String")]
 #[serde(into = "String")]
 pub struct IpcRtspUrl(pub Uri);

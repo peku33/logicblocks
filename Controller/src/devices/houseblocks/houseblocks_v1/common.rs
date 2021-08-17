@@ -2,7 +2,7 @@ use anyhow::{bail, Error};
 use crc_all::Crc;
 use std::{convert::TryInto, fmt, slice};
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct AddressDeviceType([u8; Self::LENGTH]);
 impl AddressDeviceType {
     pub const LENGTH: usize = 4;
@@ -46,7 +46,7 @@ mod tests_address_device_type {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct AddressSerial([u8; Self::LENGTH]);
 impl AddressSerial {
     pub const LENGTH: usize = 8;
@@ -86,7 +86,7 @@ mod tests_address_serial {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Address {
     pub device_type: AddressDeviceType,
     pub serial: AddressSerial,

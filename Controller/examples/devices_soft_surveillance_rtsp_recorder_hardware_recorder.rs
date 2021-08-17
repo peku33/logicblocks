@@ -22,7 +22,7 @@ use logicblocks_controller::{
 use std::{path::PathBuf, time::Duration};
 use tokio::signal::ctrl_c;
 
-#[derive(Clap, Debug)]
+#[derive(Debug, Clap)]
 #[clap(name = "devices.soft.surveillance.rtsp_recorder.hardware.recorder")]
 struct Arguments {
     rtsp_url: IpcRtspUrl,

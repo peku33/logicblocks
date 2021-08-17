@@ -49,13 +49,13 @@ pub struct Configuration {
     pub hardware_configuration: HardwareConfiguration,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct RtspUrls {
     main: IpcRtspUrl,
     sub: IpcRtspUrl,
 }
 
-#[derive(Serialize, Copy, Clone, Default, Debug)]
+#[derive(Clone, Copy, Default, Debug, Serialize)]
 pub struct Events {
     camera_failure: bool,
     video_loss: bool,
@@ -77,7 +77,7 @@ impl Events {
     }
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(tag = "state")]
 pub enum DeviceState {
     Initializing,

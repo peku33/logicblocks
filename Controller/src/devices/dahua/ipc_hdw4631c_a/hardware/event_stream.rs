@@ -14,7 +14,7 @@ use std::{
 };
 use tokio::sync::watch;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Event {
     VideoBlind,
     SceneChange,
@@ -24,7 +24,7 @@ pub enum Event {
 
 pub type Events = HashSet<Event>;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct EventStateUpdate {
     event: Event,
     active: bool,

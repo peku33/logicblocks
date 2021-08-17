@@ -12,7 +12,7 @@ use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::{any::type_name, borrow::Cow};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Configuration {
     pub name: String,
 }

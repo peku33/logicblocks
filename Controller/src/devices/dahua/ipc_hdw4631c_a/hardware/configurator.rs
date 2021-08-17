@@ -6,7 +6,7 @@ use md5::{Digest, Md5};
 use serde_json::json;
 use std::{cmp::max, collections::HashMap, iter, time::Duration};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Percentage {
     value: u8,
 }
@@ -17,7 +17,7 @@ impl Percentage {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Sensitivity {
     value: u8,
 }
@@ -29,7 +29,7 @@ impl Sensitivity {
 }
 
 // coordinate system
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct Coordinate {
     value: u16,
 }
@@ -45,7 +45,7 @@ impl Coordinate {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Point {
     // 0 is left
     x: Coordinate,
@@ -62,7 +62,7 @@ impl Point {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct RegionSquare {
     top_left: Point,
     bottom_right: Point,
@@ -92,7 +92,7 @@ impl RegionSquare {
 }
 
 // overlays
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PrivacyMaskRegion {
     pub region_square: RegionSquare,
 }
@@ -116,7 +116,7 @@ impl PrivacyMask {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Grid22x18 {
     grid: [[bool; Self::COLUMNS]; Self::ROWS], // from top-left corner
 }
@@ -284,12 +284,12 @@ impl MotionDetection {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct SceneMovedDetection {
     pub sensitivity: Sensitivity,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct AudioMutationDetection {
     pub sensitivity: Percentage,
 }

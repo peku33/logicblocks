@@ -50,7 +50,7 @@ pub struct BasicDeviceInfo {
     pub serial_number: String,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum VideoStream {
     Main,
     Sub1,

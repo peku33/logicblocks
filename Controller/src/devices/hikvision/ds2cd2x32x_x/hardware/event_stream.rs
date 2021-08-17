@@ -13,7 +13,7 @@ use std::{
 use tokio::sync::watch;
 use xmltree::Element;
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Event {
     CameraFailure,
     VideoLoss,

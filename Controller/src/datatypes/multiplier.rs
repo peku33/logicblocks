@@ -4,18 +4,18 @@ use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
 #[derive(
-    Serialize,
-    Deserialize,
-    PartialOrd,
+    Clone,
+    Copy,
     PartialEq,
+    PartialOrd,
     Add,
     Sub,
     AddAssign,
     SubAssign,
     Sum,
-    Copy,
-    Clone,
     Debug,
+    Serialize,
+    Deserialize,
 )]
 #[serde(try_from = "f64")]
 #[serde(into = "f64")]

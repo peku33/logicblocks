@@ -12,14 +12,14 @@ use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Edge {
     Raising,
     Falling,
     Both,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Configuration {
     pub edge: Edge,
 }

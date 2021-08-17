@@ -39,21 +39,21 @@ pub struct Configuration {
     pub channels: Vec<ChannelConfiguration>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 enum DeviceStateDisabledChannelState {
     Disabled,
     Paused,
     Enabled,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 enum DeviceStatePausedChannelState {
     Disabled,
     Paused { queue: Duration },
     Enabled { queue: Duration },
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 enum DeviceStateEnabledChannelState {
     Disabled,
     Paused {

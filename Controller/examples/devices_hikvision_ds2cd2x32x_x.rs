@@ -18,7 +18,7 @@ use logicblocks_controller::{
 };
 use tokio::signal::ctrl_c;
 
-#[derive(Clap, Debug)]
+#[derive(Debug, Clap)]
 #[clap(name = "devices.hikvision.ds2cd2x32x_x")]
 struct Arguments {
     host: Authority,
@@ -28,12 +28,12 @@ struct Arguments {
     subcommand: Option<ArgumentsSubcommand>,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Debug, Clap)]
 enum ArgumentsSubcommand {
     Configure(CommandConfigure),
 }
 
-#[derive(Clap, Debug)]
+#[derive(Debug, Clap)]
 #[clap(name = "configure")]
 struct CommandConfigure {
     device_name: String,

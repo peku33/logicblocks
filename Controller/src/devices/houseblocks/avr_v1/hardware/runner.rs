@@ -66,7 +66,7 @@ pub trait Device: Runnable + BusDevice + Sync + Send + Sized + fmt::Debug {
     }
 }
 
-#[derive(Serialize, Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
 pub enum DeviceState {
     Error,
     Initializing,
