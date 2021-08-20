@@ -90,15 +90,19 @@ impl<V: Value + PartialEq + PartialOrd + Clone> Runnable for Device<V> {
 }
 impl<V: Value + PartialEq + PartialOrd + Clone> signals::Device for Device<V> {
     fn signal_targets_changed_wake(&self) {
-        let a = self.signal_input_a.take_last().value;
-        let b = self.signal_input_b.take_last().value;
+        let mut signal_sources_changed = false;
 
-        let output = match (a, b) {
-            (Some(a), Some(b)) => Some(self.configuration.operation.execute(a, b)),
-            _ => None,
-        };
+        let a = self.signal_input_a.take_last();
+        let b = self.signal_input_b.take_last();
+        if a.pending || b.pending {
+            let output = match (a.value, b.value) {
+                (Some(a), Some(b)) => Some(self.configuration.operation.execute(a, b)),
+                _ => None,
+            };
+            signal_sources_changed |= self.signal_output.set_one(output);
+        }
 
-        if self.signal_output.set_one(output) {
+        if signal_sources_changed {
             self.signal_sources_changed_waker.wake();
         }
     }
