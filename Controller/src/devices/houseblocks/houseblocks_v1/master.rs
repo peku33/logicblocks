@@ -11,16 +11,6 @@ use crossbeam::channel;
 use futures::channel::oneshot;
 use std::{convert::TryInto, fmt::Debug, thread, time::Duration};
 
-const SERIAL_CONFIGURATION: SerialConfiguration = SerialConfiguration {
-    baud_rate: 115_200,
-    bits: Bits::Bits7,
-    stop_bits: StopBits::StopBits1,
-    parity: Parity::Even,
-};
-const FTDI_DEVICE_CONFIGURATION: FtdiDeviceConfiguration = FtdiDeviceConfiguration {
-    latency_timer_ms: 10,
-};
-
 #[derive(Debug)]
 enum Transaction {
     FrameOut {
@@ -45,12 +35,22 @@ struct Driver {
     ftdi_device: FtdiDeviceFailSafe,
 }
 impl Driver {
+    const SERIAL_CONFIGURATION: SerialConfiguration = SerialConfiguration {
+        baud_rate: 115_200,
+        bits: Bits::Bits7,
+        stop_bits: StopBits::StopBits1,
+        parity: Parity::Even,
+    };
+    const FTDI_DEVICE_CONFIGURATION: FtdiDeviceConfiguration = FtdiDeviceConfiguration {
+        latency_timer_ms: 10,
+    };
+
     pub fn new(ftdi_descriptor: FtdiDescriptor) -> Self {
         Self {
             ftdi_device: FtdiDeviceFailSafe::new(
                 ftdi_descriptor,
-                SERIAL_CONFIGURATION,
-                FTDI_DEVICE_CONFIGURATION,
+                Self::SERIAL_CONFIGURATION,
+                Self::FTDI_DEVICE_CONFIGURATION,
                 3,
                 Duration::from_secs(1),
             ),
@@ -81,7 +81,7 @@ impl Driver {
             let frame = self.ftdi_device.read().context("read")?;
             if frame.is_empty() {
                 match timeout_left.checked_sub(Duration::from_millis(
-                    FTDI_DEVICE_CONFIGURATION.latency_timer_ms as u64,
+                    Self::FTDI_DEVICE_CONFIGURATION.latency_timer_ms as u64,
                 )) {
                     Some(timeout_left_next) => {
                         timeout_left = timeout_left_next;
@@ -146,7 +146,7 @@ impl Driver {
             let frame = self.ftdi_device.read().context("read")?;
             if frame.is_empty() {
                 match timeout_left.checked_sub(Duration::from_millis(
-                    FTDI_DEVICE_CONFIGURATION.latency_timer_ms as u64,
+                    Self::FTDI_DEVICE_CONFIGURATION.latency_timer_ms as u64,
                 )) {
                     Some(timeout_left_next) => {
                         timeout_left = timeout_left_next;

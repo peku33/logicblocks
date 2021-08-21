@@ -29,8 +29,6 @@ use parking_lot::RwLock;
 use serde::Serialize;
 use std::{borrow::Cow, time::Duration};
 
-const SNAPSHOT_INTERVAL: Duration = Duration::from_secs(60);
-
 #[derive(Debug)]
 pub enum HardwareConfiguration {
     Full {
@@ -202,6 +200,7 @@ impl Device {
         self.signal_sources_changed_waker.wake();
     }
 
+    pub const SNAPSHOT_INTERVAL: Duration = Duration::from_secs(60);
     async fn run_once(&self) -> Result<!, Error> {
         *self.device_state.write() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
@@ -284,7 +283,7 @@ impl Device {
             &self.snapshot_manager,
             || api.snapshot_retry(2),
             || self.snapshot_updated_handle(),
-            SNAPSHOT_INTERVAL,
+            Self::SNAPSHOT_INTERVAL,
         );
         let snapshot_runner_runner = snapshot_runner.run_once();
         pin_mut!(snapshot_runner_runner);

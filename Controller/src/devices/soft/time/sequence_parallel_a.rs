@@ -861,6 +861,7 @@ impl Device {
             self.gui_summary_waker.wake();
         }
     }
+
     const CHANNELS_TICK_INTERVAL: Duration = Duration::from_secs(1);
     fn channels_tick(&self) {
         let mut state = self.state.write();

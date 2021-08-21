@@ -620,6 +620,7 @@ impl Api {
 
         Ok(content)
     }
+
     const SNAPSHOT_RETRY_INTERVAL: Duration = Duration::from_secs(5);
     pub async fn snapshot_retry(
         &self,

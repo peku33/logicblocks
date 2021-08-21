@@ -25,8 +25,6 @@ use std::{
 };
 use tokio::sync::{RwLock, RwLockReadGuard};
 
-pub const SEGMENT_TIME: Duration = Duration::from_secs(60);
-
 type RunnerChannelRunners<'r> = HashMap<ChannelId, RunnerChannelRunner<'r>>;
 
 #[derive(Debug)]
@@ -39,6 +37,8 @@ pub struct Runner<'r, 'f> {
     finalize_guard: FinalizeGuard,
 }
 impl<'r, 'f> Runner<'r, 'f> {
+    pub const SEGMENT_TIME: Duration = Duration::from_secs(60);
+
     pub fn new(
         runtime: &'r Runtime,
         name: String,
@@ -109,7 +109,7 @@ impl<'r, 'f> Runner<'r, 'f> {
 
                 let channel = Channel::new(
                     None,
-                    SEGMENT_TIME,
+                    Self::SEGMENT_TIME,
                     temporary_storage_directory,
                     channel_data.detection_threshold,
                 );

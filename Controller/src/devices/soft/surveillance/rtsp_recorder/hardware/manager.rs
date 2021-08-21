@@ -23,8 +23,6 @@ use modules::{fs::Fs, sqlite::SQLite};
 use std::{collections::HashMap, convert::TryInto, fmt, path::PathBuf, rc::Rc, time::Duration};
 use tokio::fs;
 
-const CLEANUP_INTERVAL: Duration = Duration::from_secs(60 * 5);
-
 pub type ChannelId = usize;
 
 #[derive(Debug)]
@@ -389,6 +387,8 @@ impl<'f> Manager<'f> {
 
         Ok(())
     }
+
+    const CLEANUP_INTERVAL: Duration = Duration::from_secs(60 * 5);
     async fn cleanup_loop_run_once(
         &self,
         mut exit_flag: async_flag::Receiver,
@@ -397,7 +397,7 @@ impl<'f> Manager<'f> {
             self.cleanup().await.context("cleanup")?;
 
             select! {
-                () = tokio::time::sleep(CLEANUP_INTERVAL).fuse() => {},
+                () = tokio::time::sleep(Self::CLEANUP_INTERVAL).fuse() => {},
                 () = exit_flag => break,
             }
         }

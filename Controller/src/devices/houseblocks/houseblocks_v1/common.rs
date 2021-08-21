@@ -6,6 +6,7 @@ use std::{convert::TryInto, fmt, slice};
 pub struct AddressDeviceType([u8; Self::LENGTH]);
 impl AddressDeviceType {
     pub const LENGTH: usize = 4;
+
     pub fn new(device_type: [u8; Self::LENGTH]) -> Result<Self, Error> {
         if !device_type.iter().all(|item| item.is_ascii_digit()) {
             bail!("invalid characters in device_type");
@@ -50,6 +51,7 @@ mod tests_address_device_type {
 pub struct AddressSerial([u8; Self::LENGTH]);
 impl AddressSerial {
     pub const LENGTH: usize = 8;
+
     pub fn new(serial: [u8; Self::LENGTH]) -> Result<Self, Error> {
         if !serial.iter().all(|item| item.is_ascii_digit()) {
             bail!("invalid characters in serial");

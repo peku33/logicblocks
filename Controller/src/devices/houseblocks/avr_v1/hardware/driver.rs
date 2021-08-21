@@ -9,8 +9,6 @@ use anyhow::{bail, Context, Error};
 use derive_more::Constructor;
 use std::time::Duration;
 
-const TIMEOUT_DEFAULT: Duration = Duration::from_millis(250);
-
 #[derive(Debug)]
 pub struct PowerFlags {
     wdt: bool,
@@ -31,6 +29,8 @@ pub struct Driver<'m> {
     address: Address,
 }
 impl<'m> Driver<'m> {
+    const TIMEOUT_DEFAULT: Duration = Duration::from_millis(250);
+
     pub fn address(&self) -> &Address {
         &self.address
     }
@@ -53,11 +53,16 @@ impl<'m> Driver<'m> {
         &self,
         service_mode: bool,
         payload: Payload,
-        timeout: Duration,
+        timeout: Option<Duration>,
     ) -> Result<Payload, Error> {
         let result = self
             .master
-            .transaction_out_in(service_mode, self.address, payload, timeout)
+            .transaction_out_in(
+                service_mode,
+                self.address,
+                payload,
+                timeout.unwrap_or(Self::TIMEOUT_DEFAULT),
+            )
             .await
             .context("transaction_out_in")?;
 
@@ -70,11 +75,7 @@ impl<'m> Driver<'m> {
         service_mode: bool,
     ) -> Result<(), Error> {
         let response = self
-            .transaction_out_in(
-                service_mode,
-                Payload::new(Box::from(*b"")).unwrap(),
-                TIMEOUT_DEFAULT,
-            )
+            .transaction_out_in(service_mode, Payload::new(Box::from(*b"")).unwrap(), None)
             .await
             .context("transaction_out_in")?;
 
@@ -92,7 +93,7 @@ impl<'m> Driver<'m> {
             .await
             .context("transaction_out")?;
 
-        tokio::time::sleep(TIMEOUT_DEFAULT).await;
+        tokio::time::sleep(Self::TIMEOUT_DEFAULT).await;
         Ok(())
     }
 
@@ -101,11 +102,7 @@ impl<'m> Driver<'m> {
         service_mode: bool,
     ) -> Result<PowerFlags, Error> {
         let response = self
-            .transaction_out_in(
-                service_mode,
-                Payload::new(Box::from(*b"@")).unwrap(),
-                TIMEOUT_DEFAULT,
-            )
+            .transaction_out_in(service_mode, Payload::new(Box::from(*b"@")).unwrap(), None)
             .await
             .context("transaction_out_in")?;
 
@@ -129,11 +126,7 @@ impl<'m> Driver<'m> {
         service_mode: bool,
     ) -> Result<Version, Error> {
         let response = self
-            .transaction_out_in(
-                service_mode,
-                Payload::new(Box::from(*b"#")).unwrap(),
-                TIMEOUT_DEFAULT,
-            )
+            .transaction_out_in(service_mode, Payload::new(Box::from(*b"#")).unwrap(), None)
             .await
             .context("transaction_out_in")?;
 
@@ -151,11 +144,7 @@ impl<'m> Driver<'m> {
     // Service mode routines
     async fn service_mode_read_application_checksum(&self) -> Result<u16, Error> {
         let response = self
-            .transaction_out_in(
-                true,
-                Payload::new(Box::new(*b"C")).unwrap(),
-                TIMEOUT_DEFAULT,
-            )
+            .transaction_out_in(true, Payload::new(Box::new(*b"C")).unwrap(), None)
             .await
             .context("transaction_out_in")?;
 
@@ -229,7 +218,7 @@ impl<'d> ApplicationDriver<'d> {
         timeout: Option<Duration>,
     ) -> Result<Payload, Error> {
         self.driver
-            .transaction_out_in(false, payload, timeout.unwrap_or(TIMEOUT_DEFAULT))
+            .transaction_out_in(false, payload, timeout)
             .await
     }
 }

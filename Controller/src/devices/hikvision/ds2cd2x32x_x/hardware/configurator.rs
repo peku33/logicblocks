@@ -232,7 +232,7 @@ pub struct PrivacyMask {
     regions: Vec<RegionSquare<CoordinateSystem704x576>>,
 }
 impl PrivacyMask {
-    const REGIONS_MAX: usize = 4;
+    pub const REGIONS_MAX: usize = 4;
 
     pub fn new(regions: Vec<RegionSquare<CoordinateSystem704x576>>) -> Result<Self, Error> {
         ensure!(
@@ -255,7 +255,7 @@ pub struct MotionDetection {
     regions: Vec<MotionDetectionRegion>,
 }
 impl MotionDetection {
-    const REGIONS_MAX: usize = 8;
+    pub const REGIONS_MAX: usize = 8;
 
     pub fn new(regions: Vec<MotionDetectionRegion>) -> Result<Self, Error> {
         ensure!(
