@@ -9,7 +9,7 @@ use crate::interfaces::serial::{
 use anyhow::{bail, Context, Error};
 use crossbeam::channel;
 use futures::channel::oneshot;
-use std::{convert::TryInto, fmt::Debug, thread, time::Duration};
+use std::{convert::TryInto, fmt::Debug, mem::ManuallyDrop, thread, time::Duration};
 
 #[derive(Debug)]
 enum Transaction {
@@ -225,8 +225,8 @@ impl Driver {
 pub struct Master {
     ftdi_descriptor: FtdiDescriptor,
 
-    transaction_sender: Option<channel::Sender<Transaction>>,
-    worker_thread: Option<thread::JoinHandle<()>>, // Option to allow manual dropping
+    transaction_sender: ManuallyDrop<channel::Sender<Transaction>>,
+    worker_thread: ManuallyDrop<thread::JoinHandle<()>>,
 }
 impl Master {
     pub fn new(ftdi_descriptor: FtdiDescriptor) -> Self {
@@ -245,8 +245,8 @@ impl Master {
 
         Self {
             ftdi_descriptor,
-            transaction_sender: Some(transaction_sender),
-            worker_thread: Some(worker_thread),
+            transaction_sender: ManuallyDrop::new(transaction_sender),
+            worker_thread: ManuallyDrop::new(worker_thread),
         }
     }
 
@@ -260,8 +260,6 @@ impl Master {
         let (result_sender, result_receiver) = oneshot::channel();
 
         self.transaction_sender
-            .as_ref()
-            .unwrap()
             .send(Transaction::FrameOut {
                 service_mode,
                 address,
@@ -270,7 +268,8 @@ impl Master {
             })
             .unwrap();
 
-        result_receiver.await.context("result_receiver")?
+        let result = result_receiver.await.unwrap().context("result_receiver")?;
+        Ok(result)
     }
     pub async fn transaction_out_in(
         &self,
@@ -283,8 +282,6 @@ impl Master {
         let (result_sender, result_receiver) = oneshot::channel();
 
         self.transaction_sender
-            .as_ref()
-            .unwrap()
             .send(Transaction::FrameOutIn {
                 service_mode,
                 address,
@@ -294,14 +291,13 @@ impl Master {
             })
             .unwrap();
 
-        result_receiver.await.context("result_receiver")?
+        let result = result_receiver.await.unwrap().context("result_receiver")?;
+        Ok(result)
     }
     pub async fn transaction_device_discovery(&self) -> Result<Address, Error> {
         let (result_sender, result_receiver) = oneshot::channel();
 
         self.transaction_sender
-            .as_ref()
-            .unwrap()
             .send(Transaction::DeviceDiscovery { result_sender })
             .unwrap();
 
@@ -349,7 +345,12 @@ impl Master {
 }
 impl Drop for Master {
     fn drop(&mut self) {
-        self.transaction_sender.take(); // Closes the pipe, effectively telling thread to stop
-        self.worker_thread.take().unwrap().join().unwrap(); // Close the thread
+        // This ends the iteration
+        unsafe { ManuallyDrop::drop(&mut self.transaction_sender) };
+
+        // This joins and awaits the thread
+        unsafe { ManuallyDrop::take(&mut self.worker_thread) }
+            .join()
+            .unwrap();
     }
 }

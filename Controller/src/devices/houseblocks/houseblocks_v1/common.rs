@@ -1,5 +1,5 @@
 use anyhow::{bail, Error};
-use crc_all::Crc;
+use crc::{Crc, CRC_16_MODBUS};
 use std::{convert::TryInto, fmt, slice};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -146,11 +146,7 @@ impl Frame {
     pub const CHAR_BEGIN: u8 = b'\n';
     pub const CHAR_END: u8 = b'\r';
 
-    const CRC_POLY: u16 = 0x8005;
-    const CRC_WIDTH: usize = 16;
-    const CRC_INITIAL: u16 = 0xFFFF;
-    const CRC_FINAL_XOR: u16 = 0x0000;
-    const CRC_REFLECT: bool = true;
+    const CRC_HASHER: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
 
     const CHAR_DIRECTION_NORMAL_IN: u8 = b'<';
     const CHAR_DIRECTION_NORMAL_OUT: u8 = b'>';
@@ -168,18 +164,12 @@ impl Frame {
             &Self::CHAR_DIRECTION_NORMAL_OUT
         };
 
-        let mut crc16 = Crc::<u16>::new(
-            Self::CRC_POLY,
-            Self::CRC_WIDTH,
-            Self::CRC_INITIAL,
-            Self::CRC_FINAL_XOR,
-            Self::CRC_REFLECT,
-        );
+        let mut crc16 = Self::CRC_HASHER.digest();
         crc16.update(slice::from_ref(char_direction));
         crc16.update(address.device_type.as_bytes());
         crc16.update(address.serial.as_bytes());
         crc16.update(payload.as_bytes());
-        let crc16 = crc16.finish();
+        let crc16 = crc16.finalize();
         let crc16 = hex::encode_upper(crc16.to_be_bytes());
         let crc16 = crc16.as_bytes();
 
@@ -239,18 +229,12 @@ impl Frame {
             bail!("invalid end character");
         }
 
-        let mut crc16_expected = Crc::<u16>::new(
-            Self::CRC_POLY,
-            Self::CRC_WIDTH,
-            Self::CRC_INITIAL,
-            Self::CRC_FINAL_XOR,
-            Self::CRC_REFLECT,
-        );
+        let mut crc16_expected = Self::CRC_HASHER.digest();
         crc16_expected.update(slice::from_ref(&frame[1]));
         crc16_expected.update(address.device_type.as_bytes());
         crc16_expected.update(address.serial.as_bytes());
         crc16_expected.update(payload.as_bytes());
-        let crc16_expected = crc16_expected.finish();
+        let crc16_expected = crc16_expected.finalize();
 
         if crc16_expected != crc16_received {
             bail!(
@@ -295,7 +279,7 @@ mod tests_frame {
             )
             .as_ref(),
             &b"\n}000690083461A17F#\r"[..]
-        )
+        );
     }
     #[test]
     fn in_parse_1() {
