@@ -1,30 +1,38 @@
 use super::Base;
-use crate::util::{
-    atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
-    waker_stream,
-};
+use crate::util::atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease};
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::ops::Deref;
 
 #[derive(Debug)]
-struct State<T: Clone + Serialize + Send + Sync + 'static> {
+struct State<T>
+where
+    T: Clone + Serialize + Send + Sync + 'static,
+{
     value_last: Option<T>,
     user_version: usize,
     device_version: usize,
 }
 
 #[derive(Debug)]
-struct Inner<T: Clone + Serialize + Send + Sync + 'static> {
+struct Inner<T>
+where
+    T: Clone + Serialize + Send + Sync + 'static,
+{
     state: Mutex<State<T>>,
-    sse_aggregated_waker: waker_stream::mpmc::Sender,
 }
 
 #[derive(Debug)]
-pub struct Property<T: Clone + Serialize + Send + Sync + 'static> {
+pub struct Property<T>
+where
+    T: Clone + Serialize + Send + Sync + 'static,
+{
     inner: AtomicCellErased<Inner<T>>,
 }
-impl<T: Clone + Serialize + Send + Sync + 'static> Property<T> {
+impl<T> Property<T>
+where
+    T: Clone + Serialize + Send + Sync + 'static,
+{
     pub fn new() -> Self {
         let state = State {
             value_last: None,
@@ -33,12 +41,7 @@ impl<T: Clone + Serialize + Send + Sync + 'static> Property<T> {
         };
         let state = Mutex::new(state);
 
-        let sse_aggregated_waker = waker_stream::mpmc::Sender::new();
-
-        let inner = Inner {
-            state,
-            sse_aggregated_waker,
-        };
+        let inner = Inner { state };
         let inner = AtomicCellErased::new(inner);
 
         Self { inner }
@@ -71,13 +74,19 @@ impl<T: Clone + Serialize + Send + Sync + 'static> Property<T> {
         Some(pending)
     }
 }
-impl<T: Clone + Serialize + Send + Sync + 'static> Base for Property<T> {}
+impl<T> Base for Property<T> where T: Clone + Serialize + Send + Sync + 'static {}
 
 #[derive(Debug)]
-pub struct Sink<T: Clone + Serialize + Send + Sync + 'static> {
+pub struct Sink<T>
+where
+    T: Clone + Serialize + Send + Sync + 'static,
+{
     inner: AtomicCellErasedLease<Inner<T>>,
 }
-impl<T: Clone + Serialize + Send + Sync + 'static> Sink<T> {
+impl<T> Sink<T>
+where
+    T: Clone + Serialize + Send + Sync + 'static,
+{
     fn new(parent: &Property<T>) -> Self {
         let inner = parent.inner.lease();
         Self { inner }
@@ -95,8 +104,6 @@ impl<T: Clone + Serialize + Send + Sync + 'static> Sink<T> {
 
         drop(state);
 
-        self.inner.sse_aggregated_waker.wake();
-
         true
     }
 }
@@ -113,8 +120,6 @@ impl<'p, T: Clone + Serialize + Send + Sync + 'static> Pending<'p, T> {
         state.device_version = self.version;
 
         drop(state);
-
-        self.property.inner.sse_aggregated_waker.wake();
     }
 }
 impl<'p, T> Deref for Pending<'p, T>

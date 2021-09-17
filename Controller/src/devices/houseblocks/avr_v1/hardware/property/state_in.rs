@@ -1,28 +1,36 @@
 use super::Base;
-use crate::util::{
-    atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
-    waker_stream,
-};
+use crate::util::atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease};
 use parking_lot::Mutex;
 use serde::Serialize;
 
 #[derive(Debug)]
-struct State<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> {
+struct State<T>
+where
+    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+{
     value: Option<T>,
     user_pending: bool,
 }
 
 #[derive(Debug)]
-struct Inner<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> {
+struct Inner<T>
+where
+    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+{
     state: Mutex<State<T>>,
-    sse_aggregated_waker: waker_stream::mpmc::Sender,
 }
 
 #[derive(Debug)]
-pub struct Property<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> {
+pub struct Property<T>
+where
+    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+{
     inner: AtomicCellErased<Inner<T>>,
 }
-impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Property<T> {
+impl<T> Property<T>
+where
+    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+{
     pub fn new() -> Self {
         let state = State {
             value: None,
@@ -30,11 +38,7 @@ impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Property<T> 
         };
         let state = Mutex::new(state);
 
-        let sse_aggregated_waker = waker_stream::mpmc::Sender::new();
-        let inner = Inner {
-            state,
-            sse_aggregated_waker,
-        };
+        let inner = Inner { state };
         let inner = AtomicCellErased::new(inner);
 
         Self { inner }
@@ -79,8 +83,6 @@ impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Property<T> 
 
         drop(state);
 
-        self.inner.sse_aggregated_waker.wake();
-
         true
     }
     pub fn device_reset(&self) -> bool {
@@ -95,18 +97,22 @@ impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Property<T> 
 
         drop(state);
 
-        self.inner.sse_aggregated_waker.wake();
-
         true
     }
 }
-impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Base for Property<T> {}
+impl<T> Base for Property<T> where T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static {}
 
 #[derive(Debug)]
-pub struct Stream<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> {
+pub struct Stream<T>
+where
+    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+{
     inner: AtomicCellErasedLease<Inner<T>>,
 }
-impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
+impl<T> Stream<T>
+where
+    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+{
     fn new(parent: &Property<T>) -> Self {
         let inner = parent.inner.lease();
         Self { inner }
@@ -123,8 +129,6 @@ impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
         state.user_pending = false;
 
         drop(state);
-
-        self.inner.sse_aggregated_waker.wake();
 
         Some(value)
     }

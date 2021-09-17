@@ -1,8 +1,5 @@
 use super::Base;
-use crate::util::{
-    atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
-    waker_stream,
-};
+use crate::util::atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease};
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::mem::replace;
@@ -25,7 +22,6 @@ where
     E: Clone + Serialize + Send + Sync + 'static,
 {
     state: Mutex<State<S, E>>,
-    sse_aggregated_waker: waker_stream::mpmc::Sender,
 }
 
 #[derive(Debug)]
@@ -49,11 +45,7 @@ where
         };
         let state = Mutex::new(state);
 
-        let sse_aggregated_waker = waker_stream::mpmc::Sender::new();
-        let inner = Inner {
-            state,
-            sse_aggregated_waker,
-        };
+        let inner = Inner { state };
         let inner = AtomicCellErased::new(inner);
 
         Self { inner }
@@ -96,8 +88,6 @@ where
 
         drop(inner_state);
 
-        self.inner.sse_aggregated_waker.wake();
-
         true
     }
     pub fn device_reset(&self) -> bool {
@@ -108,8 +98,6 @@ where
         inner_state.user_pending = true;
 
         drop(inner_state);
-
-        self.inner.sse_aggregated_waker.wake();
 
         true
     }
@@ -151,8 +139,6 @@ where
         state_inner.user_pending = false;
 
         drop(state_inner);
-
-        self.inner.sse_aggregated_waker.wake();
 
         Some((state, events))
     }

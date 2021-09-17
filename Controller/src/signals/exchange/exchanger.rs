@@ -80,12 +80,12 @@ impl<'d> Exchanger<'d> {
         for ((target_device_id_signal_id, state_target_remote_base), source) in
             self.connections_running.state.iter_targets()
         {
-            let value = match source {
-                Some((_, state_source_remote_base)) => state_source_remote_base.get_last(),
-                None => None,
+            let values = match source {
+                Some((_, state_source_remote_base)) => state_source_remote_base.take_pending(),
+                None => vec![None].into_boxed_slice(),
             };
 
-            if state_target_remote_base.set(&[value]) {
+            if state_target_remote_base.set(&values) {
                 target_device_ids.insert(target_device_id_signal_id.device_id);
             }
         }
