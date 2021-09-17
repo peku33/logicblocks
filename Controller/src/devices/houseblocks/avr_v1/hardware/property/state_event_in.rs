@@ -157,7 +157,7 @@ where
         Some((state, events))
     }
 
-    pub fn get_last(&self) -> Option<S> {
+    pub fn peek_last(&self) -> Option<S> {
         let state_inner = self.inner.state.lock();
 
         let value = state_inner.state.clone();

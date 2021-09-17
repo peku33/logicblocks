@@ -30,7 +30,7 @@ impl<V: Value + Clone> Signal<V> {
         }
     }
 
-    pub fn get_last(&self) -> Option<V> {
+    pub fn peek_last(&self) -> Option<V> {
         self.inner.read().last.clone()
     }
 
@@ -100,7 +100,7 @@ impl<V: Value + Clone> StateSourceRemoteBase for Signal<V> {
         pending
     }
 
-    fn get_last(&self) -> Option<Box<dyn ValueBase>> {
+    fn peek_last(&self) -> Option<Box<dyn ValueBase>> {
         self.inner
             .read()
             .last

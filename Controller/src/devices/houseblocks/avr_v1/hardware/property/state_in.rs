@@ -129,7 +129,7 @@ impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
         Some(value)
     }
 
-    pub fn get_last(&self) -> Option<T> {
+    pub fn peek_last(&self) -> Option<T> {
         let state = self.inner.state.lock();
 
         let value = state.value.clone();

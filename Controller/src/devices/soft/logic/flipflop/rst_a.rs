@@ -87,10 +87,9 @@ impl Device {
         }
     }
     pub fn t(&self) {
-        if self
-            .signal_output
-            .set_one(Some(!self.signal_output.get_last().unwrap()))
-        {
+        let value = self.signal_output.peek_last().unwrap();
+
+        if self.signal_output.set_one(Some(!value)) {
             self.signal_sources_changed_waker.wake();
             self.gui_summary_waker.wake();
         }
@@ -151,7 +150,7 @@ struct GuiSummary {
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
         let value = GuiSummary {
-            value: self.signal_output.get_last().unwrap(),
+            value: self.signal_output.peek_last().unwrap(),
         };
         let value = Box::new(value);
         value

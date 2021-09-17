@@ -205,7 +205,7 @@ pub mod logic {
                 temperature: self
                     .properties_remote
                     .temperature
-                    .get_last()
+                    .peek_last()
                     .map(|temperature| temperature.temperature())
                     .flatten(),
             };

@@ -48,7 +48,7 @@ impl Device {
         let mut inner_waker_receiver = self.inner_waker.receiver();
 
         loop {
-            let state_next = self.signal_input.get_last();
+            let state_next = self.signal_input.peek_last();
 
             let delay = match state_next {
                 Some(true) => self.configuration.delay_raising,

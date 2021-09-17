@@ -62,7 +62,7 @@ impl<V: Value + Clone> Signal<V> {
 
     // Does not clear pending flag
     // Returns last value
-    pub fn get_last(&self) -> Option<V> {
+    pub fn peek_last(&self) -> Option<V> {
         self.value_pending.read().value.clone()
     }
 }

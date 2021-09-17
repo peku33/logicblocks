@@ -109,7 +109,7 @@ impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Sink<T> {
         true
     }
 
-    pub fn get_last(&self) -> T {
+    pub fn peek_last(&self) -> T {
         let state = self.inner.state.lock();
 
         let value = state.value.clone();

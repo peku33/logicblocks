@@ -15,7 +15,7 @@ pub trait Base: Send + Sync {
 
 pub trait StateSourceRemoteBase: RemoteBase {
     fn take_pending(&self) -> Box<[Option<Box<dyn ValueBase>>]>;
-    fn get_last(&self) -> Option<Box<dyn ValueBase>>;
+    fn peek_last(&self) -> Option<Box<dyn ValueBase>>;
 }
 pub trait StateTargetRemoteBase: RemoteBase {
     #[must_use = "use this value to wake signals change notifier"]
