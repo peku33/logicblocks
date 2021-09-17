@@ -1,6 +1,6 @@
 use anyhow::{ensure, Error};
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::{cmp::Ordering, convert::TryFrom};
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 #[serde(try_from = "f64")]
@@ -19,6 +19,16 @@ impl Ratio {
 
     pub fn as_f64(&self) -> f64 {
         self.0
+    }
+}
+impl Eq for Ratio {}
+#[allow(clippy::derive_ord_xor_partial_ord)]
+impl Ord for Ratio {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 impl TryFrom<f64> for Ratio {

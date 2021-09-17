@@ -8,9 +8,9 @@ use std::{
 #[derive(Debug)]
 pub struct ManyFromOne<S, SD, T, TD>
 where
-    S: Copy + Eq + PartialEq + hash::Hash + fmt::Debug,
+    S: Copy + PartialEq + Eq + hash::Hash + fmt::Debug,
     SD: fmt::Debug,
-    T: Copy + Eq + PartialEq + hash::Hash + fmt::Debug,
+    T: Copy + PartialEq + Eq + hash::Hash + fmt::Debug,
     TD: fmt::Debug,
 {
     sources: HashMap<S, (SD, HashSet<T>)>,
@@ -18,9 +18,9 @@ where
 }
 impl<S, SD, T, TD> ManyFromOne<S, SD, T, TD>
 where
-    S: Copy + Eq + PartialEq + hash::Hash + fmt::Debug,
+    S: Copy + PartialEq + Eq + hash::Hash + fmt::Debug,
     SD: fmt::Debug,
-    T: Copy + Eq + PartialEq + hash::Hash + fmt::Debug,
+    T: Copy + PartialEq + Eq + hash::Hash + fmt::Debug,
     TD: fmt::Debug,
 {
     pub fn new() -> Self {
@@ -127,9 +127,9 @@ where
 #[derive(Debug)]
 pub struct ManyFromMany<S, SD, T, TD>
 where
-    S: Copy + Eq + PartialEq + hash::Hash + fmt::Debug,
+    S: Copy + PartialEq + Eq + hash::Hash + fmt::Debug,
     SD: fmt::Debug,
-    T: Copy + Eq + PartialEq + hash::Hash + fmt::Debug,
+    T: Copy + PartialEq + Eq + hash::Hash + fmt::Debug,
     TD: fmt::Debug,
 {
     sources: HashMap<S, (SD, HashSet<T>)>,
@@ -137,9 +137,9 @@ where
 }
 impl<S, SD, T, TD> ManyFromMany<S, SD, T, TD>
 where
-    S: Copy + Eq + PartialEq + hash::Hash + fmt::Debug,
+    S: Copy + PartialEq + Eq + hash::Hash + fmt::Debug,
     SD: fmt::Debug,
-    T: Copy + Eq + PartialEq + hash::Hash + fmt::Debug,
+    T: Copy + PartialEq + Eq + hash::Hash + fmt::Debug,
     TD: fmt::Debug,
 {
     pub fn new() -> Self {

@@ -11,7 +11,6 @@ use crate::{
         runtime::{Exited, Runnable},
         waker_stream,
     },
-    web::uri_cursor,
 };
 use async_trait::async_trait;
 use futures::{future::FutureExt, join, stream::StreamExt};
@@ -28,9 +27,6 @@ pub trait Device: Runnable + signals::Device + Sync + Send + fmt::Debug {
     fn class() -> &'static str;
 
     fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
-        None
-    }
-    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
         None
     }
 

@@ -1,22 +1,16 @@
 use super::Base;
-use crate::{
-    util::{
-        atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
-        waker_stream,
-    },
-    web::{self, sse_aggregated, uri_cursor},
+use crate::util::{
+    atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
+    waker_stream,
 };
-use futures::future::{BoxFuture, FutureExt};
-use maplit::hashmap;
 use parking_lot::Mutex;
 use serde::Serialize;
-use serde_json::json;
 use std::mem::replace;
 
 #[derive(Debug)]
 struct State<S, E>
 where
-    S: PartialEq + Clone + Serialize + Send + Sync + 'static,
+    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     state: Option<S>,
@@ -27,7 +21,7 @@ where
 #[derive(Debug)]
 struct Inner<S, E>
 where
-    S: PartialEq + Clone + Serialize + Send + Sync + 'static,
+    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     state: Mutex<State<S, E>>,
@@ -37,14 +31,14 @@ where
 #[derive(Debug)]
 pub struct Property<S, E>
 where
-    S: PartialEq + Clone + Serialize + Send + Sync + 'static,
+    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     inner: AtomicCellErased<Inner<S, E>>,
 }
 impl<S, E> Property<S, E>
 where
-    S: PartialEq + Clone + Serialize + Send + Sync + 'static,
+    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     pub fn new() -> Self {
@@ -122,70 +116,22 @@ where
 }
 impl<S, E> Base for Property<S, E>
 where
-    S: PartialEq + Clone + Serialize + Send + Sync + 'static,
+    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
-}
-impl<S, E> uri_cursor::Handler for Property<S, E>
-where
-    S: PartialEq + Clone + Serialize + Send + Sync + 'static,
-    E: Clone + Serialize + Send + Sync + 'static,
-{
-    fn handle(
-        &self,
-        request: web::Request,
-        uri_cursor: &uri_cursor::UriCursor,
-    ) -> BoxFuture<'static, web::Response> {
-        match uri_cursor {
-            uri_cursor::UriCursor::Terminal => match *request.method() {
-                http::Method::GET => {
-                    let state_inner = self.inner.state.lock();
-
-                    let value = state_inner.state.clone();
-                    let user_pending = state_inner.user_pending;
-
-                    drop(state_inner);
-
-                    async move {
-                        let response = json! {{
-                            "value": value,
-                            "user_pending": user_pending
-                        }};
-
-                        web::Response::ok_json(response)
-                    }
-                    .boxed()
-                }
-                _ => async move { web::Response::error_405() }.boxed(),
-            },
-            _ => async move { web::Response::error_404() }.boxed(),
-        }
-    }
-}
-impl<S, E> sse_aggregated::NodeProvider for Property<S, E>
-where
-    S: PartialEq + Clone + Serialize + Send + Sync + 'static,
-    E: Clone + Serialize + Send + Sync + 'static,
-{
-    fn node(&self) -> sse_aggregated::Node {
-        sse_aggregated::Node {
-            terminal: Some(self.inner.sse_aggregated_waker.receiver_factory()),
-            children: hashmap! {},
-        }
-    }
 }
 
 #[derive(Debug)]
 pub struct Stream<S, E>
 where
-    S: PartialEq + Clone + Serialize + Send + Sync + 'static,
+    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     inner: AtomicCellErasedLease<Inner<S, E>>,
 }
 impl<S, E> Stream<S, E>
 where
-    S: PartialEq + Clone + Serialize + Send + Sync + 'static,
+    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     fn new(parent: &Property<S, E>) -> Self {

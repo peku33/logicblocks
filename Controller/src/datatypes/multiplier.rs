@@ -1,7 +1,10 @@
 use anyhow::{ensure, Error};
 use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
 use serde::{Deserialize, Serialize};
-use std::convert::{TryFrom, TryInto};
+use std::{
+    cmp::Ordering,
+    convert::{TryFrom, TryInto},
+};
 
 // FIXME: Sub must ensure the value does not go sub-0
 #[derive(
@@ -32,6 +35,16 @@ impl Multiplier {
     }
     pub const fn one() -> Self {
         Self(1.0)
+    }
+}
+impl Eq for Multiplier {}
+#[allow(clippy::derive_ord_xor_partial_ord)]
+impl Ord for Multiplier {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 impl TryFrom<f64> for Multiplier {

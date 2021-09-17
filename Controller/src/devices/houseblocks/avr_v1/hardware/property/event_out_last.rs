@@ -1,16 +1,10 @@
 use super::Base;
-use crate::{
-    util::{
-        atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
-        waker_stream,
-    },
-    web::{self, sse_aggregated, uri_cursor},
+use crate::util::{
+    atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
+    waker_stream,
 };
-use futures::future::{BoxFuture, FutureExt};
-use maplit::hashmap;
 use parking_lot::Mutex;
 use serde::Serialize;
-use serde_json::json;
 use std::ops::Deref;
 
 #[derive(Debug)]
@@ -78,44 +72,6 @@ impl<T: Clone + Serialize + Send + Sync + 'static> Property<T> {
     }
 }
 impl<T: Clone + Serialize + Send + Sync + 'static> Base for Property<T> {}
-impl<T: Clone + Serialize + Send + Sync + 'static> uri_cursor::Handler for Property<T> {
-    fn handle(
-        &self,
-        request: web::Request,
-        uri_cursor: &uri_cursor::UriCursor,
-    ) -> BoxFuture<'static, web::Response> {
-        match uri_cursor {
-            uri_cursor::UriCursor::Terminal => match *request.method() {
-                http::Method::GET => {
-                    let state = self.inner.state.lock();
-
-                    let device_pending = state.user_version > state.device_version;
-
-                    drop(state);
-
-                    async move {
-                        let response = json! {{
-                            "device_pending": device_pending
-                        }};
-
-                        web::Response::ok_json(response)
-                    }
-                    .boxed()
-                }
-                _ => async move { web::Response::error_405() }.boxed(),
-            },
-            _ => async move { web::Response::error_404() }.boxed(),
-        }
-    }
-}
-impl<T: Clone + Serialize + Send + Sync + 'static> sse_aggregated::NodeProvider for Property<T> {
-    fn node(&self) -> sse_aggregated::Node {
-        sse_aggregated::Node {
-            terminal: Some(self.inner.sse_aggregated_waker.receiver_factory()),
-            children: hashmap! {},
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct Sink<T: Clone + Serialize + Send + Sync + 'static> {

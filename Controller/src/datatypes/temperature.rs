@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{cmp::Ordering, fmt};
 
 pub enum Unit {
     Kelvin,
@@ -33,6 +33,16 @@ impl Temperature {
             Unit::Celsius => self.kelvin - 273.15,
             Unit::Fahrenheit => self.kelvin * 9.0 / 5.0 - 459.67,
         }
+    }
+}
+impl Eq for Temperature {}
+#[allow(clippy::derive_ord_xor_partial_ord)]
+impl Ord for Temperature {
+    fn cmp(
+        &self,
+        other: &Self,
+    ) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 impl fmt::Display for Temperature {

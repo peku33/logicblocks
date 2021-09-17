@@ -1,34 +1,28 @@
 use super::Base;
-use crate::{
-    util::{
-        atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
-        waker_stream,
-    },
-    web::{self, sse_aggregated, uri_cursor},
+use crate::util::{
+    atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease},
+    waker_stream,
 };
-use futures::future::{BoxFuture, FutureExt};
-use maplit::hashmap;
 use parking_lot::Mutex;
 use serde::Serialize;
-use serde_json::json;
 
 #[derive(Debug)]
-struct State<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
+struct State<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> {
     value: Option<T>,
     user_pending: bool,
 }
 
 #[derive(Debug)]
-struct Inner<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
+struct Inner<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> {
     state: Mutex<State<T>>,
     sse_aggregated_waker: waker_stream::mpmc::Sender,
 }
 
 #[derive(Debug)]
-pub struct Property<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
+pub struct Property<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> {
     inner: AtomicCellErased<Inner<T>>,
 }
-impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
+impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Property<T> {
     pub fn new() -> Self {
         let state = State {
             value: None,
@@ -106,55 +100,13 @@ impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Property<T> {
         true
     }
 }
-impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Base for Property<T> {}
-impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> uri_cursor::Handler for Property<T> {
-    fn handle(
-        &self,
-        request: web::Request,
-        uri_cursor: &uri_cursor::UriCursor,
-    ) -> BoxFuture<'static, web::Response> {
-        match uri_cursor {
-            uri_cursor::UriCursor::Terminal => match *request.method() {
-                http::Method::GET => {
-                    let state = self.inner.state.lock();
-
-                    let value = state.value.clone();
-                    let user_pending = state.user_pending;
-
-                    drop(state);
-
-                    async move {
-                        let response = json! {{
-                            "value": value,
-                            "user_pending": user_pending
-                        }};
-
-                        web::Response::ok_json(response)
-                    }
-                    .boxed()
-                }
-                _ => async move { web::Response::error_405() }.boxed(),
-            },
-            _ => async move { web::Response::error_404() }.boxed(),
-        }
-    }
-}
-impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> sse_aggregated::NodeProvider
-    for Property<T>
-{
-    fn node(&self) -> sse_aggregated::Node {
-        sse_aggregated::Node {
-            terminal: Some(self.inner.sse_aggregated_waker.receiver_factory()),
-            children: hashmap! {},
-        }
-    }
-}
+impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Base for Property<T> {}
 
 #[derive(Debug)]
-pub struct Stream<T: PartialEq + Clone + Serialize + Send + Sync + 'static> {
+pub struct Stream<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> {
     inner: AtomicCellErasedLease<Inner<T>>,
 }
-impl<T: PartialEq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
+impl<T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static> Stream<T> {
     fn new(parent: &Property<T>) -> Self {
         let inner = parent.inner.lease();
         Self { inner }

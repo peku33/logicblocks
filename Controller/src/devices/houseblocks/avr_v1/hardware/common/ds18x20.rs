@@ -4,7 +4,7 @@ use anyhow::Error;
 use serde::Serialize;
 use std::mem::transmute;
 
-#[derive(Clone, Copy, PartialEq, Debug, Serialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
 pub enum SensorType {
     Empty,
     Invalid,
@@ -12,7 +12,7 @@ pub enum SensorType {
     B,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug, Serialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
 pub struct State {
     sensor_type: SensorType,
     reset_count: u8,
