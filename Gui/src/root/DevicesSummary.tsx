@@ -6,7 +6,7 @@ import styled from "styled-components";
 import useAsyncEffect from "use-async-effect";
 import DeviceSummary from "./DeviceSummary";
 
-const DevicesSummary: React.FC = () => {
+const DevicesSummary: React.VFC = () => {
   const deviceIds = useDeviceIds();
 
   if (deviceIds === undefined) {
@@ -23,7 +23,6 @@ const DevicesSummary: React.FC = () => {
     </DevicesList>
   );
 };
-
 export default DevicesSummary;
 
 function useDeviceIds(): number[] | undefined {

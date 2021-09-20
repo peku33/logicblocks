@@ -1,11 +1,8 @@
-import "minireset.css";
-import React from "react";
+import GlobalStyles from "GlobalStyles";
 import { BrowserRouter } from "react-router-dom";
-import { createGlobalStyle } from "styled-components";
-import "typeface-open-sans";
 import Body from "./root/Body";
 
-const App: React.FC = () => {
+const App: React.VFC = () => {
   return (
     <BrowserRouter>
       <GlobalStyles />
@@ -13,13 +10,4 @@ const App: React.FC = () => {
     </BrowserRouter>
   );
 };
-
 export default App;
-
-const GlobalStyles = createGlobalStyle`
-  html,
-  body {
-    font-family: "Open Sans", sans-serif;
-    font-size: 11pt;
-  }
-`;

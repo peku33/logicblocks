@@ -1,6 +1,4 @@
-import React from "react";
-
-export const SnapshotDeviceInner: React.FC<{
+export const SnapshotDeviceInner: React.VFC<{
   baseUrl: string;
   lastUpdated: Date;
 }> = (props) => {
@@ -12,6 +10,6 @@ export const SnapshotDeviceInner: React.FC<{
     </a>
   );
 };
-export const SnapshotDeviceInnerNone: React.FC = () => {
+export const SnapshotDeviceInnerNone: React.VFC = () => {
   return null;
 };
