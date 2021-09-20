@@ -6,18 +6,18 @@ pub mod ftdi_stub;
 
 pub mod ftdi;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Bits {
     Bits7,
     Bits8,
 }
-#[derive(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum StopBits {
     StopBits1,
     StopBits15,
     StopBits2,
 }
-#[derive(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Parity {
     None,
     Odd,
@@ -26,7 +26,7 @@ pub enum Parity {
     Space,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Configuration {
     pub baud_rate: usize,
     pub bits: Bits,
