@@ -79,28 +79,21 @@ async fn main() -> Result<(), Error> {
     });
 
     // wait for exit flag
-    let exit_flag_runner = ctrl_c().map_ok(|()| {
-        log::info!("received exit signal, exiting");
-        exit_flag_sender.signal();
-        Exited
-    });
+    let exit_flag_runner = ctrl_c()
+        .map_ok(|()| {
+            log::info!("received exit signal, exiting");
+            exit_flag_sender.signal();
+            Exited
+        })
+        .unwrap_or_else(|error| panic!("ctrl_c error: {:?}", error));
 
     // orchestrate all
-    let (
-        channel_runner_result,
-        segment_deleter_result,
-        detection_level_set_result,
-        exit_flag_result,
-    ) = join!(
+    let _: (Exited, (), (), Exited) = join!(
         channel_runner,
         segment_deleter_runner,
         detection_level_set_runner,
         exit_flag_runner,
     );
-    let _: Exited = channel_runner_result;
-    let _: () = segment_deleter_result;
-    let _: () = detection_level_set_result;
-    let _: Exited = exit_flag_result.unwrap();
 
     Ok(())
 }

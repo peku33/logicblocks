@@ -68,18 +68,16 @@ async fn main() -> Result<(), Error> {
         .then(async move |()| Exited);
 
     // exit flag runner
-    let exit_flag_runner = ctrl_c().map_ok(|()| {
-        log::info!("received exit signal, exiting");
-        exit_flag_sender.signal();
-        Exited
-    });
+    let exit_flag_runner = ctrl_c()
+        .map_ok(|()| {
+            log::info!("received exit signal, exiting");
+            exit_flag_sender.signal();
+            Exited
+        })
+        .unwrap_or_else(|error| panic!("ctrl_c error: {:?}", error));
 
     // orchestrate all
-    let (recorder_result, forwarder_result, exit_flag_result) =
-        join!(recorder_runner, forwarder_runner, exit_flag_runner);
-    let _: Exited = recorder_result;
-    let _: Exited = forwarder_result;
-    let _: Exited = exit_flag_result.unwrap();
+    let _: (Exited, Exited, Exited) = join!(recorder_runner, forwarder_runner, exit_flag_runner);
 
     Ok(())
 }
