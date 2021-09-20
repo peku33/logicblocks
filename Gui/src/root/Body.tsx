@@ -1,12 +1,11 @@
 import Colors from "components/common/Colors";
-import React from "react";
 import { matchPath, Redirect, Route, Switch, useLocation } from "react-router";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import DevicesSummary from "./DevicesSummary";
 import Error404 from "./Error404";
 
-const Body: React.FC = () => {
+const Body: React.VFC = () => {
   return (
     <Layout>
       <TopBar>
@@ -30,7 +29,6 @@ const Body: React.FC = () => {
     </Layout>
   );
 };
-
 export default Body;
 
 const Layout = styled.div`
@@ -42,7 +40,7 @@ const TopBar = styled.div`
   border-bottom: solid 1px ${Colors.GREY_LIGHTEST};
 `;
 const Menu = styled.div``;
-const MenuItem: React.FC<{
+const MenuItem: React.VFC<{
   path: string;
   exact?: boolean;
   strict?: boolean;

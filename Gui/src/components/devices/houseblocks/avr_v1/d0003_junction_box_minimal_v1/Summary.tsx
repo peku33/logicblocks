@@ -1,14 +1,12 @@
 import { kelvinToCelsius, kelvinToFahrenheit } from "lib/Temperature";
-import React from "react";
 import styled from "styled-components";
-import makeAvrV1Summary from "../Summary";
 
 interface DeviceState {
   temperature: number;
 }
 
-const Summary: React.FC<{
-  state?: DeviceState;
+const Summary: React.VFC<{
+  state: DeviceState | undefined;
 }> = (props) => {
   const { state } = props;
   return (
@@ -25,8 +23,7 @@ const Summary: React.FC<{
     </Wrapper>
   );
 };
-
-export default makeAvrV1Summary(Summary);
+export default Summary;
 
 const Wrapper = styled.h1`
   display: flex;

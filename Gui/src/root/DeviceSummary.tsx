@@ -1,6 +1,6 @@
 import Colors from "components/common/Colors";
 import MediaQueries from "components/common/MediaQueries";
-import { getSummaryComponent } from "components/devices/Factory";
+import { getByClass } from "components/devices/SummaryManagedFactory";
 import { getJson } from "lib/Api";
 import React, { useState } from "react";
 import { endpointBuild } from "services/LogicDevicesRunner";
@@ -12,7 +12,7 @@ interface DeviceData {
   class: string;
 }
 
-const DeviceSummary: React.FC<{
+const DeviceSummary: React.VFC<{
   deviceId: number;
 }> = (props) => {
   const { deviceId } = props;
@@ -23,7 +23,7 @@ const DeviceSummary: React.FC<{
     return null; // TODO
   }
 
-  const Component = getSummaryComponent(deviceData.class);
+  const Component = getByClass(deviceData.class);
 
   return (
     <Wrapper>
@@ -39,7 +39,6 @@ const DeviceSummary: React.FC<{
     </Wrapper>
   );
 };
-
 export default DeviceSummary;
 
 function useDeviceContext(deviceId: number): DeviceData | undefined {

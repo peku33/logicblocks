@@ -5,16 +5,14 @@ import {
   SnapshotDeviceInner,
   SnapshotDeviceInnerNone,
 } from "components/devices/soft/surveillance/ipc/SnapshotDeviceInner";
-import { urlBuild } from "lib/Api";
 import React from "react";
-import { deviceEndpointBuild, useDeviceSummary } from "services/LogicDevicesRunner";
 import styled from "styled-components";
 
-interface DeviceSummaryRtspUrls {
+export interface DeviceSummaryRtspUrls {
   main: string;
   sub: string;
 }
-interface DeviceSummaryEvents {
+export interface DeviceSummaryEvents {
   camera_failure: boolean;
   video_loss: boolean;
   tampering_detection: boolean;
@@ -23,36 +21,34 @@ interface DeviceSummaryEvents {
   field_detection: boolean;
 }
 
-interface DeviceSummaryInitializing {
+export interface DeviceSummaryInitializing {
   state: "Initializing";
 }
-interface DeviceSummaryRunning {
+export interface DeviceSummaryRunning {
   state: "Running";
   snapshot_updated: string | null;
   rtsp_urls: DeviceSummaryRtspUrls;
   events: DeviceSummaryEvents;
 }
-interface DeviceSummaryError {
+export interface DeviceSummaryError {
   state: "Error";
 }
-type DeviceSummary = DeviceSummaryInitializing | DeviceSummaryRunning | DeviceSummaryError;
-function isDeviceSummaryInitializing(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryInitializing {
+export type DeviceSummary = DeviceSummaryInitializing | DeviceSummaryRunning | DeviceSummaryError;
+export function isDeviceSummaryInitializing(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryInitializing {
   return deviceSummary.state === "Initializing";
 }
-function isDeviceSummaryRuning(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryRunning {
+export function isDeviceSummaryRunning(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryRunning {
   return deviceSummary.state === "Running";
 }
-function isDeviceSummaryError(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryError {
+export function isDeviceSummaryError(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryError {
   return deviceSummary.state === "Error";
 }
 
-const Summary: React.FC<{
-  deviceId: number;
-  deviceClass: string;
+const Summary: React.VFC<{
+  deviceSummary: DeviceSummary | undefined;
+  snapshotBaseUrl: string | undefined;
 }> = (props) => {
-  const { deviceId } = props;
-
-  const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
+  const { deviceSummary, snapshotBaseUrl } = props;
 
   return (
     <Wrapper>
@@ -63,7 +59,7 @@ const Summary: React.FC<{
               Initializing
             </Chip>
           ) : null}
-          {deviceSummary !== undefined && isDeviceSummaryRuning(deviceSummary) ? (
+          {deviceSummary !== undefined && isDeviceSummaryRunning(deviceSummary) ? (
             <Chip type={ChipType.OK} enabled={true}>
               Running
             </Chip>
@@ -75,7 +71,7 @@ const Summary: React.FC<{
           ) : null}
         </State>
         <Events>
-          {deviceSummary !== undefined && isDeviceSummaryRuning(deviceSummary) ? (
+          {deviceSummary !== undefined && isDeviceSummaryRunning(deviceSummary) ? (
             <ChipsGroup>
               <Chip type={ChipType.ERROR} enabled={deviceSummary.events.camera_failure}>
                 Camera failure
@@ -100,19 +96,17 @@ const Summary: React.FC<{
         </Events>
       </Header>
       <Snapshot>
-        {deviceSummary !== undefined &&
-        isDeviceSummaryRuning(deviceSummary) &&
+        {snapshotBaseUrl !== undefined &&
+        deviceSummary !== undefined &&
+        isDeviceSummaryRunning(deviceSummary) &&
         deviceSummary.snapshot_updated !== null ? (
-          <SnapshotDeviceInner
-            baseUrl={urlBuild(deviceEndpointBuild(deviceId, "/snapshot"))}
-            lastUpdated={new Date(deviceSummary.snapshot_updated)}
-          />
+          <SnapshotDeviceInner baseUrl={snapshotBaseUrl} lastUpdated={new Date(deviceSummary.snapshot_updated)} />
         ) : (
           <SnapshotDeviceInnerNone />
         )}
       </Snapshot>
       <RtspUrls>
-        {deviceSummary !== undefined && isDeviceSummaryRuning(deviceSummary) ? (
+        {deviceSummary !== undefined && isDeviceSummaryRunning(deviceSummary) ? (
           <ButtonGroup>
             <ButtonLink target="_blank" href={deviceSummary.rtsp_urls.main}>
               Main Stream
@@ -126,7 +120,6 @@ const Summary: React.FC<{
     </Wrapper>
   );
 };
-
 export default Summary;
 
 const Wrapper = styled.div``;

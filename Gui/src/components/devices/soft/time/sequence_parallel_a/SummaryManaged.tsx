@@ -1,9 +1,9 @@
-import { devicePostEmpty, devicePostJsonEmpty, useDeviceSummary } from "services/LogicDevicesRunner";
 import { Button, ButtonGroup } from "components/common/Button";
 import { Chip, ChipType } from "components/common/Chips";
-import React from "react";
-import styled from "styled-components";
 import Colors from "components/common/Colors";
+import { SummaryManagedBase } from "components/devices/SummaryManaged";
+import { devicePostEmpty, devicePostJsonEmpty, useDeviceSummary } from "services/LogicDevicesRunner";
+import styled from "styled-components";
 
 interface DeviceSummaryChannelConfiguration {
   name: string;
@@ -163,10 +163,7 @@ interface DeviceSummary {
   state: DeviceSummaryState;
 }
 
-const Summary: React.FC<{
-  deviceId: number;
-  deviceClass: string;
-}> = (props) => {
+const SummaryManaged: SummaryManagedBase = (props) => {
   const { deviceId } = props;
 
   const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
@@ -481,8 +478,7 @@ const Summary: React.FC<{
     </Wrapper>
   );
 };
-
-export default Summary;
+export default SummaryManaged;
 
 const Wrapper = styled.div``;
 const Section = styled.div`

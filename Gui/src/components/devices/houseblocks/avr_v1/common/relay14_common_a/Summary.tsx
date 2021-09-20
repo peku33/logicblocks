@@ -1,8 +1,6 @@
 import { Chip, ChipType } from "components/common/Chips";
 import MediaQueries from "components/common/MediaQueries";
-import React from "react";
 import styled from "styled-components";
-import makeAvrV1Summary from "../../Summary";
 
 const OUTPUT_COUNT = 14;
 
@@ -10,7 +8,7 @@ interface DeviceState {
   values: boolean[];
 }
 
-const Summary: React.FC<{
+const Summary: React.VFC<{
   state?: DeviceState;
 }> = (props) => {
   const { state } = props;
@@ -24,8 +22,7 @@ const Summary: React.FC<{
     </RelaysGrid>
   );
 };
-
-export default makeAvrV1Summary(Summary);
+export default Summary;
 
 const RelaysGrid = styled.div`
   display: grid;

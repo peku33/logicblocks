@@ -1,5 +1,4 @@
 import { Chip, ChipType } from "components/common/Chips";
-import React from "react";
 import styled from "styled-components";
 
 type DeviceState = "Error" | "Initializing" | "Running";
@@ -8,8 +7,8 @@ export interface State {
   device_state: DeviceState;
 }
 
-const Summary: React.FC<{
-  state?: State;
+const Summary: React.VFC<{
+  state: State | undefined;
 }> = (props) => {
   const { state } = props;
 
@@ -21,7 +20,6 @@ const Summary: React.FC<{
     </Wrapper>
   );
 };
-
 export default Summary;
 
 const Wrapper = styled.div`

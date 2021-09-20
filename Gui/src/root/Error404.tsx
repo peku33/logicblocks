@@ -1,7 +1,4 @@
-import React from "react";
-
-const Error404: React.FC = () => {
+const Error404: React.VFC = () => {
   return <span>Error404</span>;
 };
-
 export default Error404;

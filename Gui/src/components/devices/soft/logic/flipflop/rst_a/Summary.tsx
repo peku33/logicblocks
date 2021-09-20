@@ -1,45 +1,33 @@
 import { Button, ButtonGroup } from "components/common/Button";
 import React from "react";
-import { devicePostEmpty, useDeviceSummary } from "services/LogicDevicesRunner";
 import styled from "styled-components";
 
-interface DeviceSummary {
+export interface DeviceSummary {
   value: boolean;
 }
 
-const Summary: React.FC<{
-  deviceId: number;
-  deviceClass: string;
+const Summary: React.VFC<{
+  deviceSummary: DeviceSummary | undefined;
+  onR: () => void | undefined;
+  onS: () => void | undefined;
+  onT: () => void | undefined;
 }> = (props) => {
-  const { deviceId } = props;
-
-  const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
-
-  const doR = (): void => {
-    devicePostEmpty(deviceId, "/r");
-  };
-  const doS = (): void => {
-    devicePostEmpty(deviceId, "/s");
-  };
-  const doT = (): void => {
-    devicePostEmpty(deviceId, "/t");
-  };
+  const { deviceSummary, onR, onS, onT } = props;
 
   return (
     <Wrapper>
       <ButtonGroup>
-        <Button active={deviceSummary && deviceSummary.value} onClick={(): void => doS()}>
+        <Button active={deviceSummary && deviceSummary.value} onClick={onS !== undefined ? onS : () => ({})}>
           SET (On)
         </Button>
-        <Button onClick={(): void => doT()}>TOGGLE (Flip)</Button>
-        <Button active={deviceSummary && !deviceSummary.value} onClick={(): void => doR()}>
+        <Button onClick={onT !== undefined ? onT : () => ({})}>TOGGLE (Flip)</Button>
+        <Button active={deviceSummary && !deviceSummary.value} onClick={onR !== undefined ? onR : () => ({})}>
           RESET (Off)
         </Button>
       </ButtonGroup>
     </Wrapper>
   );
 };
-
 export default Summary;
 
 const Wrapper = styled.div``;

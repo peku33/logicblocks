@@ -1,28 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import MediaQueries from "components/common/MediaQueries";
-import React from "react";
+import { SummaryManagedBase } from "components/devices/SummaryManaged";
 import { useDeviceSummary } from "services/LogicDevicesRunner";
 import styled from "styled-components";
-import HardwareRunner, { State as HardwareRunnerState } from "./hardware_runner/Summary";
+import HardwareRunnerSummary, { State as HardwareRunnerState } from "./hardware_runner/Summary";
+
+export type DeviceSummaryManagedBase = React.VFC<{
+  state: any | undefined;
+}>;
 
 interface DeviceSummary {
   hardware_runner: HardwareRunnerState;
   device: any;
 }
 
-export default function makeAvrV1Summary(
-  DeviceComponent: React.FC<{
-    state?: any;
-  }>,
-): React.FC<{
-  deviceId: number;
-  deviceClass: string;
-}> {
-  const Summary: React.FC<{
-    deviceId: number;
-    deviceClass: string;
-  }> = (props) => {
+export function makeAvrV1SummaryManaged(DeviceSummaryManagedBase: DeviceSummaryManagedBase): SummaryManagedBase {
+  const Summary: SummaryManagedBase = (props) => {
     const { deviceId } = props;
 
     const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
@@ -30,10 +24,10 @@ export default function makeAvrV1Summary(
     return (
       <Wrapper>
         <HardwareRunnerWrapper>
-          <HardwareRunner state={deviceSummary?.hardware_runner} />
+          <HardwareRunnerSummary state={deviceSummary?.hardware_runner} />
         </HardwareRunnerWrapper>
         <DeviceComponentWrapper>
-          <DeviceComponent state={deviceSummary?.device} />
+          <DeviceSummaryManagedBase state={deviceSummary?.device} />
         </DeviceComponentWrapper>
       </Wrapper>
     );

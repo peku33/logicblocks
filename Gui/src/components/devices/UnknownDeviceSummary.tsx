@@ -1,7 +1,6 @@
-import React from "react";
 import styled from "styled-components";
 
-const UnknownDevice: React.FC<{
+const Summary: React.VFC<{
   deviceId: number;
   deviceClass: string;
 }> = (props) => {
@@ -13,8 +12,7 @@ const UnknownDevice: React.FC<{
     </>
   );
 };
-
-export default UnknownDevice;
+export default Summary;
 
 const DetailsSpan = styled.span`
   word-break: break-all;
