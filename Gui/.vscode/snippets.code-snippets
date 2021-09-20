@@ -15,17 +15,13 @@
 	// 	],
 	// 	"description": "Log output to console"
 	// }
-
-	"React Functional Component": {
+	"React Void Functional Component": {
 		"scope": "typescriptreact",
 		"prefix": "rfc",
 		"body": [
-			"import React from \"react\";",
-			"",
-			"const $1: React.FC = () => {",
+			"const $1: React.VFC = () => {",
 			"  return (<span>$1</span>);",
 			"};",
-			"",
 			"export default $1;",
 		],
 	}
