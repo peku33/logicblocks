@@ -36,8 +36,8 @@ impl Device {
             inner_waker: waker_stream::mpsc::SenderReceiver::new(),
 
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_input: signal::state_target_last::Signal::new(),
-            signal_output: signal::state_source::Signal::new(None),
+            signal_input: signal::state_target_last::Signal::<bool>::new(),
+            signal_output: signal::state_source::Signal::<bool>::new(None),
         }
     }
 

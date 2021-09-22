@@ -128,9 +128,9 @@ impl Device {
             state: RwLock::new(state),
 
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_add_all: signal::event_target_queued::Signal::new(),
-            signal_power: signal::state_source::Signal::new(Some(Multiplier::zero())),
-            signals_outputs: repeat_with(|| signal::state_source::Signal::new(Some(false)))
+            signal_add_all: signal::event_target_queued::Signal::<Multiplier>::new(),
+            signal_power: signal::state_source::Signal::<Multiplier>::new(Some(Multiplier::zero())),
+            signals_outputs: repeat_with(|| signal::state_source::Signal::<bool>::new(Some(false)))
                 .take(channels_count)
                 .collect::<Vec<_>>(),
 

@@ -57,9 +57,9 @@ impl<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> Device<V> {
             configuration,
 
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_input_a: signal::state_target_last::Signal::new(),
-            signal_input_b: signal::state_target_last::Signal::new(),
-            signal_output: signal::state_source::Signal::new(None),
+            signal_input_a: signal::state_target_last::Signal::<V>::new(),
+            signal_input_b: signal::state_target_last::Signal::<V>::new(),
+            signal_output: signal::state_source::Signal::<bool>::new(None),
         }
     }
 }

@@ -31,7 +31,7 @@ impl<V: Value + Clone> Device<V> {
             configuration,
 
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_output: signal::state_source::Signal::new(Some(value)),
+            signal_output: signal::state_source::Signal::<V>::new(Some(value)),
         }
     }
 }

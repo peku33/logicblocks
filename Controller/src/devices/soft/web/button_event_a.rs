@@ -19,17 +19,16 @@ pub struct Device {
     signal_output: signal::event_source::Signal<()>,
 }
 impl Device {
-    pub fn click(&self) {
-        if self.signal_output.push_one(()) {
-            self.signal_sources_changed_waker.wake();
-        }
-    }
-}
-impl Device {
     pub fn new() -> Self {
         Self {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
             signal_output: signal::event_source::Signal::<()>::new(),
+        }
+    }
+
+    pub fn click(&self) {
+        if self.signal_output.push_one(()) {
+            self.signal_sources_changed_waker.wake();
         }
     }
 }
