@@ -33,13 +33,13 @@ export interface DeviceSummaryError {
   state: "Error";
 }
 export type DeviceSummary = DeviceSummaryInitializing | DeviceSummaryRunning | DeviceSummaryError;
-export function isDeviceSummaryInitializing(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryInitializing {
+export function deviceSummaryIsInitializing(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryInitializing {
   return deviceSummary.state === "Initializing";
 }
-export function isDeviceSummaryRunning(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryRunning {
+export function deviceSummaryIsRunning(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryRunning {
   return deviceSummary.state === "Running";
 }
-export function isDeviceSummaryError(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryError {
+export function deviceSummaryIsError(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryError {
   return deviceSummary.state === "Error";
 }
 
@@ -53,24 +53,24 @@ const Summary: React.VFC<{
     <Wrapper>
       <Header>
         <State>
-          {deviceSummary !== undefined && isDeviceSummaryInitializing(deviceSummary) ? (
+          {deviceSummary !== undefined && deviceSummaryIsInitializing(deviceSummary) ? (
             <Chip type={ChipType.ERROR} enabled={true}>
               Initializing
             </Chip>
           ) : null}
-          {deviceSummary !== undefined && isDeviceSummaryRunning(deviceSummary) ? (
+          {deviceSummary !== undefined && deviceSummaryIsRunning(deviceSummary) ? (
             <Chip type={ChipType.OK} enabled={true}>
               Running
             </Chip>
           ) : null}
-          {deviceSummary !== undefined && isDeviceSummaryError(deviceSummary) ? (
+          {deviceSummary !== undefined && deviceSummaryIsError(deviceSummary) ? (
             <Chip type={ChipType.ERROR} enabled={true}>
               Error
             </Chip>
           ) : null}
         </State>
         <Events>
-          {deviceSummary !== undefined && isDeviceSummaryRunning(deviceSummary) ? (
+          {deviceSummary !== undefined && deviceSummaryIsRunning(deviceSummary) ? (
             <ChipsGroup>
               <Chip type={ChipType.ERROR} enabled={deviceSummary.events.video_blind}>
                 Video Blind
@@ -91,7 +91,7 @@ const Summary: React.VFC<{
       <Snapshot>
         {snapshotBaseUrl !== undefined &&
         deviceSummary !== undefined &&
-        isDeviceSummaryRunning(deviceSummary) &&
+        deviceSummaryIsRunning(deviceSummary) &&
         deviceSummary.snapshot_updated !== null ? (
           <SnapshotDeviceInner baseUrl={snapshotBaseUrl} lastUpdated={new Date(deviceSummary.snapshot_updated)} />
         ) : (
@@ -99,7 +99,7 @@ const Summary: React.VFC<{
         )}
       </Snapshot>
       <RtspUrls>
-        {deviceSummary !== undefined && isDeviceSummaryRunning(deviceSummary) ? (
+        {deviceSummary !== undefined && deviceSummaryIsRunning(deviceSummary) ? (
           <ButtonGroup>
             <ButtonLink target="_blank" href={deviceSummary.rtsp_urls.main}>
               Main Stream

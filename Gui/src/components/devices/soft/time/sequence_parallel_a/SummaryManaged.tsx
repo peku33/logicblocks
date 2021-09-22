@@ -34,17 +34,17 @@ type DeviceSummaryDeviceStateDisabledChannelState =
   | DeviceSummaryDeviceStateDisabledChannelStateDisabled
   | DeviceSummaryDeviceStateDisabledChannelStatePaused
   | DeviceSummaryDeviceStateDisabledChannelStateEnabled;
-function isDeviceSummaryDeviceStateDisabledChannelStateDisabled(
+function deviceSummaryDeviceStateDisabledChannelStateIsDisabled(
   deviceSummaryDeviceStateDisabledChannelState: DeviceSummaryDeviceStateDisabledChannelState,
 ): deviceSummaryDeviceStateDisabledChannelState is DeviceSummaryDeviceStateDisabledChannelStateDisabled {
   return deviceSummaryDeviceStateDisabledChannelState.state === "Disabled";
 }
-function isDeviceSummaryDeviceStateDisabledChannelStatePaused(
+function deviceSummaryDeviceStateDisabledChannelStateIsPaused(
   deviceSummaryDeviceStateDisabledChannelState: DeviceSummaryDeviceStateDisabledChannelState,
 ): deviceSummaryDeviceStateDisabledChannelState is DeviceSummaryDeviceStateDisabledChannelStatePaused {
   return deviceSummaryDeviceStateDisabledChannelState.state === "Paused";
 }
-function isDeviceSummaryDeviceStateDisabledChannelStateEnabled(
+function deviceSummaryDeviceStateDisabledChannelStateIsEnabled(
   deviceSummaryDeviceStateDisabledChannelState: DeviceSummaryDeviceStateDisabledChannelState,
 ): deviceSummaryDeviceStateDisabledChannelState is DeviceSummaryDeviceStateDisabledChannelStateEnabled {
   return deviceSummaryDeviceStateDisabledChannelState.state === "Enabled";
@@ -66,17 +66,17 @@ type DeviceSummaryDeviceStatePausedChannelState =
   | DeviceSummaryDeviceStatePausedChannelStateDisabled
   | DeviceSummaryDeviceStatePausedChannelStatePaused
   | DeviceSummaryDeviceStatePausedChannelStateEnabled;
-function isDeviceSummaryDeviceStatePausedChannelStateDisabled(
+function deviceSummaryDeviceStatePausedChannelStateIsDisabled(
   deviceSummaryDeviceStatePausedChannelState: DeviceSummaryDeviceStatePausedChannelState,
 ): deviceSummaryDeviceStatePausedChannelState is DeviceSummaryDeviceStatePausedChannelStateDisabled {
   return deviceSummaryDeviceStatePausedChannelState.state === "Disabled";
 }
-function isDeviceSummaryDeviceStatePausedChannelStatePaused(
+function deviceSummaryDeviceStatePausedChannelStateIsPaused(
   deviceSummaryDeviceStatePausedChannelState: DeviceSummaryDeviceStatePausedChannelState,
 ): deviceSummaryDeviceStatePausedChannelState is DeviceSummaryDeviceStatePausedChannelStatePaused {
   return deviceSummaryDeviceStatePausedChannelState.state === "Paused";
 }
-function isDeviceSummaryDeviceStatePausedChannelStateEnabled(
+function deviceSummaryDeviceStatePausedChannelStateIsEnabled(
   deviceSummaryDeviceStatePausedChannelState: DeviceSummaryDeviceStatePausedChannelState,
 ): deviceSummaryDeviceStatePausedChannelState is DeviceSummaryDeviceStatePausedChannelStateEnabled {
   return deviceSummaryDeviceStatePausedChannelState.state === "Enabled";
@@ -106,22 +106,22 @@ type DeviceSummaryDeviceStateEnabledChannelState =
   | DeviceSummaryDeviceStateEnabledChannelStateEnabledQueued
   | DeviceSummaryDeviceStateEnabledChannelStateEnabledActive;
 
-function isDeviceSummaryDeviceStateEnabledChannelStateDisabled(
+function deviceSummaryDeviceStateEnabledChannelStateIsDisabled(
   deviceSummaryDeviceStateEnabledChannelState: DeviceSummaryDeviceStateEnabledChannelState,
 ): deviceSummaryDeviceStateEnabledChannelState is DeviceSummaryDeviceStateEnabledChannelStateDisabled {
   return deviceSummaryDeviceStateEnabledChannelState.state === "Disabled";
 }
-function isDeviceSummaryDeviceStateEnabledChannelStatePaused(
+function deviceSummaryDeviceStateEnabledChannelStateIsPaused(
   deviceSummaryDeviceStateEnabledChannelState: DeviceSummaryDeviceStateEnabledChannelState,
 ): deviceSummaryDeviceStateEnabledChannelState is DeviceSummaryDeviceStateEnabledChannelStatePaused {
   return deviceSummaryDeviceStateEnabledChannelState.state === "Paused";
 }
-function isDeviceSummaryDeviceStateEnabledChannelStateEnabledQueued(
+function deviceSummaryDeviceStateEnabledChannelStateIsEnabledQueued(
   deviceSummaryDeviceStateEnabledChannelState: DeviceSummaryDeviceStateEnabledChannelState,
 ): deviceSummaryDeviceStateEnabledChannelState is DeviceSummaryDeviceStateEnabledChannelStateEnabledQueued {
   return deviceSummaryDeviceStateEnabledChannelState.state === "EnabledQueued";
 }
-function isDeviceSummaryDeviceStateEnabledChannelStateEnabledActive(
+function deviceSummaryDeviceStateEnabledChannelStateIsEnabledActive(
   deviceSummaryDeviceStateEnabledChannelState: DeviceSummaryDeviceStateEnabledChannelState,
 ): deviceSummaryDeviceStateEnabledChannelState is DeviceSummaryDeviceStateEnabledChannelStateEnabledActive {
   return deviceSummaryDeviceStateEnabledChannelState.state === "EnabledActive";
@@ -142,17 +142,17 @@ interface DeviceSummaryStateEnabled {
   power: number;
 }
 type DeviceSummaryState = DeviceSummaryStateDisabled | DeviceSummaryStatePaused | DeviceSummaryStateEnabled;
-function isDeviceSummaryStateDisabled(
+function deviceSummaryStateIsDisabled(
   deviceSummaryState: DeviceSummaryState,
 ): deviceSummaryState is DeviceSummaryStateDisabled {
   return deviceSummaryState.state === "Disabled";
 }
-function isDeviceSummaryStatePaused(
+function deviceSummaryStateIsPaused(
   deviceSummaryState: DeviceSummaryState,
 ): deviceSummaryState is DeviceSummaryStatePaused {
   return deviceSummaryState.state === "Paused";
 }
-function isDeviceSummaryStateEnabled(
+function deviceSummaryStateIsEnabled(
   deviceSummaryState: DeviceSummaryState,
 ): deviceSummaryState is DeviceSummaryStateEnabled {
   return deviceSummaryState.state === "Enabled";
@@ -240,18 +240,18 @@ const SummaryManaged: SummaryManagedBase = (props) => {
     <Wrapper>
       <Section>
         <ButtonGroup>
-          <Button active={isDeviceSummaryStateEnabled(deviceSummary.state)} onClick={doDeviceEnable}>
+          <Button active={deviceSummaryStateIsEnabled(deviceSummary.state)} onClick={doDeviceEnable}>
             Enable
           </Button>
-          <Button active={isDeviceSummaryStatePaused(deviceSummary.state)} onClick={doDevicePause}>
+          <Button active={deviceSummaryStateIsPaused(deviceSummary.state)} onClick={doDevicePause}>
             Pause
           </Button>
-          <Button active={isDeviceSummaryStateDisabled(deviceSummary.state)} onClick={doDeviceDisable}>
+          <Button active={deviceSummaryStateIsDisabled(deviceSummary.state)} onClick={doDeviceDisable}>
             Disable
           </Button>
         </ButtonGroup>
 
-        {isDeviceSummaryStatePaused(deviceSummary.state) || isDeviceSummaryStateEnabled(deviceSummary.state) ? (
+        {deviceSummaryStateIsPaused(deviceSummary.state) || deviceSummaryStateIsEnabled(deviceSummary.state) ? (
           <ButtonGroup>
             <Button onClick={() => doChannelsAllAdd(1.0)}>+1</Button>
             <Button onClick={() => doChannelsAllAdd(0.5)}>+1/2</Button>
@@ -260,7 +260,7 @@ const SummaryManaged: SummaryManagedBase = (props) => {
           </ButtonGroup>
         ) : null}
 
-        {isDeviceSummaryStateEnabled(deviceSummary.state) ? (
+        {deviceSummaryStateIsEnabled(deviceSummary.state) ? (
           <Chip type={ChipType.INFO} enabled={deviceSummary.state.power > 0}>
             Power usage: {deviceSummary.state.power.toFixed(2)} / {deviceSummary.configuration.power_max.toFixed(2)}
           </Chip>
@@ -281,19 +281,19 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                 <ButtonGroup>
                   <Button
                     active={
-                      (isDeviceSummaryStateDisabled(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStateDisabledChannelStateEnabled(
+                      (deviceSummaryStateIsDisabled(deviceSummary.state) &&
+                        deviceSummaryDeviceStateDisabledChannelStateIsEnabled(
                           channelState as DeviceSummaryDeviceStateDisabledChannelState,
                         )) ||
-                      (isDeviceSummaryStatePaused(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStatePausedChannelStateEnabled(
+                      (deviceSummaryStateIsPaused(deviceSummary.state) &&
+                        deviceSummaryDeviceStatePausedChannelStateIsEnabled(
                           channelState as DeviceSummaryDeviceStatePausedChannelState,
                         )) ||
-                      (isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                        (isDeviceSummaryDeviceStateEnabledChannelStateEnabledQueued(
+                      (deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                        (deviceSummaryDeviceStateEnabledChannelStateIsEnabledQueued(
                           channelState as DeviceSummaryDeviceStateEnabledChannelState,
                         ) ||
-                          isDeviceSummaryDeviceStateEnabledChannelStateEnabledActive(
+                          deviceSummaryDeviceStateEnabledChannelStateIsEnabledActive(
                             channelState as DeviceSummaryDeviceStateEnabledChannelState,
                           )))
                     }
@@ -303,16 +303,16 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                   </Button>
                   <Button
                     active={
-                      (isDeviceSummaryStateDisabled(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStateDisabledChannelStatePaused(
+                      (deviceSummaryStateIsDisabled(deviceSummary.state) &&
+                        deviceSummaryDeviceStateDisabledChannelStateIsPaused(
                           channelState as DeviceSummaryDeviceStateDisabledChannelState,
                         )) ||
-                      (isDeviceSummaryStatePaused(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStatePausedChannelStatePaused(
+                      (deviceSummaryStateIsPaused(deviceSummary.state) &&
+                        deviceSummaryDeviceStatePausedChannelStateIsPaused(
                           channelState as DeviceSummaryDeviceStatePausedChannelState,
                         )) ||
-                      (isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStateEnabledChannelStatePaused(
+                      (deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                        deviceSummaryDeviceStateEnabledChannelStateIsPaused(
                           channelState as DeviceSummaryDeviceStateEnabledChannelState,
                         ))
                     }
@@ -322,16 +322,16 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                   </Button>
                   <Button
                     active={
-                      (isDeviceSummaryStateDisabled(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStateDisabledChannelStateDisabled(
+                      (deviceSummaryStateIsDisabled(deviceSummary.state) &&
+                        deviceSummaryDeviceStateDisabledChannelStateIsDisabled(
                           channelState as DeviceSummaryDeviceStateDisabledChannelState,
                         )) ||
-                      (isDeviceSummaryStatePaused(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStatePausedChannelStateDisabled(
+                      (deviceSummaryStateIsPaused(deviceSummary.state) &&
+                        deviceSummaryDeviceStatePausedChannelStateIsDisabled(
                           channelState as DeviceSummaryDeviceStatePausedChannelState,
                         )) ||
-                      (isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStateEnabledChannelStateDisabled(
+                      (deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                        deviceSummaryDeviceStateEnabledChannelStateIsDisabled(
                           channelState as DeviceSummaryDeviceStateEnabledChannelState,
                         ))
                     }
@@ -343,21 +343,21 @@ const SummaryManaged: SummaryManagedBase = (props) => {
 
                 {/* Add time / clear */}
                 <>
-                  {(isDeviceSummaryStatePaused(deviceSummary.state) &&
-                    (isDeviceSummaryDeviceStatePausedChannelStatePaused(
+                  {(deviceSummaryStateIsPaused(deviceSummary.state) &&
+                    (deviceSummaryDeviceStatePausedChannelStateIsPaused(
                       channelState as DeviceSummaryDeviceStatePausedChannelState,
                     ) ||
-                      isDeviceSummaryDeviceStatePausedChannelStateEnabled(
+                      deviceSummaryDeviceStatePausedChannelStateIsEnabled(
                         channelState as DeviceSummaryDeviceStatePausedChannelState,
                       ))) ||
-                  (isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                    (isDeviceSummaryDeviceStateEnabledChannelStatePaused(
+                  (deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                    (deviceSummaryDeviceStateEnabledChannelStateIsPaused(
                       channelState as DeviceSummaryDeviceStateEnabledChannelState,
                     ) ||
-                      isDeviceSummaryDeviceStateEnabledChannelStateEnabledQueued(
+                      deviceSummaryDeviceStateEnabledChannelStateIsEnabledQueued(
                         channelState as DeviceSummaryDeviceStateEnabledChannelState,
                       ) ||
-                      isDeviceSummaryDeviceStateEnabledChannelStateEnabledActive(
+                      deviceSummaryDeviceStateEnabledChannelStateIsEnabledActive(
                         channelState as DeviceSummaryDeviceStateEnabledChannelState,
                       ))) ? (
                     <ButtonGroup>
@@ -371,11 +371,11 @@ const SummaryManaged: SummaryManagedBase = (props) => {
 
                 {/* Move front / back */}
                 <>
-                  {isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                  (isDeviceSummaryDeviceStateEnabledChannelStateEnabledQueued(
+                  {deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                  (deviceSummaryDeviceStateEnabledChannelStateIsEnabledQueued(
                     channelState as DeviceSummaryDeviceStateEnabledChannelState,
                   ) ||
-                    isDeviceSummaryDeviceStateEnabledChannelStateEnabledActive(
+                    deviceSummaryDeviceStateEnabledChannelStateIsEnabledActive(
                       channelState as DeviceSummaryDeviceStateEnabledChannelState,
                     )) ? (
                     <ButtonGroup>
@@ -390,8 +390,8 @@ const SummaryManaged: SummaryManagedBase = (props) => {
               <Section>
                 {/* Order index */}
                 <>
-                  {isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                  isDeviceSummaryDeviceStateEnabledChannelStateEnabledQueued(
+                  {deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                  deviceSummaryDeviceStateEnabledChannelStateIsEnabledQueued(
                     channelState as DeviceSummaryDeviceStateEnabledChannelState,
                   ) &&
                   (channelState as DeviceSummaryDeviceStateEnabledChannelStateEnabledQueued).queue_position !== null ? (
@@ -404,8 +404,8 @@ const SummaryManaged: SummaryManagedBase = (props) => {
 
                 {/* Round time */}
                 <>
-                  {isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                  isDeviceSummaryDeviceStateEnabledChannelStateEnabledActive(
+                  {deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                  deviceSummaryDeviceStateEnabledChannelStateIsEnabledActive(
                     channelState as DeviceSummaryDeviceStateEnabledChannelState,
                   ) ? (
                     <Chip type={ChipType.OK} enabled>
@@ -417,31 +417,31 @@ const SummaryManaged: SummaryManagedBase = (props) => {
 
                 {/* Queue time */}
                 <>
-                  {(isDeviceSummaryStatePaused(deviceSummary.state) &&
-                    (isDeviceSummaryDeviceStatePausedChannelStatePaused(
+                  {(deviceSummaryStateIsPaused(deviceSummary.state) &&
+                    (deviceSummaryDeviceStatePausedChannelStateIsPaused(
                       channelState as DeviceSummaryDeviceStatePausedChannelState,
                     ) ||
-                      isDeviceSummaryDeviceStatePausedChannelStateEnabled(
+                      deviceSummaryDeviceStatePausedChannelStateIsEnabled(
                         channelState as DeviceSummaryDeviceStatePausedChannelState,
                       ))) ||
-                  (isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                    (isDeviceSummaryDeviceStateEnabledChannelStatePaused(
+                  (deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                    (deviceSummaryDeviceStateEnabledChannelStateIsPaused(
                       channelState as DeviceSummaryDeviceStateEnabledChannelState,
                     ) ||
-                      isDeviceSummaryDeviceStateEnabledChannelStateEnabledQueued(
+                      deviceSummaryDeviceStateEnabledChannelStateIsEnabledQueued(
                         channelState as DeviceSummaryDeviceStateEnabledChannelState,
                       ) ||
-                      isDeviceSummaryDeviceStateEnabledChannelStateEnabledActive(
+                      deviceSummaryDeviceStateEnabledChannelStateIsEnabledActive(
                         channelState as DeviceSummaryDeviceStateEnabledChannelState,
                       ))) ? (
                     <Chip
                       type={ChipType.OK}
                       enabled={
-                        isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                        (isDeviceSummaryDeviceStateEnabledChannelStateEnabledQueued(
+                        deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                        (deviceSummaryDeviceStateEnabledChannelStateIsEnabledQueued(
                           channelState as DeviceSummaryDeviceStateEnabledChannelState,
                         ) ||
-                          isDeviceSummaryDeviceStateEnabledChannelStateEnabledActive(
+                          deviceSummaryDeviceStateEnabledChannelStateIsEnabledActive(
                             channelState as DeviceSummaryDeviceStateEnabledChannelState,
                           )) &&
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -465,8 +465,8 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                   <Chip
                     type={ChipType.INFO}
                     enabled={
-                      isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                      isDeviceSummaryDeviceStateEnabledChannelStateEnabledActive(
+                      deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                      deviceSummaryDeviceStateEnabledChannelStateIsEnabledActive(
                         channelState as DeviceSummaryDeviceStateEnabledChannelState,
                       )
                     }
@@ -480,15 +480,15 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                   <Chip
                     type={ChipType.INFO}
                     enabled={
-                      (isDeviceSummaryStatePaused(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStatePausedChannelStateEnabled(
+                      (deviceSummaryStateIsPaused(deviceSummary.state) &&
+                        deviceSummaryDeviceStatePausedChannelStateIsEnabled(
                           channelState as DeviceSummaryDeviceStatePausedChannelState,
                         )) ||
-                      (isDeviceSummaryStateEnabled(deviceSummary.state) &&
-                        isDeviceSummaryDeviceStateEnabledChannelStateEnabledQueued(
+                      (deviceSummaryStateIsEnabled(deviceSummary.state) &&
+                        deviceSummaryDeviceStateEnabledChannelStateIsEnabledQueued(
                           channelState as DeviceSummaryDeviceStateEnabledChannelState,
                         )) ||
-                      isDeviceSummaryDeviceStateEnabledChannelStateEnabledActive(
+                      deviceSummaryDeviceStateEnabledChannelStateIsEnabledActive(
                         channelState as DeviceSummaryDeviceStateEnabledChannelState,
                       )
                     }

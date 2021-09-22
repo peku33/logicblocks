@@ -4,7 +4,7 @@ import Summary from "./Summary";
 
 export default {
   component: Summary,
-  title: "Devices/Soft/Web/RatioSliderA/Summary",
+  title: "devices/soft/web/ratio_slider_a/Summary",
   argTypes: {
     value: {
       type: "number",
