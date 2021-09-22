@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import useAsyncEffect from "use-async-effect";
 import { getJson } from "./Api";
-import Client, { Path } from "./SSEAggregatedStream";
+import Client, { Path, WatchToken } from "./SSEAggregatedStream";
 
 export function useObservableState<S>(
   getJsonUrl: string,
@@ -10,35 +10,27 @@ export function useObservableState<S>(
   sseAggregatedStreamPath: Path,
 ): S | undefined {
   const [state, setState] = useState<S>();
-
-  const version = useObservableStateVersion(sseAggregatedStreamClient, sseAggregatedStreamPath);
+  const token = useRef<WatchToken | null>(null);
 
   useAsyncEffect(
-    async (isMounted) => {
-      const state = await getJson<S>(getJsonUrl);
-      if (!isMounted()) return;
-      setState(state);
+    (isMounted) => {
+      // register data reload on notification and make initial reload
+      token.current = sseAggregatedStreamClient.watchAdd(
+        sseAggregatedStreamPath,
+        async () => {
+          const state = await getJson<S>(getJsonUrl);
+          if (!isMounted()) return;
+          setState(state);
+        },
+        true,
+      );
     },
     () => {
-      // FIXME: dont call setState(undefined) if only version was changed
-      // setState(undefined);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      sseAggregatedStreamClient.watchRemove(token.current!);
     },
-    [getJsonUrl, sseAggregatedStreamClient, ...sseAggregatedStreamPath, version],
+    [getJsonUrl, sseAggregatedStreamClient, ...sseAggregatedStreamPath],
   );
 
   return state;
-}
-
-export function useObservableStateVersion(sseAggregatedStreamClient: Client, sseAggregatedStreamPath: Path): number {
-  const [version, setVersion] = useState(0);
-  useEffect(() => {
-    const token = sseAggregatedStreamClient.watchAdd(sseAggregatedStreamPath, () => {
-      setVersion((version) => version + 1);
-    });
-    return (): void => {
-      sseAggregatedStreamClient.watchRemove(token);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sseAggregatedStreamClient, ...sseAggregatedStreamPath]);
-  return version;
 }

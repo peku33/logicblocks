@@ -2,6 +2,7 @@ import { Button, ButtonGroup } from "components/common/Button";
 import { Chip, ChipType } from "components/common/Chips";
 import Colors from "components/common/Colors";
 import { SummaryManagedBase } from "components/devices/SummaryManaged";
+import { useCallback } from "react";
 import { devicePostEmpty, devicePostJsonEmpty, useDeviceSummary } from "services/LogicDevicesRunner";
 import styled from "styled-components";
 
@@ -167,48 +168,73 @@ const SummaryManaged: SummaryManagedBase = (props) => {
   const { deviceId } = props;
 
   const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
+
+  const doDeviceDisable = useCallback((): void => {
+    devicePostEmpty(deviceId, "/device/disable");
+  }, [deviceId]);
+  const doDevicePause = useCallback((): void => {
+    devicePostEmpty(deviceId, "/device/pause");
+  }, [deviceId]);
+  const doDeviceEnable = useCallback((): void => {
+    devicePostEmpty(deviceId, "/device/enable");
+  }, [deviceId]);
+
+  const doChannelsAllClear = useCallback((): void => {
+    devicePostEmpty(deviceId, "/channels/all/clear");
+  }, [deviceId]);
+  const doChannelsAllAdd = useCallback(
+    (multiplier: number): void => {
+      devicePostJsonEmpty(deviceId, "/channels/all/add", multiplier);
+    },
+    [deviceId],
+  );
+
+  const doChannelDisable = useCallback(
+    (channelId: number) => {
+      devicePostEmpty(deviceId, `/channels/${channelId}/disable`);
+    },
+    [deviceId],
+  );
+  const doChannelPause = useCallback(
+    (channelId: number) => {
+      devicePostEmpty(deviceId, `/channels/${channelId}/pause`);
+    },
+    [deviceId],
+  );
+  const doChannelEnable = useCallback(
+    (channelId: number) => {
+      devicePostEmpty(deviceId, `/channels/${channelId}/enable`);
+    },
+    [deviceId],
+  );
+  const doChannelClear = useCallback(
+    (channelId: number) => {
+      devicePostEmpty(deviceId, `/channels/${channelId}/clear`);
+    },
+    [deviceId],
+  );
+  const doChannelAdd = useCallback(
+    (channelId: number, multiplier: number) => {
+      devicePostJsonEmpty(deviceId, `/channels/${channelId}/add`, multiplier);
+    },
+    [deviceId],
+  );
+  const doChannelMoveFront = useCallback(
+    (channelId: number) => {
+      devicePostEmpty(deviceId, `/channels/${channelId}/move-front`);
+    },
+    [deviceId],
+  );
+  const doChannelMoveBack = useCallback(
+    (channelId: number) => {
+      devicePostEmpty(deviceId, `/channels/${channelId}/move-back`);
+    },
+    [deviceId],
+  );
+
   if (deviceSummary === undefined) {
     return null;
   }
-
-  const doDeviceDisable = (): void => {
-    devicePostEmpty(deviceId, "/device/disable");
-  };
-  const doDevicePause = (): void => {
-    devicePostEmpty(deviceId, "/device/pause");
-  };
-  const doDeviceEnable = (): void => {
-    devicePostEmpty(deviceId, "/device/enable");
-  };
-
-  const doChannelsAllClear = (): void => {
-    devicePostEmpty(deviceId, "/channels/all/clear");
-  };
-  const doChannelsAllAdd = (multiplier: number): void => {
-    devicePostJsonEmpty(deviceId, "/channels/all/add", multiplier);
-  };
-
-  const doChannelDisable = (channelId: number) => {
-    devicePostEmpty(deviceId, `/channels/${channelId}/disable`);
-  };
-  const doChannelPause = (channelId: number) => {
-    devicePostEmpty(deviceId, `/channels/${channelId}/pause`);
-  };
-  const doChannelEnable = (channelId: number) => {
-    devicePostEmpty(deviceId, `/channels/${channelId}/enable`);
-  };
-  const doChannelClear = (channelId: number) => {
-    devicePostEmpty(deviceId, `/channels/${channelId}/clear`);
-  };
-  const doChannelAdd = (channelId: number, multiplier: number) => {
-    devicePostJsonEmpty(deviceId, `/channels/${channelId}/add`, multiplier);
-  };
-  const doChannelMoveFront = (channelId: number) => {
-    devicePostEmpty(deviceId, `/channels/${channelId}/move-front`);
-  };
-  const doChannelMoveBack = (channelId: number) => {
-    devicePostEmpty(deviceId, `/channels/${channelId}/move-back`);
-  };
 
   return (
     <Wrapper>

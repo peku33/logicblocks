@@ -61,7 +61,11 @@ export default class Client {
   private tokenNext = 0;
   private watches: Map<number, WatchContext> = new Map();
 
-  public watchAdd(path: Path, callback: () => void): WatchToken {
+  public watchAdd(path: Path, callback: () => void, initialCallback: boolean): WatchToken {
+    if (initialCallback) {
+      callback();
+    }
+
     if (this.watches.size === 0) {
       this.streamStart();
     }

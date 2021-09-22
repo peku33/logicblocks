@@ -8,20 +8,26 @@ export interface DeviceSummary {
 
 const Summary: React.VFC<{
   deviceSummary: DeviceSummary | undefined;
-  onR: () => void | undefined;
-  onS: () => void | undefined;
-  onT: () => void | undefined;
+  onR: (() => void) | undefined;
+  onS: (() => void) | undefined;
+  onT: (() => void) | undefined;
 }> = (props) => {
   const { deviceSummary, onR, onS, onT } = props;
 
   return (
     <Wrapper>
       <ButtonGroup>
-        <Button active={deviceSummary && deviceSummary.value} onClick={onS !== undefined ? onS : () => ({})}>
+        <Button
+          active={deviceSummary !== undefined ? deviceSummary.value : undefined}
+          onClick={onS !== undefined ? onS : () => ({})}
+        >
           SET (On)
         </Button>
         <Button onClick={onT !== undefined ? onT : () => ({})}>TOGGLE (Flip)</Button>
-        <Button active={deviceSummary && !deviceSummary.value} onClick={onR !== undefined ? onR : () => ({})}>
+        <Button
+          active={deviceSummary !== undefined ? !deviceSummary.value : undefined}
+          onClick={onR !== undefined ? onR : () => ({})}
+        >
           RESET (Off)
         </Button>
       </ButtonGroup>

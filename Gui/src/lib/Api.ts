@@ -24,6 +24,9 @@ export async function postEmpty(endpoint: string): Promise<void> {
   const response = await fetch(urlBuild(endpoint), {
     method: "POST",
   });
+  if (!response.ok) {
+    throw new ApiRequestError(response);
+  }
   const text = await response.text();
   if (text !== "") {
     throw new Error("Expected empty string");
@@ -39,6 +42,9 @@ export async function postJsonEmpty<D>(endpoint: string, data: D): Promise<void>
     },
     body: request,
   });
+  if (!response.ok) {
+    throw new ApiRequestError(response);
+  }
   const text = await response.text();
   if (text !== "") {
     throw new Error("Expected empty string");

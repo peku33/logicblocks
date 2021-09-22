@@ -17,10 +17,10 @@ export const Chip = styled.div<{
   text-align: center;
 
   border-radius: 0.25rem;
-  border: solid 1px ${(props): string => enabledColor(props.type)};
+  border: solid 1px ${(props) => enabledColor(props.type)};
 
-  color: ${(props): string => (props.enabled ? Colors.WHITE : enabledColor(props.type))};
-  background-color: ${(props): string => (props.enabled ? enabledColor(props.type) : Colors.WHITE)};
+  color: ${(props) => (props.enabled ? Colors.WHITE : enabledColor(props.type))};
+  background-color: ${(props) => (props.enabled ? enabledColor(props.type) : Colors.WHITE)};
 
   @media ${MediaQueries.COMPUTER_AT_LEAST} {
     padding: 0.5rem 1rem;

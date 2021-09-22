@@ -51,18 +51,19 @@ const MenuItem: React.VFC<{
   const location = useLocation();
   const match = !!matchPath(location.pathname, props);
   return (
-    <MenuLink isActive={match}>
+    <MenuLink active={match}>
       <Link to={props.path}>{props.text}</Link>
     </MenuLink>
   );
 };
 const MenuLink = styled.div<{
-  isActive: boolean;
+  active: boolean;
 }>`
   display: inline-block;
   padding: 1rem;
 
-  background-color: ${Colors.BLUE};
+  background-color: ${(props) => (props.active ? Colors.BLUE : "unset")};
+  color: ${(props) => (props.active ? "white" : "unset")};
 
   font-weight: bold;
 

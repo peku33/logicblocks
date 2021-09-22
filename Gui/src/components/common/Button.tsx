@@ -6,7 +6,7 @@ export const Button = styled.div<{
   active?: boolean;
 }>`
   padding: 0.5rem 1rem;
-  background-color: ${(props): string => (props.active ? Colors.GREEN : Colors.GREY)};
+  background-color: ${(props) => (props.active ? Colors.GREEN : Colors.GREY)};
   color: white;
   font-weight: bold;
   text-align: center;
@@ -17,7 +17,7 @@ export const Button = styled.div<{
   }
 
   :hover {
-    background-color: ${(props): string => (props.active ? Colors.GREEN : Colors.GREY_DARK)};
+    background-color: ${(props) => (props.active ? Colors.GREEN : Colors.GREY_DARK)};
   }
 `;
 export const ButtonLink = styled.a`
