@@ -360,7 +360,7 @@ impl Runnable for Device {
 }
 impl signals::Device for Device {
     fn signal_targets_changed_wake(&self) {
-        // will never be called - no targets
+        // no signal targets
     }
     fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
         self.signal_sources_changed_waker.receiver()
