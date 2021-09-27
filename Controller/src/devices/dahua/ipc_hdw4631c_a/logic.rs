@@ -327,11 +327,11 @@ impl devices::Device for Device {
         Cow::from("dahua/ipc_hdw4631c_a")
     }
 
-    fn as_runnable(&self) -> &dyn Runnable {
-        self
-    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
+    }
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        Some(self)
     }
     fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         Some(self)

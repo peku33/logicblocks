@@ -1,13 +1,8 @@
 use crate::{
     devices,
     signals::{self, signal, types::state::Value},
-    util::{
-        async_flag,
-        runtime::{Exited, Runnable},
-        waker_stream,
-    },
+    util::waker_stream,
 };
-use async_trait::async_trait;
 use maplit::hashmap;
 use std::{any::type_name, borrow::Cow};
 
@@ -71,21 +66,8 @@ impl<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> devices::Device for D
         ))
     }
 
-    fn as_runnable(&self) -> &dyn Runnable {
-        self
-    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
-    }
-}
-#[async_trait]
-impl<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> Runnable for Device<V> {
-    async fn run(
-        &self,
-        exit_flag: async_flag::Receiver,
-    ) -> Exited {
-        exit_flag.await;
-        Exited
     }
 }
 impl<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> signals::Device for Device<V> {

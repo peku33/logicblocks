@@ -88,11 +88,11 @@ impl devices::Device for Device {
         Cow::from("soft/time/slope_delay_a")
     }
 
-    fn as_runnable(&self) -> &dyn Runnable {
-        self
-    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
+    }
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        Some(self)
     }
 }
 #[async_trait]

@@ -3,13 +3,8 @@ use crate::{
     datatypes::{ipc_rtsp_url::IpcRtspUrl, ratio::Ratio},
     devices,
     signals::{self, signal},
-    util::{
-        async_flag,
-        runtime::{Exited, Runnable},
-        waker_stream,
-    },
+    util::waker_stream,
 };
-use async_trait::async_trait;
 use maplit::hashmap;
 use std::borrow::Cow;
 
@@ -40,21 +35,8 @@ impl<'c> devices::Device for Device<'c> {
         Cow::from("soft/surveillance/rtsp_recorder/channel")
     }
 
-    fn as_runnable(&self) -> &dyn Runnable {
-        self
-    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
-    }
-}
-#[async_trait]
-impl<'c> Runnable for Device<'c> {
-    async fn run(
-        &self,
-        exit_flag: async_flag::Receiver,
-    ) -> Exited {
-        exit_flag.await;
-        Exited
     }
 }
 impl<'c> signals::Device for Device<'c> {

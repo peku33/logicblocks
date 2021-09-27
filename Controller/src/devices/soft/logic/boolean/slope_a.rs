@@ -1,13 +1,8 @@
 use crate::{
     devices,
     signals::{self, signal},
-    util::{
-        async_flag,
-        runtime::{Exited, Runnable},
-        waker_stream,
-    },
+    util::waker_stream,
 };
-use async_trait::async_trait;
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -48,21 +43,8 @@ impl devices::Device for Device {
         Cow::from("soft/logic/boolean/slope_a")
     }
 
-    fn as_runnable(&self) -> &dyn Runnable {
-        self
-    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
-    }
-}
-#[async_trait]
-impl Runnable for Device {
-    async fn run(
-        &self,
-        exit_flag: async_flag::Receiver,
-    ) -> Exited {
-        exit_flag.await;
-        Exited
     }
 }
 impl signals::Device for Device {

@@ -2,14 +2,8 @@ use crate::{
     datatypes::ratio::Ratio,
     devices,
     signals::{self, signal},
-    util::{
-        async_flag,
-        runtime::{Exited, Runnable},
-        waker_stream,
-    },
-    web::uri_cursor,
+    util::waker_stream,
 };
-use async_trait::async_trait;
 use std::{borrow::Cow, convert::TryFrom};
 
 #[derive(Debug)]
@@ -79,27 +73,8 @@ impl devices::Device for Device {
         Cow::from("soft/logic/encoders_decoders/boolean_to_ratio")
     }
 
-    fn as_runnable(&self) -> &dyn Runnable {
-        self
-    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
-    }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
-        None
-    }
-    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
-        None
-    }
-}
-#[async_trait]
-impl Runnable for Device {
-    async fn run(
-        &self,
-        exit_flag: async_flag::Receiver,
-    ) -> Exited {
-        exit_flag.await;
-        Exited
     }
 }
 impl signals::Device for Device {

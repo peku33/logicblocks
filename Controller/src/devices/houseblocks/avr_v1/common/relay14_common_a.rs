@@ -3,15 +3,10 @@ pub mod logic {
     use crate::{
         devices,
         signals::{self, signal},
-        util::{
-            async_flag,
-            runtime::{Exited, Runnable},
-            waker_stream,
-        },
+        util::waker_stream,
     };
     use array_init::array_init;
     use arrayvec::ArrayVec;
-    use async_trait::async_trait;
     use serde::Serialize;
     use std::{fmt, marker::PhantomData};
 
@@ -64,16 +59,6 @@ pub mod logic {
             &self
         ) -> waker_stream::mpsc::ReceiverLease {
             self.properties_remote_out_changed_waker.receiver()
-        }
-    }
-    #[async_trait]
-    impl<S: Specification> Runnable for Device<S> {
-        async fn run(
-            &self,
-            exit_flag: async_flag::Receiver,
-        ) -> Exited {
-            exit_flag.await;
-            Exited
         }
     }
     impl<S: Specification> signals::Device for Device<S> {
@@ -153,10 +138,6 @@ pub mod hardware {
             serializer::Serializer,
         },
     };
-    use crate::util::{
-        async_flag,
-        runtime::{Exited, Runnable},
-    };
     use anyhow::{Context, Error};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
@@ -228,16 +209,6 @@ pub mod hardware {
         type Properties = Properties;
         fn properties(&self) -> &Self::Properties {
             &self.properties
-        }
-    }
-    #[async_trait]
-    impl<S: Specification> Runnable for Device<S> {
-        async fn run(
-            &self,
-            exit_flag: async_flag::Receiver,
-        ) -> Exited {
-            exit_flag.await;
-            Exited
         }
     }
     #[async_trait]

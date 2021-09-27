@@ -4,15 +4,10 @@ pub mod logic {
         datatypes::temperature::Temperature,
         devices,
         signals::{self, signal},
-        util::{
-            async_flag,
-            runtime::{Exited, Runnable},
-            waker_stream,
-        },
+        util::waker_stream,
     };
     use array_init::array_init;
     use arrayvec::ArrayVec;
-    use async_trait::async_trait;
     use maplit::hashmap;
     use serde::Serialize;
     use std::time::Duration;
@@ -125,16 +120,6 @@ pub mod logic {
             self.properties_remote_out_changed_waker.receiver()
         }
     }
-    #[async_trait]
-    impl Runnable for Device {
-        async fn run(
-            &self,
-            exit_flag: async_flag::Receiver,
-        ) -> Exited {
-            exit_flag.await;
-            Exited
-        }
-    }
     impl signals::Device for Device {
         fn signal_targets_changed_wake(&self) {
             let mut properties_remote_changed = false;
@@ -230,10 +215,6 @@ pub mod hardware {
             serializer::Serializer,
         },
     };
-    use crate::util::{
-        async_flag,
-        runtime::{Exited, Runnable},
-    };
     use anyhow::{bail, Context, Error};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
@@ -322,16 +303,6 @@ pub mod hardware {
         type Properties = Properties;
         fn properties(&self) -> &Self::Properties {
             &self.properties
-        }
-    }
-    #[async_trait]
-    impl Runnable for Device {
-        async fn run(
-            &self,
-            exit_flag: async_flag::Receiver,
-        ) -> Exited {
-            exit_flag.await;
-            Exited
         }
     }
     #[async_trait]

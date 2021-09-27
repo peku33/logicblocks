@@ -1,14 +1,9 @@
 use crate::{
     devices, signals,
     signals::signal,
-    util::{
-        async_flag,
-        runtime::{Exited, Runnable},
-        waker_stream,
-    },
+    util::waker_stream,
     web::{self, uri_cursor},
 };
-use async_trait::async_trait;
 use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use std::borrow::Cow;
@@ -37,24 +32,11 @@ impl devices::Device for Device {
         Cow::from("soft/web/button_event_a")
     }
 
-    fn as_runnable(&self) -> &dyn Runnable {
-        self
-    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
         Some(self)
-    }
-}
-#[async_trait]
-impl Runnable for Device {
-    async fn run(
-        &self,
-        exit_flag: async_flag::Receiver,
-    ) -> Exited {
-        exit_flag.await;
-        Exited
     }
 }
 impl signals::Device for Device {

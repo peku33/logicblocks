@@ -13,11 +13,15 @@ use crate::{
     },
 };
 use async_trait::async_trait;
-use futures::{future::FutureExt, join, stream::StreamExt};
+use futures::{
+    future::{Either, FutureExt},
+    join,
+    stream::StreamExt,
+};
 use serde::Serialize;
 use std::{borrow::Cow, fmt};
 
-pub trait Device: Runnable + signals::Device + Sync + Send + fmt::Debug {
+pub trait Device: signals::Device + Sync + Send + fmt::Debug {
     type HardwareDevice: runner::Device;
 
     fn new(
@@ -26,6 +30,9 @@ pub trait Device: Runnable + signals::Device + Sync + Send + fmt::Debug {
 
     fn class() -> &'static str;
 
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        None
+    }
     fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         None
     }
@@ -68,7 +75,12 @@ impl<'m, D: Device> Runner<'m, D> {
         // TODO: revise sequential exit of this futures
         // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
         let hardware_runner_runner = self.hardware_runner.run(exit_flag.clone());
-        let device_runner = self.device.run(exit_flag.clone());
+
+        let device_exit_flag = exit_flag.clone();
+        let device_runner = match self.device.as_runnable() {
+            Some(runnable) => Either::Left(runnable.run(device_exit_flag)),
+            None => Either::Right(device_exit_flag.map(|()| Exited)),
+        };
 
         let mut properties_remote_in_changed_waker_receiver = self
             .hardware_runner
@@ -149,11 +161,11 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
         Cow::from(class)
     }
 
-    fn as_runnable(&self) -> &dyn Runnable {
-        self
-    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
+    }
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        Some(self)
     }
     fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         Some(self)

@@ -17,7 +17,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use derive_more::Constructor;
-use futures::future::{BoxFuture, FutureExt};
+use futures::future::{BoxFuture, Either, FutureExt};
 use maplit::hashmap;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::json;
@@ -31,8 +31,10 @@ pub trait State = Serialize + DeserializeOwned;
 pub trait Device: Send + Sync + fmt::Debug {
     fn class(&self) -> Cow<'static, str>;
 
-    fn as_runnable(&self) -> &dyn Runnable;
     fn as_signals_device(&self) -> &dyn signals::Device;
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        None
+    }
     fn as_gui_summary_provider(&self) -> Option<&dyn GuiSummaryProvider> {
         None
     }
@@ -68,7 +70,11 @@ impl<'d> DeviceWrapper<'d> {
         &self,
         exit_flag: async_flag::Receiver,
     ) -> Exited {
-        self.device.as_runnable().run(exit_flag).await
+        let device_runner = match self.device.as_runnable() {
+            Some(runnable) => Either::Left(runnable.run(exit_flag)),
+            None => Either::Right(exit_flag.map(|()| Exited)),
+        };
+        device_runner.await
     }
 
     pub fn close(self) -> Box<dyn Device + 'd> {

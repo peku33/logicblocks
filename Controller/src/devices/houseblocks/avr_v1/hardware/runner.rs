@@ -17,7 +17,11 @@ use crate::{
 };
 use anyhow::{Context, Error};
 use async_trait::async_trait;
-use futures::{future::FutureExt, join, select, stream::StreamExt};
+use futures::{
+    future::{Either, FutureExt},
+    join, select,
+    stream::StreamExt,
+};
 use parking_lot::Mutex;
 use serde::Serialize;
 use std::{cmp::min, collections::HashMap, fmt, time::Duration};
@@ -52,11 +56,15 @@ pub trait Properties {
     fn remote(&self) -> Self::Remote;
 }
 
-pub trait Device: Runnable + BusDevice + Sync + Send + Sized + fmt::Debug {
+pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
     fn new() -> Self;
 
     fn device_type_name() -> &'static str;
     fn address_device_type() -> AddressDeviceType;
+
+    fn as_runnable(&self) -> Option<&dyn Runnable> {
+        None
+    }
 
     type Properties: Properties;
     fn properties(&self) -> &Self::Properties;
@@ -239,7 +247,12 @@ impl<'m, D: Device> Runner<'m, D> {
     ) -> Exited {
         // TODO: check whether this should be exited sequentially
         let driver_runner = self.driver_run(exit_flag.clone());
-        let device_runner = self.device.run(exit_flag.clone());
+
+        let device_exit_flag = exit_flag.clone();
+        let device_runner = match self.device.as_runnable() {
+            Some(runnable) => Either::Left(runnable.run(device_exit_flag)),
+            None => Either::Right(device_exit_flag.map(|()| Exited)),
+        };
 
         let _: (Exited, Exited) = join!(driver_runner, device_runner);
 

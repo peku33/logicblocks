@@ -2,14 +2,9 @@ use crate::{
     datatypes::ratio::Ratio,
     devices, signals,
     signals::signal,
-    util::{
-        async_flag,
-        runtime::{Exited, Runnable},
-        waker_stream,
-    },
+    util::waker_stream,
     web::{self, uri_cursor},
 };
-use async_trait::async_trait;
 use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::Serialize;
@@ -58,9 +53,6 @@ impl devices::Device for Device {
         Cow::from("soft/web/ratio_slider_a")
     }
 
-    fn as_runnable(&self) -> &dyn Runnable {
-        self
-    }
     fn as_signals_device(&self) -> &dyn signals::Device {
         self
     }
@@ -69,16 +61,6 @@ impl devices::Device for Device {
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
         Some(self)
-    }
-}
-#[async_trait]
-impl Runnable for Device {
-    async fn run(
-        &self,
-        exit_flag: async_flag::Receiver,
-    ) -> Exited {
-        exit_flag.await;
-        Exited
     }
 }
 impl signals::Device for Device {
