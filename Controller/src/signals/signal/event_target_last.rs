@@ -30,7 +30,10 @@ impl<V: Value + Clone> EventTargetRemoteBase for Signal<V> {
         &self,
         values: &[Box<dyn ValueBase>],
     ) -> bool {
-        let value = values.iter().last().unwrap();
+        let value = match values.iter().last() {
+            Some(value) => value,
+            None => return false,
+        };
         let value = value.downcast_ref::<V>().unwrap().clone();
         *self.pending.write() = Some(value);
         true

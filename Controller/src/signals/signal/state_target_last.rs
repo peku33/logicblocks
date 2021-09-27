@@ -77,7 +77,10 @@ impl<V: Value + Clone> StateTargetRemoteBase for Signal<V> {
         &self,
         values: &[Option<Box<dyn ValueBase>>],
     ) -> bool {
-        let value = values.iter().last().unwrap();
+        let value = match values.iter().last() {
+            Some(value) => value,
+            None => return false,
+        };
         let value = value
             .as_ref()
             .map(|value| value.downcast_ref::<V>().unwrap().clone());
