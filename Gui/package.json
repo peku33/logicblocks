@@ -5,11 +5,11 @@
   "dependencies": {
     "@types/deep-equal": "^1.0.1",
     "@types/glob-base": "^0.3.0",
-    "@types/jest": "27.0.1",
-    "@types/node": "16.9.1",
-    "@types/react": "17.0.21",
+    "@types/jest": "27.0.2",
+    "@types/node": "16.10.1",
+    "@types/react": "17.0.24",
     "@types/react-dom": "17.0.9",
-    "@types/react-router-dom": "^5.1.9",
+    "@types/react-router-dom": "^5.3.0",
     "@types/styled-components": "^5.1.14",
     "deep-equal": "^2.0.5",
     "minireset.css": "0.0.7",
@@ -118,9 +118,8 @@
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "eslint-plugin-react": "^7.25.1",
+    "eslint-plugin-react": "^7.26.0",
     "eslint-plugin-typescript": "^0.14.0",
-    "npm-check-updates": "^11.8.5",
     "prettier": "^2.4.1"
   }
 }
