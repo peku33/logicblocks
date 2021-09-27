@@ -1,3 +1,4 @@
+#![feature(array_chunks)]
 #![feature(associated_type_defaults)]
 #![feature(async_closure)]
 #![feature(div_duration)]
@@ -6,6 +7,7 @@
 #![feature(generic_associated_types)]
 #![feature(hash_drain_filter)]
 #![feature(inherent_associated_types)]
+#![feature(int_roundings)]
 #![feature(never_type)]
 #![feature(option_result_contains)]
 #![feature(raw_vec_internals)]
