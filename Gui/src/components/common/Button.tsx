@@ -7,7 +7,7 @@ export const Button = styled.div<{
 }>`
   padding: 0.5rem 1rem;
   background-color: ${(props) => (props.active ? Colors.GREEN : Colors.GREY)};
-  color: white;
+  color: ${Colors.WHITE};
   font-weight: bold;
   text-align: center;
   cursor: pointer;
@@ -25,7 +25,7 @@ export const ButtonLink = styled.a`
   padding: 0.5rem 1rem;
 
   background-color: ${Colors.GREY};
-  color: white;
+  color: ${Colors.WHITE};
   font-weight: bold;
   text-align: center;
   cursor: pointer;

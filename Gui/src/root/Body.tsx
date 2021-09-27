@@ -63,7 +63,7 @@ const MenuLink = styled.div<{
   padding: 1rem;
 
   background-color: ${(props) => (props.active ? Colors.BLUE : "unset")};
-  color: ${(props) => (props.active ? "white" : "unset")};
+  color: ${(props) => (props.active ? Colors.WHITE : "unset")};
 
   font-weight: bold;
 
