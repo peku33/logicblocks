@@ -1,4 +1,5 @@
 import dahuaIpcHdw4631cA from "./dahua/ipc_hdw4631c_a/SummaryManaged";
+import eatonMmaxA from "./eaton/mmax_a/SummaryManaged";
 import hikvisionDs2cd2x32xX from "./hikvision/ds2cd2x32x_x/SummaryManaged";
 import houseblocksAvrV1D0003JunctionBoxMinimalV1 from "./houseblocks/avr_v1/d0003_junction_box_minimal_v1/SummaryManaged";
 import houseblocksAvrV1D0006Relay14OptoAV1 from "./houseblocks/avr_v1/d0006_relay14_opto_a_v1/SummaryManaged";
@@ -14,6 +15,8 @@ export function getByClass(cls: string): SummaryManagedBase {
   switch (cls) {
     case "dahua/ipc_hdw4631c_a":
       return dahuaIpcHdw4631cA;
+    case "eaton/mmax_a":
+      return eatonMmaxA;
     case "hikvision/ds2cd2x32x_x":
       return hikvisionDs2cd2x32xX;
     case "houseblocks/avr_v1/junction_box_minimal_v1":
