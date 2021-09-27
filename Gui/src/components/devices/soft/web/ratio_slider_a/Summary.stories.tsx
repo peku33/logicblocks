@@ -17,4 +17,4 @@ export default {
   },
 } as Meta;
 
-export const Template: Story<ComponentProps<typeof Summary>> = (props) => <Summary {...props} />;
+export const Default: Story<ComponentProps<typeof Summary>> = (props) => <Summary {...props} />;
