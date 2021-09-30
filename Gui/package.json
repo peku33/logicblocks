@@ -6,8 +6,8 @@
     "@types/deep-equal": "^1.0.1",
     "@types/glob-base": "^0.3.0",
     "@types/jest": "27.0.2",
-    "@types/node": "16.10.1",
-    "@types/react": "17.0.24",
+    "@types/node": "16.10.2",
+    "@types/react": "17.0.26",
     "@types/react-dom": "17.0.9",
     "@types/react-router-dom": "^5.3.0",
     "@types/styled-components": "^5.1.14",
@@ -118,7 +118,7 @@
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "eslint-plugin-react": "^7.26.0",
+    "eslint-plugin-react": "^7.26.1",
     "eslint-plugin-typescript": "^0.14.0",
     "prettier": "^2.4.1"
   }
