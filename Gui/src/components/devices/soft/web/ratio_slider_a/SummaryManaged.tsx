@@ -11,14 +11,15 @@ const SummaryManaged: SummaryManagedBase = (props) => {
   const { deviceId } = props;
 
   const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
-
-  const setValue = useCallback(
+  const onValueChanged = useCallback(
     (value: number | null) => {
       devicePostJsonEmpty(deviceId, "", value);
     },
     [deviceId],
   );
 
-  return <Summary value={deviceSummary !== undefined ? deviceSummary.value : undefined} valueChanged={setValue} />;
+  return (
+    <Summary value={deviceSummary !== undefined ? deviceSummary.value : undefined} onValueChanged={onValueChanged} />
+  );
 };
 export default SummaryManaged;

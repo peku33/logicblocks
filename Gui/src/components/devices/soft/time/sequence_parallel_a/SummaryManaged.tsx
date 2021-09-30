@@ -169,63 +169,63 @@ const SummaryManaged: SummaryManagedBase = (props) => {
 
   const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
 
-  const doDeviceDisable = useCallback((): void => {
+  const onDeviceDisable = useCallback((): void => {
     devicePostEmpty(deviceId, "/device/disable");
   }, [deviceId]);
-  const doDevicePause = useCallback((): void => {
+  const onDevicePause = useCallback((): void => {
     devicePostEmpty(deviceId, "/device/pause");
   }, [deviceId]);
-  const doDeviceEnable = useCallback((): void => {
+  const onDeviceEnable = useCallback((): void => {
     devicePostEmpty(deviceId, "/device/enable");
   }, [deviceId]);
 
-  const doChannelsAllClear = useCallback((): void => {
+  const onChannelsAllClear = useCallback((): void => {
     devicePostEmpty(deviceId, "/channels/all/clear");
   }, [deviceId]);
-  const doChannelsAllAdd = useCallback(
+  const onChannelsAllAdd = useCallback(
     (multiplier: number): void => {
       devicePostJsonEmpty(deviceId, "/channels/all/add", multiplier);
     },
     [deviceId],
   );
 
-  const doChannelDisable = useCallback(
+  const onChannelDisable = useCallback(
     (channelId: number) => {
       devicePostEmpty(deviceId, `/channels/${channelId}/disable`);
     },
     [deviceId],
   );
-  const doChannelPause = useCallback(
+  const onChannelPause = useCallback(
     (channelId: number) => {
       devicePostEmpty(deviceId, `/channels/${channelId}/pause`);
     },
     [deviceId],
   );
-  const doChannelEnable = useCallback(
+  const onChannelEnable = useCallback(
     (channelId: number) => {
       devicePostEmpty(deviceId, `/channels/${channelId}/enable`);
     },
     [deviceId],
   );
-  const doChannelClear = useCallback(
+  const onChannelClear = useCallback(
     (channelId: number) => {
       devicePostEmpty(deviceId, `/channels/${channelId}/clear`);
     },
     [deviceId],
   );
-  const doChannelAdd = useCallback(
+  const onChannelAdd = useCallback(
     (channelId: number, multiplier: number) => {
       devicePostJsonEmpty(deviceId, `/channels/${channelId}/add`, multiplier);
     },
     [deviceId],
   );
-  const doChannelMoveFront = useCallback(
+  const onChannelMoveFront = useCallback(
     (channelId: number) => {
       devicePostEmpty(deviceId, `/channels/${channelId}/move-front`);
     },
     [deviceId],
   );
-  const doChannelMoveBack = useCallback(
+  const onChannelMoveBack = useCallback(
     (channelId: number) => {
       devicePostEmpty(deviceId, `/channels/${channelId}/move-back`);
     },
@@ -240,23 +240,23 @@ const SummaryManaged: SummaryManagedBase = (props) => {
     <Wrapper>
       <Section>
         <ButtonGroup>
-          <Button active={deviceSummaryStateIsEnabled(deviceSummary.state)} onClick={doDeviceEnable}>
+          <Button active={deviceSummaryStateIsEnabled(deviceSummary.state)} onClick={onDeviceEnable}>
             Enable
           </Button>
-          <Button active={deviceSummaryStateIsPaused(deviceSummary.state)} onClick={doDevicePause}>
+          <Button active={deviceSummaryStateIsPaused(deviceSummary.state)} onClick={onDevicePause}>
             Pause
           </Button>
-          <Button active={deviceSummaryStateIsDisabled(deviceSummary.state)} onClick={doDeviceDisable}>
+          <Button active={deviceSummaryStateIsDisabled(deviceSummary.state)} onClick={onDeviceDisable}>
             Disable
           </Button>
         </ButtonGroup>
 
         {deviceSummaryStateIsPaused(deviceSummary.state) || deviceSummaryStateIsEnabled(deviceSummary.state) ? (
           <ButtonGroup>
-            <Button onClick={() => doChannelsAllAdd(1.0)}>+1</Button>
-            <Button onClick={() => doChannelsAllAdd(0.5)}>+1/2</Button>
-            <Button onClick={() => doChannelsAllAdd(0.25)}>+1/4</Button>
-            <Button onClick={doChannelsAllClear}>Clear</Button>
+            <Button onClick={() => onChannelsAllAdd(1.0)}>+1</Button>
+            <Button onClick={() => onChannelsAllAdd(0.5)}>+1/2</Button>
+            <Button onClick={() => onChannelsAllAdd(0.25)}>+1/4</Button>
+            <Button onClick={onChannelsAllClear}>Clear</Button>
           </ButtonGroup>
         ) : null}
 
@@ -297,7 +297,7 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                             channelState as DeviceSummaryDeviceStateEnabledChannelState,
                           )))
                     }
-                    onClick={() => doChannelEnable(channelId)}
+                    onClick={() => onChannelEnable(channelId)}
                   >
                     Enable
                   </Button>
@@ -316,7 +316,7 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                           channelState as DeviceSummaryDeviceStateEnabledChannelState,
                         ))
                     }
-                    onClick={() => doChannelPause(channelId)}
+                    onClick={() => onChannelPause(channelId)}
                   >
                     Pause
                   </Button>
@@ -335,7 +335,7 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                           channelState as DeviceSummaryDeviceStateEnabledChannelState,
                         ))
                     }
-                    onClick={() => doChannelDisable(channelId)}
+                    onClick={() => onChannelDisable(channelId)}
                   >
                     Disable
                   </Button>
@@ -361,10 +361,10 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                         channelState as DeviceSummaryDeviceStateEnabledChannelState,
                       ))) ? (
                     <ButtonGroup>
-                      <Button onClick={() => doChannelAdd(channelId, 1.0)}>+1</Button>
-                      <Button onClick={() => doChannelAdd(channelId, 0.5)}>+1/2</Button>
-                      <Button onClick={() => doChannelAdd(channelId, 0.25)}>+1/4</Button>
-                      <Button onClick={() => doChannelClear(channelId)}>Clear</Button>
+                      <Button onClick={() => onChannelAdd(channelId, 1.0)}>+1</Button>
+                      <Button onClick={() => onChannelAdd(channelId, 0.5)}>+1/2</Button>
+                      <Button onClick={() => onChannelAdd(channelId, 0.25)}>+1/4</Button>
+                      <Button onClick={() => onChannelClear(channelId)}>Clear</Button>
                     </ButtonGroup>
                   ) : null}
                 </>
@@ -380,8 +380,8 @@ const SummaryManaged: SummaryManagedBase = (props) => {
                     )) ? (
                     <ButtonGroup>
                       <ButtonGroup>
-                        <Button onClick={() => doChannelMoveFront(channelId)}>Move front</Button>
-                        <Button onClick={() => doChannelMoveBack(channelId)}>Move back</Button>
+                        <Button onClick={() => onChannelMoveFront(channelId)}>Move front</Button>
+                        <Button onClick={() => onChannelMoveBack(channelId)}>Move back</Button>
                       </ButtonGroup>
                     </ButtonGroup>
                   ) : null}

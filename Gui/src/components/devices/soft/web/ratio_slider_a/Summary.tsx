@@ -6,9 +6,9 @@ const ButtonOffsets = [0.01, 0.05, 0.1];
 
 const Summary: React.VFC<{
   value: number | null | undefined; // 0.0 - 1.0
-  valueChanged: ((newValue: number | null) => void) | undefined;
+  onValueChanged: ((newValue: number | null) => void) | undefined;
 }> = (props) => {
-  const { value, valueChanged } = props;
+  const { value, onValueChanged } = props;
 
   return (
     <Wrapper>
@@ -16,7 +16,7 @@ const Summary: React.VFC<{
         {ButtonValues.map((buttonValue) => (
           <Button
             key={buttonValue}
-            onClick={valueChanged !== undefined ? () => valueChanged(buttonValue) : () => ({})}
+            onClick={onValueChanged !== undefined ? () => onValueChanged(buttonValue) : () => ({})}
             active={buttonValue === value}
           >
             {stringifyValue(buttonValue)}
@@ -30,8 +30,8 @@ const Summary: React.VFC<{
             <Button
               key={offset}
               onClick={
-                valueChanged !== undefined && value !== undefined && value !== null
-                  ? () => valueChanged(fixValue(value - offset))
+                onValueChanged !== undefined && value !== undefined && value !== null
+                  ? () => onValueChanged(fixValue(value - offset))
                   : () => ({})
               }
             >
@@ -46,8 +46,8 @@ const Summary: React.VFC<{
           <Button
             key={offset}
             onClick={
-              valueChanged !== undefined && value !== undefined && value !== null
-                ? () => valueChanged(fixValue(value + offset))
+              onValueChanged !== undefined && value !== undefined && value !== null
+                ? () => onValueChanged(fixValue(value + offset))
                 : () => ({})
             }
           >

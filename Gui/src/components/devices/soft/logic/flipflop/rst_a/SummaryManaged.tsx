@@ -8,16 +8,16 @@ const SummaryManaged: SummaryManagedBase = (props) => {
 
   const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
 
-  const doR = useCallback((): void => {
+  const onR = useCallback((): void => {
     devicePostEmpty(deviceId, "/r");
   }, [deviceId]);
-  const doS = useCallback((): void => {
+  const onS = useCallback((): void => {
     devicePostEmpty(deviceId, "/s");
   }, [deviceId]);
-  const doT = useCallback((): void => {
+  const onT = useCallback((): void => {
     devicePostEmpty(deviceId, "/t");
   }, [deviceId]);
 
-  return <Summary deviceSummary={deviceSummary} onR={doR} onS={doS} onT={doT} />;
+  return <Summary deviceSummary={deviceSummary} onR={onR} onS={onS} onT={onT} />;
 };
 export default SummaryManaged;

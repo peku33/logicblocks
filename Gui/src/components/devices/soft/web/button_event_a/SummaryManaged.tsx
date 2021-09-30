@@ -6,10 +6,10 @@ import Summary from "./Summary";
 const SummaryManaged: SummaryManagedBase = (props) => {
   const { deviceId } = props;
 
-  const doSignal = useCallback((): void => {
+  const onSignal = useCallback((): void => {
     devicePostEmpty(deviceId, "");
   }, [deviceId]);
 
-  return <Summary onSignal={doSignal} />;
+  return <Summary onSignal={onSignal} />;
 };
 export default SummaryManaged;
