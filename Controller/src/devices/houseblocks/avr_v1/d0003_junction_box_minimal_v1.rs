@@ -186,7 +186,7 @@ pub mod logic {
     }
     impl devices::GuiSummaryProvider for Device {
         fn value(&self) -> Box<dyn devices::GuiSummary> {
-            let value = GuiSummary {
+            let gui_summary = GuiSummary {
                 temperature: self
                     .properties_remote
                     .temperature
@@ -194,8 +194,8 @@ pub mod logic {
                     .map(|temperature| temperature.temperature())
                     .flatten(),
             };
-            let value = Box::new(value);
-            value
+            let gui_summary = Box::new(gui_summary);
+            gui_summary
         }
 
         fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {

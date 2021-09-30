@@ -143,8 +143,9 @@ impl Runnable for Device {
 }
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let gui_summary: bool = *self.value_beat_receiver.borrow();
-        Box::new(gui_summary)
+        let gui_summary = *self.value_beat_receiver.borrow();
+        let gui_summary = Box::new(gui_summary);
+        gui_summary
     }
 
     fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {

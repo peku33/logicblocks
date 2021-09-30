@@ -83,9 +83,10 @@ struct GuiSummary {
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
         let value = self.signal_output.peek_last();
-        let value = GuiSummary { value };
-        let value = Box::new(value);
-        value
+
+        let gui_summary = GuiSummary { value };
+        let gui_summary = Box::new(gui_summary);
+        gui_summary
     }
 
     fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {

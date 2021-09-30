@@ -380,7 +380,9 @@ impl signals::Device for Device {
 }
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
-        Box::new(self.device_state.read().clone())
+        let gui_summary = self.device_state.read().clone();
+        let gui_summary = Box::new(gui_summary);
+        gui_summary
     }
     fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
         self.gui_summary_waker.receiver_factory()

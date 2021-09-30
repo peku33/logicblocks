@@ -116,11 +116,11 @@ pub mod logic {
     }
     impl<S: Specification> devices::GuiSummaryProvider for Device<S> {
         fn value(&self) -> Box<dyn devices::GuiSummary> {
-            let value = GuiSummary {
+            let gui_summary = GuiSummary {
                 values: self.properties_remote.outputs.peek_last(),
             };
-            let value = Box::new(value);
-            value
+            let gui_summary = Box::new(gui_summary);
+            gui_summary
         }
 
         fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {

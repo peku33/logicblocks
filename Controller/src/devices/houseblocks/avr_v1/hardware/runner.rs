@@ -266,11 +266,11 @@ struct GuiSummary {
 }
 impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let value = GuiSummary {
+        let gui_summary = GuiSummary {
             device_state: *self.device_state.lock(),
         };
-        let value = Box::new(value);
-        value
+        let gui_summary = Box::new(gui_summary);
+        gui_summary
     }
 
     fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {

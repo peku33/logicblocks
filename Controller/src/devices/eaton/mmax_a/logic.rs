@@ -219,7 +219,8 @@ impl<'m> devices::GuiSummaryProvider for Device<'m> {
             },
             hardware::Output::Error => GuiSummary::Error,
         };
-        Box::new(gui_summary)
+        let gui_summary = Box::new(gui_summary);
+        gui_summary
     }
     fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
         self.gui_summary_waker.receiver_factory()

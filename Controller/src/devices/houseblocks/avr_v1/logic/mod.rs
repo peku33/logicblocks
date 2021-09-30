@@ -200,15 +200,15 @@ struct GuiSummary {
 }
 impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let value = GuiSummary {
+        let gui_summary = GuiSummary {
             device: match self.device.as_gui_summary_provider() {
                 Some(gui_summary_provider) => gui_summary_provider.value(),
                 None => Box::new(()),
             },
             hardware_runner: self.hardware_runner.value(),
         };
-        let value = Box::new(value);
-        value
+        let gui_summary = Box::new(gui_summary);
+        gui_summary
     }
 
     fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
