@@ -21,8 +21,8 @@ pub struct Signal<V: Value + Clone> {
 impl<V: Value + Clone> Signal<V> {
     pub fn new(initial: Option<V>) -> Self {
         let inner = Inner {
-            last: initial,
-            pending: Vec::new(),
+            last: initial.clone(),
+            pending: vec![initial],
         };
 
         Self {
