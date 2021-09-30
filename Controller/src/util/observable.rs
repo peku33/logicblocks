@@ -48,6 +48,8 @@ impl InnerRemote {
 }
 
 // Value
+/// Main value holder object.
+/// This should be but in the place where you manage contained value
 #[derive(Debug)]
 pub struct Value<T>
 where
@@ -59,15 +61,20 @@ impl<T> Value<T>
 where
     T: Clone + PartialEq + Eq,
 {
+    /// Initializes object with given initial value
     pub fn new(initial: T) -> Self {
         let inner = Inner::new(initial);
         let inner = RwLock::new(inner);
         Self { inner }
     }
 
+    /// Returns current value
     pub fn get(&self) -> T {
         self.inner.read().value.clone()
     }
+    /// Sets new value
+    /// Returns false if value was equal to previous and was not updated
+    /// Returns true if value was updated and observers were waked
     pub fn set(
         &self,
         value: T,
@@ -88,25 +95,30 @@ where
         changed
     }
 
+    /// Returns [`Getter`]
     pub fn getter(&self) -> Getter<'_, T> {
         Getter::new(self)
     }
+    /// Returns [`Setter`]
     pub fn setter(&self) -> Setter<'_, T> {
         Setter::new(self)
     }
 
+    /// Returns [`Observer`]
     pub fn observer(
         &self,
         initially_pending: bool,
     ) -> Observer<'_, T> {
         Observer::new(self, initially_pending)
     }
+    /// Returns [`ChangedStream`]
     pub fn changed_stream(
         &self,
         initially_pending: bool,
     ) -> ChangedStream<'_, T> {
         ChangedStream::new(self, initially_pending)
     }
+    /// Returns [`ValueStream`]
     pub fn value_stream(
         &self,
         initially_pending: bool,
@@ -116,6 +128,8 @@ where
 }
 
 // Getter
+/// Getter object - read only part od [`Value`]. Creating and keeping this object has no cost, it's just a proxy around
+/// read-only methods of [`Value`].
 #[derive(Debug)]
 pub struct Getter<'v, T>
 where
@@ -131,22 +145,26 @@ where
         Self { parent }
     }
 
+    /// Returns current value
     pub fn get(&self) -> T {
         self.parent.get()
     }
 
+    /// Returns [`Observer`]
     pub fn observer(
         &self,
         initially_pending: bool,
     ) -> Observer<'v, T> {
         self.parent.observer(initially_pending)
     }
+    /// Returns [`ChangedStream`]
     pub fn changed_stream(
         &self,
         initially_pending: bool,
     ) -> ChangedStream<'v, T> {
         self.parent.changed_stream(initially_pending)
     }
+    /// Returns [`ValueStream`]
     pub fn value_stream(
         &self,
         initially_pending: bool,
@@ -156,6 +174,8 @@ where
 }
 
 // Setter
+/// Setter object - read-write part od [`Value`]. Creating and keeping this object has no cost, it's just a proxy around
+/// read-write methods of [`Value`].
 #[derive(Debug)]
 pub struct Setter<'v, T>
 where
@@ -171,9 +191,13 @@ where
         Self { parent }
     }
 
+    /// Returns current value
     pub fn get(&self) -> T {
         self.parent.get()
     }
+    /// Sets new value
+    /// Returns false if value was equal to previous and was not updated
+    /// Returns true if value was updated and observers were waked
     pub fn set(
         &mut self,
         value: T,
@@ -181,18 +205,21 @@ where
         self.parent.set(value)
     }
 
+    /// Returns [`Observer`]
     pub fn observer(
         &self,
         initially_pending: bool,
     ) -> Observer<'v, T> {
         self.parent.observer(initially_pending)
     }
+    /// Returns [`ChangedStream`]
     pub fn changed_stream(
         &self,
         initially_pending: bool,
     ) -> ChangedStream<'v, T> {
         self.parent.changed_stream(initially_pending)
     }
+    /// Returns [`ValueStream`]
     pub fn value_stream(
         &self,
         initially_pending: bool,
@@ -202,6 +229,8 @@ where
 }
 
 // Observer
+/// Observer object. This internally keeps the copy of "last seen" or "last processed" value. Calling its method will
+/// compare this value against global (from [`Value`]) value and tell whether it was changed.
 #[derive(Debug)]
 pub struct Observer<'v, T>
 where
@@ -230,6 +259,21 @@ where
         }
     }
 
+    /// Returns latest global (from [`Value`]) value and marks it as "last seen".
+    pub fn get_update(&mut self) -> &T {
+        let parent_inner = self.parent.inner.read();
+
+        if !self.last_seen_value.contains(&parent_inner.value) {
+            self.last_seen_value.replace(parent_inner.value.clone());
+        }
+
+        drop(parent_inner);
+
+        self.last_seen_value.as_ref().unwrap()
+    }
+
+    /// Returns latest global (from [`Value`]) value and marks it as "last seen" only if it differs from previous
+    /// "last seen".
     pub fn get_changed_update(&mut self) -> Option<&T> {
         let parent_inner = self.parent.inner.read();
 
@@ -244,6 +288,8 @@ where
 
         changed
     }
+
+    /// Returns [`ObserverCommitter`] object if global (from [`Value`]) value differs from "last seen".
     pub fn get_changed_committer(&mut self) -> Option<ObserverCommitter<'_, 'v, T>> {
         let parent_inner = self.parent.inner.read();
 
@@ -258,11 +304,14 @@ where
         observer_committer
     }
 
+    /// Returns the [`ObserverChanged`] object.
     pub fn changed(&mut self) -> ObserverChanged<'_, 'v, T> {
         ObserverChanged::new(self)
     }
 }
 
+/// This object allows to first freeze the value and then mark it (or not) as "last seen" or "last processed". This
+/// is useful if processing of the value may fail and we may want to retry later, keeping pending state.
 pub struct ObserverCommitter<'r, 'v, T>
 where
     T: Clone + PartialEq + Eq,
@@ -284,15 +333,20 @@ where
         }
     }
 
+    /// Returns value. The value is frozen inside, meaning it won't change between calls, event if [`Value`] value was
+    /// updated.
     pub fn value(&self) -> &T {
         &self.pending_value
     }
+    /// Marks value returned by [`Self::value`] as last seen.
     pub fn commit(self) {
         self.parent.last_seen_value.replace(self.pending_value);
     }
 }
 
 // ObserverChanged
+/// Future that will complete if value stored in [`Observer`] (aka last seen) differs from value stored
+/// in [`Value`] (aka global).
 #[derive(Debug)]
 pub struct ObserverChanged<'r, 'v, T>
 where
@@ -306,7 +360,7 @@ impl<'r, 'v, T> ObserverChanged<'r, 'v, T>
 where
     T: Clone + PartialEq + Eq,
 {
-    pub fn new(parent: &'r mut Observer<'v, T>) -> Self {
+    fn new(parent: &'r mut Observer<'v, T>) -> Self {
         let inner_remote = InnerRemote::new();
         let inner_remote = Box::pin(inner_remote);
 
@@ -385,10 +439,9 @@ where
 }
 
 // ChangedStream
-// yields () on value change
-// multiple changes between polls will be compacted to single yield
-// if value goes back - won't yield
-// a little slower than ObserverChanged because of additional clone
+/// Stream yielding () when value is changed. Remembers value from previous yield and yields only if value differs. If
+/// value went A -> B -> A quickly, it is possible it won't yield. Use this when you don't need value returned from
+/// stream, as this is a bit faster then [`ValueStream`].
 pub struct ChangedStream<'v, T>
 where
     T: Clone + PartialEq + Eq,
@@ -481,10 +534,9 @@ where
 }
 
 // ValueStream
-// yields latest value
-// multiple changes between polls will be compacted to single (last) yield
-// if value goes back - won't yield
-// a little slower than ObserverChanged because of additional clone
+/// Stream yielding value when it is changed. Remembers value from previous yield and yields only if value differs. If
+/// value went A -> B -> A quickly, it is possible it won't yield. A bit slower then [`ChangedStream`], because of
+/// additional clone, so use it only when you actually need value from stream, not just information it was changed.
 pub struct ValueStream<'v, T>
 where
     T: Clone + PartialEq + Eq,
