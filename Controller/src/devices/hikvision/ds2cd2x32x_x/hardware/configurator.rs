@@ -4,6 +4,11 @@ use std::{fmt, marker::PhantomData, time::Duration};
 use xmltree::{Element, XMLNode};
 
 #[derive(Clone, Copy, Debug)]
+pub struct Capabilities {
+    audio: bool,
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct Percentage {
     value: u8,
 }
@@ -303,22 +308,55 @@ pub struct Configuration {
 
 pub struct Configurator<'a> {
     api: &'a Api,
-    basic_device_info: &'a BasicDeviceInfo,
+    basic_device_info: BasicDeviceInfo,
+    capabilities: Capabilities,
 }
 impl<'a> Configurator<'a> {
     pub const SHARED_USER_LOGIN: &'static str = "logicblocks";
 
-    pub fn new(
-        api: &'a Api,
-        basic_device_info: &'a BasicDeviceInfo,
-    ) -> Self {
-        Self {
-            api,
-            basic_device_info,
-        }
+    async fn capabilities_fetch(api: &Api) -> Result<Capabilities, Error> {
+        let device_capabilities = api
+            .get_xml("/ISAPI/System/capabilities".parse().unwrap())
+            .await
+            .context("get_xml")?;
+
+        let system_capabilities = device_capabilities.get_child("SysCap");
+
+        let audio_capabilities = match system_capabilities {
+            Some(system_capabilities) => system_capabilities.get_child("AudioCap"),
+            None => None,
+        };
+        let audio = audio_capabilities.is_some();
+
+        let capabilities = Capabilities { audio };
+        Ok(capabilities)
     }
 
-    pub async fn healthcheck(&mut self) -> Result<(), Error> {
+    pub async fn connect(api: &'a Api) -> Result<Configurator<'a>, Error> {
+        let basic_device_info = api
+            .validate_basic_device_info()
+            .await
+            .context("validate_basic_device_info")?;
+        let capabilities = Self::capabilities_fetch(api)
+            .await
+            .context("capabilities")?;
+
+        let self_ = Self {
+            api,
+            basic_device_info,
+            capabilities,
+        };
+        Ok(self_)
+    }
+
+    pub fn basic_device_info(&self) -> &BasicDeviceInfo {
+        &self.basic_device_info
+    }
+    pub fn capabilities(&self) -> &Capabilities {
+        &self.capabilities
+    }
+
+    async fn healthcheck(&mut self) -> Result<(), Error> {
         self.api
             .validate_basic_device_info()
             .await
@@ -529,7 +567,7 @@ impl<'a> Configurator<'a> {
                         element_build_text("userType", "viewer"),
                         element_build_children(
                             "remotePermission",
-                            vec![element_build_text("preview", "true")],
+                            vec![element_build_bool("preview", true)],
                         ),
                     ],
                 )),
@@ -553,7 +591,7 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "UPnP",
                     vec![
-                        element_build_text("enabled", "true"),
+                        element_build_bool("enabled", true),
                         element_build_text("name", device_name),
                     ],
                 )),
@@ -573,7 +611,7 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "ports",
                     vec![
-                        element_build_text("enabled", "false"),
+                        element_build_bool("enabled", false),
                         element_build_text("mapmode", "auto"),
                         element_build_children("portList", vec![]),
                     ],
@@ -593,7 +631,7 @@ impl<'a> Configurator<'a> {
                 "/ISAPI/System/Network/EZVIZ".parse().unwrap(),
                 Some(element_build_children(
                     "EZVIZ",
-                    vec![element_build_text("enabled", "false")],
+                    vec![element_build_bool("enabled", false)],
                 )),
             )
             .await
@@ -626,7 +664,7 @@ impl<'a> Configurator<'a> {
                         ),
                         element_build_children(
                             "Audio",
-                            vec![element_build_text("enabled", "true")],
+                            vec![element_build_bool("enabled", self.capabilities.audio)],
                         ),
                     ],
                 )),
@@ -660,7 +698,7 @@ impl<'a> Configurator<'a> {
                         ),
                         element_build_children(
                             "Audio",
-                            vec![element_build_text("enabled", "true")],
+                            vec![element_build_bool("enabled", self.capabilities.audio)],
                         ),
                     ],
                 )),
@@ -683,7 +721,7 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "ImageFlip",
                     vec![
-                        element_build_text("enabled", if upside_down { "true" } else { "false" }),
+                        element_build_bool("enabled", upside_down),
                         element_build_text("ImageFlipStyle", "UPDOWN"),
                     ],
                 )),
@@ -697,6 +735,10 @@ impl<'a> Configurator<'a> {
     }
 
     pub async fn audio(&mut self) -> Result<(), Error> {
+        if !self.capabilities.audio {
+            return Ok(());
+        }
+
         let reboot_required = self
             .api
             .put_xml(
@@ -705,10 +747,10 @@ impl<'a> Configurator<'a> {
                     "TwoWayAudioChannel",
                     vec![
                         element_build_text("id", "1"),
-                        element_build_text("enabled", "true"),
+                        element_build_bool("enabled", true),
                         element_build_text("audioInputType", "MicIn"),
                         element_build_text("speakerVolume", "100"),
-                        element_build_text("noisereduce", "true"),
+                        element_build_bool("noisereduce", true),
                     ],
                 )),
             )
@@ -735,10 +777,7 @@ impl<'a> Configurator<'a> {
                     vec![element_build_children(
                         "channelNameOverlay",
                         vec![
-                            element_build_text(
-                                "enabled",
-                                if name.is_some() { "true" } else { "false" },
-                            ),
+                            element_build_bool("enabled", name.is_some()),
                             element_build_text("positionX", "512"),
                             element_build_text("positionY", "64"),
                         ],
@@ -782,12 +821,12 @@ impl<'a> Configurator<'a> {
                     vec![element_build_children(
                         "DateTimeOverlay",
                         vec![
-                            element_build_text("enabled", "true"),
+                            element_build_bool("enabled", true),
                             element_build_text("positionX", "0"),
                             element_build_text("positionY", "544"),
                             element_build_text("dateStyle", "YYYY-MM-DD"),
                             element_build_text("timeStyle", "24hour"),
-                            element_build_text("displayWeek", "false"),
+                            element_build_bool("displayWeek", false),
                         ],
                     )],
                 )),
@@ -814,7 +853,7 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "PrivacyMask",
                     vec![
-                        element_build_text("enabled", "true"),
+                        element_build_bool("enabled", true),
                         element_build_children(
                             "PrivacyMaskRegionList",
                             privacy_mask
@@ -826,7 +865,7 @@ impl<'a> Configurator<'a> {
                                         "PrivacyMaskRegion",
                                         vec![
                                             element_build_text("id", (id + 1).to_string()),
-                                            element_build_text("enabled", "true"),
+                                            element_build_bool("enabled", true),
                                             serialize_coordinates_list(region),
                                         ],
                                     )
@@ -854,8 +893,8 @@ impl<'a> Configurator<'a> {
                     vec![
                         element_build_text("id", "101"),
                         element_build_text("Channel", "101"),
-                        element_build_text("Enable", "false"),
-                        element_build_text("LoopEnable", "true"),
+                        element_build_bool("Enable", false),
+                        element_build_bool("LoopEnable", true),
                     ],
                 )),
             )
@@ -882,7 +921,7 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "MotionDetectionExt",
                     vec![
-                        element_build_text("enabled", "true"),
+                        element_build_bool("enabled", true),
                         element_build_text("activeMode", "expert"),
                         element_build_children(
                             "MotionDetectionRegionList",
@@ -895,7 +934,7 @@ impl<'a> Configurator<'a> {
                                         "MotionDetectionRegion",
                                         vec![
                                             element_build_text("id", (id + 1).to_string()),
-                                            element_build_text("enabled", "true"),
+                                            element_build_bool("enabled", true),
                                             element_build_text(
                                                 "sensitivityLevel",
                                                 region.sensitivity.value().to_string(),
@@ -932,14 +971,14 @@ impl<'a> Configurator<'a> {
                 Some(element_build_children(
                     "TamperDetection",
                     vec![
-                        element_build_text("enabled", "true"),
+                        element_build_bool("enabled", true),
                         element_build_children(
                             "TamperDetectionRegionList",
                             vec![element_build_children(
                                 "TamperDetectionRegion",
                                 vec![
                                     element_build_text("id", "1"),
-                                    element_build_text("enabled", "true"),
+                                    element_build_bool("enabled", true),
                                     element_build_text("sensitivityLevel", "100"),
                                     serialize_coordinates_list(RegionSquare::<
                                         CoordinateSystem704x576,
@@ -972,7 +1011,7 @@ impl<'a> Configurator<'a> {
                     "FieldDetection",
                     vec![
                         element_build_text("id", "1"),
-                        element_build_text("enabled", "true"),
+                        element_build_bool("enabled", true),
                         element_build_children(
                             "normalizedScreenSize",
                             vec![
@@ -986,7 +1025,7 @@ impl<'a> Configurator<'a> {
                                 "FieldDetectionRegion",
                                 vec![
                                     element_build_text("id", "1"),
-                                    element_build_text("enabled", "true"),
+                                    element_build_bool("enabled", true),
                                     element_build_text(
                                         "sensitivityLevel",
                                         field_detection.sensitivity.value().to_string(),
@@ -1027,7 +1066,7 @@ impl<'a> Configurator<'a> {
                     "LineDetection",
                     vec![
                         element_build_text("id", "1"),
-                        element_build_text("enabled", "true"),
+                        element_build_bool("enabled", true),
                         element_build_children(
                             "normalizedScreenSize",
                             vec![
@@ -1041,7 +1080,7 @@ impl<'a> Configurator<'a> {
                                 "LineItem",
                                 vec![
                                     element_build_text("id", "1"),
-                                    element_build_text("enabled", "true"),
+                                    element_build_bool("enabled", true),
                                     element_build_text(
                                         "sensitivityLevel",
                                         line_detection.sensitivity.value().to_string(),
@@ -1174,6 +1213,12 @@ fn element_build_text(
     let mut element = Element::new(name);
     element.children.push(XMLNode::Text(text.to_string()));
     element
+}
+fn element_build_bool(
+    name: &str,
+    value: bool,
+) -> Element {
+    element_build_text(name, if value { "true" } else { "false" })
 }
 fn element_build_children(
     name: &str,

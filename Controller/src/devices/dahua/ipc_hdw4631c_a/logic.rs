@@ -211,20 +211,15 @@ impl Device {
             self.configuration.admin_password.clone(),
         );
 
-        // basic validation
-        let basic_device_info = api
-            .validate_basic_device_info()
-            .await
-            .context("validate_basic_device_info")?;
-
         // configuration & watcher credentials
         let (shared_user_login, shared_user_password) =
             match &self.configuration.hardware_configuration {
                 HardwareConfiguration::Full {
                     hardware_configuration,
                 } => {
-                    let mut configurator =
-                        configurator::Configurator::new(&api, &basic_device_info);
+                    let mut configurator = configurator::Configurator::connect(&api)
+                        .await
+                        .context("connect")?;
                     configurator
                         .configure(hardware_configuration.clone())
                         .await
@@ -238,7 +233,14 @@ impl Device {
                 HardwareConfiguration::Skip {
                     shared_user_login,
                     shared_user_password,
-                } => (shared_user_login.as_str(), shared_user_password),
+                } => {
+                    // check if device is online and supported
+                    let _basic_device_info = api
+                        .validate_basic_device_info()
+                        .await
+                        .context("validate_basic_device_info")?;
+                    (shared_user_login.as_str(), shared_user_password)
+                }
             };
 
         let rtsp_urls = RtspUrls {

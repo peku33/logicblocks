@@ -7,6 +7,9 @@ use serde_json::json;
 use std::{cmp::max, collections::HashMap, iter, time::Duration};
 
 #[derive(Clone, Copy, Debug)]
+pub struct Capabilities {}
+
+#[derive(Clone, Copy, Debug)]
 pub struct Percentage {
     value: u8,
 }
@@ -310,22 +313,42 @@ pub struct Configuration {
 
 pub struct Configurator<'a> {
     api: &'a Api,
-    basic_device_info: &'a BasicDeviceInfo,
+    basic_device_info: BasicDeviceInfo,
+    capabilities: Capabilities,
 }
 impl<'a> Configurator<'a> {
     pub const SHARED_USER_LOGIN: &'static str = "logicblocks";
 
-    pub fn new(
-        api: &'a Api,
-        basic_device_info: &'a BasicDeviceInfo,
-    ) -> Self {
-        Self {
-            api,
-            basic_device_info,
-        }
+    async fn capabilities_fetch(_api: &Api) -> Result<Capabilities, Error> {
+        let capabilities = Capabilities {};
+        Ok(capabilities)
     }
 
-    pub async fn healthcheck(&mut self) -> Result<(), Error> {
+    pub async fn connect(api: &'a Api) -> Result<Configurator<'a>, Error> {
+        let basic_device_info = api
+            .validate_basic_device_info()
+            .await
+            .context("validate_basic_device_info")?;
+        let capabilities = Self::capabilities_fetch(api)
+            .await
+            .context("capabilities")?;
+
+        let self_ = Self {
+            api,
+            basic_device_info,
+            capabilities,
+        };
+        Ok(self_)
+    }
+
+    pub fn basic_device_info(&self) -> &BasicDeviceInfo {
+        &self.basic_device_info
+    }
+    pub fn capabilities(&self) -> &Capabilities {
+        &self.capabilities
+    }
+
+    async fn healthcheck(&mut self) -> Result<(), Error> {
         self.api
             .validate_basic_device_info()
             .await

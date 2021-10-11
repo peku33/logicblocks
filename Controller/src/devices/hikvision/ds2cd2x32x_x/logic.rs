@@ -204,12 +204,6 @@ impl Device {
             self.configuration.admin_password.clone(),
         );
 
-        // Check device
-        let basic_device_info = api
-            .validate_basic_device_info()
-            .await
-            .context("validate_basic_device_info")?;
-
         // Set device configuration
         // Get rtsp data based on configuration type
         let (shared_user_login, shared_user_password) =
@@ -217,8 +211,9 @@ impl Device {
                 HardwareConfiguration::Full {
                     hardware_configuration,
                 } => {
-                    let mut configurator =
-                        configurator::Configurator::new(&api, &basic_device_info);
+                    let mut configurator = configurator::Configurator::connect(&api)
+                        .await
+                        .context("connect")?;
                     configurator
                         .configure(hardware_configuration.clone())
                         .await
@@ -232,7 +227,15 @@ impl Device {
                 HardwareConfiguration::Skip {
                     shared_user_login,
                     shared_user_password,
-                } => (shared_user_login.as_str(), shared_user_password),
+                } => {
+                    // Check device
+                    let _basic_device_info = api
+                        .validate_basic_device_info()
+                        .await
+                        .context("validate_basic_device_info")?;
+
+                    (shared_user_login.as_str(), shared_user_password)
+                }
             };
 
         // Set device video URLs

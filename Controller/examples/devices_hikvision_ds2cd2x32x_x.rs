@@ -52,15 +52,11 @@ async fn main() -> Result<(), Error> {
 
     let api = Api::new(arguments.host, arguments.admin_password);
 
-    let basic_device_info = api
-        .validate_basic_device_info()
-        .await
-        .context("validate_basic_device_info")?;
-    log::info!("basic_device_info: {:?}", basic_device_info);
-
     if let Some(ArgumentsSubcommand::Configure(command_configure)) = arguments.subcommand {
+        let mut configurator = Configurator::connect(&api).await.context("connect")?;
+        log::info!("basic_device_info: {:?}", configurator.basic_device_info());
+        log::info!("capabilities: {:?}", configurator.capabilities());
         log::info!("starting configuration");
-        let mut configurator = Configurator::new(&api, &basic_device_info);
         configurator
             .configure(Configuration {
                 device_name: command_configure.device_name,
@@ -83,6 +79,12 @@ async fn main() -> Result<(), Error> {
             .await
             .context("configure")?;
         log::info!("configuration completed");
+    } else {
+        let basic_device_info = api
+            .validate_basic_device_info()
+            .await
+            .context("validate_basic_device_info")?;
+        log::info!("basic_device_info: {:?}", basic_device_info);
     }
 
     let event_stream_manager = Manager::new(&api);
