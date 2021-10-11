@@ -52,9 +52,10 @@ impl<T: fmt::Debug> fmt::Debug for AtomicCellErased<T> {
 }
 impl<T> Drop for AtomicCellErased<T> {
     fn drop(&mut self) {
-        if self.inner.lease_count.load(Ordering::Relaxed) != 0 {
-            panic!("dropping AtomicCellErased while AtomicCellErasedLease still exists");
-        }
+        assert!(
+            self.inner.lease_count.load(Ordering::Relaxed) == 0,
+            "dropping AtomicCellErased while AtomicCellErasedLease still exists"
+        );
     }
 }
 

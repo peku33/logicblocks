@@ -68,7 +68,7 @@ impl ReadBitsGenericResponse {
         }
         let bit_bytes_count_received = data[0] as usize;
 
-        let bit_bytes_count_expected = request.number_of_bits.div_ceil(8) as usize;
+        let bit_bytes_count_expected = request.number_of_bits.unstable_div_ceil(8) as usize;
         ensure!(
             bit_bytes_count_received == bit_bytes_count_expected,
             "bit bytes count mismatch"

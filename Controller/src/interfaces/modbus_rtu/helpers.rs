@@ -26,7 +26,7 @@ pub fn bits_slice_to_bytes(bits: &[bool]) -> Box<[u8]> {
     bits.iter()
         .copied()
         .chain(std::iter::repeat(false))
-        .take(bits.len().div_ceil(8) * 8)
+        .take(bits.len().unstable_div_ceil(8) * 8)
         .chunks(8)
         .into_iter()
         .map(|bits_array_iterator| {

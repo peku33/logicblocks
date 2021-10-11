@@ -16,9 +16,10 @@ where
     T: Send,
 {
     fn new(parent: &'a AtomicCell<T>) -> Self {
-        if parent.borrowed.swap(true, Ordering::Relaxed) {
-            panic!("already borrowed");
-        }
+        assert!(
+            !parent.borrowed.swap(true, Ordering::Relaxed),
+            "already borrowed"
+        );
         Self { parent }
     }
 }
@@ -56,9 +57,10 @@ where
     T: Send,
 {
     fn drop(&mut self) {
-        if !self.parent.borrowed.swap(false, Ordering::Relaxed) {
-            panic!("not borrowed?");
-        }
+        assert!(
+            self.parent.borrowed.swap(false, Ordering::Relaxed),
+            "not borrowed?"
+        );
     }
 }
 unsafe impl<'a, T> Send for AtomicCellLease<'a, T> where T: Send {}
