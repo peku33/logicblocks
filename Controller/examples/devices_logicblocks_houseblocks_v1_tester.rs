@@ -21,7 +21,7 @@ use std::time::Duration;
 use tokio::signal::ctrl_c;
 
 pub fn main() {
-    logging::configure();
+    logging::configure(module_path!());
 
     main_error().unwrap();
 }

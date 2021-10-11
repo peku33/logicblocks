@@ -28,7 +28,7 @@ const DETECTION_CHANGE_INTERVAL: Duration = Duration::from_secs(20);
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Error> {
-    logging::configure();
+    logging::configure(module_path!());
 
     let arguments = Arguments::parse();
 

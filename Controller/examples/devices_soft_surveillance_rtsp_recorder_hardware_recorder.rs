@@ -33,7 +33,7 @@ struct Arguments {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Error> {
-    logging::configure();
+    logging::configure(module_path!());
 
     let arguments = Arguments::parse();
 
