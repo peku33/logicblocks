@@ -86,3 +86,13 @@ impl Signals {
         self.inner
     }
 }
+
+pub fn disi(
+    device_id: DeviceId,
+    signal_id: SignalId,
+) -> DeviceIdSignalId {
+    DeviceIdSignalId {
+        device_id,
+        signal_id,
+    }
+}
