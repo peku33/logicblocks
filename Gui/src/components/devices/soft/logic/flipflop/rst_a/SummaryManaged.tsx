@@ -1,12 +1,12 @@
 import { SummaryManagedBase } from "components/devices/SummaryManaged";
 import { useCallback } from "react";
 import { devicePostEmpty, useDeviceSummary } from "services/LogicDevicesRunner";
-import Summary, { DeviceSummary } from "./Summary";
+import Summary from "./Summary";
 
 const SummaryManaged: SummaryManagedBase = (props) => {
   const { deviceId } = props;
 
-  const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
+  const deviceSummary = useDeviceSummary<boolean>(deviceId);
 
   const onR = useCallback((): void => {
     devicePostEmpty(deviceId, "/r");
@@ -18,6 +18,6 @@ const SummaryManaged: SummaryManagedBase = (props) => {
     devicePostEmpty(deviceId, "/t");
   }, [deviceId]);
 
-  return <Summary deviceSummary={deviceSummary} onR={onR} onS={onS} onT={onT} />;
+  return <Summary value={deviceSummary} onR={onR} onS={onS} onT={onT} />;
 };
 export default SummaryManaged;

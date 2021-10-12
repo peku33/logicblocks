@@ -18,6 +18,7 @@ pub struct Configuration {
 pub struct Device {
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
     signal_output: signal::state_source::Signal<bool>,
+    signal_input: signal::event_target_last::Signal<bool>,
     signal_r: signal::event_target_last::Signal<()>,
     signal_s: signal::event_target_last::Signal<()>,
     signal_t: signal::event_target_last::Signal<()>,
@@ -32,6 +33,7 @@ impl Device {
             signal_output: signal::state_source::Signal::<bool>::new(Some(
                 configuration.initial_value,
             )),
+            signal_input: signal::event_target_last::Signal::<bool>::new(),
             signal_r: signal::event_target_last::Signal::<()>::new(),
             signal_s: signal::event_target_last::Signal::<()>::new(),
             signal_t: signal::event_target_last::Signal::<()>::new(),
@@ -40,54 +42,20 @@ impl Device {
         }
     }
 
-    fn handle_inputs(
+    fn get(&self) -> bool {
+        self.signal_output.peek_last().unwrap()
+    }
+    fn set(
         &self,
-        r: bool,
-        s: bool,
-        t: bool,
+        value: bool,
     ) {
-        match (r, s) {
-            (true, true) | (false, false) => {
-                if t {
-                    self.t();
-                }
-            }
-            (true, false) => {
-                if !t {
-                    self.r();
-                } else {
-                    self.s();
-                }
-            }
-            (false, true) => {
-                if !t {
-                    self.s();
-                } else {
-                    self.r();
-                }
-            }
-        }
-    }
-
-    pub fn r(&self) {
-        if self.signal_output.set_one(Some(false)) {
+        if self.signal_output.set_one(Some(value)) {
             self.signal_sources_changed_waker.wake();
             self.gui_summary_waker.wake();
         }
     }
-    pub fn s(&self) {
-        if self.signal_output.set_one(Some(true)) {
-            self.signal_sources_changed_waker.wake();
-            self.gui_summary_waker.wake();
-        }
-    }
-    pub fn t(&self) {
-        let value = self.signal_output.peek_last().unwrap();
-
-        if self.signal_output.set_one(Some(!value)) {
-            self.signal_sources_changed_waker.wake();
-            self.gui_summary_waker.wake();
-        }
+    fn invert(&self) {
+        self.set(!self.get());
     }
 }
 impl devices::Device for Device {
@@ -107,11 +75,36 @@ impl devices::Device for Device {
 }
 impl signals::Device for Device {
     fn signal_targets_changed_wake(&self) {
-        self.handle_inputs(
-            self.signal_r.take_pending().is_some(),
-            self.signal_s.take_pending().is_some(),
-            self.signal_t.take_pending().is_some(),
-        );
+        let input = self.signal_input.take_pending();
+        let r = self.signal_r.take_pending().is_some();
+        let s = self.signal_s.take_pending().is_some();
+        let t = self.signal_t.take_pending().is_some();
+
+        if let Some(value) = input {
+            self.set(value);
+        } else {
+            match (r, s) {
+                (true, true) | (false, false) => {
+                    if t {
+                        self.invert();
+                    }
+                }
+                (true, false) => {
+                    if !t {
+                        self.set(false);
+                    } else {
+                        self.set(true);
+                    }
+                }
+                (false, true) => {
+                    if !t {
+                        self.set(true);
+                    } else {
+                        self.set(false);
+                    }
+                }
+            }
+        }
     }
     fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
         self.signal_sources_changed_waker.receiver()
@@ -119,23 +112,18 @@ impl signals::Device for Device {
     fn signals(&self) -> signals::Signals {
         hashmap! {
             0 => &self.signal_output as &dyn signal::Base,
-            1 => &self.signal_r as &dyn signal::Base,
-            2 => &self.signal_s as &dyn signal::Base,
-            3 => &self.signal_t as &dyn signal::Base,
+            1 => &self.signal_input as &dyn signal::Base,
+            2 => &self.signal_r as &dyn signal::Base,
+            3 => &self.signal_s as &dyn signal::Base,
+            4 => &self.signal_t as &dyn signal::Base,
         }
     }
 }
-#[derive(Serialize)]
-struct GuiSummary {
-    value: bool,
-}
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let value = GuiSummary {
-            value: self.signal_output.peek_last().unwrap(),
-        };
-        let value = Box::new(value);
-        value
+        let gui_summary = self.signal_output.peek_last().unwrap();
+        let gui_summary = Box::new(gui_summary);
+        gui_summary
     }
 
     fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
@@ -151,21 +139,21 @@ impl uri_cursor::Handler for Device {
         match uri_cursor.as_last() {
             Some("r") => match *request.method() {
                 http::Method::POST => {
-                    self.r();
+                    self.set(false);
                     async move { web::Response::ok_empty() }.boxed()
                 }
                 _ => async move { web::Response::error_405() }.boxed(),
             },
             Some("s") => match *request.method() {
                 http::Method::POST => {
-                    self.s();
+                    self.set(true);
                     async move { web::Response::ok_empty() }.boxed()
                 }
                 _ => async move { web::Response::error_405() }.boxed(),
             },
             Some("t") => match *request.method() {
                 http::Method::POST => {
-                    self.t();
+                    self.invert();
                     async move { web::Response::ok_empty() }.boxed()
                 }
                 _ => async move { web::Response::error_405() }.boxed(),
