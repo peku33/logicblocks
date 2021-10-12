@@ -21,8 +21,10 @@ pub struct Configuration {
     pub breakpoints: Vec<Breakpoint>,
 }
 
-// last signals_output.expired will fire after last breakpoint is hit, meaning no more events will be triggered
-// additionally signal_output_finished is similar, but will signal after button release
+// signal_output_started triggered in idle state, after signal goes from false to true
+// signal_output_breakpoints[b].0 (aka released) triggered when signal goes from true to false before b breakpoint
+// signal_output_breakpoints[b].1 (aka expired) triggered when b breakpoint is finished
+// signal_output_finished triggered when signal goes from true to false after last breakpoint
 
 #[derive(Debug)]
 pub struct Device {
@@ -32,7 +34,8 @@ pub struct Device {
 
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
     signal_input: signal::state_target_last::Signal<bool>,
-    signals_output: Vec<(
+    signal_output_started: signal::event_source::Signal<()>,
+    signal_output_breakpoints: Vec<(
         signal::event_source::Signal<()>, // released
         signal::event_source::Signal<()>, // expired
     )>,
@@ -49,7 +52,8 @@ impl Device {
 
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
             signal_input: signal::state_target_last::Signal::<bool>::new(),
-            signals_output: (0..breakpoints_count)
+            signal_output_started: signal::event_source::Signal::<()>::new(),
+            signal_output_breakpoints: (0..breakpoints_count)
                 .map(|_| {
                     (
                         signal::event_source::Signal::<()>::new(),
@@ -81,10 +85,9 @@ impl Device {
                     () = input_waker_receiver.select_next_some() => {},
                 }
             }
-
-            // check at which index signal was released
-            // None - all breakpoints passed, signal never released
-            let mut released = false;
+            if self.signal_output_started.push_one(()) {
+                self.signal_sources_changed_waker.wake();
+            }
 
             for (index, breakpoint) in self.configuration.breakpoints.iter().enumerate() {
                 // create timer to wait for breakpoint time
@@ -93,7 +96,7 @@ impl Device {
                 let mut breakpoint_timer = breakpoint_timer.fuse();
 
                 // tell whether client released the state or timeout expired
-                let released_inner = 'break_on_released: loop {
+                let released = 'break_on_released: loop {
                     if !self.signal_input.take_last().value.unwrap_or(false) {
                         break 'break_on_released true;
                     }
@@ -106,45 +109,38 @@ impl Device {
                     }
                 };
 
-                if released_inner {
-                    // countdown was stopped by released state
-                    // released state after loop, no need to wait
-                    released = true;
-
+                if released {
                     // trigger released signal
-                    if self.signals_output[index].0.push_one(()) {
+                    if self.signal_output_breakpoints[index].0.push_one(()) {
                         self.signal_sources_changed_waker.wake();
                     }
 
-                    // button is released, this is over
-                    break;
+                    // button is released, we break the section
+                    continue 'outer;
                 } else {
                     // timeout expires, input still acquired
 
-                    if self.signals_output[index].1.push_one(()) {
+                    if self.signal_output_breakpoints[index].1.push_one(()) {
                         self.signal_sources_changed_waker.wake();
                     }
                 }
             }
 
-            if !released {
-                // wait for released state
-                'wait_for_released: loop {
-                    if !self.signal_input.take_last().value.unwrap_or(false) {
-                        break 'wait_for_released;
-                    }
-
-                    // wait for value change
-                    select! {
-                        () = exit_flag => break 'outer,
-                        () = input_waker_receiver.select_next_some() => {},
-                    }
+            // no breakpoint was hit, we are still acquired
+            // wait for signal to be released and go to the beginning
+            'wait_for_released: loop {
+                if !self.signal_input.take_last().value.unwrap_or(false) {
+                    break 'wait_for_released;
                 }
 
-                // run post release signal
-                if self.signal_output_finished.push_one(()) {
-                    self.signal_sources_changed_waker.wake();
+                // wait for value change
+                select! {
+                    () = exit_flag => break 'outer,
+                    () = input_waker_receiver.select_next_some() => {},
                 }
+            }
+            if self.signal_output_finished.push_one(()) {
+                self.signal_sources_changed_waker.wake();
             }
         }
 
@@ -182,21 +178,22 @@ impl signals::Device for Device {
     fn signals(&self) -> signals::Signals {
         std::iter::empty()
             .chain(std::array::IntoIter::new([
-                &self.signal_input as &dyn signal::Base, // 0
+                &self.signal_input as &dyn signal::Base,          // 0
+                &self.signal_output_started as &dyn signal::Base, // 1
             ]))
             .chain(
-                self.signals_output
+                self.signal_output_breakpoints
                     .iter()
                     .map(|(signal_released, signal_expired)| {
                         std::array::IntoIter::new([
-                            signal_released as &dyn signal::Base, // 1 + 2b + 0
-                            signal_expired as &dyn signal::Base,  // 1 + 2b + 1
+                            signal_released as &dyn signal::Base, // 2 + 2b + 0
+                            signal_expired as &dyn signal::Base,  // 2 + 2b + 1
                         ])
                     })
                     .flatten(),
             )
             .chain(std::array::IntoIter::new([
-                &self.signal_output_finished as &dyn signal::Base, // 1 + 2B
+                &self.signal_output_finished as &dyn signal::Base, // 2 + 2B
             ]))
             .enumerate()
             .map(|(signal_id, signal)| (signal_id as signals::Id, signal))
