@@ -3,14 +3,10 @@ import { useCallback } from "react";
 import { devicePostJsonEmpty, useDeviceSummary } from "services/LogicDevicesRunner";
 import Summary from "./Summary";
 
-interface DeviceSummary {
-  value: number | null;
-}
-
 const SummaryManaged: SummaryManagedBase = (props) => {
   const { deviceId } = props;
 
-  const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
+  const deviceSummary = useDeviceSummary<number | null>(deviceId);
   const onValueChanged = useCallback(
     (value: number | null) => {
       devicePostJsonEmpty(deviceId, "", value);
@@ -18,8 +14,6 @@ const SummaryManaged: SummaryManagedBase = (props) => {
     [deviceId],
   );
 
-  return (
-    <Summary value={deviceSummary !== undefined ? deviceSummary.value : undefined} onValueChanged={onValueChanged} />
-  );
+  return <Summary value={deviceSummary} onValueChanged={onValueChanged} />;
 };
 export default SummaryManaged;
