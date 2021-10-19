@@ -1,2 +1,3 @@
-pub mod invert_a;
-pub mod slope_a;
+pub mod flip_flop;
+pub mod gate;
+pub mod value;

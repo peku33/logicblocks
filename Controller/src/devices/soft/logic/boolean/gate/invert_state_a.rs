@@ -23,7 +23,7 @@ impl Device {
 }
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/logic/boolean/invert_a")
+        Cow::from("soft/logic/boolean/gate/invert_state_a")
     }
 
     fn as_signals_device(&self) -> &dyn signals::Device {

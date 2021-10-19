@@ -5,7 +5,6 @@ use super::{
     connections_map::{ManyFromMany, ManyFromOne},
     DeviceIdSignalId,
 };
-use std::{fmt, hash};
 
 pub type State<'d> = ManyFromOne<
     DeviceIdSignalId,
@@ -21,10 +20,7 @@ pub type Event<'d> = ManyFromMany<
     &'d dyn EventTargetRemoteBase,
 >;
 
-pub struct Connections<'d>
-where
-    DeviceIdSignalId: hash::Hash + PartialEq + Eq + Copy + Clone + fmt::Debug,
-{
+pub struct Connections<'d> {
     pub state: State<'d>,
     pub event: Event<'d>,
 }

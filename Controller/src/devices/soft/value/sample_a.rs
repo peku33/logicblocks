@@ -10,19 +10,13 @@ use maplit::hashmap;
 use std::{any::type_name, borrow::Cow};
 
 #[derive(Debug)]
-pub struct Device<V>
-where
-    V: EventValue + StateValue + Clone,
-{
+pub struct Device<V: EventValue + StateValue + Clone> {
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
     signal_input: signal::state_target_last::Signal<V>,
     signal_trigger: signal::event_target_last::Signal<()>,
     signal_output: signal::event_source::Signal<V>,
 }
-impl<V> Device<V>
-where
-    V: EventValue + StateValue + Clone,
-{
+impl<V: EventValue + StateValue + Clone> Device<V> {
     pub fn new() -> Self {
         Self {
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
@@ -32,10 +26,7 @@ where
         }
     }
 }
-impl<V> devices::Device for Device<V>
-where
-    V: EventValue + StateValue + Clone,
-{
+impl<V: EventValue + StateValue + Clone> devices::Device for Device<V> {
     fn class(&self) -> Cow<'static, str> {
         Cow::from(format!("soft/value/sample_a<{}>", type_name::<V>()))
     }
@@ -44,10 +35,7 @@ where
         self
     }
 }
-impl<V> signals::Device for Device<V>
-where
-    V: EventValue + StateValue + Clone,
-{
+impl<V: EventValue + StateValue + Clone> signals::Device for Device<V> {
     fn signal_targets_changed_wake(&self) {
         let mut signal_sources_changed = false;
 

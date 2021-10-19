@@ -4,43 +4,28 @@ use crate::{
     util::waker_stream,
 };
 use maplit::hashmap;
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Edge {
-    Raising,
-    Falling,
-    Both,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Configuration {
-    pub edge: Edge,
-}
 
 #[derive(Debug)]
 pub struct Device {
-    configuration: Configuration,
-
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
     signal_input: signal::state_target_queued::Signal<bool>,
-    signal_output: signal::event_source::Signal<()>,
+    signal_output_raising: signal::event_source::Signal<()>,
+    signal_output_falling: signal::event_source::Signal<()>,
 }
 impl Device {
-    pub fn new(configuration: Configuration) -> Self {
+    pub fn new() -> Self {
         Self {
-            configuration,
-
             signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
             signal_input: signal::state_target_queued::Signal::<bool>::new(),
-            signal_output: signal::event_source::Signal::<()>::new(),
+            signal_output_raising: signal::event_source::Signal::<()>::new(),
+            signal_output_falling: signal::event_source::Signal::<()>::new(),
         }
     }
 }
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/logic/boolean/slope_a")
+        Cow::from("soft/logic/boolean/value/slope_a")
     }
 
     fn as_signals_device(&self) -> &dyn signals::Device {
@@ -49,21 +34,33 @@ impl devices::Device for Device {
 }
 impl signals::Device for Device {
     fn signal_targets_changed_wake(&self) {
-        let values = self.signal_input.take_pending();
+        let mut raising = false;
+        let mut falling = true;
 
-        let values = values
+        for value in self
+            .signal_input
+            .take_pending()
             .into_vec()
             .into_iter()
             .flatten()
-            .filter_map(|value| match (value, &self.configuration.edge) {
-                (true, Edge::Raising) => Some(()),
-                (false, Edge::Falling) => Some(()),
-                (_, Edge::Both) => Some(()),
-                _ => None,
-            })
-            .collect::<Box<[_]>>();
+        {
+            if value {
+                raising = true;
+            } else {
+                falling = true;
+            }
+        }
 
-        if self.signal_output.push_many(values) {
+        let mut signal_sources_changed = false;
+
+        if raising {
+            signal_sources_changed |= self.signal_output_raising.push_one(());
+        }
+        if falling {
+            signal_sources_changed |= self.signal_output_falling.push_one(());
+        }
+
+        if signal_sources_changed {
             self.signal_sources_changed_waker.wake();
         }
     }
@@ -73,7 +70,8 @@ impl signals::Device for Device {
     fn signals(&self) -> signals::Signals {
         hashmap! {
             0 => &self.signal_input as &dyn signal::Base,
-            1 => &self.signal_output as &dyn signal::Base,
+            1 => &self.signal_output_raising as &dyn signal::Base,
+            2 => &self.signal_output_falling as &dyn signal::Base,
         }
     }
 }
