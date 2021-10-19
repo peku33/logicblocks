@@ -7,6 +7,7 @@ import houseblocksAvrV1D0007Relay14SSRAV2 from "./houseblocks/avr_v1/d0007_relay
 import softLogicBooleanFlipFlopRSTA from "./soft/logic/boolean/flip_flop/rst_a/SummaryManaged";
 import softTimeSequenceParallelA from "./soft/time/sequence_parallel_a/SummaryManaged";
 import softWebButtonEventA from "./soft/web/button_event_a/SummaryManaged";
+import softWebButtonEventBooleanA from "./soft/web/button_event_boolean_a/SummaryManaged";
 import softWebButtonStateMonostableA from "./soft/web/button_state_monostable_a/SummaryManaged";
 import softWebRatioSliderA from "./soft/web/ratio_slider_a/SummaryManaged";
 import { SummaryManagedBase } from "./SummaryManaged";
@@ -32,6 +33,8 @@ export function getByClass(cls: string): SummaryManagedBase {
       return softTimeSequenceParallelA;
     case "soft/web/button_event_a":
       return softWebButtonEventA;
+    case "soft/web/button_event_boolean_a":
+      return softWebButtonEventBooleanA;
     case "soft/web/button_state_monostable_a":
       return softWebButtonStateMonostableA;
     case "soft/web/ratio_slider_a":
