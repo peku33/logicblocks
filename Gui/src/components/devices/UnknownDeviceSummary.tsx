@@ -7,8 +7,7 @@ const Summary: React.VFC<{
   const { deviceId, deviceClass } = props;
   return (
     <>
-      Unknown device #<DetailsSpan>{deviceId}</DetailsSpan>
-      <DetailsSpan>({deviceClass})</DetailsSpan>
+      Unknown device #<DetailsSpan>{deviceId}</DetailsSpan> <DetailsSpan>({deviceClass})</DetailsSpan>
     </>
   );
 };
