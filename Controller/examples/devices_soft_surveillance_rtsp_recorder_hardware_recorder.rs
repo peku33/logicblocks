@@ -2,7 +2,7 @@
 #![allow(clippy::unused_unit)]
 
 use anyhow::Error;
-use clap::Clap;
+use clap::Parser;
 use futures::{
     channel::mpsc,
     future::{FutureExt, TryFutureExt},
@@ -22,7 +22,7 @@ use logicblocks_controller::{
 use std::{path::PathBuf, time::Duration};
 use tokio::signal::ctrl_c;
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 #[clap(name = "devices.soft.surveillance.rtsp_recorder.hardware.recorder")]
 struct Arguments {
     rtsp_url: IpcRtspUrl,

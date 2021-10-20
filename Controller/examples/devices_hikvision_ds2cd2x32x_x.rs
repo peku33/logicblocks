@@ -2,7 +2,7 @@
 #![allow(clippy::unused_unit)]
 
 use anyhow::{Context, Error};
-use clap::Clap;
+use clap::Parser;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use http::uri::Authority;
 use logicblocks_controller::{
@@ -18,7 +18,7 @@ use logicblocks_controller::{
 };
 use tokio::signal::ctrl_c;
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 #[clap(name = "devices.hikvision.ds2cd2x32x_x")]
 struct Arguments {
     host: Authority,
@@ -28,12 +28,12 @@ struct Arguments {
     subcommand: Option<ArgumentsSubcommand>,
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 enum ArgumentsSubcommand {
     Configure(CommandConfigure),
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 #[clap(name = "configure")]
 struct CommandConfigure {
     device_name: String,

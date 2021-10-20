@@ -2,7 +2,7 @@
 #![allow(clippy::unused_unit)]
 
 use anyhow::{anyhow, bail, Context, Error};
-use clap::Clap;
+use clap::Parser;
 use futures::{future::TryFutureExt, join, stream::StreamExt};
 use logicblocks_controller::{
     datatypes::ratio::Ratio,
@@ -42,7 +42,7 @@ impl FromStr for ArgumentsSpeedSetpoint {
     }
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 #[clap(name = "devices.eaton.mmax_a")]
 struct Arguments {
     ftdi_serial: String,
@@ -53,12 +53,12 @@ struct Arguments {
     subcommand: Option<ArgumentsSubcommand>,
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 enum ArgumentsSubcommand {
     Set(ArgumentsSet),
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 #[clap(name = "set")]
 struct ArgumentsSet {
     speed_setpoint: ArgumentsSpeedSetpoint,
