@@ -140,7 +140,7 @@ impl Recorder {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             // global options
-            .args(&["-loglevel", "warning"])
+            .args(&["-loglevel", "error"])
             .arg("-hide_banner")
             .arg("-nostats")
             .arg("-nostdin")
