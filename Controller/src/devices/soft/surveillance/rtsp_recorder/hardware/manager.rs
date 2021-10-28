@@ -20,7 +20,7 @@ use futures::{
 };
 use indoc::indoc;
 use modules::{fs::Fs, sqlite::SQLite};
-use std::{collections::HashMap, convert::TryInto, fmt, path::PathBuf, rc::Rc, time::Duration};
+use std::{collections::HashMap, fmt, path::PathBuf, rc::Rc, time::Duration};
 use tokio::fs;
 
 pub type ChannelId = usize;

@@ -13,6 +13,8 @@
 #![feature(raw_vec_internals)]
 #![feature(trait_alias)]
 #![feature(try_blocks)]
+#![allow(dead_code)]
+#![allow(incomplete_features)]
 #![warn(clippy::all)]
 #![allow(clippy::bool_assert_comparison)]
 #![allow(clippy::large_enum_variant)]
@@ -21,8 +23,6 @@
 #![allow(clippy::mem_replace_with_default)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::undropped_manually_drops)]
-#![allow(dead_code)]
-#![allow(incomplete_features)]
 #![recursion_limit = "256"]
 
 pub mod app;

@@ -13,7 +13,7 @@ use anyhow::{bail, ensure, Context, Error};
 use async_trait::async_trait;
 use futures::{pin_mut, select, FutureExt};
 use itertools::Itertools;
-use std::{convert::TryFrom, time::Duration};
+use std::time::Duration;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct InputControl {

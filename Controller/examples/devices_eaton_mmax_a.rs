@@ -10,7 +10,7 @@ use logicblocks_controller::{
     interfaces::{modbus_rtu, serial},
     util::{async_flag, logging, runtime::Exited},
 };
-use std::{collections::HashMap, convert::TryFrom, str::FromStr};
+use std::{collections::HashMap, str::FromStr};
 use tokio::signal::ctrl_c;
 
 #[derive(Debug)]

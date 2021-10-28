@@ -1,6 +1,6 @@
 use anyhow::{ensure, Error};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, convert::TryFrom};
+use std::cmp::Ordering;
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 #[serde(try_from = "f64")]

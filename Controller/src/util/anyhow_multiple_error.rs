@@ -1,6 +1,6 @@
 use anyhow::Error as AnyhowError;
 use derive_more::Constructor;
-use std::{error::Error as StdError, fmt, iter::FromIterator};
+use std::{error::Error as StdError, fmt};
 
 #[derive(Constructor)]
 pub struct AnyhowMultipleError {

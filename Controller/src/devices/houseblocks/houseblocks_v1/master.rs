@@ -9,7 +9,7 @@ use crate::interfaces::serial::{
 use anyhow::{bail, Context, Error};
 use crossbeam::channel;
 use futures::channel::oneshot;
-use std::{convert::TryInto, fmt::Debug, mem::ManuallyDrop, thread, time::Duration};
+use std::{fmt::Debug, mem::ManuallyDrop, thread, time::Duration};
 
 #[derive(Debug)]
 enum Transaction {

@@ -4,8 +4,7 @@ use arrayvec::ArrayVec;
 use itertools::Itertools;
 
 pub fn bits_array_to_byte(bits: [bool; 8]) -> u8 {
-    std::array::IntoIter::new(bits)
-        .into_iter()
+    bits.into_iter()
         .enumerate()
         .filter_map(|(index, bit)| if bit { Some(index) } else { None })
         .fold(0, |accumulator, index| accumulator | (1 << index))

@@ -5,7 +5,7 @@ use super::{
     helpers::{bits_byte_to_array, bits_bytes_to_slice_checked, bits_slice_to_bytes},
 };
 use anyhow::{anyhow, bail, ensure, Context, Error};
-use std::{cmp::Ordering, convert::TryInto};
+use std::cmp::Ordering;
 
 // Generics for 0x01 and 0x02
 #[derive(PartialEq, Eq, Debug)]

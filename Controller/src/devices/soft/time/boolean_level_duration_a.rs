@@ -177,24 +177,24 @@ impl signals::Device for Device {
     }
     fn signals(&self) -> signals::Signals {
         std::iter::empty()
-            .chain(std::array::IntoIter::new([
+            .chain([
                 &self.signal_input as &dyn signal::Base,          // 0
                 &self.signal_output_started as &dyn signal::Base, // 1
-            ]))
+            ])
             .chain(
                 self.signal_output_breakpoints
                     .iter()
                     .map(|(signal_released, signal_expired)| {
-                        std::array::IntoIter::new([
+                        [
                             signal_released as &dyn signal::Base, // 2 + 2b + 0
                             signal_expired as &dyn signal::Base,  // 2 + 2b + 1
-                        ])
+                        ]
                     })
                     .flatten(),
             )
-            .chain(std::array::IntoIter::new([
+            .chain([
                 &self.signal_output_finished as &dyn signal::Base, // 2 + 2B
-            ]))
+            ])
             .enumerate()
             .map(|(signal_id, signal)| (signal_id as signals::Id, signal))
             .collect()

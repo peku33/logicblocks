@@ -4,7 +4,7 @@ use crate::{
     signals::{self, signal},
     util::waker_stream,
 };
-use std::{borrow::Cow, convert::TryFrom};
+use std::borrow::Cow;
 
 #[derive(Debug)]
 pub struct Configuration {
@@ -87,26 +87,22 @@ impl signals::Device for Device {
     }
 
     fn signals(&self) -> signals::Signals {
-        // 0 - output
-        // 1 + n - inputs
-
-        let signal_output_iter = std::array::IntoIter::new([
-            (0, &self.signal_output as &dyn signal::Base), // line break
-        ]);
-        let signals_input_iter =
-            self.signals_input
-                .iter()
-                .enumerate()
-                .map(|(input_id, signal_input)| {
-                    (
-                        (1 + input_id) as signals::Id,
-                        signal_input as &dyn signal::Base,
-                    )
-                });
-
         std::iter::empty()
-            .chain(signal_output_iter)
-            .chain(signals_input_iter)
+            .chain([
+                (0, &self.signal_output as &dyn signal::Base), // 0 - output
+            ])
+            .chain(
+                // 1 + n - inputs
+                self.signals_input
+                    .iter()
+                    .enumerate()
+                    .map(|(input_id, signal_input)| {
+                        (
+                            (1 + input_id) as signals::Id,
+                            signal_input as &dyn signal::Base,
+                        )
+                    }),
+            )
             .collect::<signals::Signals>()
     }
 }

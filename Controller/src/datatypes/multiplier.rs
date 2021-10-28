@@ -1,10 +1,7 @@
 use anyhow::{ensure, Error};
 use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
 use serde::{Deserialize, Serialize};
-use std::{
-    cmp::Ordering,
-    convert::{TryFrom, TryInto},
-};
+use std::cmp::Ordering;
 
 // FIXME: Sub must ensure the value does not go sub-0
 #[derive(

@@ -4,9 +4,7 @@ use anyhow::{bail, ensure, Context, Error};
 use crc::{Crc, CRC_16_MODBUS};
 use crossbeam::channel;
 use futures::channel::oneshot;
-use std::{
-    any::Any, convert::TryInto, fmt::Debug, mem::ManuallyDrop, slice, thread, time::Duration,
-};
+use std::{any::Any, fmt::Debug, mem::ManuallyDrop, slice, thread, time::Duration};
 
 pub struct Bus {
     ftdi_device: ftdi::DeviceFailSafe,

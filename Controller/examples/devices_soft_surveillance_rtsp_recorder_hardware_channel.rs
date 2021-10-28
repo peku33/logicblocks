@@ -13,7 +13,7 @@ use logicblocks_controller::{
     },
 };
 use rand::Rng;
-use std::{convert::TryInto, path::PathBuf, time::Duration};
+use std::{path::PathBuf, time::Duration};
 use tokio::{fs, signal::ctrl_c};
 
 #[derive(Debug, Parser)]

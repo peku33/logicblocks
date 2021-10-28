@@ -1,6 +1,6 @@
 use anyhow::{bail, Error};
 use crc::{Crc, CRC_16_MODBUS};
-use std::{convert::TryInto, fmt, slice};
+use std::{fmt, slice};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct AddressDeviceType([u8; Self::LENGTH]);

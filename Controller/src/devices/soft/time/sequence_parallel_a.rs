@@ -1067,10 +1067,10 @@ impl signals::Device for Device {
 
     fn signals(&self) -> signals::Signals {
         std::iter::empty()
-            .chain(std::array::IntoIter::new([
+            .chain([
                 &self.signal_add_all as &dyn signal::Base, // 0
                 &self.signal_power as &dyn signal::Base,   // 1
-            ]))
+            ])
             .chain(
                 // 2 + n
                 self.signals_outputs
