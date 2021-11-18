@@ -6,10 +6,7 @@ use crate::datatypes::{
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt;
 
-pub trait Value:
-    Base + PartialEq + Eq + Serialize + DeserializeOwned + fmt::Debug + 'static
-{
-}
+pub trait Value: Base + Eq + Serialize + DeserializeOwned + fmt::Debug + 'static {}
 
 impl Value for bool {}
 
