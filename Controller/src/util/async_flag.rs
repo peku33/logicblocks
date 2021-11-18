@@ -113,11 +113,11 @@ impl Future for Receiver {
     ) -> Poll<Self::Output> {
         let self_ = unsafe { self.get_unchecked_mut() };
 
-        self_.receiver_inner.waker.register(cx.waker());
         if self_.receiver_inner.inner.signaled.load(Ordering::Relaxed) {
             self_.completed = true;
             Poll::Ready(())
         } else {
+            self_.receiver_inner.waker.register(cx.waker());
             Poll::Pending
         }
     }
@@ -226,10 +226,10 @@ impl<'s> Future for LocalReceiver<'s> {
     ) -> Poll<Self::Output> {
         let self_ = unsafe { self.get_unchecked_mut() };
 
-        self_.receiver_inner.waker.register(cx.waker());
         if self_.sender.signaled.load(Ordering::Relaxed) {
             Poll::Ready(())
         } else {
+            self_.receiver_inner.waker.register(cx.waker());
             Poll::Pending
         }
     }

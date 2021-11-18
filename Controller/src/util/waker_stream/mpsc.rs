@@ -56,8 +56,8 @@ impl Stream for Receiver {
         cx: &mut Context,
     ) -> Poll<Option<Self::Item>> {
         self.common.waker.register(cx.waker());
-        let signaled = self.common.signaled.swap(false, Ordering::Relaxed);
-        if signaled {
+        
+        if self.common.signaled.swap(false, Ordering::Relaxed) {
             Poll::Ready(Some(()))
         } else {
             Poll::Pending

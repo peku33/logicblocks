@@ -123,10 +123,11 @@ impl Stream for Receiver {
         self.inner.waker.register(cx.waker());
 
         let version = self.common.version.load(Ordering::SeqCst);
-        if self.version.swap(version, Ordering::SeqCst) == version {
-            return Poll::Pending;
+        if self.version.swap(version, Ordering::SeqCst) != version {
+            Poll::Ready(Some(()))
+        } else {
+            Poll::Pending
         }
-        Poll::Ready(Some(()))
     }
 }
 impl FusedStream for Receiver {
