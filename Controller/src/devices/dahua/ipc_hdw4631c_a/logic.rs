@@ -348,12 +348,12 @@ impl Runnable for Device {
         &self,
         mut exit_flag: async_flag::Receiver,
     ) -> Exited {
-        let run_future = self.run();
-        pin_mut!(run_future);
-        let mut run_future = run_future.fuse();
+        let runner = self.run();
+        pin_mut!(runner);
+        let mut runner = runner.fuse();
 
         select! {
-            _ = run_future => panic!("run_future yielded"),
+            _ = runner => panic!("runner yielded"),
             () = exit_flag => {},
         }
 

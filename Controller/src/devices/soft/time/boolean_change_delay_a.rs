@@ -56,17 +56,17 @@ impl Device {
                 None => Duration::ZERO,
             };
 
-            let delay_future = if delay >= Duration::ZERO {
+            let delay_runner = if delay >= Duration::ZERO {
                 let future = tokio::time::sleep(delay);
                 MaybeDone::Future(future)
             } else {
                 MaybeDone::Done(())
             };
-            pin_mut!(delay_future);
+            pin_mut!(delay_runner);
 
             select! {
                 () = inner_waker_receiver.select_next_some() => continue,
-                () = delay_future => {},
+                () = delay_runner => {},
                 () = exit_flag => break,
             }
 

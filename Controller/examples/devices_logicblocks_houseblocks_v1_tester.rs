@@ -175,7 +175,7 @@ fn run_d0003_junction_box_minimal_v1(
 
             let exit_flag_sender = Sender::new();
 
-            let run_future = runner_ref.run(exit_flag_sender.receiver());
+            let runner = runner_ref.run(exit_flag_sender.receiver());
 
             let abort_runner = ctrl_c().then(async move |_| {
                 exit_flag_sender.signal();
@@ -249,7 +249,7 @@ fn run_d0003_junction_box_minimal_v1(
             let mut properties_remote_in_changed_runner = properties_remote_in_changed_runner.fuse();
 
             select! {
-                _ = join(abort_runner, run_future).fuse() => {},
+                _ = join(abort_runner, runner).fuse() => {},
                 _ = leds_runner => panic!("leds_runner"),
                 _ = buzzer_runner => panic!("leds_runner"),
                 _ = properties_remote_in_changed_runner => panic!("properties_remote_in_changed_runner yielded"),
@@ -291,7 +291,7 @@ fn run_common_relay14_common<S: avr_v1::common::relay14_common_a::hardware::Spec
 
             let exit_flag_sender = Sender::new();
 
-            let run_future = runner_ref.run(exit_flag_sender.receiver());
+            let runner = runner_ref.run(exit_flag_sender.receiver());
 
             let abort_runner = ctrl_c().then(async move |_| {
                 exit_flag_sender.signal();
@@ -319,7 +319,7 @@ fn run_common_relay14_common<S: avr_v1::common::relay14_common_a::hardware::Spec
             let mut outputs_runner = outputs_runner.fuse();
 
             select! {
-                _ = join(abort_runner, run_future).fuse() => {},
+                _ = join(abort_runner, runner).fuse() => {},
                 _ = outputs_runner => panic!("outputs_runner yielded"),
             }
         }
