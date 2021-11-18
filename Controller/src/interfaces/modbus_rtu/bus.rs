@@ -265,7 +265,7 @@ impl AsyncBus {
         request: T,
         timeout: Duration,
     ) -> Result<T::Response, Error> {
-        let request = RequestGenericWrapper::from_original(request);
+        let request = RequestErasedWrapper::from_original(request);
 
         let (result_sender, result_receiver) = oneshot::channel();
 
@@ -319,24 +319,24 @@ impl Drop for AsyncBus {
 
 struct AsyncBusTransaction {
     address: u8,
-    request: RequestGenericWrapper,
+    request: RequestErasedWrapper,
     timeout: Duration,
-    result_sender: oneshot::Sender<Result<ResponseGenericWrapper, Error>>,
+    result_sender: oneshot::Sender<Result<ResponseErasedWrapper, Error>>,
 }
 
-trait RequestGeneric: Debug + Send + 'static {
+trait RequestErased: Debug + Send + 'static {
     fn function_code(&self) -> u8;
     fn data(&self) -> Box<[u8]>;
 
     fn response_from_data(
         &self,
-        request: &RequestGenericWrapper,
+        request: &RequestErasedWrapper,
         data: &[u8],
-    ) -> Result<Option<ResponseGenericWrapper>, Error>;
+    ) -> Result<Option<ResponseErasedWrapper>, Error>;
 
     fn as_any(&self) -> &dyn Any;
 }
-impl<T: Request> RequestGeneric for T {
+impl<T: Request> RequestErased for T {
     fn function_code(&self) -> u8 {
         self.function_code()
     }
@@ -346,12 +346,12 @@ impl<T: Request> RequestGeneric for T {
 
     fn response_from_data(
         &self,
-        request: &RequestGenericWrapper,
+        request: &RequestErasedWrapper,
         data: &[u8],
-    ) -> Result<Option<ResponseGenericWrapper>, Error> {
+    ) -> Result<Option<ResponseErasedWrapper>, Error> {
         let request = request.as_original::<T>();
         let response = T::Response::from_data(request, data);
-        let response = response.map(|response| response.map(ResponseGenericWrapper::from_original));
+        let response = response.map(|response| response.map(ResponseErasedWrapper::from_original));
         response
     }
 
@@ -361,8 +361,8 @@ impl<T: Request> RequestGeneric for T {
 }
 
 #[derive(Debug)]
-struct RequestGenericWrapper(Box<dyn RequestGeneric>);
-impl RequestGenericWrapper {
+struct RequestErasedWrapper(Box<dyn RequestErased>);
+impl RequestErasedWrapper {
     fn from_original<T: Request>(request: T) -> Self {
         Self(Box::new(request))
     }
@@ -370,8 +370,8 @@ impl RequestGenericWrapper {
         self.0.as_any().downcast_ref::<T>().unwrap()
     }
 }
-impl Request for RequestGenericWrapper {
-    type Response = ResponseGenericWrapper;
+impl Request for RequestErasedWrapper {
+    type Response = ResponseErasedWrapper;
 
     fn function_code(&self) -> u8 {
         self.0.function_code()
@@ -381,18 +381,18 @@ impl Request for RequestGenericWrapper {
     }
 }
 
-trait ResponseGeneric: Debug + Send + 'static {
+trait ResponseErased: Debug + Send + 'static {
     fn into_any(self: Box<Self>) -> Box<dyn Any>;
 }
-impl<T: Response> ResponseGeneric for T {
+impl<T: Response> ResponseErased for T {
     fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self
     }
 }
 
 #[derive(Debug)]
-struct ResponseGenericWrapper(Box<dyn ResponseGeneric>);
-impl ResponseGenericWrapper {
+struct ResponseErasedWrapper(Box<dyn ResponseErased>);
+impl ResponseErasedWrapper {
     fn from_original<T: Response>(response: T) -> Self {
         Self(Box::new(response))
     }
@@ -400,8 +400,8 @@ impl ResponseGenericWrapper {
         *self.0.into_any().downcast::<T>().unwrap()
     }
 }
-impl Response for ResponseGenericWrapper {
-    type Request = RequestGenericWrapper;
+impl Response for ResponseErasedWrapper {
+    type Request = RequestErasedWrapper;
 
     fn from_data(
         request: &Self::Request,
@@ -486,19 +486,19 @@ mod tests_bus {
 }
 
 #[cfg(test)]
-mod tests_generic_wrappers {
+mod tests_erased_wrappers {
     use super::{
         super::frames_public::{ReadCoilsRequest, ReadCoilsResponse},
-        Bus, RequestGenericWrapper, ResponseGenericWrapper,
+        Bus, RequestErasedWrapper, ResponseErasedWrapper,
     };
 
     #[test]
     fn test_request_response() {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
-        let request_generic = RequestGenericWrapper::from_original(request);
+        let request_erased = RequestErasedWrapper::from_original(request);
 
         assert_eq!(
-            Bus::serialize(0x11, &request_generic).unwrap().into_vec(),
+            Bus::serialize(0x11, &request_erased).unwrap().into_vec(),
             vec![0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84]
         );
 
@@ -513,16 +513,16 @@ mod tests_generic_wrappers {
             .into_boxed_slice(),
         );
 
-        let response_generic: ResponseGenericWrapper = Bus::parse(
+        let response_erased: ResponseErasedWrapper = Bus::parse(
             0x11,
-            &request_generic,
+            &request_erased,
             &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6],
         )
         .unwrap()
         .unwrap();
 
         assert_eq!(
-            response_generic.into_original::<ReadCoilsResponse>(),
+            response_erased.into_original::<ReadCoilsResponse>(),
             response
         );
     }
