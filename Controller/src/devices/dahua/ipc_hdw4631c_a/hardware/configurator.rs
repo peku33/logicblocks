@@ -475,7 +475,7 @@ impl<'a> Configurator<'a> {
             }
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-        bail!("device didn't went away in designated time");
+        bail!("device didn't go away in designated time");
     }
     async fn wait_for_power_up(&mut self) -> Result<(), Error> {
         for _ in 0..60 {
@@ -485,7 +485,7 @@ impl<'a> Configurator<'a> {
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
         // TODO: Return last failure
-        bail!("device didn't went up in designated time");
+        bail!("device didn't go up in designated time");
     }
     async fn wait_for_power_down_up(&mut self) -> Result<(), Error> {
         self.wait_for_power_down()
