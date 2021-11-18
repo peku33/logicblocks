@@ -7,7 +7,7 @@ use std::mem::replace;
 #[derive(Debug)]
 struct State<S, E>
 where
-    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    S: Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     state: Option<S>,
@@ -18,7 +18,7 @@ where
 #[derive(Debug)]
 struct Inner<S, E>
 where
-    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    S: Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     state: Mutex<State<S, E>>,
@@ -27,14 +27,14 @@ where
 #[derive(Debug)]
 pub struct Property<S, E>
 where
-    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    S: Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     inner: AtomicCellErased<Inner<S, E>>,
 }
 impl<S, E> Property<S, E>
 where
-    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    S: Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     pub fn new() -> Self {
@@ -104,7 +104,7 @@ where
 }
 impl<S, E> Base for Property<S, E>
 where
-    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    S: Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
 }
@@ -112,14 +112,14 @@ where
 #[derive(Debug)]
 pub struct Stream<S, E>
 where
-    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    S: Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     inner: AtomicCellErasedLease<Inner<S, E>>,
 }
 impl<S, E> Stream<S, E>
 where
-    S: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    S: Eq + Clone + Serialize + Send + Sync + 'static,
     E: Clone + Serialize + Send + Sync + 'static,
 {
     fn new(parent: &Property<S, E>) -> Self {

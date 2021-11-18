@@ -13,17 +13,17 @@ use std::{
 #[derive(Debug)]
 struct Inner<T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     value: T,
     remotes: HashSet<*const InnerRemote>,
 }
-unsafe impl<T> Send for Inner<T> where T: Clone + PartialEq + Eq {}
-unsafe impl<T> Sync for Inner<T> where T: Clone + PartialEq + Eq {}
+unsafe impl<T> Send for Inner<T> where T: Clone + Eq {}
+unsafe impl<T> Sync for Inner<T> where T: Clone + Eq {}
 
 impl<T> Inner<T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     pub fn new(initial: T) -> Self {
         #[allow(clippy::mutable_key_type)]
@@ -53,13 +53,13 @@ impl InnerRemote {
 #[derive(Debug)]
 pub struct Value<T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     inner: RwLock<Inner<T>>,
 }
 impl<T> Value<T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     /// Initializes object with given initial value
     pub fn new(initial: T) -> Self {
@@ -133,13 +133,13 @@ where
 #[derive(Debug)]
 pub struct Getter<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     parent: &'v Value<T>,
 }
 impl<'v, T> Getter<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn new(parent: &'v Value<T>) -> Self {
         Self { parent }
@@ -179,13 +179,13 @@ where
 #[derive(Debug)]
 pub struct Setter<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     parent: &'v Value<T>,
 }
 impl<'v, T> Setter<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn new(parent: &'v Value<T>) -> Self {
         Self { parent }
@@ -234,14 +234,14 @@ where
 #[derive(Debug)]
 pub struct Observer<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     parent: &'v Value<T>,
     last_seen_value: Option<T>,
 }
 impl<'v, T> Observer<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn new(
         parent: &'v Value<T>,
@@ -314,14 +314,14 @@ where
 /// is useful if processing of the value may fail and we may want to retry later, keeping pending state.
 pub struct ObserverCommitter<'r, 'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     parent: &'r mut Observer<'v, T>,
     pending_value: T,
 }
 impl<'r, 'v, T> ObserverCommitter<'r, 'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn new(
         parent: &'r mut Observer<'v, T>,
@@ -350,7 +350,7 @@ where
 #[derive(Debug)]
 pub struct ObserverChanged<'r, 'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     parent: &'r mut Observer<'v, T>,
     inner_remote: Pin<Box<InnerRemote>>,
@@ -358,7 +358,7 @@ where
 }
 impl<'r, 'v, T> ObserverChanged<'r, 'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn new(parent: &'r mut Observer<'v, T>) -> Self {
         let inner_remote = InnerRemote::new();
@@ -383,7 +383,7 @@ where
 }
 impl<'r, 'v, T> Future for ObserverChanged<'r, 'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     type Output = ();
 
@@ -416,7 +416,7 @@ where
 }
 impl<'r, 'v, T> FusedFuture for ObserverChanged<'r, 'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn is_terminated(&self) -> bool {
         self.competed
@@ -424,7 +424,7 @@ where
 }
 impl<'r, 'v, T> Drop for ObserverChanged<'r, 'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn drop(&mut self) {
         let removed = self
@@ -444,7 +444,7 @@ where
 /// stream, as this is a bit faster then [`ValueStream`].
 pub struct ChangedStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     parent: &'v Value<T>,
     inner_remote: Pin<Box<InnerRemote>>,
@@ -452,7 +452,7 @@ where
 }
 impl<'v, T> ChangedStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn new(
         parent: &'v Value<T>,
@@ -485,7 +485,7 @@ where
 }
 impl<'v, T> Stream for ChangedStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     type Item = ();
 
@@ -512,7 +512,7 @@ where
 }
 impl<'v, T> FusedStream for ChangedStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn is_terminated(&self) -> bool {
         false
@@ -520,7 +520,7 @@ where
 }
 impl<'v, T> Drop for ChangedStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn drop(&mut self) {
         let removed = self
@@ -539,7 +539,7 @@ where
 /// additional clone, so use it only when you actually need value from stream, not just information it was changed.
 pub struct ValueStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     parent: &'v Value<T>,
     inner_remote: Pin<Box<InnerRemote>>,
@@ -547,7 +547,7 @@ where
 }
 impl<'v, T> ValueStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn new(
         parent: &'v Value<T>,
@@ -580,7 +580,7 @@ where
 }
 impl<'v, T> Stream for ValueStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     type Item = T;
 
@@ -607,7 +607,7 @@ where
 }
 impl<'v, T> FusedStream for ValueStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn is_terminated(&self) -> bool {
         false
@@ -615,7 +615,7 @@ where
 }
 impl<'v, T> Drop for ValueStream<'v, T>
 where
-    T: Clone + PartialEq + Eq,
+    T: Clone + Eq,
 {
     fn drop(&mut self) {
         let removed = self

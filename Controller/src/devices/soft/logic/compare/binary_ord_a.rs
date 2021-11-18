@@ -16,7 +16,7 @@ pub enum Operation {
     Less,
 }
 impl Operation {
-    pub fn execute<V: PartialEq + Eq + PartialOrd + Ord>(
+    pub fn execute<V: Eq + Ord>(
         &self,
         a: V,
         b: V,
@@ -38,7 +38,7 @@ pub struct Configuration {
 }
 
 #[derive(Debug)]
-pub struct Device<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> {
+pub struct Device<V: Value + Eq + Ord + Clone> {
     configuration: Configuration,
 
     signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
@@ -46,7 +46,7 @@ pub struct Device<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> {
     signal_input_b: signal::state_target_last::Signal<V>,
     signal_output: signal::state_source::Signal<bool>,
 }
-impl<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> Device<V> {
+impl<V: Value + Eq + Ord + Clone> Device<V> {
     pub fn new(configuration: Configuration) -> Self {
         Self {
             configuration,
@@ -58,7 +58,7 @@ impl<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> Device<V> {
         }
     }
 }
-impl<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> devices::Device for Device<V> {
+impl<V: Value + Eq + Ord + Clone> devices::Device for Device<V> {
     fn class(&self) -> Cow<'static, str> {
         Cow::from(format!(
             "soft/logic/compare/binary_ord_a<{}>",
@@ -70,7 +70,7 @@ impl<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> devices::Device for D
         self
     }
 }
-impl<V: Value + PartialEq + Eq + PartialOrd + Ord + Clone> signals::Device for Device<V> {
+impl<V: Value + Eq + Ord + Clone> signals::Device for Device<V> {
     fn signal_targets_changed_wake(&self) {
         let mut signal_sources_changed = false;
 

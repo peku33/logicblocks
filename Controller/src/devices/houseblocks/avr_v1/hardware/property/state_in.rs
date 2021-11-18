@@ -6,7 +6,7 @@ use serde::Serialize;
 #[derive(Debug)]
 struct State<T>
 where
-    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Serialize + Send + Sync + 'static,
 {
     value: Option<T>,
     user_pending: bool,
@@ -15,7 +15,7 @@ where
 #[derive(Debug)]
 struct Inner<T>
 where
-    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Serialize + Send + Sync + 'static,
 {
     state: Mutex<State<T>>,
 }
@@ -23,13 +23,13 @@ where
 #[derive(Debug)]
 pub struct Property<T>
 where
-    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Serialize + Send + Sync + 'static,
 {
     inner: AtomicCellErased<Inner<T>>,
 }
 impl<T> Property<T>
 where
-    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Serialize + Send + Sync + 'static,
 {
     pub fn new() -> Self {
         let state = State {
@@ -100,18 +100,18 @@ where
         true
     }
 }
-impl<T> Base for Property<T> where T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static {}
+impl<T> Base for Property<T> where T: Eq + Clone + Serialize + Send + Sync + 'static {}
 
 #[derive(Debug)]
 pub struct Stream<T>
 where
-    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Serialize + Send + Sync + 'static,
 {
     inner: AtomicCellErasedLease<Inner<T>>,
 }
 impl<T> Stream<T>
 where
-    T: PartialEq + Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Serialize + Send + Sync + 'static,
 {
     fn new(parent: &Property<T>) -> Self {
         let inner = parent.inner.lease();
