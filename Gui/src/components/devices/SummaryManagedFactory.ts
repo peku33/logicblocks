@@ -4,7 +4,7 @@ import hikvisionDs2cd2x32xX from "./hikvision/ds2cd2x32x_x/SummaryManaged";
 import houseblocksAvrV1D0003JunctionBoxMinimalV1 from "./houseblocks/avr_v1/d0003_junction_box_minimal_v1/SummaryManaged";
 import houseblocksAvrV1D0006Relay14OptoAV1 from "./houseblocks/avr_v1/d0006_relay14_opto_a_v1/SummaryManaged";
 import houseblocksAvrV1D0007Relay14SSRAV2 from "./houseblocks/avr_v1/d0007_relay14_ssr_a_v2/SummaryManaged";
-import softLogicBooleanFlipFlopRSTA from "./soft/logic/boolean/flip_flop/rst_a/SummaryManaged";
+import softLogicFlipflopRSTA from "./soft/logic/flipflop/rst_a/SummaryManaged";
 import softTimeSequenceParallelA from "./soft/time/sequence_parallel_a/SummaryManaged";
 import softWebButtonEventA from "./soft/web/button_event_a/SummaryManaged";
 import softWebButtonEventBooleanA from "./soft/web/button_event_boolean_a/SummaryManaged";
@@ -27,8 +27,8 @@ export function getByClass(cls: string): SummaryManagedBase {
       return houseblocksAvrV1D0006Relay14OptoAV1;
     case "houseblocks/avr_v1/relay14_ssr_a_v2":
       return houseblocksAvrV1D0007Relay14SSRAV2;
-    case "soft/logic/boolean/flip_flop/rst_a":
-      return softLogicBooleanFlipFlopRSTA;
+    case "soft/logic/flipflop/rst_a":
+      return softLogicFlipflopRSTA;
     case "soft/time/sequence_parallel_a":
       return softTimeSequenceParallelA;
     case "soft/web/button_event_a":

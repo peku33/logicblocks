@@ -4,12 +4,11 @@ use crate::{
     util::{
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
 };
 use async_trait::async_trait;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
-use std::{borrow::Cow, time::Duration};
+use std::{borrow::Cow, iter, time::Duration};
 
 #[derive(Debug)]
 pub struct Breakpoint {
@@ -21,25 +20,19 @@ pub struct Configuration {
     pub breakpoints: Vec<Breakpoint>,
 }
 
-// signal_output_started triggered in idle state, after signal goes from false to true
-// signal_output_breakpoints[b].0 (aka released) triggered when signal goes from true to false before b breakpoint
-// signal_output_breakpoints[b].1 (aka expired) triggered when b breakpoint is finished
-// signal_output_finished triggered when signal goes from true to false after last breakpoint
-
 #[derive(Debug)]
 pub struct Device {
     configuration: Configuration,
 
-    input_waker: waker_stream::mpsc::SenderReceiver,
-
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+    signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
+    signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input: signal::state_target_last::Signal<bool>,
-    signal_output_started: signal::event_source::Signal<()>,
-    signal_output_breakpoints: Vec<(
+    signal_started: signal::event_source::Signal<()>,
+    signal_breakpoints: Vec<(
         signal::event_source::Signal<()>, // released
         signal::event_source::Signal<()>, // expired
     )>,
-    signal_output_finished: signal::event_source::Signal<()>,
+    signal_finished: signal::event_source::Signal<()>,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -48,12 +41,11 @@ impl Device {
         Self {
             configuration,
 
-            input_waker: waker_stream::mpsc::SenderReceiver::new(),
-
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+            signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
+            signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input: signal::state_target_last::Signal::<bool>::new(),
-            signal_output_started: signal::event_source::Signal::<()>::new(),
-            signal_output_breakpoints: (0..breakpoints_count)
+            signal_started: signal::event_source::Signal::<()>::new(),
+            signal_breakpoints: (0..breakpoints_count)
                 .map(|_| {
                     (
                         signal::event_source::Signal::<()>::new(),
@@ -61,7 +53,7 @@ impl Device {
                     )
                 })
                 .collect(),
-            signal_output_finished: signal::event_source::Signal::<()>::new(),
+            signal_finished: signal::event_source::Signal::<()>::new(),
         }
     }
 
@@ -69,7 +61,11 @@ impl Device {
         &self,
         mut exit_flag: async_flag::Receiver,
     ) -> Exited {
-        let mut input_waker_receiver = self.input_waker.receiver();
+        let signal_input_changed_stream = self
+            .signals_targets_changed_waker
+            .stream(false)
+            .filter(async move |()| self.signal_input.take_pending().is_some());
+        pin_mut!(signal_input_changed_stream);
 
         'outer: loop {
             // wait until signal goes to acquired state
@@ -82,11 +78,11 @@ impl Device {
                 // wait for value change
                 select! {
                     () = exit_flag => break 'outer,
-                    () = input_waker_receiver.select_next_some() => {},
+                    () = signal_input_changed_stream.select_next_some() => {},
                 }
             }
-            if self.signal_output_started.push_one(()) {
-                self.signal_sources_changed_waker.wake();
+            if self.signal_started.push_one(()) {
+                self.signals_sources_changed_waker.wake();
             }
 
             for (index, breakpoint) in self.configuration.breakpoints.iter().enumerate() {
@@ -104,15 +100,15 @@ impl Device {
                     // wait for value change
                     select! {
                         () = exit_flag => break 'outer,
-                        () = input_waker_receiver.select_next_some() => {},
+                        () = signal_input_changed_stream.select_next_some() => {},
                         () = breakpoint_timer => break 'break_on_released false,
                     }
                 };
 
                 if released {
                     // trigger released signal
-                    if self.signal_output_breakpoints[index].0.push_one(()) {
-                        self.signal_sources_changed_waker.wake();
+                    if self.signal_breakpoints[index].0.push_one(()) {
+                        self.signals_sources_changed_waker.wake();
                     }
 
                     // button is released, we break the section
@@ -120,8 +116,8 @@ impl Device {
                 } else {
                     // timeout expires, input still acquired
 
-                    if self.signal_output_breakpoints[index].1.push_one(()) {
-                        self.signal_sources_changed_waker.wake();
+                    if self.signal_breakpoints[index].1.push_one(()) {
+                        self.signals_sources_changed_waker.wake();
                     }
                 }
             }
@@ -136,29 +132,31 @@ impl Device {
                 // wait for value change
                 select! {
                     () = exit_flag => break 'outer,
-                    () = input_waker_receiver.select_next_some() => {},
+                    () = signal_input_changed_stream.select_next_some() => {},
                 }
             }
-            if self.signal_output_finished.push_one(()) {
-                self.signal_sources_changed_waker.wake();
+            if self.signal_finished.push_one(()) {
+                self.signals_sources_changed_waker.wake();
             }
         }
 
         Exited
     }
 }
+
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
         Cow::from("soft/time/boolean_level_duration_a")
     }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
+    fn as_runnable(&self) -> &dyn Runnable {
         self
     }
-    fn as_runnable(&self) -> Option<&dyn Runnable> {
-        Some(self)
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
+        self
     }
 }
+
 #[async_trait]
 impl Runnable for Device {
     async fn run(
@@ -168,35 +166,59 @@ impl Runnable for Device {
         self.run(exit_flag).await
     }
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    Input,
+    Started,         // triggered in idle state, after signal goes from false to true
+    Released(usize), // triggered when signal goes from true to false before .0 breakpoint
+    Expired(usize),  // triggered when .0 breakpoint is finished
+    Finished,        // triggered when signal goes from true to false after last breakpoint
+}
+impl signals::Identifier for SignalIdentifier {}
 impl signals::Device for Device {
-    fn signal_targets_changed_wake(&self) {
-        self.input_waker.wake();
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        Some(&self.signals_targets_changed_waker)
     }
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        Some(&self.signals_sources_changed_waker)
     }
-    fn signals(&self) -> signals::Signals {
-        std::iter::empty()
+
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+        iter::empty()
             .chain([
-                &self.signal_input as &dyn signal::Base,          // 0
-                &self.signal_output_started as &dyn signal::Base, // 1
+                (
+                    SignalIdentifier::Input,
+                    &self.signal_input as &dyn signal::Base,
+                ),
+                (
+                    SignalIdentifier::Started,
+                    &self.signal_started as &dyn signal::Base,
+                ),
             ])
             .chain(
-                self.signal_output_breakpoints
+                self.signal_breakpoints
                     .iter()
-                    .map(|(signal_released, signal_expired)| {
+                    .enumerate()
+                    .map(|(breakpoint_index, (signal_released, signal_expired))| {
                         [
-                            signal_released as &dyn signal::Base, // 2 + 2b + 0
-                            signal_expired as &dyn signal::Base,  // 2 + 2b + 1
+                            (
+                                SignalIdentifier::Released(breakpoint_index),
+                                signal_released as &dyn signal::Base,
+                            ),
+                            (
+                                SignalIdentifier::Expired(breakpoint_index),
+                                signal_expired as &dyn signal::Base,
+                            ),
                         ]
                     })
                     .flatten(),
             )
-            .chain([
-                &self.signal_output_finished as &dyn signal::Base, // 2 + 2B
-            ])
-            .enumerate()
-            .map(|(signal_id, signal)| (signal_id as signals::Id, signal))
+            .chain([(
+                SignalIdentifier::Finished,
+                &self.signal_finished as &dyn signal::Base,
+            )])
             .collect()
     }
 }

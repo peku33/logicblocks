@@ -1,98 +1,185 @@
 use super::{Device, DeviceWrapper, Id as DeviceId};
 use crate::signals::{
-    exchange::{connections_requested::Connections, DeviceIdSignalId},
-    Id as SignalId,
+    exchanger::{ConnectionRequested, DeviceIdSignalIdentifierBaseWrapper},
+    Device as SignalsDevice, Identifier as SignalIdentifier,
+    IdentifierBaseWrapper as SignalIdentifierBaseWrapper,
 };
-use std::collections::{HashMap, HashSet};
+use std::{collections::HashMap, marker::PhantomData};
 
 pub struct Devices<'d> {
-    id_next: DeviceId,
-    devices: HashMap<DeviceId, DeviceWrapper<'d>>,
+    device_wrappers: Vec<DeviceWrapper<'d>>,
 }
 impl<'d> Devices<'d> {
     pub fn new() -> Self {
         Self {
-            id_next: 1,
-            devices: HashMap::new(),
+            device_wrappers: Vec::new(),
         }
     }
-    pub fn device_add<N: ToString, D: Device + 'd>(
+
+    pub fn add<N: ToString, D: Device + SignalsDevice + 'd>(
         &mut self,
         name: N,
         device: D,
-    ) -> DeviceId {
+    ) -> DeviceHandle<'d, D> {
         let name = name.to_string();
         let device = Box::new(device);
 
         let device_wrapper = DeviceWrapper::new(name, device);
-        self.device_wrapper_add(device_wrapper)
-    }
-    pub fn device_wrapper_add(
-        &mut self,
-        device_wrapper: DeviceWrapper<'d>,
-    ) -> DeviceId {
-        let id = self.id_next;
-        self.id_next += 1;
 
-        let replaced = self.devices.insert(id, device_wrapper).is_some();
-        assert!(!replaced);
+        let device_id = self.device_wrappers.len() as DeviceId;
+        self.device_wrappers.push(device_wrapper);
 
-        id
+        DeviceHandle::<D>::new(device_id)
     }
 
-    pub fn into_devices(self) -> HashMap<DeviceId, DeviceWrapper<'d>> {
-        self.devices
+    pub fn into_device_wrappers_by_id(self) -> HashMap<DeviceId, DeviceWrapper<'d>> {
+        self.device_wrappers
+            .into_iter()
+            .enumerate()
+            .map(|(device_id, device)| (device_id as u32, device))
+            .collect::<HashMap<_, _>>()
     }
 }
 
 pub struct Signals {
-    inner: Connections,
+    connections_requested: Vec<ConnectionRequested>,
 }
 impl Signals {
     pub fn new() -> Self {
-        let inner = Connections::new();
+        let connections_requested = Vec::<ConnectionRequested>::new();
 
-        Self { inner }
+        Self {
+            connections_requested,
+        }
     }
-    pub fn connect_disi(
+
+    // device to device
+    pub fn d2d<SD: Device + SignalsDevice, TD: Device + SignalsDevice>(
         &mut self,
-        source: DeviceIdSignalId,
-        target: DeviceIdSignalId,
+        source_device: DeviceHandle<SD>,
+        source_signal_identifier: SD::Identifier,
+        target_device: DeviceHandle<TD>,
+        target_signal_identifier: TD::Identifier,
     ) {
-        self.inner
-            .entry(source)
-            .or_insert_with(HashSet::new)
-            .insert(target);
+        self.s2s(
+            source_device.signal(source_signal_identifier),
+            target_device.signal(target_signal_identifier),
+        );
     }
-    pub fn connect(
+    // device erased to device erased
+    pub fn de2de<S: SignalIdentifier, T: SignalIdentifier>(
         &mut self,
-        source_device_id: DeviceId,
-        source_signal_id: SignalId,
-        target_device_id: DeviceId,
-        target_signal_id: SignalId,
+        source_device: DeviceHandleErased,
+        source_signal_identifier: S,
+        target_device: DeviceHandleErased,
+        target_signal_identifier: S,
     ) {
-        self.connect_disi(
-            DeviceIdSignalId {
-                device_id: source_device_id,
-                signal_id: source_signal_id,
-            },
-            DeviceIdSignalId {
-                device_id: target_device_id,
-                signal_id: target_signal_id,
-            },
+        self.s2s(
+            source_device.signal(source_signal_identifier),
+            target_device.signal(target_signal_identifier),
         )
     }
-    pub fn into_signals(self) -> Connections {
-        self.inner
+    // signal to signal
+    pub fn s2s(
+        &mut self,
+        source: DeviceIdSignalIdentifierBaseWrapper,
+        target: DeviceIdSignalIdentifierBaseWrapper,
+    ) {
+        self.connections_requested.push((source, target));
+    }
+
+    pub fn d2s<SD: Device + SignalsDevice>(
+        &mut self,
+        source_device: DeviceHandle<SD>,
+        source_signal_identifier: SD::Identifier,
+        target: DeviceIdSignalIdentifierBaseWrapper,
+    ) {
+        self.s2s(source_device.signal(source_signal_identifier), target);
+    }
+    pub fn s2d<TD: Device + SignalsDevice>(
+        &mut self,
+        source: DeviceIdSignalIdentifierBaseWrapper,
+        target_device: DeviceHandle<TD>,
+        target_signal_identifier: TD::Identifier,
+    ) {
+        self.s2s(source, target_device.signal(target_signal_identifier));
+    }
+
+    pub fn as_connections_requested(&self) -> &[ConnectionRequested] {
+        self.connections_requested.as_slice()
+    }
+    pub fn into_connections_requested(self) -> Vec<ConnectionRequested> {
+        self.connections_requested
     }
 }
 
-pub fn disi(
+#[derive(Debug)]
+pub struct DeviceHandle<'d, D: Device + SignalsDevice + 'd> {
     device_id: DeviceId,
-    signal_id: SignalId,
-) -> DeviceIdSignalId {
-    DeviceIdSignalId {
-        device_id,
-        signal_id,
+
+    phantom_data: PhantomData<&'d D>,
+}
+impl<'d, D: Device + SignalsDevice + 'd> DeviceHandle<'d, D> {
+    fn new(device_id: DeviceId) -> Self {
+        Self {
+            device_id,
+
+            phantom_data: PhantomData,
+        }
+    }
+
+    pub fn signal(
+        &self,
+        signal_identifier: D::Identifier,
+    ) -> DeviceIdSignalIdentifierBaseWrapper {
+        let signal_identifier_base_wrapper = SignalIdentifierBaseWrapper::new(signal_identifier);
+        let device_id_signal_identifier_base_wrapper = DeviceIdSignalIdentifierBaseWrapper::new(
+            self.device_id,
+            signal_identifier_base_wrapper,
+        );
+        device_id_signal_identifier_base_wrapper
+    }
+
+    pub fn erased(&self) -> DeviceHandleErased<'d> {
+        DeviceHandleErased::new(self.device_id)
     }
 }
+impl<'d, D: Device + SignalsDevice + 'd> Clone for DeviceHandle<'d, D> {
+    fn clone(&self) -> Self {
+        Self { ..*self }
+    }
+}
+impl<'d, D: Device + SignalsDevice + 'd> Copy for DeviceHandle<'d, D> {}
+
+#[derive(Debug)]
+pub struct DeviceHandleErased<'d> {
+    device_id: DeviceId,
+
+    phantom_data: PhantomData<&'d ()>,
+}
+impl<'d> DeviceHandleErased<'d> {
+    fn new(device_id: DeviceId) -> Self {
+        Self {
+            device_id,
+            phantom_data: PhantomData,
+        }
+    }
+
+    pub fn signal<I: SignalIdentifier>(
+        &self,
+        signal_identifier: I,
+    ) -> DeviceIdSignalIdentifierBaseWrapper {
+        let signal_identifier_base_wrapper = SignalIdentifierBaseWrapper::new(signal_identifier);
+        let device_id_signal_identifier_base_wrapper = DeviceIdSignalIdentifierBaseWrapper::new(
+            self.device_id,
+            signal_identifier_base_wrapper,
+        );
+        device_id_signal_identifier_base_wrapper
+    }
+}
+impl<'d> Clone for DeviceHandleErased<'d> {
+    fn clone(&self) -> Self {
+        Self { ..*self }
+    }
+}
+impl<'d> Copy for DeviceHandleErased<'d> {}

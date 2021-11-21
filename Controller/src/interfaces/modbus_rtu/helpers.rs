@@ -2,6 +2,7 @@ use anyhow::{ensure, Error};
 use array_init::array_init;
 use arrayvec::ArrayVec;
 use itertools::Itertools;
+use std::iter;
 
 pub fn bits_array_to_byte(bits: [bool; 8]) -> u8 {
     bits.into_iter()
@@ -24,7 +25,7 @@ pub fn bits_byte_to_array_checked(
 pub fn bits_slice_to_bytes(bits: &[bool]) -> Box<[u8]> {
     bits.iter()
         .copied()
-        .chain(std::iter::repeat(false))
+        .chain(iter::repeat(false))
         .take(bits.len().unstable_div_ceil(8) * 8)
         .chunks(8)
         .into_iter()

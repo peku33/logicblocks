@@ -3,6 +3,7 @@ use crate::{
     devices,
     signals::{self, signal},
     util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         runtime::{Exited, Runnable},
         waker_stream,
@@ -14,13 +15,19 @@ use async_trait::async_trait;
 use core::panic;
 use futures::{
     future::{BoxFuture, FutureExt},
-    pin_mut, select,
+    join,
     stream::StreamExt,
 };
 use itertools::{izip, zip_eq, Itertools};
 use parking_lot::RwLock;
 use serde::Serialize;
-use std::{borrow::Cow, cmp::min, collections::HashMap, iter::repeat_with, time::Duration};
+use std::{
+    borrow::Cow,
+    cmp::min,
+    collections::HashMap,
+    iter::{self, repeat_with},
+    time::Duration,
+};
 
 #[derive(Debug)]
 pub struct ChannelConfiguration {
@@ -94,7 +101,8 @@ pub struct Device {
     configuration: Configuration,
     state: RwLock<State>,
 
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+    signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
+    signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_add_all: signal::event_target_queued::Signal<Multiplier>,
     signal_power: signal::state_source::Signal<Multiplier>,
     signals_outputs: Vec<signal::state_source::Signal<bool>>,
@@ -127,7 +135,8 @@ impl Device {
             configuration,
             state: RwLock::new(state),
 
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+            signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
+            signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_add_all: signal::event_target_queued::Signal::<Multiplier>::new(),
             signal_power: signal::state_source::Signal::<Multiplier>::new(Some(Multiplier::zero())),
             signals_outputs: repeat_with(|| signal::state_source::Signal::<bool>::new(Some(false)))
@@ -200,7 +209,7 @@ impl Device {
         }
 
         if signal_sources_changed {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -274,7 +283,7 @@ impl Device {
         }
 
         if signal_sources_changed {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -344,7 +353,7 @@ impl Device {
         }
 
         // if signal_sources_changed {
-        //     self.signal_sources_changed_waker.wake();
+        //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -414,7 +423,7 @@ impl Device {
         }
 
         if signal_sources_changed {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -492,7 +501,7 @@ impl Device {
         }
 
         if signal_sources_changed {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -567,7 +576,7 @@ impl Device {
         }
 
         // if signal_sources_changed {
-        //     self.signal_sources_changed_waker.wake();
+        //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -613,7 +622,7 @@ impl Device {
         }
 
         // if signal_sources_changed {
-        //     self.signal_sources_changed_waker.wake();
+        //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -662,7 +671,7 @@ impl Device {
         }
 
         // if signal_sources_changed {
-        //     self.signal_sources_changed_waker.wake();
+        //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -704,7 +713,7 @@ impl Device {
         }
 
         // if signal_sources_changed {
-        //     self.signal_sources_changed_waker.wake();
+        //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -761,7 +770,7 @@ impl Device {
         }
 
         if signal_sources_changed {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -979,7 +988,7 @@ impl Device {
         signal_sources_changed |= self.signal_power.set_one(Some(power));
 
         if signal_sources_changed {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
             self.gui_summary_waker.wake();
@@ -1000,55 +1009,7 @@ impl Device {
             .sum::<Multiplier>()
     }
 
-    async fn run(
-        &self,
-        mut exit_flag: async_flag::Receiver,
-    ) -> Exited {
-        let tick_runner = tokio_stream::wrappers::IntervalStream::new(tokio::time::interval(
-            Self::CHANNELS_TICK_INTERVAL,
-        ))
-        .for_each(async move |_| {
-            self.channels_tick();
-        });
-        pin_mut!(tick_runner);
-        let mut tick_runner = tick_runner.fuse();
-
-        select! {
-            () = tick_runner => panic!("tick_runner yielded"),
-            () = exit_flag => {},
-        }
-        Exited
-    }
-}
-impl devices::Device for Device {
-    fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/time/sequence_parallel_a")
-    }
-
-    fn as_signals_device(&self) -> &dyn signals::Device {
-        self
-    }
-    fn as_runnable(&self) -> Option<&dyn Runnable> {
-        Some(self)
-    }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
-        Some(self)
-    }
-    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
-        Some(self)
-    }
-}
-#[async_trait]
-impl Runnable for Device {
-    async fn run(
-        &self,
-        exit_flag: async_flag::Receiver,
-    ) -> Exited {
-        self.run(exit_flag).await
-    }
-}
-impl signals::Device for Device {
-    fn signal_targets_changed_wake(&self) {
+    fn signals_targets_changed(&self) {
         let value = self
             .signal_add_all
             .take_pending()
@@ -1061,25 +1022,104 @@ impl signals::Device for Device {
         }
     }
 
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
+        let tick_runner = tokio_stream::wrappers::IntervalStream::new(tokio::time::interval(
+            Self::CHANNELS_TICK_INTERVAL,
+        ))
+        .stream_take_until_exhausted(exit_flag.clone())
+        .for_each(async move |_| {
+            self.channels_tick();
+        })
+        .boxed();
+
+        let signals_targets_changed_runner = self
+            .signals_targets_changed_waker
+            .stream(false)
+            .stream_take_until_exhausted(exit_flag.clone())
+            .for_each(async move |()| {
+                self.signals_targets_changed();
+            })
+            .boxed();
+
+        let _: ((), ()) = join!(tick_runner, signals_targets_changed_runner);
+
+        Exited
+    }
+}
+
+impl devices::Device for Device {
+    fn class(&self) -> Cow<'static, str> {
+        Cow::from("soft/time/sequence_parallel_a")
     }
 
-    fn signals(&self) -> signals::Signals {
-        std::iter::empty()
+    fn as_runnable(&self) -> &dyn Runnable {
+        self
+    }
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
+        self
+    }
+    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+        Some(self)
+    }
+    fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
+        Some(self)
+    }
+}
+
+#[async_trait]
+impl Runnable for Device {
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.run(exit_flag).await
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    AddAll,
+    Power,
+    Output(usize),
+}
+impl signals::Identifier for SignalIdentifier {}
+impl signals::Device for Device {
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        Some(&self.signals_targets_changed_waker)
+    }
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        Some(&self.signals_sources_changed_waker)
+    }
+
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+        iter::empty()
             .chain([
-                &self.signal_add_all as &dyn signal::Base, // 0
-                &self.signal_power as &dyn signal::Base,   // 1
+                (
+                    SignalIdentifier::AddAll,
+                    &self.signal_add_all as &dyn signal::Base,
+                ),
+                (
+                    SignalIdentifier::Power,
+                    &self.signal_power as &dyn signal::Base,
+                ),
             ])
             .chain(
-                // 2 + n
                 self.signals_outputs
                     .iter()
-                    .map(|signals_output| signals_output as &dyn signal::Base),
+                    .enumerate()
+                    .map(|(output_index, output_signal)| {
+                        (
+                            SignalIdentifier::Output(output_index),
+                            output_signal as &dyn signal::Base,
+                        )
+                    }),
             )
-            .enumerate()
-            .map(|(signal_id, signal)| (signal_id as signals::Id, signal))
-            .collect::<signals::Signals>()
+            .collect()
     }
 }
 

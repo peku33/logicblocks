@@ -1,10 +1,15 @@
 use crate::{
     datatypes::ratio::Ratio,
-    devices, signals,
-    signals::signal,
-    util::waker_stream,
+    devices,
+    signals::{self, signal},
+    util::{
+        async_flag,
+        runtime::{Exited, Runnable},
+        waker_stream,
+    },
     web::{self, uri_cursor},
 };
+use async_trait::async_trait;
 use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use std::borrow::Cow;
@@ -18,10 +23,10 @@ pub struct Configuration {
 pub struct Device {
     configuration: Configuration,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
-
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+    signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_output: signal::state_source::Signal<Ratio>,
+
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -30,10 +35,10 @@ impl Device {
         Self {
             configuration,
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
-
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+            signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_output: signal::state_source::Signal::<Ratio>::new(initial),
+
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -42,17 +47,21 @@ impl Device {
         value: Option<Ratio>,
     ) {
         if self.signal_output.set_one(value) {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
             self.gui_summary_waker.wake();
         }
     }
 }
+
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
         Cow::from("soft/web/ratio_slider_a")
     }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
+    fn as_runnable(&self) -> &dyn Runnable {
+        self
+    }
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
     fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
@@ -62,19 +71,39 @@ impl devices::Device for Device {
         Some(self)
     }
 }
+
+#[async_trait]
+impl Runnable for Device {
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        exit_flag.await;
+        Exited
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    Output,
+}
+impl signals::Identifier for SignalIdentifier {}
 impl signals::Device for Device {
-    fn signal_targets_changed_wake(&self) {
-        // no signal targets
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        None
     }
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        Some(&self.signals_sources_changed_waker)
     }
-    fn signals(&self) -> signals::Signals {
+
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         hashmap! {
-            0 => &self.signal_output as &dyn signal::Base,
+            SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
         }
     }
 }
+
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
         let gui_summary = self.signal_output.peek_last();
@@ -86,6 +115,7 @@ impl devices::GuiSummaryProvider for Device {
         self.gui_summary_waker.receiver_factory()
     }
 }
+
 impl uri_cursor::Handler for Device {
     fn handle(
         &self,

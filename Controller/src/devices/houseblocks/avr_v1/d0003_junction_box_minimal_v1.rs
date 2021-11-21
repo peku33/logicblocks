@@ -4,26 +4,84 @@ pub mod logic {
         datatypes::temperature::Temperature,
         devices,
         signals::{self, signal},
-        util::waker_stream,
+        util::{
+            async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+            async_flag,
+            runtime::{Exited, Runnable},
+            waker_stream,
+        },
     };
     use array_init::array_init;
     use arrayvec::ArrayVec;
-    use maplit::hashmap;
+    use async_trait::async_trait;
+    use futures::stream::StreamExt;
     use serde::Serialize;
-    use std::time::Duration;
+    use std::{iter, time::Duration};
 
     #[derive(Debug)]
     pub struct Device {
         properties_remote: hardware::PropertiesRemote,
         properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver,
 
-        signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+        signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
+        signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
         signal_keys: [signal::state_source::Signal<bool>; hardware::KEY_COUNT],
         signal_leds: [signal::state_target_last::Signal<bool>; hardware::LED_COUNT],
         signal_buzzer: signal::event_target_last::Signal<Duration>,
         signal_temperature: signal::state_source::Signal<Temperature>,
 
         gui_summary_waker: waker_stream::mpmc::Sender,
+    }
+
+    impl Device {
+        fn signals_targets_changed(&self) {
+            let mut properties_remote_changed = false;
+
+            // leds
+            let leds_last = self
+                .signal_leds
+                .iter()
+                .map(|signal_led| signal_led.take_last())
+                .collect::<ArrayVec<_, { hardware::LED_COUNT }>>();
+            if leds_last.iter().any(|led_last| led_last.pending) {
+                let leds = leds_last
+                    .iter()
+                    .map(|led_last| led_last.value.unwrap_or(false))
+                    .collect::<ArrayVec<_, { hardware::LED_COUNT }>>()
+                    .into_inner()
+                    .unwrap();
+
+                if self.properties_remote.leds.set(leds) {
+                    properties_remote_changed = true;
+                }
+            }
+
+            // buzzer
+            if let Some(buzzer) = self.signal_buzzer.take_pending() {
+                if self.properties_remote.buzzer.push(buzzer) {
+                    properties_remote_changed = true;
+                }
+            }
+
+            if properties_remote_changed {
+                self.properties_remote_out_changed_waker.wake();
+            }
+        }
+
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            self.signals_targets_changed_waker
+                .stream(false)
+                .stream_take_until_exhausted(exit_flag)
+                .for_each(async move |()| {
+                    self.signals_targets_changed();
+                })
+                .await;
+
+            Exited
+        }
     }
 
     impl logic::Device for Device {
@@ -34,7 +92,8 @@ pub mod logic {
                 properties_remote,
                 properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
 
-                signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+                signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
+                signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
                 signal_keys: array_init(|_| signal::state_source::Signal::<bool>::new(None)),
                 signal_leds: array_init(|_| signal::state_target_last::Signal::<bool>::new()),
                 signal_buzzer: signal::event_target_last::Signal::<Duration>::new(),
@@ -47,6 +106,9 @@ pub mod logic {
             "junction_box_minimal_v1"
         }
 
+        fn as_runnable(&self) -> &dyn Runnable {
+            self
+        }
         fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
             Some(self)
         }
@@ -108,7 +170,7 @@ pub mod logic {
             }
 
             if signals_changed {
-                self.signal_sources_changed_waker.wake();
+                self.signals_sources_changed_waker.wake();
             }
             if gui_summary_changed {
                 self.gui_summary_waker.wake();
@@ -120,63 +182,69 @@ pub mod logic {
             self.properties_remote_out_changed_waker.receiver()
         }
     }
+
+    #[async_trait]
+    impl Runnable for Device {
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            self.run(exit_flag).await
+        }
+    }
+
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+    pub enum SignalIdentifier {
+        Key(usize),
+        Led(usize),
+        Buzzer,
+        Temperature,
+    }
+    impl signals::Identifier for SignalIdentifier {}
     impl signals::Device for Device {
-        fn signal_targets_changed_wake(&self) {
-            let mut properties_remote_changed = false;
-
-            // leds
-            let leds_last = self
-                .signal_leds
-                .iter()
-                .map(|signal_led| signal_led.take_last())
-                .collect::<ArrayVec<_, { hardware::LED_COUNT }>>();
-            if leds_last.iter().any(|led_last| led_last.pending) {
-                let leds = leds_last
-                    .iter()
-                    .map(|led_last| led_last.value.unwrap_or(false))
-                    .collect::<ArrayVec<_, { hardware::LED_COUNT }>>()
-                    .into_inner()
-                    .unwrap();
-
-                if self.properties_remote.leds.set(leds) {
-                    properties_remote_changed = true;
-                }
-            }
-
-            // buzzer
-            if let Some(buzzer) = self.signal_buzzer.take_pending() {
-                if self.properties_remote.buzzer.push(buzzer) {
-                    properties_remote_changed = true;
-                }
-            }
-
-            if properties_remote_changed {
-                self.properties_remote_out_changed_waker.wake();
-            }
+        fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+            Some(&self.signals_targets_changed_waker)
         }
-        fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-            self.signal_sources_changed_waker.receiver()
+        fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+            Some(&self.signals_sources_changed_waker)
         }
-        fn signals(&self) -> signals::Signals {
-            hashmap! {
-                10 => &self.signal_keys[0] as &dyn signal::Base,
-                11 => &self.signal_keys[1] as &dyn signal::Base,
-                12 => &self.signal_keys[2] as &dyn signal::Base,
-                13 => &self.signal_keys[3] as &dyn signal::Base,
-                14 => &self.signal_keys[4] as &dyn signal::Base,
-                15 => &self.signal_keys[5] as &dyn signal::Base,
 
-                20 => &self.signal_leds[0] as &dyn signal::Base,
-                21 => &self.signal_leds[1] as &dyn signal::Base,
-                22 => &self.signal_leds[2] as &dyn signal::Base,
-                23 => &self.signal_leds[3] as &dyn signal::Base,
-                24 => &self.signal_leds[4] as &dyn signal::Base,
-                25 => &self.signal_leds[5] as &dyn signal::Base,
-
-                30 => &self.signal_buzzer as &dyn signal::Base,
-
-                40 => &self.signal_temperature as &dyn signal::Base,
-            }
+        type Identifier = SignalIdentifier;
+        fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+            iter::empty()
+                .chain(
+                    self.signal_keys
+                        .iter()
+                        .enumerate()
+                        .map(|(key_index, signal_key)| {
+                            (
+                                SignalIdentifier::Key(key_index),
+                                signal_key as &dyn signal::Base,
+                            )
+                        }),
+                )
+                .chain(
+                    self.signal_leds
+                        .iter()
+                        .enumerate()
+                        .map(|(led_index, signal_led)| {
+                            (
+                                SignalIdentifier::Led(led_index),
+                                signal_led as &dyn signal::Base,
+                            )
+                        }),
+                )
+                .chain([
+                    (
+                        SignalIdentifier::Buzzer,
+                        &self.signal_buzzer as &dyn signal::Base,
+                    ),
+                    (
+                        SignalIdentifier::Temperature,
+                        &self.signal_temperature as &dyn signal::Base,
+                    ),
+                ])
+                .collect()
         }
     }
 

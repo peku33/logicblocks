@@ -13,6 +13,7 @@ use logicblocks_controller::{
     datatypes::ipc_rtsp_url::IpcRtspUrl,
     devices::soft::surveillance::rtsp_recorder::hardware::recorder::Recorder,
     util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         fs::move_file,
         logging,
@@ -40,7 +41,7 @@ async fn main() -> Result<(), Error> {
     let exit_flag_sender = async_flag::Sender::new();
 
     // set up recorder
-    let (segment_sender, mut segment_receiver) = mpsc::unbounded();
+    let (segment_sender, segment_receiver) = mpsc::unbounded();
     let recorder = Recorder::new(
         Some(arguments.rtsp_url),
         Duration::from_secs(arguments.segment_time_seconds),
@@ -52,9 +53,7 @@ async fn main() -> Result<(), Error> {
     // forwarder to target directory
     let forwarder_runner_persistent_storage_directory = &arguments.persistent_storage_directory;
     let forwarder_runner = segment_receiver
-        .by_ref()
-        // TODO: convert take_until to something like "take_until_non_empty_async_flag"
-        .take_until(exit_flag_sender.receiver())
+        .stream_take_until_exhausted(exit_flag_sender.receiver())
         .for_each(async move |segment| {
             let target_path = forwarder_runner_persistent_storage_directory
                 .join(segment.path.file_name().unwrap());

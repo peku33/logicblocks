@@ -19,11 +19,12 @@ pub async fn run(
     signals: Signals,
     bind_global: bool,
 ) -> Result<(), Error> {
-    let devices = devices.into_devices();
-    let signals = signals.into_signals();
+    let device_wrappers_by_id = devices.into_device_wrappers_by_id();
+    let connections_requested = signals.into_connections_requested();
 
     // devices runner
-    let device_runner = Runner::new(devices, &signals);
+    let device_runner =
+        Runner::new(device_wrappers_by_id, &connections_requested).context("new")?;
 
     // web service
     let root_router = MapRouter::new(hashmap! {

@@ -2,9 +2,15 @@ use crate::{
     datatypes::ratio::Ratio,
     devices,
     signals::{self, signal},
-    util::waker_stream,
+    util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        async_flag,
+        runtime::{Exited, Runnable},
+    },
 };
-use std::borrow::Cow;
+use async_trait::async_trait;
+use futures::stream::StreamExt;
+use std::{borrow::Cow, iter};
 
 #[derive(Debug)]
 pub struct Configuration {
@@ -15,9 +21,10 @@ pub struct Configuration {
 pub struct Device {
     configuration: Configuration,
 
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
-    signal_output: signal::state_source::Signal<Ratio>,
+    signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
+    signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signals_input: Vec<signal::state_target_last::Signal<bool>>,
+    signal_output: signal::state_source::Signal<Ratio>,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -26,15 +33,16 @@ impl Device {
         Self {
             configuration,
 
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-            signal_output: signal::state_source::Signal::<Ratio>::new(None),
+            signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
+            signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signals_input: (0..inputs_count)
                 .map(|_input_id| signal::state_target_last::Signal::<bool>::new())
                 .collect::<Vec<_>>(),
+            signal_output: signal::state_source::Signal::<Ratio>::new(None),
         }
     }
 
-    fn recalculate(&self) {
+    fn signals_targets_changed(&self) {
         let inputs_values = self
             .signals_input
             .iter()
@@ -64,45 +72,81 @@ impl Device {
         };
 
         if self.signal_output.set_one(ratio) {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
     }
+
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.signals_targets_changed_waker
+            .stream(false)
+            .stream_take_until_exhausted(exit_flag)
+            .for_each(async move |()| {
+                self.signals_targets_changed();
+            })
+            .await;
+
+        Exited
+    }
 }
+
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
         Cow::from("soft/logic/encoders_decoders/boolean_to_ratio")
     }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
+    fn as_runnable(&self) -> &dyn Runnable {
+        self
+    }
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
 }
+
+#[async_trait]
+impl Runnable for Device {
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.run(exit_flag).await
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    Input(usize),
+    Output,
+}
+impl signals::Identifier for SignalIdentifier {}
 impl signals::Device for Device {
-    fn signal_targets_changed_wake(&self) {
-        self.recalculate()
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        Some(&self.signals_targets_changed_waker)
+    }
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        Some(&self.signals_sources_changed_waker)
     }
 
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
-    }
-
-    fn signals(&self) -> signals::Signals {
-        std::iter::empty()
-            .chain([
-                (0, &self.signal_output as &dyn signal::Base), // 0 - output
-            ])
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+        iter::empty()
             .chain(
-                // 1 + n - inputs
                 self.signals_input
                     .iter()
                     .enumerate()
-                    .map(|(input_id, signal_input)| {
+                    .map(|(input_index, input_signal)| {
                         (
-                            (1 + input_id) as signals::Id,
-                            signal_input as &dyn signal::Base,
+                            SignalIdentifier::Input(input_index),
+                            input_signal as &dyn signal::Base,
                         )
                     }),
             )
-            .collect::<signals::Signals>()
+            .chain([(
+                SignalIdentifier::Output,
+                &self.signal_output as &dyn signal::Base,
+            )])
+            .collect()
     }
 }

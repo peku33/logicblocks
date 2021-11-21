@@ -16,13 +16,7 @@ use futures::{
     join, pin_mut, select,
     stream::{StreamExt, TryStreamExt},
 };
-use std::{
-    fmt,
-    fs::Metadata,
-    path::{Path, PathBuf},
-    process::Stdio,
-    time::{Duration, SystemTime},
-};
+use std::{fmt, fs::Metadata, io, path::{Path, PathBuf}, process::Stdio, time::{Duration, SystemTime}};
 use tokio::{
     fs,
     io::{AsyncBufReadExt, BufReader},
@@ -324,7 +318,7 @@ impl Recorder {
 
     async fn inotify_handle_event(
         &self,
-        event: Result<EventOwned, std::io::Error>,
+        event: Result<EventOwned, io::Error>,
     ) -> Result<(), Error> {
         let event = event.context("event")?;
 

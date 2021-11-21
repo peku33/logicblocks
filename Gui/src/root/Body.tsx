@@ -1,6 +1,5 @@
 import Colors from "components/common/Colors";
-import { matchPath, Redirect, Route, Switch, useLocation } from "react-router";
-import { Link } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useMatch } from "react-router-dom";
 import styled from "styled-components";
 import DevicesSummary from "./DevicesSummary";
 import Error404 from "./Error404";
@@ -10,21 +9,15 @@ const Body: React.VFC = () => {
     <Layout>
       <TopBar>
         <Menu>
-          <MenuItem path="/devices_summary" text="Devices" />
+          <MenuItem pattern="/devices_summary/*" target="/devices_summary" text="Devices" />
         </Menu>
       </TopBar>
       <Content>
-        <Switch>
-          <Route path="/devices_summary">
-            <DevicesSummary />
-          </Route>
-          <Route path="/" exact>
-            <Redirect to="/devices_summary" />
-          </Route>
-          <Route path="*">
-            <Error404 />
-          </Route>
-        </Switch>
+        <Routes>
+          <Route path="devices_summary/*" element={<DevicesSummary />} />
+          <Route path="" element={<Navigate to="devices_summary" />} />
+          <Route path="*" element={<Error404 />} />
+        </Routes>
       </Content>
     </Layout>
   );
@@ -41,18 +34,15 @@ const TopBar = styled.div`
 `;
 const Menu = styled.div``;
 const MenuItem: React.VFC<{
-  path: string;
-  exact?: boolean;
-  strict?: boolean;
-  sensitive?: boolean;
-
+  pattern: string;
+  target: string;
   text: string;
 }> = (props) => {
-  const location = useLocation();
-  const match = !!matchPath(location.pathname, props);
+  const match = useMatch(props.pattern) !== null;
+
   return (
     <MenuLink active={match}>
-      <Link to={props.path}>{props.text}</Link>
+      <Link to={props.target}>{props.text}</Link>
     </MenuLink>
   );
 };

@@ -1,8 +1,14 @@
 use crate::{
     devices,
     signals::{self, signal, types::state::Value},
-    util::waker_stream,
+    util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        async_flag,
+        runtime::{Exited, Runnable},
+    },
 };
+use async_trait::async_trait;
+use futures::stream::StreamExt;
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use std::{any::type_name, borrow::Cow};
@@ -13,42 +19,98 @@ pub struct Configuration {
 }
 
 #[derive(Debug)]
-pub struct Device<V: Value + Clone> {
+pub struct Device<V>
+where
+    V: Value + Clone,
+{
     configuration: Configuration,
 
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+    signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signal_input: signal::state_target_queued::Signal<V>,
 }
-impl<V: Value + Clone> Device<V> {
+impl<V> Device<V>
+where
+    V: Value + Clone,
+{
     pub fn new(configuration: Configuration) -> Self {
         Self {
             configuration,
 
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+            signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signal_input: signal::state_target_queued::Signal::<V>::new(),
         }
     }
+
+    fn signals_targets_changed(&self) {
+        let values = self.signal_input.take_pending();
+        log::info!("{}: {:?}", self.configuration.name, values);
+    }
+
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.signals_targets_changed_waker
+            .stream(false)
+            .stream_take_until_exhausted(exit_flag)
+            .for_each(async move |()| {
+                self.signals_targets_changed();
+            })
+            .await;
+
+        Exited
+    }
 }
-impl<V: Value + Clone> devices::Device for Device<V> {
+
+impl<V> devices::Device for Device<V>
+where
+    V: Value + Clone,
+{
     fn class(&self) -> Cow<'static, str> {
         Cow::from(format!("soft/debug/log_state<{}>", type_name::<V>()))
     }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
+    fn as_runnable(&self) -> &dyn Runnable {
+        self
+    }
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
 }
-impl<V: Value + Clone> signals::Device for Device<V> {
-    fn signal_targets_changed_wake(&self) {
-        let values = self.signal_input.take_pending();
-        log::info!("{}: {:?}", self.configuration.name, values);
+
+#[async_trait]
+impl<V> Runnable for Device<V>
+where
+    V: Value + Clone,
+{
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.run(exit_flag).await
     }
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    Input,
+}
+impl signals::Identifier for SignalIdentifier {}
+impl<V> signals::Device for Device<V>
+where
+    V: Value + Clone,
+{
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        Some(&self.signals_targets_changed_waker)
     }
-    fn signals(&self) -> signals::Signals {
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        None
+    }
+
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         hashmap! {
-            0 => &self.signal_input as &dyn signal::Base,
+            SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
         }
     }
 }

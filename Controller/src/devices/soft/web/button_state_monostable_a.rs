@@ -1,6 +1,6 @@
 use crate::{
-    devices, signals,
-    signals::signal,
+    devices,
+    signals::{self, signal},
     util::{
         async_flag,
         runtime::{Exited, Runnable},
@@ -22,10 +22,10 @@ pub struct Device {
     value_beat_sender: watch::Sender<bool>,
     value_beat_receiver: watch::Receiver<bool>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
-
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+    signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_output: signal::state_source::Signal<bool>,
+
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     const VALUE_TIMEOUT: Duration = Duration::from_secs(5);
@@ -37,10 +37,10 @@ impl Device {
             value_beat_sender,
             value_beat_receiver,
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
-
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+            signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_output: signal::state_source::Signal::<bool>::new(Some(false)),
+
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -66,7 +66,7 @@ impl Device {
                 }
             }
             if self.signal_output.set_one(Some(true)) {
-                self.signal_sources_changed_waker.wake();
+                self.signals_sources_changed_waker.wake();
             }
 
             // wait for signal to go down or timeout expires
@@ -95,22 +95,24 @@ impl Device {
                 break 'inner_wait_for_down;
             }
             if self.signal_output.set_one(Some(false)) {
-                self.signal_sources_changed_waker.wake();
+                self.signals_sources_changed_waker.wake();
             }
         }
+
         Exited
     }
 }
+
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
         Cow::from("soft/web/button_state_monostable_a")
     }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
+    fn as_runnable(&self) -> &dyn Runnable {
         self
     }
-    fn as_runnable(&self) -> Option<&dyn Runnable> {
-        Some(self)
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
+        self
     }
     fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         Some(self)
@@ -119,19 +121,7 @@ impl devices::Device for Device {
         Some(self)
     }
 }
-impl signals::Device for Device {
-    fn signal_targets_changed_wake(&self) {
-        // no signal targets
-    }
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
-    }
-    fn signals(&self) -> signals::Signals {
-        hashmap! {
-            0 => &self.signal_output as &dyn signal::Base,
-        }
-    }
-}
+
 #[async_trait]
 impl Runnable for Device {
     async fn run(
@@ -141,6 +131,28 @@ impl Runnable for Device {
         self.run(exit_flag).await
     }
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    Output,
+}
+impl signals::Identifier for SignalIdentifier {}
+impl signals::Device for Device {
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        None
+    }
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        Some(&self.signals_sources_changed_waker)
+    }
+
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+        hashmap! {
+            SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
+        }
+    }
+}
+
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
         let gui_summary = *self.value_beat_receiver.borrow();
@@ -152,6 +164,7 @@ impl devices::GuiSummaryProvider for Device {
         self.gui_summary_waker.receiver_factory()
     }
 }
+
 impl uri_cursor::Handler for Device {
     fn handle(
         &self,

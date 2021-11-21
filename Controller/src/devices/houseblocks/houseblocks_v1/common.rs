@@ -1,6 +1,6 @@
 use anyhow::{bail, Error};
 use crc::{Crc, CRC_16_MODBUS};
-use std::{fmt, slice};
+use std::{fmt, slice, str};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct AddressDeviceType([u8; Self::LENGTH]);
@@ -27,7 +27,7 @@ impl fmt::Display for AddressDeviceType {
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        f.write_str(std::str::from_utf8(self.as_bytes()).unwrap())
+        f.write_str(str::from_utf8(self.as_bytes()).unwrap())
     }
 }
 #[cfg(test)]
@@ -68,7 +68,7 @@ impl fmt::Display for AddressSerial {
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        f.write_str(std::str::from_utf8(self.as_bytes()).unwrap())
+        f.write_str(str::from_utf8(self.as_bytes()).unwrap())
     }
 }
 #[cfg(test)]

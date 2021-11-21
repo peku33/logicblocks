@@ -45,6 +45,7 @@ mod gui_responder {
     use super::super::Response;
     use http::{HeaderMap, Method, Uri};
     use ouroboros::self_referencing;
+    use std::{env, include_bytes, mem};
     use web_static_pack::{
         hyper_loader::{Responder, ResponderError},
         loader::Loader,
@@ -65,8 +66,7 @@ mod gui_responder {
     impl GuiResponder {
         pub fn new() -> Self {
             let inner = GuiResponderInnerBuilder {
-                loader: Loader::new(std::include_bytes!(std::env!("CI_WEB_STATIC_PACK_GUI")))
-                    .unwrap(),
+                loader: Loader::new(include_bytes!(env!("CI_WEB_STATIC_PACK_GUI"))).unwrap(),
                 responder_builder: |loader| Responder::new(loader),
             }
             .build();
@@ -82,7 +82,7 @@ mod gui_responder {
         ) -> Response {
             let responder: &Responder<'static> = self.inner.with_responder(|responder| unsafe {
                 #[allow(clippy::transmute_ptr_to_ptr)]
-                std::mem::transmute::<&Responder<'_>, &Responder<'static>>(responder)
+                mem::transmute::<&Responder<'_>, &Responder<'static>>(responder)
             });
 
             // If path is /, use index.html

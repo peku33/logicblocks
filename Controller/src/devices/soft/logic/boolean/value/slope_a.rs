@@ -1,14 +1,21 @@
 use crate::{
     devices,
     signals::{self, signal},
-    util::waker_stream,
+    util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        async_flag,
+        runtime::{Exited, Runnable},
+    },
 };
+use async_trait::async_trait;
+use futures::stream::StreamExt;
 use maplit::hashmap;
 use std::borrow::Cow;
 
 #[derive(Debug)]
 pub struct Device {
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+    signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
+    signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input: signal::state_target_queued::Signal<bool>,
     signal_output_raising: signal::event_source::Signal<()>,
     signal_output_falling: signal::event_source::Signal<()>,
@@ -16,24 +23,15 @@ pub struct Device {
 impl Device {
     pub fn new() -> Self {
         Self {
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+            signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
+            signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input: signal::state_target_queued::Signal::<bool>::new(),
             signal_output_raising: signal::event_source::Signal::<()>::new(),
             signal_output_falling: signal::event_source::Signal::<()>::new(),
         }
     }
-}
-impl devices::Device for Device {
-    fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/logic/boolean/value/slope_a")
-    }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
-        self
-    }
-}
-impl signals::Device for Device {
-    fn signal_targets_changed_wake(&self) {
+    fn signals_targets_changed(&self) {
         let mut raising = false;
         let mut falling = true;
 
@@ -61,17 +59,70 @@ impl signals::Device for Device {
         }
 
         if signal_sources_changed {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
     }
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
+
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.signals_targets_changed_waker
+            .stream(false)
+            .stream_take_until_exhausted(exit_flag)
+            .for_each(async move |()| {
+                self.signals_targets_changed();
+            })
+            .await;
+
+        Exited
     }
-    fn signals(&self) -> signals::Signals {
+}
+
+impl devices::Device for Device {
+    fn class(&self) -> Cow<'static, str> {
+        Cow::from("soft/logic/boolean/value/slope_a")
+    }
+
+    fn as_runnable(&self) -> &dyn Runnable {
+        self
+    }
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
+        self
+    }
+}
+
+#[async_trait]
+impl Runnable for Device {
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.run(exit_flag).await
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    Input,
+    OutputRaising,
+    OutputFalling,
+}
+impl signals::Identifier for SignalIdentifier {}
+impl signals::Device for Device {
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        Some(&self.signals_targets_changed_waker)
+    }
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        Some(&self.signals_sources_changed_waker)
+    }
+
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         hashmap! {
-            0 => &self.signal_input as &dyn signal::Base,
-            1 => &self.signal_output_raising as &dyn signal::Base,
-            2 => &self.signal_output_falling as &dyn signal::Base,
+            SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
+            SignalIdentifier::OutputRaising => &self.signal_output_raising as &dyn signal::Base,
+            SignalIdentifier::OutputFalling => &self.signal_output_falling as &dyn signal::Base,
         }
     }
 }

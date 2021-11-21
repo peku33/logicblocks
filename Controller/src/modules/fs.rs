@@ -1,5 +1,5 @@
 use std::{
-    env::current_dir,
+    env::{self, current_dir},
     fs::create_dir_all,
     path::{Path, PathBuf},
 };
@@ -18,7 +18,7 @@ impl Fs {
 
         // TODO: Make this instance dependant
         let temporary_root = if cfg!(unix) {
-            if let Ok(temporary_root) = std::env::var("XDG_RUNTIME_DIR") {
+            if let Ok(temporary_root) = env::var("XDG_RUNTIME_DIR") {
                 PathBuf::from(temporary_root)
             } else {
                 Path::new("/dev/shm").to_path_buf()
