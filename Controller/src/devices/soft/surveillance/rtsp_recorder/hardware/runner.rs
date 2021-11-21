@@ -5,6 +5,7 @@ use super::{
 use crate::{
     modules::fs::Fs,
     util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         runtime::{Exited, FinalizeGuard, Runnable, Runtime, RuntimeScope, RuntimeScopeRunnable},
     },
@@ -264,11 +265,10 @@ impl RunnerChannel {
         &self,
         exit_flag: async_flag::Receiver,
     ) -> Exited {
-        let mut channel_segment_receiver = self.channel.channel_segment_receiver_lease();
-        // TODO: convert take_until to something like "take_until_non_empty_async_flag"
-        let mut channel_segment_receiver = channel_segment_receiver.by_ref().take_until(exit_flag);
-        channel_segment_receiver
+        self.channel
+            .channel_segment_receiver_lease()
             .by_ref()
+            .stream_take_until_exhausted(exit_flag)
             .for_each(async move |channel_segment| {
                 let channel_id_segment = ChannelIdSegment {
                     id: self.channel_id,
@@ -280,7 +280,6 @@ impl RunnerChannel {
             })
             .await;
 
-        assert!(channel_segment_receiver.is_stopped());
         Exited
     }
 

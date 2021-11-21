@@ -5,6 +5,7 @@ use crate::{
     interfaces::modbus_rtu::bus::AsyncBus,
     signals::{self, signal},
     util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         runtime::{Exited, Runnable},
         waker_stream,
@@ -20,12 +21,13 @@ use std::borrow::Cow;
 pub struct Device<'m> {
     hardware_device: hardware::Device<'m>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
-
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+    signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
+    signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input_speed: signal::state_target_last::Signal<Ratio>,
     signal_input_reverse: signal::state_target_last::Signal<bool>,
     signal_output_ok: signal::state_source::Signal<bool>,
+
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl<'m> Device<'m> {
     pub fn new(
@@ -37,12 +39,13 @@ impl<'m> Device<'m> {
         Self {
             hardware_device,
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
-
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+            signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
+            signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input_speed: signal::state_target_last::Signal::<Ratio>::new(),
             signal_input_reverse: signal::state_target_last::Signal::<bool>::new(),
             signal_output_ok: signal::state_source::Signal::<bool>::new(None),
+
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -75,7 +78,7 @@ impl<'m> Device<'m> {
         );
 
         if signal_sources_changed {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
     }
 
@@ -83,15 +86,22 @@ impl<'m> Device<'m> {
         &self,
         exit_flag: async_flag::Receiver,
     ) -> Exited {
-        // TODO: convert take_until to something like "take_until_non_empty_async_flag"
         // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
-        let mut output_receiver = self
+        let input_runner = self
+            .signals_targets_changed_waker
+            .stream(true)
+            .stream_take_until_exhausted(exit_flag.clone())
+            .for_each(async move |()| {
+                self.signals_to_device();
+            })
+            .boxed();
+
+        // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
+        let output_runner = self
             .hardware_device
             .output_getter()
             .changed_stream(true)
-            .take_until(exit_flag.clone());
-        let output_runner = output_receiver
-            .by_ref()
+            .stream_take_until_exhausted(exit_flag.clone())
             .for_each(async move |_output| {
                 self.device_to_signals();
                 self.gui_summary_waker.wake();
@@ -100,28 +110,28 @@ impl<'m> Device<'m> {
 
         let hardware_runner = self.hardware_device.run(exit_flag.clone());
 
-        let _: ((), Exited) = join!(output_runner, hardware_runner);
-
-        assert!(output_receiver.is_stopped());
+        let _: ((), (), Exited) = join!(input_runner, output_runner, hardware_runner);
 
         Exited
     }
 }
+
 impl<'m> devices::Device for Device<'m> {
     fn class(&self) -> Cow<'static, str> {
         Cow::from("eaton/mmax_a")
     }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
+    fn as_runnable(&self) -> &dyn Runnable {
         self
     }
-    fn as_runnable(&self) -> Option<&dyn Runnable> {
-        Some(self)
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
+        self
     }
     fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         Some(self)
     }
 }
+
 #[async_trait]
 impl<'m> Runnable for Device<'m> {
     async fn run(
@@ -131,21 +141,32 @@ impl<'m> Runnable for Device<'m> {
         self.run(exit_flag).await
     }
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    InputSpeed,
+    InputReverse,
+    OutputOk,
+}
+impl signals::Identifier for SignalIdentifier {}
 impl<'m> signals::Device for Device<'m> {
-    fn signal_targets_changed_wake(&self) {
-        self.signals_to_device();
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        Some(&self.signals_targets_changed_waker)
     }
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        Some(&self.signals_sources_changed_waker)
     }
-    fn signals(&self) -> signals::Signals {
+
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         hashmap! {
-            0 => &self.signal_input_speed as &dyn signal::Base,
-            1 => &self.signal_input_reverse as &dyn signal::Base,
-            2 => &self.signal_output_ok as &dyn signal::Base,
+            SignalIdentifier::InputSpeed => &self.signal_input_speed as &dyn signal::Base,
+            SignalIdentifier::InputReverse => &self.signal_input_reverse as &dyn signal::Base,
+            SignalIdentifier::OutputOk => &self.signal_output_ok as &dyn signal::Base,
         }
     }
 }
+
 #[derive(Copy, Clone, Debug, Serialize)]
 #[serde(tag = "state")]
 enum GuiSummary {

@@ -1,7 +1,7 @@
 use anyhow::{ensure, Context, Error};
 use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};
-use std::collections::VecDeque;
+use std::{collections::VecDeque, str};
 
 #[derive(Debug)]
 pub struct Extractor {
@@ -30,7 +30,7 @@ impl Extractor {
         }
 
         let buffer = self.buffer.make_contiguous();
-        let buffer = unsafe { std::str::from_utf8_unchecked(buffer) }; // SAFETY: buffer accepts &str only
+        let buffer = unsafe { str::from_utf8_unchecked(buffer) }; // SAFETY: buffer accepts &str only
 
         let capture = match PATTERN.captures(buffer) {
             Some(capture) => capture,

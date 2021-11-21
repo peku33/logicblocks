@@ -93,14 +93,12 @@ async fn main() -> Result<(), Error> {
     pin_mut!(event_stream_manager_runner);
     let mut event_stream_manager_runner = event_stream_manager_runner.fuse();
 
-    let mut event_stream_manager_receiver =
-        tokio_stream::wrappers::WatchStream::new(event_stream_manager.receiver());
-    let event_stream_manager_receiver_runner =
-        event_stream_manager_receiver
-            .by_ref()
-            .for_each(async move |events| {
-                log::info!("events: {:?}", events);
-            });
+    let event_stream_manager_receiver_runner = tokio_stream::wrappers::WatchStream::new(
+        event_stream_manager.receiver(),
+    )
+    .for_each(async move |events| {
+        log::info!("events: {:?}", events);
+    });
     pin_mut!(event_stream_manager_receiver_runner);
     let mut event_stream_manager_receiver_runner = event_stream_manager_receiver_runner.fuse();
 

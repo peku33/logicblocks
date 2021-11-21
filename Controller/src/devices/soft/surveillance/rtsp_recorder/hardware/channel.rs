@@ -2,6 +2,7 @@ use super::recorder::{Recorder, Segment};
 use crate::{
     datatypes::{ipc_rtsp_url::IpcRtspUrl, ratio::Ratio},
     util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         atomic_cell::{AtomicCell, AtomicCellLease},
         runtime::{Exited, Runnable},
@@ -162,12 +163,10 @@ impl Channel {
         &self,
         exit_flag: async_flag::Receiver,
     ) -> Result<Exited, Error> {
-        let mut recorder_segment_receiver = self.recorder_segment_receiver.lease();
-        // TODO: convert take_until to something like "take_until_non_empty_async_flag"
-        let mut recorder_segment_receiver =
-            recorder_segment_receiver.by_ref().take_until(exit_flag);
-        recorder_segment_receiver
+        self.recorder_segment_receiver
+            .lease()
             .by_ref()
+            .stream_take_until_exhausted(exit_flag)
             .map(Ok)
             .try_for_each(async move |segment| -> Result<(), Error> {
                 self.channel_segment_forward(segment)
@@ -178,7 +177,7 @@ impl Channel {
             })
             .await
             .context("recorder_segment_receiver")?;
-        assert!(recorder_segment_receiver.is_stopped());
+
         Ok(Exited)
     }
     async fn channel_segment_forwarder_run(

@@ -3,8 +3,14 @@ use crate::{
     datatypes::{ipc_rtsp_url::IpcRtspUrl, ratio::Ratio},
     devices,
     signals::{self, signal},
-    util::waker_stream,
+    util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        async_flag,
+        runtime::{Exited, Runnable},
+    },
 };
+use async_trait::async_trait;
+use futures::stream::StreamExt;
 use maplit::hashmap;
 use std::borrow::Cow;
 
@@ -12,35 +18,22 @@ use std::borrow::Cow;
 pub struct Device<'c> {
     channel: &'c Channel,
 
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+    signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signal_rtsp_url: signal::state_target_last::Signal<IpcRtspUrl>,
     signal_detection_level: signal::state_target_last::Signal<Ratio>,
 }
 impl<'c> Device<'c> {
     pub fn new(channel: &'c Channel) -> Self {
-        channel.rtsp_url_set(None);
-        channel.detection_level_set(None);
-
         Self {
             channel,
 
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+            signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signal_rtsp_url: signal::state_target_last::Signal::<IpcRtspUrl>::new(),
             signal_detection_level: signal::state_target_last::Signal::<Ratio>::new(),
         }
     }
-}
-impl<'c> devices::Device for Device<'c> {
-    fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/surveillance/rtsp_recorder/channel")
-    }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
-        self
-    }
-}
-impl<'c> signals::Device for Device<'c> {
-    fn signal_targets_changed_wake(&self) {
+    fn signals_targets_changed(&self) {
         if let Some(rtsp_url) = self.signal_rtsp_url.take_pending() {
             self.channel.rtsp_url_set(rtsp_url);
         }
@@ -48,13 +41,68 @@ impl<'c> signals::Device for Device<'c> {
             self.channel.detection_level_set(detection_level);
         }
     }
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
+
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.channel.rtsp_url_set(None);
+        self.channel.detection_level_set(None);
+
+        self.signals_targets_changed_waker
+            .stream(false)
+            .stream_take_until_exhausted(exit_flag)
+            .for_each(async move |()| {
+                self.signals_targets_changed();
+            })
+            .await;
+
+        Exited
     }
-    fn signals(&self) -> signals::Signals {
+}
+
+impl<'c> devices::Device for Device<'c> {
+    fn class(&self) -> Cow<'static, str> {
+        Cow::from("soft/surveillance/rtsp_recorder/channel")
+    }
+
+    fn as_runnable(&self) -> &dyn Runnable {
+        self
+    }
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
+        self
+    }
+}
+
+#[async_trait]
+impl<'c> Runnable for Device<'c> {
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.run(exit_flag).await
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    RtspUrl,
+    DetectionLevel,
+}
+impl signals::Identifier for SignalIdentifier {}
+impl<'c> signals::Device for Device<'c> {
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        Some(&self.signals_targets_changed_waker)
+    }
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        None
+    }
+
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         hashmap! {
-            0 => &self.signal_rtsp_url as &dyn signal::Base,
-            1 => &self.signal_detection_level as &dyn signal::Base,
+            SignalIdentifier::RtspUrl => &self.signal_rtsp_url as &dyn signal::Base,
+            SignalIdentifier::DetectionLevel => &self.signal_detection_level as &dyn signal::Base,
         }
     }
 }

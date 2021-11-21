@@ -8,7 +8,10 @@ use logicblocks_controller::{
     datatypes::ratio::Ratio,
     devices::eaton::mmax_a,
     interfaces::{modbus_rtu, serial},
-    util::{async_flag, logging, runtime::Exited},
+    util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt, async_flag, logging,
+        runtime::Exited,
+    },
 };
 use std::{collections::HashMap, str::FromStr};
 use tokio::signal::ctrl_c;
@@ -112,16 +115,13 @@ async fn main() -> Result<(), Error> {
         device.input_setter().set(input);
     }
 
-    let mut output_state_receiver = device
+    let output_state_receiver_runner = device
         .output_getter()
         .value_stream(true)
-        .take_until(exit_flag_sender.receiver());
-    let output_state_receiver_runner =
-        output_state_receiver
-            .by_ref()
-            .for_each(async move |output_state| {
-                log::info!("output_state: {:#?}", output_state);
-            });
+        .stream_take_until_exhausted(exit_flag_sender.receiver())
+        .for_each(async move |output_state| {
+            log::info!("output_state: {:#?}", output_state);
+        });
 
     let exit_flag_runner = ctrl_c()
         .map_ok(|()| {
@@ -136,8 +136,6 @@ async fn main() -> Result<(), Error> {
         output_state_receiver_runner,
         exit_flag_runner,
     );
-
-    assert!(output_state_receiver.is_stopped());
 
     Ok(())
 }

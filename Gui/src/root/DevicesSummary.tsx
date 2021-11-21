@@ -1,10 +1,12 @@
 import Colors from "components/common/Colors";
 import { getJson } from "lib/Api";
 import React, { useState } from "react";
+import { Route, Routes } from "react-router-dom";
 import { endpointBuild } from "services/LogicDevicesRunner";
 import styled from "styled-components";
 import useAsyncEffect from "use-async-effect";
 import DeviceSummary from "./DeviceSummary";
+import Error404 from "./Error404";
 
 const DevicesSummary: React.VFC = () => {
   const deviceIds = useDeviceIds();
@@ -14,13 +16,23 @@ const DevicesSummary: React.VFC = () => {
   }
 
   return (
-    <DevicesList>
-      {deviceIds.map((deviceId) => (
-        <DevicesListItem key={deviceId}>
-          <DeviceSummary deviceId={deviceId} />
-        </DevicesListItem>
-      ))}
-    </DevicesList>
+    <Routes>
+      <Route
+        path=""
+        element={
+          <>
+            <DevicesList>
+              {deviceIds.map((deviceId) => (
+                <DevicesListItem key={deviceId}>
+                  <DeviceSummary deviceId={deviceId} />
+                </DevicesListItem>
+              ))}
+            </DevicesList>
+          </>
+        }
+      ></Route>
+      <Route path="*" element={<Error404 />} />
+    </Routes>
   );
 };
 export default DevicesSummary;

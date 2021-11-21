@@ -8,7 +8,7 @@ use http::{
 };
 use image::DynamicImage;
 use semver::{Version, VersionReq};
-use std::{pin::Pin, task, time::Duration};
+use std::{pin::Pin, str, task, time::Duration};
 use xmltree::Element;
 
 #[derive(Debug)]
@@ -431,7 +431,7 @@ impl Stream for BoundaryStreamExtractor {
         if !self_.data_stream_terminated {
             match Pin::new(&mut self_.data_stream).poll_next(cx) {
                 task::Poll::Ready(Some(item)) => match item.context("item") {
-                    Ok(chunk) => match std::str::from_utf8(&chunk).context("from_utf8") {
+                    Ok(chunk) => match str::from_utf8(&chunk).context("from_utf8") {
                         Ok(chunk) => {
                             self_.extractor.push(chunk);
                         }

@@ -14,13 +14,7 @@ use image::DynamicImage;
 use itertools::Itertools;
 use md5::{Digest, Md5};
 use serde_json::json;
-use std::{
-    fmt,
-    pin::Pin,
-    sync::atomic::{AtomicU64, Ordering},
-    task,
-    time::Duration,
-};
+use std::{fmt, pin::Pin, str, sync::atomic::{AtomicU64, Ordering}, task, time::Duration};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct WebVersion {
@@ -690,7 +684,7 @@ impl Stream for BoundaryStreamExtractor {
         if !self_.data_stream_terminated {
             match Pin::new(&mut self_.data_stream).poll_next(cx) {
                 task::Poll::Ready(Some(item)) => match item.context("item") {
-                    Ok(chunk) => match std::str::from_utf8(&chunk).context("from_utf8") {
+                    Ok(chunk) => match str::from_utf8(&chunk).context("from_utf8") {
                         Ok(chunk) => {
                             self_.extractor.push(chunk);
                         }

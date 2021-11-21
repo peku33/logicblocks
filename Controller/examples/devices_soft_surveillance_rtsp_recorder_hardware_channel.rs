@@ -8,6 +8,7 @@ use logicblocks_controller::{
     datatypes::{ipc_rtsp_url::IpcRtspUrl, ratio::Ratio},
     devices::soft::surveillance::rtsp_recorder::hardware::channel::Channel,
     util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag, logging,
         runtime::{Exited, Runnable},
     },
@@ -47,8 +48,7 @@ async fn main() -> Result<(), Error> {
     let mut channel_segment_receiver_lease = channel.channel_segment_receiver_lease();
     let segment_deleter_runner = channel_segment_receiver_lease
         .by_ref()
-        // TODO: convert take_until to something like "take_until_non_empty_async_flag"
-        .take_until(exit_flag_sender.receiver())
+        .stream_take_until_exhausted(exit_flag_sender.receiver())
         .for_each(async move |channel_segment| {
             log::info!("received segment: {:?}", channel_segment);
             fs::remove_file(channel_segment.segment.path).await.unwrap();
@@ -59,8 +59,7 @@ async fn main() -> Result<(), Error> {
     let detection_level_set_runner = tokio_stream::wrappers::IntervalStream::new(
         tokio::time::interval(DETECTION_CHANGE_INTERVAL),
     )
-    // TODO: convert take_until to something like "take_until_non_empty_async_flag"
-    .take_until(exit_flag_sender.receiver())
+    .stream_take_until_exhausted(exit_flag_sender.receiver())
     .for_each(async move |_| {
         let mut rng = rand::thread_rng();
         let detection_level: Option<Ratio> = if rng.gen_bool(0.7) {

@@ -94,9 +94,7 @@ pub struct Device {
     device_state: RwLock<DeviceState>,
     snapshot_manager: SnapshotManager,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
-
-    signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+    signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_rtsp_url_main: signal::state_source::Signal<IpcRtspUrl>,
     signal_rtsp_url_sub: signal::state_source::Signal<IpcRtspUrl>,
     signal_event_camera_failure: signal::state_source::Signal<bool>,
@@ -105,6 +103,8 @@ pub struct Device {
     signal_event_motion_detection: signal::state_source::Signal<bool>,
     signal_event_line_detection: signal::state_source::Signal<bool>,
     signal_event_field_detection: signal::state_source::Signal<bool>,
+
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -114,9 +114,7 @@ impl Device {
             device_state: RwLock::new(DeviceState::Initializing),
             snapshot_manager: SnapshotManager::new(),
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
-
-            signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+            signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_rtsp_url_main: signal::state_source::Signal::<IpcRtspUrl>::new(None),
             signal_rtsp_url_sub: signal::state_source::Signal::<IpcRtspUrl>::new(None),
             signal_event_camera_failure: signal::state_source::Signal::<bool>::new(None),
@@ -125,6 +123,8 @@ impl Device {
             signal_event_motion_detection: signal::state_source::Signal::<bool>::new(None),
             signal_event_line_detection: signal::state_source::Signal::<bool>::new(None),
             signal_event_field_detection: signal::state_source::Signal::<bool>::new(None),
+
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -172,7 +172,7 @@ impl Device {
             .signal_event_field_detection
             .set_one(Some(events.field_detection));
         if signals_changed {
-            self.signal_sources_changed_waker.wake();
+            self.signals_sources_changed_waker.wake();
         }
     }
 
@@ -190,7 +190,7 @@ impl Device {
         let _ = self.signal_event_motion_detection.set_one(None);
         let _ = self.signal_event_line_detection.set_one(None);
         let _ = self.signal_event_field_detection.set_one(None);
-        self.signal_sources_changed_waker.wake();
+        self.signals_sources_changed_waker.wake();
     }
 
     pub const SNAPSHOT_INTERVAL: Duration = Duration::from_secs(60);
@@ -254,22 +254,21 @@ impl Device {
 
         // Attach event manager
         let events_stream_manager = event_stream::Manager::new(&api);
-        let mut events_stream_manager_receiver =
-            tokio_stream::wrappers::WatchStream::new(events_stream_manager.receiver());
+
+        let events_stream_manager_receiver_runner = tokio_stream::wrappers::WatchStream::new(
+            events_stream_manager.receiver(),
+        )
+        .for_each(async move |hardware_events| {
+            let events = Events::from_event_stream_events(&hardware_events);
+            self.events_handle(events);
+        });
+        pin_mut!(events_stream_manager_receiver_runner);
+        let mut events_stream_manager_receiver_runner =
+            events_stream_manager_receiver_runner.fuse();
 
         let events_stream_manager_runner = events_stream_manager.run_once();
         pin_mut!(events_stream_manager_runner);
         let mut events_stream_manager_runner = events_stream_manager_runner.fuse();
-
-        let events_stream_manager_receiver_runner = events_stream_manager_receiver
-            .by_ref()
-            .for_each(async move |hardware_events| {
-                let events = Events::from_event_stream_events(&hardware_events);
-                self.events_handle(events);
-            });
-        pin_mut!(events_stream_manager_receiver_runner);
-        let mut events_stream_manager_receiver_runner =
-            events_stream_manager_receiver_runner.fuse();
 
         // Attach snapshot manager
         let snapshot_runner = SnapshotRunner::new(
@@ -293,7 +292,7 @@ impl Device {
         // Set initial signal values
         let _ = self.signal_rtsp_url_main.set_one(Some(rtsp_urls.main));
         let _ = self.signal_rtsp_url_sub.set_one(Some(rtsp_urls.sub));
-        self.signal_sources_changed_waker.wake();
+        self.signals_sources_changed_waker.wake();
 
         select! {
             events_stream_manager_runner_error = events_stream_manager_runner => events_stream_manager_runner_error,
@@ -313,16 +312,17 @@ impl Device {
         }
     }
 }
+
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
         Cow::from("hikvision/ds2cd2x32x_x")
     }
 
-    fn as_signals_device(&self) -> &dyn signals::Device {
+    fn as_runnable(&self) -> &dyn Runnable {
         self
     }
-    fn as_runnable(&self) -> Option<&dyn Runnable> {
-        Some(self)
+    fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
+        self
     }
     fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         Some(self)
@@ -331,6 +331,7 @@ impl devices::Device for Device {
         Some(self)
     }
 }
+
 #[async_trait]
 impl Runnable for Device {
     async fn run(
@@ -349,27 +350,43 @@ impl Runnable for Device {
         Exited
     }
 }
-impl signals::Device for Device {
-    fn signal_targets_changed_wake(&self) {
-        // no signal targets
-    }
-    fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.signal_sources_changed_waker.receiver()
-    }
-    fn signals(&self) -> signals::Signals {
-        hashmap! {
-            0 => &self.signal_rtsp_url_main as &dyn signal::Base,
-            1 => &self.signal_rtsp_url_sub as &dyn signal::Base,
 
-            100 => &self.signal_event_camera_failure as &dyn signal::Base,
-            101 => &self.signal_event_video_loss as &dyn signal::Base,
-            102 => &self.signal_event_tampering_detection as &dyn signal::Base,
-            103 => &self.signal_event_motion_detection as &dyn signal::Base,
-            104 => &self.signal_event_line_detection as &dyn signal::Base,
-            105 => &self.signal_event_field_detection as &dyn signal::Base,
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum SignalIdentifier {
+    RtspUrlMain,
+    RtspUrlSub,
+
+    EventCameraFailure,
+    EventVideoLoss,
+    EventTamperingDetection,
+    EventMotionDetection,
+    EventLineDetection,
+    EventFieldDetection,
+}
+impl signals::Identifier for SignalIdentifier {}
+impl signals::Device for Device {
+    fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+        None
+    }
+    fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+        Some(&self.signals_sources_changed_waker)
+    }
+
+    type Identifier = SignalIdentifier;
+    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+        hashmap! {
+            SignalIdentifier::RtspUrlMain => &self.signal_rtsp_url_main as &dyn signal::Base,
+            SignalIdentifier::RtspUrlSub => &self.signal_rtsp_url_sub as &dyn signal::Base,
+            SignalIdentifier::EventCameraFailure => &self.signal_event_camera_failure as &dyn signal::Base,
+            SignalIdentifier::EventVideoLoss => &self.signal_event_video_loss as &dyn signal::Base,
+            SignalIdentifier::EventTamperingDetection => &self.signal_event_tampering_detection as &dyn signal::Base,
+            SignalIdentifier::EventMotionDetection => &self.signal_event_motion_detection as &dyn signal::Base,
+            SignalIdentifier::EventLineDetection => &self.signal_event_line_detection as &dyn signal::Base,
+            SignalIdentifier::EventFieldDetection => &self.signal_event_field_detection as &dyn signal::Base,
         }
     }
 }
+
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
         let gui_summary = self.device_state.read().clone();
@@ -380,6 +397,7 @@ impl devices::GuiSummaryProvider for Device {
         self.gui_summary_waker.receiver_factory()
     }
 }
+
 impl uri_cursor::Handler for Device {
     fn handle(
         &self,

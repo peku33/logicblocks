@@ -3,6 +3,7 @@ use crate::{
     datatypes::ratio::Ratio,
     modules,
     util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         atomic_cell::AtomicCell,
         fs::{move_file, remove_all_dir_empty},
@@ -227,11 +228,10 @@ impl<'f> Manager<'f> {
         &self,
         exit_flag: async_flag::Receiver,
     ) -> Result<Exited, Error> {
-        let mut channel_segment_receiver = self.channel_segment_receiver.lease();
-        // TODO: convert take_until to something like "take_until_non_empty_async_flag"
-        let mut channel_segment_receiver = channel_segment_receiver.by_ref().take_until(exit_flag);
-        channel_segment_receiver
+        self.channel_segment_receiver
+            .lease()
             .by_ref()
+            .stream_take_until_exhausted(exit_flag)
             .map(Ok)
             .try_for_each_concurrent(None, async move |channel_id_segment| -> Result<(), Error> {
                 self.channel_segment_handle(channel_id_segment.id, channel_id_segment.segment)
@@ -243,7 +243,6 @@ impl<'f> Manager<'f> {
             .await
             .context("channel_segment_receiver")?;
 
-        assert!(channel_segment_receiver.is_stopped());
         Ok(Exited)
     }
     async fn channel_segment_receiver_run(

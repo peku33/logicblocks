@@ -5,7 +5,7 @@ use super::{
     helpers::{bits_byte_to_array, bits_bytes_to_slice_checked, bits_slice_to_bytes},
 };
 use anyhow::{anyhow, bail, ensure, Context, Error};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, iter};
 
 // Generics for 0x01 and 0x02
 #[derive(PartialEq, Eq, Debug)]
@@ -36,7 +36,7 @@ impl ReadBitsGenericRequest {
         })
     }
     pub fn data(&self) -> Box<[u8]> {
-        std::iter::empty()
+        iter::empty()
             .chain(((self.starting_address - 1) as u16).to_be_bytes())
             .chain((self.number_of_bits as u16).to_be_bytes())
             .collect::<Box<[_]>>()
@@ -265,7 +265,7 @@ impl ReadWordsGenericRequest {
         })
     }
     pub fn data(&self) -> Box<[u8]> {
-        std::iter::empty()
+        iter::empty()
             .chain(((self.starting_address - 1) as u16).to_be_bytes())
             .chain((self.number_of_words as u16).to_be_bytes())
             .collect::<Box<[_]>>()
@@ -487,7 +487,7 @@ impl Request for WriteSingleCoilRequest {
         0x05
     }
     fn data(&self) -> Box<[u8]> {
-        std::iter::empty()
+        iter::empty()
             .chain(((self.address - 1) as u16).to_be_bytes())
             .chain(((if self.value { 0xFF00 } else { 0x0000 }) as u16).to_be_bytes())
             .collect::<Box<[_]>>()
@@ -572,7 +572,7 @@ impl Request for WriteSingleRegisterRequest {
         0x06
     }
     fn data(&self) -> Box<[u8]> {
-        std::iter::empty()
+        iter::empty()
             .chain(((self.address - 1) as u16).to_be_bytes())
             .chain(self.value.to_be_bytes())
             .collect::<Box<[_]>>()
@@ -746,7 +746,7 @@ impl Request for WriteMultipleCoilsRequest {
     fn data(&self) -> Box<[u8]> {
         let values_bytes = bits_slice_to_bytes(self.values.as_ref());
 
-        std::iter::empty()
+        iter::empty()
             .chain(((self.starting_address - 1) as u16).to_be_bytes())
             .chain((self.values.len() as u16).to_be_bytes())
             .chain((values_bytes.len() as u8).to_be_bytes())
@@ -855,7 +855,7 @@ impl Request for WriteMultipleRegistersRequest {
         0x10
     }
     fn data(&self) -> Box<[u8]> {
-        std::iter::empty()
+        iter::empty()
             .chain(((self.starting_address - 1) as u16).to_be_bytes())
             .chain((self.values.len() as u16).to_be_bytes())
             .chain(((self.values.len() * 2) as u8).to_be_bytes())

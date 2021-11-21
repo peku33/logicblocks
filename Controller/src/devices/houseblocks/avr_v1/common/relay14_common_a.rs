@@ -3,10 +3,17 @@ pub mod logic {
     use crate::{
         devices,
         signals::{self, signal},
-        util::waker_stream,
+        util::{
+            async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+            async_flag,
+            runtime::{Exited, Runnable},
+            waker_stream,
+        },
     };
     use array_init::array_init;
     use arrayvec::ArrayVec;
+    use async_trait::async_trait;
+    use futures::stream::StreamExt;
     use serde::Serialize;
     use std::{fmt, marker::PhantomData};
 
@@ -21,48 +28,15 @@ pub mod logic {
         properties_remote: hardware::PropertiesRemote,
         properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver,
 
-        signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver,
+        signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
         signal_outputs: [signal::state_target_last::Signal<bool>; hardware::OUTPUT_COUNT],
 
         gui_summary_waker: waker_stream::mpmc::Sender,
 
         _phantom: PhantomData<S>,
     }
-    impl<S: Specification> logic::Device for Device<S> {
-        type HardwareDevice = hardware::Device<S::HardwareSpecification>;
-
-        fn new(properties_remote: hardware::PropertiesRemote) -> Self {
-            Self {
-                properties_remote,
-                properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-
-                signal_sources_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-                signal_outputs: array_init(|_| signal::state_target_last::Signal::<bool>::new()),
-
-                gui_summary_waker: waker_stream::mpmc::Sender::new(),
-
-                _phantom: PhantomData,
-            }
-        }
-
-        fn class() -> &'static str {
-            S::class()
-        }
-
-        fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
-            Some(self)
-        }
-        fn properties_remote_in_changed(&self) {
-            // We have no "in" properties
-        }
-        fn properties_remote_out_changed_waker_receiver(
-            &self
-        ) -> waker_stream::mpsc::ReceiverLease {
-            self.properties_remote_out_changed_waker.receiver()
-        }
-    }
-    impl<S: Specification> signals::Device for Device<S> {
-        fn signal_targets_changed_wake(&self) {
+    impl<S: Specification> Device<S> {
+        fn signals_targets_changed(&self) {
             let mut properties_remote_changed = false;
             let mut gui_summary_changed = false;
 
@@ -93,20 +67,95 @@ pub mod logic {
                 self.gui_summary_waker.wake()
             }
         }
-        fn signal_sources_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-            self.signal_sources_changed_waker.receiver()
+
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            self.signals_targets_changed_waker
+                .stream(false)
+                .stream_take_until_exhausted(exit_flag)
+                .for_each(async move |()| {
+                    self.signals_targets_changed();
+                })
+                .await;
+
+            Exited
         }
-        fn signals(&self) -> signals::Signals {
+    }
+
+    impl<S: Specification> logic::Device for Device<S> {
+        type HardwareDevice = hardware::Device<S::HardwareSpecification>;
+
+        fn new(properties_remote: hardware::PropertiesRemote) -> Self {
+            Self {
+                properties_remote,
+                properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
+
+                signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
+                signal_outputs: array_init(|_| signal::state_target_last::Signal::<bool>::new()),
+
+                gui_summary_waker: waker_stream::mpmc::Sender::new(),
+
+                _phantom: PhantomData,
+            }
+        }
+
+        fn class() -> &'static str {
+            S::class()
+        }
+
+        fn as_runnable(&self) -> &dyn Runnable {
+            self
+        }
+        fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+            Some(self)
+        }
+        fn properties_remote_in_changed(&self) {
+            // We have no "in" properties
+        }
+        fn properties_remote_out_changed_waker_receiver(
+            &self
+        ) -> waker_stream::mpsc::ReceiverLease {
+            self.properties_remote_out_changed_waker.receiver()
+        }
+    }
+
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+    pub enum SignalIdentifier {
+        Output(usize),
+    }
+    impl signals::Identifier for SignalIdentifier {}
+    impl<S: Specification> signals::Device for Device<S> {
+        fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
+            Some(&self.signals_targets_changed_waker)
+        }
+        fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
+            None
+        }
+
+        type Identifier = SignalIdentifier;
+        fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
             self.signal_outputs
                 .iter()
                 .enumerate()
-                .map(|(signal_id, signal)| {
+                .map(|(output_index, output_signal)| {
                     (
-                        signal_id as signals::Id,
-                        signal as &dyn signals::signal::Base,
+                        SignalIdentifier::Output(output_index),
+                        output_signal as &dyn signal::Base,
                     )
                 })
-                .collect::<signals::Signals>()
+                .collect()
+        }
+    }
+
+    #[async_trait]
+    impl<S: Specification> Runnable for Device<S> {
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            self.run(exit_flag).await
         }
     }
 

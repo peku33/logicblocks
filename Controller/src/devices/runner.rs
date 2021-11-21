@@ -1,12 +1,13 @@
 use super::{DeviceWrapper, Id as DeviceId};
 use crate::{
-    signals::exchange::{
-        connections_requested::Connections as ConnectionsRequested, exchanger::Exchanger,
+    signals::{
+        exchanger::{ConnectionRequested, Exchanger},
+        DeviceBaseRef as SignalsDeviceBaseRef,
     },
     util::runtime::{FinalizeGuard, Runtime, RuntimeScopeRunnable},
     web::{self, sse_aggregated, uri_cursor},
 };
-use anyhow::Context;
+use anyhow::{Context, Error};
 use futures::future::{BoxFuture, FutureExt, JoinAll};
 use ouroboros::self_referencing;
 use std::{
@@ -17,17 +18,17 @@ use std::{
 #[self_referencing]
 struct RunnerInner<'d> {
     runtime: Runtime,
-    device_wrappers: HashMap<DeviceId, DeviceWrapper<'d>>,
+    device_wrappers_by_id: HashMap<DeviceId, DeviceWrapper<'d>>,
 
-    #[borrows(device_wrappers)]
+    #[borrows(device_wrappers_by_id)]
     #[not_covariant]
     exchanger: Exchanger<'this>,
 
-    // #[borrows(device_wrappers)]
+    // #[borrows(device_wrappers_by_id)]
     // #[not_covariant]
     devices_gui_summary_sse_aggregated_bus: sse_aggregated::Bus,
 
-    #[borrows(runtime, device_wrappers)]
+    #[borrows(runtime, device_wrappers_by_id)]
     #[not_covariant]
     devices_wrapper_runtime_scope_runnable:
         ManuallyDrop<Box<[RuntimeScopeRunnable<'this, 'this, DeviceWrapper<'d>>]>>,
@@ -44,14 +45,14 @@ pub struct Runner<'d> {
 }
 impl<'d> Runner<'d> {
     pub fn new(
-        device_wrappers: HashMap<DeviceId, DeviceWrapper<'d>>,
-        connections_requested: &ConnectionsRequested,
-    ) -> Self {
+        device_wrappers_by_id: HashMap<DeviceId, DeviceWrapper<'d>>,
+        connections_requested: &[ConnectionRequested],
+    ) -> Result<Self, Error> {
         let runtime = Runtime::new("devices", 4, 4);
 
         let devices_gui_summary_sse_aggregated_node = sse_aggregated::Node {
             terminal: None,
-            children: device_wrappers
+            children: device_wrappers_by_id
                 .iter()
                 .map(|(device_id, device_wrapper)| {
                     (
@@ -64,47 +65,50 @@ impl<'d> Runner<'d> {
         let devices_gui_summary_sse_aggregated_bus =
             sse_aggregated::Bus::new(devices_gui_summary_sse_aggregated_node);
 
-        let inner = RunnerInnerBuilder {
+        let inner = RunnerInner::try_new(
             runtime,
-            device_wrappers,
-            exchanger_builder: |device_wrappers| {
-                let exchanger_devices = device_wrappers
+            device_wrappers_by_id,
+            |device_wrappers_by_id| -> Result<_, Error> {
+                let exchanger_devices = device_wrappers_by_id
                     .iter()
                     .map(|(device_id, device_wrapper)| {
-                        let signals_device = device_wrapper.device().as_signals_device();
                         let device_id = *device_id;
-                        (device_id, signals_device)
+
+                        let signals_device_base = device_wrapper.device().as_signals_device_base();
+                        let signals_device_base =
+                            SignalsDeviceBaseRef::from_device_base(signals_device_base);
+
+                        (device_id, signals_device_base)
                     })
                     .collect::<HashMap<_, _>>();
-                let exchanger = Exchanger::new(exchanger_devices, connections_requested);
-                exchanger
+                let exchanger = Exchanger::new(&exchanger_devices, connections_requested)?;
+                Ok(exchanger)
             },
             devices_gui_summary_sse_aggregated_bus,
-            devices_wrapper_runtime_scope_runnable_builder: |runtime, device_wrappers| {
-                let devices_wrapper_runtime_scope_runnable = device_wrappers
+            |runtime, device_wrappers_by_id| -> Result<_, Error> {
+                let devices_wrapper_runtime_scope_runnable = device_wrappers_by_id
                     .values()
                     .map(|device_wrapper| RuntimeScopeRunnable::new(runtime, device_wrapper))
                     .collect::<Box<[_]>>();
                 let devices_wrapper_runtime_scope_runnable =
                     ManuallyDrop::new(devices_wrapper_runtime_scope_runnable);
-                devices_wrapper_runtime_scope_runnable
+                Ok(devices_wrapper_runtime_scope_runnable)
             },
-            exchanger_runtime_scope_runnable_builder: |runtime, exchanger| {
+            |runtime, exchanger| -> Result<_, Error> {
                 let exchanger_runtime_scope_runnable =
                     RuntimeScopeRunnable::new(runtime, exchanger);
                 let exchanger_runtime_scope_runnable =
                     ManuallyDrop::new(exchanger_runtime_scope_runnable);
-                exchanger_runtime_scope_runnable
+                Ok(exchanger_runtime_scope_runnable)
             },
-        }
-        .build();
+        )?;
 
         let finalize_guard = FinalizeGuard::new();
 
-        Self {
+        Ok(Self {
             inner,
             finalize_guard,
-        }
+        })
     }
     pub async fn finalize(mut self) -> HashMap<DeviceId, DeviceWrapper<'d>> {
         let exchanger_runtime_scope_runnable = self
@@ -160,7 +164,7 @@ impl<'d> Runner<'d> {
         self.finalize_guard.finalized();
 
         let inner_heads = self.inner.into_heads();
-        inner_heads.device_wrappers
+        inner_heads.device_wrappers_by_id
     }
 }
 impl<'d> uri_cursor::Handler for Runner<'d> {
@@ -176,7 +180,7 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
                         http::Method::GET => {
                             let device_ids = self
                                 .inner
-                                .borrow_device_wrappers()
+                                .borrow_device_wrappers_by_id()
                                 .keys()
                                 .copied()
                                 .collect::<Vec<_>>();
@@ -208,10 +212,11 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
                                 .boxed()
                         }
                     };
-                    let device_wrapper = match self.inner.borrow_device_wrappers().get(&device_id) {
-                        Some(device_wrapper) => device_wrapper,
-                        None => return async move { web::Response::error_404() }.boxed(),
-                    };
+                    let device_wrapper =
+                        match self.inner.borrow_device_wrappers_by_id().get(&device_id) {
+                            Some(device_wrapper) => device_wrapper,
+                            None => return async move { web::Response::error_404() }.boxed(),
+                        };
                     device_wrapper.handle(request, &*uri_cursor)
                 }
                 _ => async move { web::Response::error_404() }.boxed(),
