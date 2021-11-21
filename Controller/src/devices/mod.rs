@@ -41,7 +41,7 @@ pub trait Device: Send + Sync + fmt::Debug {
     }
 }
 
-#[derive(Constructor)]
+#[derive(Constructor, Debug)]
 pub struct DeviceWrapper<'d> {
     name: String,
     device: Box<dyn Device + 'd>,
