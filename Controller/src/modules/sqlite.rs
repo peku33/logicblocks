@@ -11,14 +11,15 @@ use std::{fmt, mem::ManuallyDrop, path::PathBuf, thread};
 type Operation = Box<dyn FnOnce(&mut Connection) + Send + 'static>;
 
 #[derive(Debug)]
-pub struct SQLite {
+pub struct SQLite<'f> {
     name: String,
+    fs: &'f Fs,
     operation_sender: ManuallyDrop<channel::Sender<Operation>>,
     sqlite_thread: ManuallyDrop<thread::JoinHandle<Result<(), Error>>>,
 }
-impl SQLite {
+impl<'f> SQLite<'f> {
     pub fn new(
-        fs: &Fs,
+        fs: &'f Fs,
         name: String,
     ) -> Self {
         assert!(
@@ -42,6 +43,7 @@ impl SQLite {
 
         Self {
             name,
+            fs,
             operation_sender,
             sqlite_thread,
         }
@@ -120,7 +122,7 @@ impl SQLite {
         result_receiver.map(|r| r.unwrap())
     }
 }
-impl fmt::Display for SQLite {
+impl<'f> fmt::Display for SQLite<'f> {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,
@@ -128,7 +130,7 @@ impl fmt::Display for SQLite {
         write!(f, "SQlite({})", self.name)
     }
 }
-impl Drop for SQLite {
+impl<'f> Drop for SQLite<'f> {
     fn drop(&mut self) {
         unsafe { ManuallyDrop::drop(&mut self.operation_sender) }; // closes channel and exits thread
         unsafe { ManuallyDrop::take(&mut self.sqlite_thread) }

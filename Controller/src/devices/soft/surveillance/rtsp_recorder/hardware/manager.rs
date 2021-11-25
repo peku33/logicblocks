@@ -43,7 +43,7 @@ pub struct Manager<'f> {
     name: String,
     fs: &'f Fs,
 
-    sqlite: SQLite,
+    sqlite: SQLite<'f>,
 
     channel_segment_sender: mpsc::UnboundedSender<ChannelIdSegment>,
     channel_segment_receiver: AtomicCell<mpsc::UnboundedReceiver<ChannelIdSegment>>,
