@@ -6,8 +6,6 @@ pub mod atomic_cell_erased;
 pub mod fs;
 pub mod logging;
 pub mod observable;
-pub mod optional_async;
-pub mod ready_chunks_dynamic;
 pub mod runtime;
 pub mod waker_stream;
 

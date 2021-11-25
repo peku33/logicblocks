@@ -6,9 +6,10 @@ use crate::{
     devices::{self, GuiSummaryProvider},
     signals,
     util::{
-        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        async_ext::{
+            optional::StreamOrPending, stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        },
         async_flag,
-        optional_async::StreamOrPending,
         runtime::{Exited, Runnable},
         waker_stream,
     },

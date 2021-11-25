@@ -9,8 +9,8 @@ use super::{
 use crate::{
     devices,
     util::{
+        async_ext::optional::StreamOrPending,
         async_flag,
-        optional_async::StreamOrPending,
         runtime::{Exited, Runnable},
         waker_stream,
     },

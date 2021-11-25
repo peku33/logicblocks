@@ -10,9 +10,11 @@ use super::{
 use crate::{
     devices::Id as DeviceId,
     util::{
-        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        async_ext::{
+            ready_chunks_dynamic::ReadyChunksDynamicExt,
+            stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        },
         async_flag,
-        ready_chunks_dynamic::ReadyChunksDynamicExt,
         runtime::{Exited, Runnable},
     },
 };
