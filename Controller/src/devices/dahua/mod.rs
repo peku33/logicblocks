@@ -1,1 +1,1 @@
-pub mod ipc_hdw4631c_a;
+pub mod ipc;
