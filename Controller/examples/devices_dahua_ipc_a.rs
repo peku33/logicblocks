@@ -6,7 +6,7 @@ use clap::Parser;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use http::uri::Authority;
 use logicblocks_controller::{
-    devices::dahua::ipc::hardware::{
+    devices::dahua::ipc_a::hardware::{
         api::Api,
         configurator::{
             AudioMutationDetection, Configuration, Configurator, Grid22x18, MotionDetection,
@@ -20,7 +20,7 @@ use logicblocks_controller::{
 use tokio::signal::ctrl_c;
 
 #[derive(Debug, Parser)]
-#[clap(name = "devices.dahua.ipc")]
+#[clap(name = "devices.dahua.ipc_a")]
 struct Arguments {
     host: Authority,
     admin_password: String,

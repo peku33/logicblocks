@@ -350,7 +350,7 @@ impl Device {
 
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("dahua/ipc")
+        Cow::from("dahua/ipc_a")
     }
 
     fn as_runnable(&self) -> &dyn Runnable {
