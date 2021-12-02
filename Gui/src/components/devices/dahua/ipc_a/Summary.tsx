@@ -18,6 +18,8 @@ export interface DeviceSummaryEvents {
   scene_change: boolean;
   video_motion: boolean;
   audio_mutation: boolean;
+  smart_motion_human: boolean;
+  smart_motion_vehicle: boolean;
 }
 
 export interface DeviceSummaryInitializing {
@@ -83,6 +85,12 @@ const Summary: React.VFC<{
               </Chip>
               <Chip type={ChipType.INFO} enabled={deviceSummary.events.audio_mutation}>
                 Audio Mutation
+              </Chip>
+              <Chip type={ChipType.INFO} enabled={deviceSummary.events.smart_motion_human}>
+                Human Motion
+              </Chip>
+              <Chip type={ChipType.INFO} enabled={deviceSummary.events.smart_motion_vehicle}>
+                Vehicle Motion
               </Chip>
             </ChipsGroup>
           ) : null}

@@ -1,4 +1,4 @@
-import dahuaIpcHdw4631cA from "./dahua/ipc_hdw4631c_a/SummaryManaged";
+import dahuaIpcA from "./dahua/ipc_a/SummaryManaged";
 import eatonMmaxA from "./eaton/mmax_a/SummaryManaged";
 import hikvisionDs2cd2x32xX from "./hikvision/ds2cd2x32x_x/SummaryManaged";
 import houseblocksAvrV1D0003JunctionBoxMinimalV1 from "./houseblocks/avr_v1/d0003_junction_box_minimal_v1/SummaryManaged";
@@ -15,8 +15,8 @@ import UnknownDeviceSummaryManaged from "./UnknownDeviceSummaryManaged";
 
 export function getByClass(cls: string): SummaryManagedBase {
   switch (cls) {
-    case "dahua/ipc_hdw4631c_a":
-      return dahuaIpcHdw4631cA;
+    case "dahua/ipc_a":
+      return dahuaIpcA;
     case "eaton/mmax_a":
       return eatonMmaxA;
     case "hikvision/ds2cd2x32x_x":
