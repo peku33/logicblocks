@@ -1,6 +1,11 @@
+/**
+ * In general camera events are fucked up.
+ * For example if motion starts in region 1 and ends in region 2, the camera will issue start for region 1 and stop for region 2
+ * Even sometimes there are two ending regions, which makes it even more useless.
+*/
 use super::api::Api;
 use crate::util::atomic_cell::AtomicCell;
-use anyhow::{anyhow, bail, ensure, Context, Error};
+use anyhow::{anyhow, bail, Context, Error};
 use futures::{
     future::FutureExt,
     pin_mut, select,
@@ -18,8 +23,10 @@ use tokio::sync::watch;
 pub enum Event {
     VideoBlind,
     SceneChange,
-    VideoMotion { region: String },
+    VideoMotion,
     AudioMutation,
+    SmartMotionHuman,
+    SmartMotionVehicle,
 }
 
 pub type Events = HashSet<Event>;
@@ -65,40 +72,15 @@ impl<'a> Manager<'a> {
 
     fn event_parse(
         code: &str,
-        data: Option<serde_json::Value>,
+        _data: Option<serde_json::Value>,
     ) -> Result<Option<Event>, Error> {
         match code {
             "VideoBlind" => Ok(Some(Event::VideoBlind)),
             "AudioMutation" => Ok(Some(Event::AudioMutation)),
             "SceneChange" => Ok(Some(Event::SceneChange)),
-            "VideoMotion" => {
-                let data = match data {
-                    Some(data) => data,
-                    None => return Ok(None),
-                };
-
-                let data_object = data.as_object().ok_or_else(|| anyhow!("expected object"))?;
-
-                let regions = data_object
-                    .get("RegionName")
-                    .ok_or_else(|| anyhow!("missing RegionName"))?
-                    .as_array()
-                    .ok_or_else(|| anyhow!("expected array"))?;
-
-                if regions.len() != 1 {
-                    return Err(anyhow!("regions array size must be 1"));
-                }
-                ensure!(regions.len() == 1);
-
-                let region = regions.get(0).unwrap();
-
-                let region = region
-                    .as_str()
-                    .ok_or_else(|| anyhow!("expected string"))?
-                    .to_owned();
-
-                Ok(Some(Event::VideoMotion { region }))
-            }
+            "VideoMotion" => Ok(Some(Event::VideoMotion)),
+            "SmartMotionHuman" => Ok(Some(Event::SmartMotionHuman)),
+            "SmartMotionVehicle" => Ok(Some(Event::SmartMotionVehicle)),
             code => {
                 log::trace!("unrecognized event: {}", code);
                 Ok(None)
@@ -142,19 +124,46 @@ impl<'a> Manager<'a> {
 
         Ok(Some(EventStateUpdate { event, active }))
     }
+
     fn event_state_update_handle(
         &self,
         event_time: Instant,
         event_state_update: EventStateUpdate,
     ) -> bool {
         let mut events_active = self.events_active.lease();
+        let events_active = &mut *events_active;
+
+        let mut changed = false;
+
         if event_state_update.active {
-            events_active
-                .insert(event_state_update.event, event_time)
-                .is_none()
+            match events_active.insert(event_state_update.event, event_time) {
+                None => {
+                    changed = true;
+                }
+                Some(previous) => {
+                    log::warn!(
+                        "adding already added event: {:?} ({:?})",
+                        previous,
+                        events_active
+                    );
+                }
+            }
         } else {
-            events_active.remove(&event_state_update.event).is_some()
+            match events_active.remove(&event_state_update.event) {
+                Some(_) => {
+                    changed = true;
+                }
+                None => {
+                    log::warn!(
+                        "removing not added element: {:?} ({:?})",
+                        event_state_update.event,
+                        events_active
+                    );
+                }
+            }
         }
+
+        changed
     }
     fn events_fixer_handle(
         &self,
@@ -164,7 +173,7 @@ impl<'a> Manager<'a> {
 
         let mut events_active = self.events_active.lease();
         events_active
-            .drain_filter(|event, started| {
+            .drain_filter(move |event, started| {
                 if *started < fix_before {
                     log::warn!("removing outdated events: {:?}", event);
                     true
@@ -211,7 +220,7 @@ impl<'a> Manager<'a> {
                 }
                 Ok(())
             })
-            .map(|result| match result.context("item_stream_runner") {
+            .map(move |result| match result.context("item_stream_runner") {
                 Ok(()) => anyhow!("item_stream completed"),
                 Err(error) => error,
             });
@@ -251,13 +260,13 @@ mod tests_manager {
     #[test]
     fn test_unsupported() {
         let event = indoc!(
-            "
+            r##"
             Code=NTPAdjustTime;action=Pulse;index=0;data={
-                \"Address\" : \"pool.ntp.org\",
-                \"Before\" : \"2021-05-18 20:33:00\",
-                \"result\" : true
+                "Address" : "pool.ntp.org",
+                "Before" : "2021-05-18 20:33:00",
+                "result" : true
             }
-        "
+        "##
         );
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
@@ -280,13 +289,15 @@ mod tests_manager {
     }
 
     #[test]
-    fn test_parametrized() {
+    fn test_video_motion_by_id() {
         let event = indoc!(
-            "
-            Code=VideoMotion;action=Start;index=0;data={
-                \"RegionName\" : [ \"MD1\" ]
-            }
-        "
+            r##"
+                Code=VideoMotion;action=Start;index=0;data={
+                    "Id" : [ 1 ],
+                    "RegionName" : [ "Region2" ],
+                    "SmartMotionEnable" : true
+                }
+            "##
         );
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
@@ -294,10 +305,108 @@ mod tests_manager {
         assert_eq!(
             event_state_update,
             Some(EventStateUpdate {
-                event: Event::VideoMotion {
-                    region: "MD1".to_owned()
-                },
+                event: Event::VideoMotion,
                 active: true,
+            }),
+        );
+    }
+
+    #[test]
+    fn test_video_motion_by_name() {
+        let event = indoc!(
+            r##"
+                Code=VideoMotion;action=Start;index=0;data={
+                    "RegionName" : [ "MD1" ]
+                }
+            "##
+        );
+
+        let event_state_update = Manager::event_state_update_parse(event).unwrap();
+
+        assert_eq!(
+            event_state_update,
+            Some(EventStateUpdate {
+                event: Event::VideoMotion,
+                active: true,
+            }),
+        );
+    }
+
+    #[test]
+    fn test_smart_motion_human() {
+        let event = indoc!(
+            r##"
+                Code=SmartMotionHuman;action=Start;index=0;data={
+                    "RegionName" : [ "Region2" ],
+                    "WindowId" : [ 1 ],
+                    "object" : [
+                        {
+                            "HumamID" : 17,
+                            "Rect" : [ 4736, 5744, 6272, 8168 ]
+                        }
+                    ]
+                }
+            "##
+        );
+
+        let event_state_update = Manager::event_state_update_parse(event).unwrap();
+
+        assert_eq!(
+            event_state_update,
+            Some(EventStateUpdate {
+                event: Event::SmartMotionHuman,
+                active: true,
+            }),
+        );
+    }
+
+    #[test]
+    fn test_smart_motion_vehicle() {
+        let event = indoc!(
+            r##"
+            Code=SmartMotionVehicle;action=Stop;index=0;data={
+                "RegionName" : [ "Motion Detection" ],
+                "WindowId" : [ 0 ],
+                "object" : [
+                   {
+                      "Rect" : [ 2608, 2624, 4360, 3952 ],
+                      "VehicleID" : 15
+                   }
+                ]
+            }
+            "##
+        );
+
+        let event_state_update = Manager::event_state_update_parse(event).unwrap();
+
+        assert_eq!(
+            event_state_update,
+            Some(EventStateUpdate {
+                event: Event::SmartMotionVehicle,
+                active: false,
+            }),
+        );
+    }
+
+    #[test]
+    fn test_video_motion_multiple() {
+        let event = indoc!(
+            r##"
+            Code=VideoMotion;action=Stop;index=0;data={
+                "Id" : [ 0, 1 ],
+                "RegionName" : [ "Motion Detection", "Region2" ],
+                "SmartMotionEnable" : true
+            }
+            "##
+        );
+
+        let event_state_update = Manager::event_state_update_parse(event).unwrap();
+
+        assert_eq!(
+            event_state_update,
+            Some(EventStateUpdate {
+                event: Event::VideoMotion,
+                active: false,
             })
         );
     }

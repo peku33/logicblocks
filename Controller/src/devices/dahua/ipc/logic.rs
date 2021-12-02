@@ -59,6 +59,8 @@ pub struct Events {
     scene_change: bool,
     video_motion: bool,
     audio_mutation: bool,
+    smart_motion_human: bool,
+    smart_motion_vehicle: bool,
 }
 impl Events {
     pub fn from_event_stream_events(hardware_events: &event_stream::Events) -> Self {
@@ -66,6 +68,8 @@ impl Events {
         let mut scene_change: bool = false;
         let mut video_motion: bool = false;
         let mut audio_mutation: bool = false;
+        let mut smart_motion_human: bool = false;
+        let mut smart_motion_vehicle: bool = false;
 
         hardware_events.iter().for_each(|event| match event {
             event_stream::Event::VideoBlind => {
@@ -74,11 +78,17 @@ impl Events {
             event_stream::Event::SceneChange => {
                 scene_change = true;
             }
-            event_stream::Event::VideoMotion { region: _ } => {
+            event_stream::Event::VideoMotion => {
                 video_motion = true;
             }
             event_stream::Event::AudioMutation => {
                 audio_mutation = true;
+            }
+            event_stream::Event::SmartMotionHuman => {
+                smart_motion_human = true;
+            }
+            event_stream::Event::SmartMotionVehicle => {
+                smart_motion_vehicle = true;
             }
         });
 
@@ -87,6 +97,8 @@ impl Events {
             scene_change,
             video_motion,
             audio_mutation,
+            smart_motion_human,
+            smart_motion_vehicle,
         }
     }
 }
@@ -118,6 +130,8 @@ pub struct Device {
     signal_event_scene_change: signal::state_source::Signal<bool>,
     signal_event_video_motion: signal::state_source::Signal<bool>,
     signal_event_audio_mutation: signal::state_source::Signal<bool>,
+    signal_event_smart_motion_human: signal::state_source::Signal<bool>,
+    signal_event_smart_motion_vehicle: signal::state_source::Signal<bool>,
 
     gui_summary_waker: waker_stream::mpmc::Sender,
 }
@@ -137,6 +151,8 @@ impl Device {
             signal_event_scene_change: signal::state_source::Signal::<bool>::new(None),
             signal_event_video_motion: signal::state_source::Signal::<bool>::new(None),
             signal_event_audio_mutation: signal::state_source::Signal::<bool>::new(None),
+            signal_event_smart_motion_human: signal::state_source::Signal::<bool>::new(None),
+            signal_event_smart_motion_vehicle: signal::state_source::Signal::<bool>::new(None),
 
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
@@ -179,6 +195,12 @@ impl Device {
         signals_changed |= self
             .signal_event_audio_mutation
             .set_one(Some(events.audio_mutation));
+        signals_changed |= self
+            .signal_event_smart_motion_human
+            .set_one(Some(events.smart_motion_human));
+        signals_changed |= self
+            .signal_event_smart_motion_vehicle
+            .set_one(Some(events.smart_motion_vehicle));
         if signals_changed {
             self.signals_sources_changed_waker.wake();
         }
@@ -197,6 +219,8 @@ impl Device {
         let _ = self.signal_event_scene_change.set_one(None);
         let _ = self.signal_event_video_motion.set_one(None);
         let _ = self.signal_event_audio_mutation.set_one(None);
+        let _ = self.signal_event_smart_motion_human.set_one(None);
+        let _ = self.signal_event_smart_motion_vehicle.set_one(None);
         self.signals_sources_changed_waker.wake();
     }
 
@@ -372,6 +396,8 @@ pub enum SignalIdentifier {
     EventSceneChange,
     EventVideoMotion,
     EventAudioMutation,
+    EventSmartMotionHuman,
+    EventSmartMotionVehicle,
 }
 impl signals::Identifier for SignalIdentifier {}
 impl signals::Device for Device {
@@ -393,6 +419,8 @@ impl signals::Device for Device {
             SignalIdentifier::EventSceneChange => &self.signal_event_scene_change as &dyn signal::Base,
             SignalIdentifier::EventVideoMotion => &self.signal_event_video_motion as &dyn signal::Base,
             SignalIdentifier::EventAudioMutation => &self.signal_event_audio_mutation as &dyn signal::Base,
+            SignalIdentifier::EventSmartMotionHuman => &self.signal_event_smart_motion_human as &dyn signal::Base,
+            SignalIdentifier::EventSmartMotionVehicle => &self.signal_event_smart_motion_vehicle as &dyn signal::Base,
         }
     }
 }

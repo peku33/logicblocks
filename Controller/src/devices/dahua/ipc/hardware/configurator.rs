@@ -7,9 +7,6 @@ use serde_json::json;
 use std::{cmp::max, collections::HashMap, iter, time::Duration};
 
 #[derive(Clone, Copy, Debug)]
-pub struct Capabilities {}
-
-#[derive(Clone, Copy, Debug)]
 pub struct Percentage {
     value: u8,
 }
@@ -287,6 +284,20 @@ impl MotionDetection {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum SmartMotionDetectionSensitivity {
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct SmartMotionDetection {
+    pub human: bool,
+    pub vehicle: bool,
+    pub sensitivity: SmartMotionDetectionSensitivity,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct SceneMovedDetection {
     pub sensitivity: Sensitivity,
@@ -307,6 +318,7 @@ pub struct Configuration {
     pub channel_title: Option<String>,
     pub privacy_mask: Option<PrivacyMask>,
     pub motion_detection: Option<MotionDetection>,
+    pub smart_motion_detection: Option<SmartMotionDetection>,
     pub scene_moved_detection: Option<SceneMovedDetection>,
     pub audio_mutation_detection: Option<AudioMutationDetection>,
 }
@@ -314,38 +326,25 @@ pub struct Configuration {
 pub struct Configurator<'a> {
     api: &'a Api,
     basic_device_info: BasicDeviceInfo,
-    capabilities: Capabilities,
 }
 impl<'a> Configurator<'a> {
     pub const SHARED_USER_LOGIN: &'static str = "logicblocks";
-
-    async fn capabilities_fetch(_api: &Api) -> Result<Capabilities, Error> {
-        let capabilities = Capabilities {};
-        Ok(capabilities)
-    }
 
     pub async fn connect(api: &'a Api) -> Result<Configurator<'a>, Error> {
         let basic_device_info = api
             .validate_basic_device_info()
             .await
             .context("validate_basic_device_info")?;
-        let capabilities = Self::capabilities_fetch(api)
-            .await
-            .context("capabilities")?;
 
         let self_ = Self {
             api,
             basic_device_info,
-            capabilities,
         };
         Ok(self_)
     }
 
     pub fn basic_device_info(&self) -> &BasicDeviceInfo {
         &self.basic_device_info
-    }
-    pub fn capabilities(&self) -> &Capabilities {
-        &self.capabilities
     }
 
     async fn healthcheck(&mut self) -> Result<(), Error> {
@@ -362,10 +361,9 @@ impl<'a> Configurator<'a> {
     ) -> Result<serde_json::Value, Error> {
         let params = self
             .api
-            .rpc2("configManager.getConfig", json!({ "name": name }))
+            .rpc2_call_params("configManager.getConfig", json!({ "name": name }))
             .await
-            .context("rpc2 getConfig")?
-            .ok_or_else(|| anyhow!("missing params"))?;
+            .context("rpc2_call_params getConfig")?;
 
         let table = params
             .get("table")
@@ -381,7 +379,7 @@ impl<'a> Configurator<'a> {
     ) -> Result<(), Error> {
         let result = self
             .api
-            .rpc2(
+            .rpc2_call_params(
                 "configManager.setConfig",
                 json!({
                     "name": name,
@@ -390,8 +388,7 @@ impl<'a> Configurator<'a> {
                 }),
             )
             .await
-            .context("rpc2")?
-            .ok_or_else(|| anyhow!("missing params"))?;
+            .context("rpc2_call_params")?;
 
         let options = result
             .get("options")
@@ -407,7 +404,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
 
-    async fn config_patch<E>(
+    async fn config_patch_with<E>(
         &mut self,
         name: &str,
         executor: E,
@@ -422,32 +419,37 @@ impl<'a> Configurator<'a> {
         self.config_set(name, table).await.context("config_set")?;
         Ok(())
     }
-
-    async fn config_patch_object(
+    async fn config_patch_object_with<E>(
         &mut self,
         name: &str,
-        patch: HashMap<&str, serde_json::Value>,
-    ) -> Result<(), Error> {
-        self.config_patch(name, move |config| -> Result<(), Error> {
+        executor: E,
+    ) -> Result<(), Error>
+    where
+        E: FnOnce(&mut serde_json::Map<String, serde_json::Value>) -> Result<(), Error>,
+    {
+        self.config_patch_with(name, move |config| -> Result<(), Error> {
             let config = config
                 .as_object_mut()
                 .ok_or_else(|| anyhow!("expected object"))?;
 
-            patch_object(config, patch).context("patch_object")?;
+            let _: () = executor(config).context("executor")?;
 
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_with")?;
 
         Ok(())
     }
-    async fn config_patch_array_object(
+    async fn config_patch_array_object_with<E>(
         &mut self,
         name: &str,
-        patch: HashMap<&str, serde_json::Value>,
-    ) -> Result<(), Error> {
-        self.config_patch(name, move |config| -> Result<(), Error> {
+        executor: E,
+    ) -> Result<(), Error>
+    where
+        E: FnOnce(&mut serde_json::Map<String, serde_json::Value>) -> Result<(), Error>,
+    {
+        self.config_patch_with(name, move |config| -> Result<(), Error> {
             let config = config
                 .as_array_mut()
                 .ok_or_else(|| anyhow!("expected array"))?;
@@ -458,12 +460,43 @@ impl<'a> Configurator<'a> {
                 .as_object_mut()
                 .ok_or_else(|| anyhow!("expected object"))?;
 
+            let _: () = executor(config).context("executor")?;
+
+            Ok(())
+        })
+        .await
+        .context("config_patch_with")?;
+
+        Ok(())
+    }
+
+    async fn config_patch_object(
+        &mut self,
+        name: &str,
+        patch: HashMap<&str, serde_json::Value>,
+    ) -> Result<(), Error> {
+        self.config_patch_object_with(name, move |config| -> Result<(), Error> {
             patch_object(config, patch).context("patch_object")?;
 
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_object_with")?;
+
+        Ok(())
+    }
+    async fn config_patch_array_object(
+        &mut self,
+        name: &str,
+        patch: HashMap<&str, serde_json::Value>,
+    ) -> Result<(), Error> {
+        self.config_patch_array_object_with(name, move |config| -> Result<(), Error> {
+            patch_object(config, patch).context("patch_object")?;
+
+            Ok(())
+        })
+        .await
+        .context("config_patch_array_object_with")?;
 
         Ok(())
     }
@@ -500,9 +533,10 @@ impl<'a> Configurator<'a> {
     }
     pub async fn reboot(&mut self) -> Result<(), Error> {
         self.api
-            .rpc2("magicBox.reboot", serde_json::Value::Null)
+            .rpc2_call_result("magicBox.reboot", serde_json::Value::Null)
             .await
-            .context("rpc2")?;
+            .context("rpc2_call_result")?;
+
         Ok(())
     }
     pub async fn reboot_wait_for_ready(&mut self) -> Result<(), Error> {
@@ -517,15 +551,23 @@ impl<'a> Configurator<'a> {
     pub async fn system_factory_reset(&mut self) -> Result<(), Error> {
         loop {
             let mut again = false;
-            if let Err(_error) = self
+
+            let (result, _) = self
                 .api
-                .rpc2(
+                .rpc2_call(
                     "configManager.restoreExcept",
                     json!({ "names": ["Network"] }),
+                    None,
                 )
                 .await
-                .context("rpc2")
-            {
+                .context("rpc2_call")?;
+
+            let result = result
+                .ok_or_else(|| anyhow!("missing result"))?
+                .as_bool()
+                .ok_or_else(|| anyhow!("expected bool"))?;
+
+            if !result {
                 again = true;
                 log::warn!(
                     "error while resetting to factory settings, this is likely false positive (device bug)"
@@ -559,10 +601,9 @@ impl<'a> Configurator<'a> {
         // check existing users
         let user_infos = self
             .api
-            .rpc2("userManager.getUserInfoAll", serde_json::Value::Null)
+            .rpc2_call_params("userManager.getUserInfoAll", serde_json::Value::Null)
             .await
-            .context("rpc2 get user info")?
-            .ok_or_else(|| anyhow!("missing params"))?;
+            .context("rpc2_call_params get user info")?;
 
         let user_infos = user_infos
             .as_object()
@@ -599,14 +640,14 @@ impl<'a> Configurator<'a> {
         // delete share user if exists
         if shared_user_exists {
             self.api
-                .rpc2(
+                .rpc2_call_result(
                     "userManager.deleteUser",
                     json!({
                         "name": Self::SHARED_USER_LOGIN,
                     }),
                 )
                 .await
-                .context("rpc2 delete user")?;
+                .context("rpc2_call_result delete user")?;
         } else {
             user_id_max += 1;
         }
@@ -627,7 +668,7 @@ impl<'a> Configurator<'a> {
         let realm_phase = hex::encode_upper(realm_phase);
 
         self.api
-            .rpc2(
+            .rpc2_call_result(
                 "userManager.addUser",
                 json!({
                     "user": {
@@ -645,7 +686,7 @@ impl<'a> Configurator<'a> {
                 }),
             )
             .await
-            .context("rpc2 add user")?;
+            .context("rpc2_call_result add user")?;
 
         Ok(())
     }
@@ -654,7 +695,7 @@ impl<'a> Configurator<'a> {
 
         // this one is listed in "All" configuration
         if self.basic_device_info.web_version
-            >= (WebVersion {
+            == (WebVersion {
                 major: 3,
                 minor: 2,
                 revision: 1,
@@ -708,7 +749,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn system_multicast_disable(&mut self) -> Result<(), Error> {
-        self.config_patch("Multicast", move |config| {
+        self.config_patch_with("Multicast", move |config| {
             *config
                 .pointer_mut("/DHII/0/Enable")
                 .ok_or_else(|| anyhow!("missing item"))? = json!(false);
@@ -724,7 +765,7 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_with")?;
 
         Ok(())
     }
@@ -797,43 +838,47 @@ impl<'a> Configurator<'a> {
     }
     pub async fn system_onvif_disable(&mut self) -> Result<(), Error> {
         if self.basic_device_info.web_version
-            >= (WebVersion {
+            < (WebVersion {
                 major: 3,
                 minor: 2,
                 revision: 1,
                 build: 582554,
             })
         {
-            self.config_patch_object(
-                "VSP_ONVIF",
-                hashmap! {
-                    "ServiceStart" => json!(false),
-                },
-            )
-            .await
-            .context("config_patch_object")?;
+            return Ok(());
         }
+
+        self.config_patch_object(
+            "VSP_ONVIF",
+            hashmap! {
+                "ServiceStart" => json!(false),
+            },
+        )
+        .await
+        .context("config_patch_object")?;
 
         Ok(())
     }
     pub async fn system_genetec_disable(&mut self) -> Result<(), Error> {
         if self.basic_device_info.web_version
-            >= (WebVersion {
+            < (WebVersion {
                 major: 3,
                 minor: 2,
                 revision: 1,
                 build: 582554,
             })
         {
-            self.config_patch_object(
-                "VSP_GENETEC",
-                hashmap! {
-                    "ServiceStart" => json!(false),
-                },
-            )
-            .await
-            .context("config_patch_object")?;
+            return Ok(());
         }
+
+        self.config_patch_object(
+            "VSP_GENETEC",
+            hashmap! {
+                "ServiceStart" => json!(false),
+            },
+        )
+        .await
+        .context("config_patch_object")?;
 
         Ok(())
     }
@@ -851,22 +896,24 @@ impl<'a> Configurator<'a> {
     }
     pub async fn system_mobile_phone_platform_disable(&mut self) -> Result<(), Error> {
         if self.basic_device_info.web_version
-            >= (WebVersion {
+            < (WebVersion {
                 major: 3,
                 minor: 2,
                 revision: 1,
                 build: 582554,
             })
         {
-            self.config_patch_object(
-                "MobilePhoneApplication",
-                hashmap! {
-                    "PushNotificationEnable" => json!(false),
-                },
-            )
-            .await
-            .context("config_patch_object")?;
+            return Ok(());
         }
+
+        self.config_patch_object(
+            "MobilePhoneApplication",
+            hashmap! {
+                "PushNotificationEnable" => json!(false),
+            },
+        )
+        .await
+        .context("config_patch_object")?;
 
         Ok(())
     }
@@ -929,56 +976,60 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn system_storage_disable(&mut self) -> Result<(), Error> {
-        self.config_patch("RecordStoragePoint", move |config| -> Result<(), Error> {
-            let config = config
-                .as_array_mut()
-                .ok_or_else(|| anyhow!("expected array"))?;
-            ensure!(config.len() == 1);
-            let config = config.get_mut(0).unwrap();
+        self.config_patch_array_object_with(
+            "RecordStoragePoint",
+            move |config| -> Result<(), Error> {
+                config
+                    .values_mut()
+                    .try_for_each(|config| -> Result<(), Error> {
+                        let config = config
+                            .as_object_mut()
+                            .ok_or_else(|| anyhow!("expected object"))?;
 
-            let config = config
-                .as_object_mut()
-                .ok_or_else(|| anyhow!("expected object"))?;
+                        // at least one element must be set to true, otherwise detections wont work
+                        patch_object(
+                            config,
+                            hashmap! {
+                                "AutoSync" => json!(false),
+                                "Custom" => json!(true),
+                                "FTP" => json!(false),
+                                "Local" => json!(false),
+                                "LocalForEmergency" => json!(false),
+                                "Redundant" => json!(false),
+                                "Remote" => json!(false),
+                            },
+                        )
+                        .context("patch_object")?;
 
-            config
-                .values_mut()
-                .try_for_each(|config| -> Result<(), Error> {
-                    let config = config
-                        .as_object_mut()
-                        .ok_or_else(|| anyhow!("expected object"))?;
+                        Ok(())
+                    })?;
 
-                    // at least one element must be set to true, otherwise detections wont work
-                    patch_object(
-                        config,
-                        hashmap! {
-                            "AutoSync" => json!(false),
-                            "Custom" => json!(true),
-                            "FTP" => json!(false),
-                            "Local" => json!(false),
-                            "LocalForEmergency" => json!(false),
-                            "Redundant" => json!(false),
-                            "Remote" => json!(false),
-                        },
-                    )
-                    .context("patch_object")?;
-
-                    Ok(())
-                })?;
-
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await
-        .context("config_patch")?;
+        .context("config_patch_array_object_with")?;
 
         Ok(())
     }
+    pub async fn system_record_disable(&mut self) -> Result<(), Error> {
+        self.config_patch_array_object(
+            "RecordMode",
+            hashmap! {
+                "Mode" => json!(2),
+            },
+        )
+        .await
+        .context("config_patch_array_object")?;
 
+        Ok(())
+    }
     pub async fn system_ntsc_set(&mut self) -> Result<(), Error> {
         // required for IVS to work
         let mut changed = false;
 
         let changed_ref = &mut changed;
-        self.config_patch("VideoStandard", move |config| {
+        self.config_patch_with("VideoStandard", move |config| {
             let config_new = json!("NTSC");
             if *config != config_new {
                 *config = config_new;
@@ -987,7 +1038,7 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_with")?;
 
         // change MAY require reboot
         if changed {
@@ -1000,8 +1051,62 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
 
+    pub async fn video_ai_codec_disable(&mut self) -> Result<(), Error> {
+        let encode_capabilities = self
+            .api
+            .rpc2_call_params("encode.getCaps", serde_json::Value::Null)
+            .await
+            .context("rpc2_call_params")?;
+
+        if !encode_capabilities
+            .pointer("/caps/VideoEncodeDevices/0/SupportAICoding/0/AICoding")
+            .contains(&&json!(true))
+        {
+            return Ok(());
+        }
+
+        self.config_set(
+            "AICoding",
+            json!([{
+                "Enable": false
+            }]),
+        )
+        .await
+        .context("config_set")?;
+
+        Ok(())
+    }
     pub async fn video_quality_configure(&mut self) -> Result<(), Error> {
-        fn apply_main_format(config: &mut serde_json::Value) -> Result<(), Error> {
+        let video_input_caps = self
+            .api
+            .rpc2_call_params("devVideoInput.getCaps", json!({"channel": 0_usize}))
+            .await
+            .context("rpc2_call_params")?;
+        let video_input_caps = video_input_caps
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?
+            .get("caps")
+            .ok_or_else(|| anyhow!("missing MaxWidth"))?
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?;
+
+        let width = video_input_caps
+            .get("MaxWidth")
+            .ok_or_else(|| anyhow!("missing MaxWidth"))?
+            .as_u64()
+            .ok_or_else(|| anyhow!("expected number"))? as usize;
+
+        let height = video_input_caps
+            .get("MaxHeight")
+            .ok_or_else(|| anyhow!("missing MaxHeight"))?
+            .as_u64()
+            .ok_or_else(|| anyhow!("expected number"))? as usize;
+
+        fn apply_main_format(
+            config: &mut serde_json::Value,
+            width: usize,
+            height: usize,
+        ) -> Result<(), Error> {
             let config = config
                 .as_object_mut()
                 .ok_or_else(|| anyhow!("expected object"))?;
@@ -1038,10 +1143,10 @@ impl<'a> Configurator<'a> {
             patch_object(
                 video,
                 hashmap! {
-                    "Compression" => json!("H.264"),
-                    "Width" => json!(3072),
-                    "Height" => json!(2048),
-                    "CustomResolutionName" => json!("3072x2048"),
+                    "Compression" => json!("H.265"),
+                    "Width" => json!(width),
+                    "Height" => json!(height),
+                    "CustomResolutionName" => json!(format!("{}x{}", width, height)),
                     "BitRateControl" => json!("VBR"),
                     "BitRate" => json!(8192),
                     "Quality" => json!(6),
@@ -1091,7 +1196,7 @@ impl<'a> Configurator<'a> {
             patch_object(
                 video,
                 hashmap! {
-                    "Compression" => json!("H.264"),
+                    "Compression" => json!("H.265"),
                     "Width" => json!(352),
                     "Height" => json!(240),
                     "CustomResolutionName" => json!("CIF"),
@@ -1144,7 +1249,7 @@ impl<'a> Configurator<'a> {
             patch_object(
                 video,
                 hashmap! {
-                    "Compression" => json!("H.264"),
+                    "Compression" => json!("H.265"),
                     "Width" => json!(704),
                     "Height" => json!(480),
                     "CustomResolutionName" => json!("D1"),
@@ -1161,24 +1266,16 @@ impl<'a> Configurator<'a> {
             Ok(())
         }
 
-        self.config_patch("Encode", move |config| {
-            let config = config
-                .as_array_mut()
-                .ok_or_else(|| anyhow!("expected array"))?;
-            ensure!(config.len() == 1);
-            let config = config.get_mut(0).unwrap();
-
-            let config = config
-                .as_object_mut()
-                .ok_or_else(|| anyhow!("expected object"))?;
-
+        self.config_patch_array_object_with("Encode", move |config| {
             let main_format = config
                 .get_mut("MainFormat")
                 .ok_or_else(|| anyhow!("missing MainFormat"))?
                 .as_array_mut()
                 .ok_or_else(|| anyhow!("expected array"))?;
             ensure!(main_format.len() == 4);
-            main_format.iter_mut().try_for_each(apply_main_format)?;
+            main_format
+                .iter_mut()
+                .try_for_each(move |config| apply_main_format(config, width, height))?;
 
             let extra_format = config
                 .get_mut("ExtraFormat")
@@ -1200,7 +1297,7 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_array_object_with")?;
 
         Ok(())
     }
@@ -1263,7 +1360,7 @@ impl<'a> Configurator<'a> {
             .context("config_patch_object")?;
         }
 
-        self.config_patch("VideoWidget", move |config| {
+        self.config_patch_with("VideoWidget", move |config| {
             *config
                 .pointer_mut("/0/ChannelTitle/EncodeBlend")
                 .ok_or_else(|| anyhow!("missing EncodeBlend"))? = json!(channel_title.is_some());
@@ -1275,7 +1372,7 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_with")?;
 
         Ok(())
     }
@@ -1317,16 +1414,8 @@ impl<'a> Configurator<'a> {
 
         let privacy_mask = privacy_mask.unwrap_or_else(PrivacyMask::none);
 
-        self.config_patch("VideoWidget", move |config| {
-            let config = config
-                .as_array_mut()
-                .ok_or_else(|| anyhow!("exected array"))?;
-            ensure!(config.len() == 1);
-            let config = config.get_mut(0).unwrap();
-
+        self.config_patch_array_object_with("VideoWidget", move |config| {
             let covers = config
-                .as_object_mut()
-                .ok_or_else(|| anyhow!("expected object"))?
                 .get_mut("Covers")
                 .ok_or_else(|| anyhow!("missing Covers"))?
                 .as_array_mut()
@@ -1350,13 +1439,25 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_array_object_with")?;
 
         Ok(())
     }
 
     pub async fn detection_external_alarm_disable(&mut self) -> Result<(), Error> {
-        self.config_patch("ExAlarm", move |config| -> Result<(), Error> {
+        // not available since this software
+        if self.basic_device_info.web_version
+            >= (WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 1053483,
+            })
+        {
+            return Ok(());
+        }
+
+        self.config_patch_with("ExAlarm", move |config| -> Result<(), Error> {
             let config = config
                 .as_array_mut()
                 .ok_or_else(|| anyhow!("expected array"))?;
@@ -1382,7 +1483,7 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_with")?;
 
         Ok(())
     }
@@ -1451,18 +1552,7 @@ impl<'a> Configurator<'a> {
         &mut self,
         motion_detection: Option<MotionDetection>,
     ) -> Result<(), Error> {
-        self.config_patch("MotionDetect", |config| -> Result<(), Error> {
-            let config = config
-                .as_array_mut()
-                .ok_or_else(|| anyhow!("expected array"))?;
-
-            ensure!(config.len() == 1);
-            let config = config.get_mut(0).unwrap();
-
-            let config = config
-                .as_object_mut()
-                .ok_or_else(|| anyhow!("expected object"))?;
-
+        self.config_patch_array_object_with("MotionDetect", |config| -> Result<(), Error> {
             patch_nested_event_handler(config).context("patch_nested_event_handler")?;
 
             patch_object(
@@ -1544,23 +1634,103 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_array_object_with")?;
+
+        Ok(())
+    }
+    pub async fn detection_smart_motion_configure(
+        &mut self,
+        smart_motion_detection: Option<SmartMotionDetection>,
+    ) -> Result<(), Error> {
+        let (detection_capabilities_key, _) = self
+            .api
+            .rpc2_call(
+                "devVideoDetect.factory.instance",
+                json!({"channel": 0_usize}),
+                None,
+            )
+            .await
+            .context("rpc2_call")?;
+        let detection_capabilities_key = detection_capabilities_key
+            .ok_or_else(|| anyhow!("missing result"))?
+            .as_u64()
+            .ok_or_else(|| anyhow!("expected number"))?;
+
+        let (result, detection_capabilities) = self
+            .api
+            .rpc2_call(
+                "devVideoDetect.getCaps",
+                serde_json::Value::Null,
+                Some(serde_json::Value::Number(detection_capabilities_key.into())),
+            )
+            .await
+            .context("rpc2_call_params")?;
+
+        let result = result
+            .ok_or_else(|| anyhow!("missing result"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+        ensure!(result, "request failed with result = {}", result);
+
+        let smart_motion_detection_support = detection_capabilities
+            .ok_or_else(|| anyhow!("missing params"))?
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?
+            .get("caps")
+            .ok_or_else(|| anyhow!("missing caps"))?
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?
+            .get("SmartMotion")
+            .ok_or_else(|| anyhow!("missing SmartMotion"))?
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?
+            .get("Support")
+            .ok_or_else(|| anyhow!("missing Support"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+
+        if !smart_motion_detection_support {
+            return Ok(());
+        }
+
+        self.config_patch_array_object_with("SmartMotionDetect", |config| -> Result<(), Error> {
+            if let Some(smart_motion_detection) = smart_motion_detection {
+                let value = json!({
+                    "Enable": true,
+                    "ObjectTypes": {
+                        "Human": smart_motion_detection.human,
+                        "Vehicle": smart_motion_detection.vehicle,
+                    },
+                    "Sensitivity": match smart_motion_detection.sensitivity {
+                        SmartMotionDetectionSensitivity::Low => "Low",
+                        SmartMotionDetectionSensitivity::Medium => "Middle",
+                        SmartMotionDetectionSensitivity::High => "High",
+                    },
+                });
+                let value = match value {
+                    serde_json::Value::Object(value) => value,
+                    _ => panic!(),
+                };
+                *config = value;
+            } else {
+                patch_object(
+                    config,
+                    hashmap! {
+                        "Enable" => json!(false),
+                    },
+                )
+                .context("patch_object")?;
+            }
+
+            Ok(())
+        })
+        .await
+        .context("config_patch_array_object_with")?;
 
         Ok(())
     }
     pub async fn detection_video_blind_enable(&mut self) -> Result<(), Error> {
-        self.config_patch("BlindDetect", |config| -> Result<(), Error> {
-            let config = config
-                .as_array_mut()
-                .ok_or_else(|| anyhow!("expected array"))?;
-
-            ensure!(config.len() == 1);
-            let config = config.get_mut(0).unwrap();
-
-            let config = config
-                .as_object_mut()
-                .ok_or_else(|| anyhow!("expected object"))?;
-
+        self.config_patch_array_object_with("BlindDetect", |config| -> Result<(), Error> {
             patch_nested_event_handler(config).context("patch_nested_event_handler")?;
 
             patch_object(
@@ -1575,7 +1745,7 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_array_object_with")?;
 
         Ok(())
     }
@@ -1583,18 +1753,7 @@ impl<'a> Configurator<'a> {
         &mut self,
         scene_moved_detection: Option<SceneMovedDetection>,
     ) -> Result<(), Error> {
-        self.config_patch("MovedDetect", |config| -> Result<(), Error> {
-            let config = config
-                .as_array_mut()
-                .ok_or_else(|| anyhow!("expected array"))?;
-
-            ensure!(config.len() == 1);
-            let config = config.get_mut(0).unwrap();
-
-            let config = config
-                .as_object_mut()
-                .ok_or_else(|| anyhow!("expected object"))?;
-
+        self.config_patch_array_object_with("MovedDetect", |config| -> Result<(), Error> {
             patch_nested_event_handler(config).context("patch_nested_event_handler")?;
 
             patch_object(
@@ -1615,7 +1774,7 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_array_object_with")?;
 
         Ok(())
     }
@@ -1623,12 +1782,27 @@ impl<'a> Configurator<'a> {
         &mut self,
         audio_mutation_detection: Option<AudioMutationDetection>,
     ) -> Result<(), Error> {
-        self.config_patch("AudioDetect", move |config| -> Result<(), Error> {
+        let legacy_config_object = self.basic_device_info.web_version
+            < (WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 1053483,
+            });
+
+        self.config_patch_with("AudioDetect", move |config| -> Result<(), Error> {
             let config = config
                 .as_array_mut()
                 .ok_or_else(|| anyhow!("expected array"))?;
 
-            ensure!(config.len() == 2);
+            if legacy_config_object {
+                // anomaly_sensitivity
+                // not needed, mutation_sensitivity is the current approach
+                ensure!(config.len() == 2);
+            } else {
+                ensure!(config.len() == 1);
+            }
+
             let config = config.get_mut(0).unwrap();
 
             let config = config
@@ -1636,9 +1810,6 @@ impl<'a> Configurator<'a> {
                 .ok_or_else(|| anyhow!("expected object"))?;
 
             patch_nested_event_handler(config).context("patch_nested_event_handler")?;
-
-            // anomaly_sensitivity
-            // not needed, mutation_sensitivity is the current approach
 
             // mutation_sensitivity
             patch_object(
@@ -1662,7 +1833,7 @@ impl<'a> Configurator<'a> {
             Ok(())
         })
         .await
-        .context("config_patch")?;
+        .context("config_patch_with")?;
 
         Ok(())
     }
@@ -1751,9 +1922,17 @@ impl<'a> Configurator<'a> {
             .await
             .context("system_storage_disable")?;
 
+        self.system_record_disable()
+            .await
+            .context("system_record_disable")?;
+
         self.system_ntsc_set() // break
             .await
             .context("system_ntsc_set")?;
+
+        self.video_ai_codec_disable()
+            .await
+            .context("video_ai_codec_disable")?;
 
         self.video_quality_configure()
             .await
@@ -1806,6 +1985,10 @@ impl<'a> Configurator<'a> {
         self.detection_motion_configure(configuration.motion_detection)
             .await
             .context("detection_motion_configure")?;
+
+        self.detection_smart_motion_configure(configuration.smart_motion_detection)
+            .await
+            .context("detection_smart_motion_configure")?;
 
         self.detection_video_blind_enable()
             .await

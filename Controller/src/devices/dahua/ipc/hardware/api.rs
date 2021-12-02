@@ -14,7 +14,14 @@ use image::DynamicImage;
 use itertools::Itertools;
 use md5::{Digest, Md5};
 use serde_json::json;
-use std::{fmt, pin::Pin, str, sync::atomic::{AtomicU64, Ordering}, task, time::Duration};
+use std::{
+    fmt,
+    pin::Pin,
+    str,
+    sync::atomic::{AtomicU64, Ordering},
+    task,
+    time::Duration,
+};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct WebVersion {
@@ -56,10 +63,11 @@ struct Rpc2Request {
     method: String,
     params: serde_json::Value,
     session: Option<String>,
+    object: Option<serde_json::Value>,
 }
 #[derive(Debug)]
 struct Rpc2Response {
-    result: bool,
+    result: Option<serde_json::Value>,
     params: Option<serde_json::Value>,
     error: Option<serde_json::Value>,
     session: Option<String>,
@@ -185,11 +193,12 @@ impl Api {
             "params": request.params,
             "id": request_id,
         });
+        let rpc_request_object = rpc_request.as_object_mut().unwrap();
         if let Some(session) = request.session {
-            rpc_request
-                .as_object_mut()
-                .unwrap()
-                .insert("session".to_owned(), serde_json::Value::String(session));
+            rpc_request_object.insert("session".to_owned(), serde_json::Value::String(session));
+        }
+        if let Some(object) = request.object {
+            rpc_request_object.insert("object".to_owned(), object);
         }
         let rpc_request = rpc_request;
 
@@ -230,11 +239,7 @@ impl Api {
         }
 
         // result
-        let result = response
-            .get("result")
-            .ok_or_else(|| anyhow!("missing result"))?
-            .as_bool()
-            .ok_or_else(|| anyhow!("expected bool"))?;
+        let result = response.get("result").cloned();
 
         // params
         let params = response.get("params").cloned();
@@ -255,6 +260,7 @@ impl Api {
             error,
             session,
         };
+
         Ok(response)
     }
 
@@ -267,6 +273,7 @@ impl Api {
                 "clientType": "Dahua3.0-Web3.0",
             }),
             session: None,
+            object: None,
         };
 
         let response = self
@@ -274,7 +281,12 @@ impl Api {
             .await
             .context("rpc2_request")?;
 
-        ensure!(!response.result); // returns false for no reason
+        let result = response
+            .result
+            .ok_or_else(|| anyhow!("missing result"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+        ensure!(!result); // returns false for no reason
 
         let error = response
             .error
@@ -282,7 +294,6 @@ impl Api {
             .ok_or_else(|| anyhow!("missing error"))?
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?;
-
         let code = error
             .get("code")
             .ok_or_else(|| anyhow!("missing code"))?
@@ -361,6 +372,7 @@ impl Api {
                 "passwordType": "Default",
             }),
             session: Some(session.to_owned()),
+            object: None,
         };
 
         let response = self
@@ -369,11 +381,17 @@ impl Api {
             .context("rpc2_request")?;
 
         ensure!(
-            response.result && response.error.is_none(),
-            "login failed: params={:?} error={:?}",
-            response.params,
-            response.error
+            response.error.is_none(),
+            "request failed: {:?}",
+            response.error.unwrap()
         );
+
+        let result = response
+            .result
+            .ok_or_else(|| anyhow!("missing result"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+        ensure!(result, "request failed with result = {}", result);
 
         let params = response
             .params
@@ -381,6 +399,7 @@ impl Api {
             .ok_or_else(|| anyhow!("missing params"))?
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?;
+
         let keep_alive_interval = params
             .get("keepAliveInterval")
             .ok_or_else(|| anyhow!("keep alive interval missing"))?
@@ -417,17 +436,25 @@ impl Api {
 
         code.contains(&287637505) && message.contains(&"Invalid session in request data!")
     }
-    pub async fn rpc2(
+
+    pub async fn rpc2_call(
         &self,
         method: impl ToString,
         params: serde_json::Value,
-    ) -> Result<Option<serde_json::Value>, Error> {
+        object: Option<serde_json::Value>,
+    ) -> Result<
+        (
+            Option<serde_json::Value>, // result
+            Option<serde_json::Value>, // params
+        ),
+        Error,
+    > {
         const RETRY_COUNT: usize = 3;
 
         let mut rpc2_session_cache = self.rpc2_session_cache.lock().await;
         let mut retry_id: usize = 0;
 
-        let params = loop {
+        let result_params = loop {
             retry_id += 1;
 
             // make sure session exists
@@ -442,6 +469,7 @@ impl Api {
                 method: method.to_string(),
                 params: params.clone(),
                 session: Some(session.to_owned()),
+                object: object.clone(),
             };
             let response = self
                 .rpc2_request("/RPC2".parse().unwrap(), request)
@@ -455,16 +483,54 @@ impl Api {
             }
 
             ensure!(
-                response.result && response.error.is_none(),
-                "request failed: params={:?} error={:?}",
-                response.params,
-                response.error
+                response.error.is_none(),
+                "request failed: {:?}",
+                response.error.unwrap()
             );
             ensure!(response.session.as_deref() == Some(session));
 
             // if succeeds - break
-            break response.params;
+            break (response.result, response.params);
         };
+
+        Ok(result_params)
+    }
+
+    pub async fn rpc2_call_result(
+        &self,
+        method: impl ToString,
+        params: serde_json::Value,
+    ) -> Result<(), Error> {
+        let (result, _) = self
+            .rpc2_call(method, params, None)
+            .await
+            .context("rpc2_call")?;
+
+        let result = result
+            .ok_or_else(|| anyhow!("missing result"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+        ensure!(result, "request failed with result = {}", result);
+
+        Ok(())
+    }
+    pub async fn rpc2_call_params(
+        &self,
+        method: impl ToString,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value, Error> {
+        let (result, params) = self
+            .rpc2_call(method, params, None)
+            .await
+            .context("rpc2_call")?;
+
+        let result = result
+            .ok_or_else(|| anyhow!("missing result"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+        ensure!(result, "request failed with result = {}", result);
+
+        let params = params.ok_or_else(|| anyhow!("missing params"))?;
 
         Ok(params)
     }
@@ -490,7 +556,7 @@ impl Api {
         })
     }
     fn device_type_supported(device_type: &str) -> bool {
-        matches!(device_type, "IPC-HDW4631C-A")
+        matches!(device_type, "IPC-HDW4631C-A" | "IPC-HDW3841TMP-AS")
     }
     fn web_version_supported(web_version: &WebVersion) -> bool {
         matches!(
@@ -505,16 +571,20 @@ impl Api {
                 minor: 2,
                 revision: 1,
                 build: 582554,
+            } | WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 1053483,
             }
         )
     }
     pub async fn validate_basic_device_info(&self) -> Result<BasicDeviceInfo, Error> {
         let device_type = self
-            .rpc2("magicBox.getDeviceType", serde_json::Value::Null)
+            .rpc2_call_params("magicBox.getDeviceType", serde_json::Value::Null)
             .await
-            .context("rpc2")?;
+            .context("rpc2_call_params")?;
         let device_type = device_type
-            .ok_or_else(|| anyhow!("missing params"))?
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?
             .get("type")
@@ -529,12 +599,10 @@ impl Api {
         );
 
         let software_version = self
-            .rpc2("magicBox.getSoftwareVersion", serde_json::Value::Null)
+            .rpc2_call_params("magicBox.getSoftwareVersion", serde_json::Value::Null)
             .await
-            .context("rpc2")?;
+            .context("rpc2_call_params")?;
         let software_version = software_version
-            .as_ref()
-            .ok_or_else(|| anyhow!("missing params"))?
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?
             .get("version")
@@ -558,11 +626,10 @@ impl Api {
         );
 
         let serial_number = self
-            .rpc2("magicBox.getSerialNo", serde_json::Value::Null)
+            .rpc2_call_params("magicBox.getSerialNo", serde_json::Value::Null)
             .await
-            .context("rpc2")?;
+            .context("rpc2_call_params")?;
         let serial_number = serial_number
-            .ok_or_else(|| anyhow!("missing params"))?
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?
             .get("sn")
