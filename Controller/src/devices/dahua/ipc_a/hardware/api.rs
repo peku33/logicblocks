@@ -81,7 +81,12 @@ pub struct Api {
     reqwest_client: reqwest::Client,
 
     rpc2_request_id_next: AtomicU64,
-    rpc2_session_cache: Mutex<Option<String>>,
+    rpc2_session_cache: Mutex<
+        Option<(
+            String, // realm
+            String, // session
+        )>,
+    >,
 }
 impl Api {
     pub fn new(
@@ -93,7 +98,7 @@ impl Api {
         let rpc2_request_id_next = 0;
         let rpc2_request_id_next = AtomicU64::new(rpc2_request_id_next);
 
-        let rpc2_session_cache: Option<String> = None;
+        let rpc2_session_cache: Option<(String, String)> = None;
         let rpc2_session_cache = Mutex::new(rpc2_session_cache);
 
         Self {
@@ -264,7 +269,16 @@ impl Api {
         Ok(response)
     }
 
-    async fn rpc2_login_prepare_password(&self) -> Result<(String, String), Error> {
+    async fn rpc2_login_prepare_password(
+        &self
+    ) -> Result<
+        (
+            String, // realm
+            String, // random_phase
+            String, // session
+        ),
+        Error,
+    > {
         let request = Rpc2Request {
             method: "global.login".to_owned(),
             params: json!({
@@ -319,7 +333,8 @@ impl Api {
             .get("realm")
             .ok_or_else(|| anyhow!("missing realm"))?
             .as_str()
-            .ok_or_else(|| anyhow!("expected string"))?;
+            .ok_or_else(|| anyhow!("expected string"))?
+            .to_owned();
 
         let random = params
             .get("random")
@@ -335,7 +350,7 @@ impl Api {
             let mut d = Md5::new();
             d.update("admin");
             d.update(":");
-            d.update(realm);
+            d.update(&realm);
             d.update(":");
             d.update(&self.admin_password);
             let h = d.finalize();
@@ -355,7 +370,7 @@ impl Api {
         };
         let random_phase = hex::encode_upper(random_phase);
 
-        Ok((random_phase, session))
+        Ok((realm, random_phase, session))
     }
     async fn rpc2_login_initialize_session(
         &self,
@@ -413,8 +428,17 @@ impl Api {
 
         Ok(keep_alive_interval)
     }
-    async fn rpc2_login(&self) -> Result<(String, u64), Error> {
-        let (password_digest, session) = self
+    async fn rpc2_login(
+        &self
+    ) -> Result<
+        (
+            String, // realm
+            String, // session
+            u64,    // session_expiration_seconds
+        ),
+        Error,
+    > {
+        let (realm, password_digest, session) = self
             .rpc2_login_prepare_password()
             .await
             .context("rpc2_login_prepare_password")?;
@@ -422,7 +446,35 @@ impl Api {
             .rpc2_login_initialize_session(&password_digest, &session)
             .await
             .context("rpc2_login_initialize_session")?;
-        Ok((session, session_expiration_seconds))
+        Ok((realm, session, session_expiration_seconds))
+    }
+
+    async fn rpc2_session_ensure_session(&self) -> Result<String, Error> {
+        let mut rpc2_session_cache = self.rpc2_session_cache.lock().await;
+
+        if rpc2_session_cache.is_none() {
+            let (realm, session, _) = self.rpc2_login().await.context("rpc2_login")?;
+            *rpc2_session_cache = Some((realm, session));
+        }
+
+        let (_, session) = rpc2_session_cache.as_ref().unwrap();
+        let session = session.clone();
+
+        Ok(session)
+    }
+    pub async fn rpc2_session_peek_realm(&self) -> Result<Option<String>, Error> {
+        let rpc2_session_cache = self.rpc2_session_cache.lock().await;
+
+        let realm = rpc2_session_cache.as_ref().map(|(realm, _)| realm.clone());
+
+        Ok(realm)
+    }
+    async fn rpc2_session_clear(&self) -> Result<(), Error> {
+        let mut rpc2_session_cache = self.rpc2_session_cache.lock().await;
+
+        rpc2_session_cache.take();
+
+        Ok(())
     }
 
     fn error_is_invalid_session(error: &Option<serde_json::Value>) -> bool {
@@ -451,18 +503,16 @@ impl Api {
     > {
         const RETRY_COUNT: usize = 3;
 
-        let mut rpc2_session_cache = self.rpc2_session_cache.lock().await;
         let mut retry_id: usize = 0;
 
         let result_params = loop {
             retry_id += 1;
 
             // make sure session exists
-            if rpc2_session_cache.is_none() {
-                let login = self.rpc2_login().await.context("rpc2_login")?;
-                *rpc2_session_cache = Some(login.0);
-            }
-            let session = rpc2_session_cache.as_ref().unwrap();
+            let session = self
+                .rpc2_session_ensure_session()
+                .await
+                .context("rpc2_session_ensure_session")?;
 
             // try making the request
             let request = Rpc2Request {
@@ -478,7 +528,9 @@ impl Api {
 
             // if error means invalid session, retry
             if retry_id < RETRY_COUNT && Self::error_is_invalid_session(&response.error) {
-                *rpc2_session_cache = None;
+                self.rpc2_session_clear()
+                    .await
+                    .context("rpc2_session_clear")?;
                 continue;
             }
 
@@ -487,7 +539,7 @@ impl Api {
                 "request failed: {:?}",
                 response.error.unwrap()
             );
-            ensure!(response.session.as_deref() == Some(session));
+            ensure!(response.session == Some(session));
 
             // if succeeds - break
             break (response.result, response.params);

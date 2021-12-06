@@ -653,7 +653,12 @@ impl<'a> Configurator<'a> {
         }
 
         // create new user
-        let realm = format!("Login to {}", self.basic_device_info.serial_number);
+        let realm = self
+            .api
+            .rpc2_session_peek_realm()
+            .await
+            .context("rpc2_session_peek_realm")?
+            .ok_or_else(|| anyhow!("missing realm on api?"))?;
 
         let realm_phase = {
             let mut d = Md5::new();
