@@ -552,7 +552,7 @@ impl<'a> Configurator<'a> {
         loop {
             let mut again = false;
 
-            let (result, _) = self
+            let result = self
                 .api
                 .rpc2_call(
                     "configManager.restoreExcept",
@@ -560,14 +560,9 @@ impl<'a> Configurator<'a> {
                     None,
                 )
                 .await
-                .context("rpc2_call")?;
+                .context("rpc2_call");
 
-            let result = result
-                .ok_or_else(|| anyhow!("missing result"))?
-                .as_bool()
-                .ok_or_else(|| anyhow!("expected bool"))?;
-
-            if !result {
+            if result.is_err() {
                 again = true;
                 log::warn!(
                     "error while resetting to factory settings, this is likely false positive (device bug)"
@@ -1677,7 +1672,8 @@ impl<'a> Configurator<'a> {
             .ok_or_else(|| anyhow!("expected bool"))?;
         ensure!(result, "request failed with result = {}", result);
 
-        let smart_motion_detection_support = detection_capabilities
+        let smart_motion_detection_object = detection_capabilities
+            .as_ref()
             .ok_or_else(|| anyhow!("missing params"))?
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?
@@ -1685,8 +1681,16 @@ impl<'a> Configurator<'a> {
             .ok_or_else(|| anyhow!("missing caps"))?
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?
-            .get("SmartMotion")
-            .ok_or_else(|| anyhow!("missing SmartMotion"))?
+            .get("SmartMotion");
+
+        let smart_motion_detection_object = match smart_motion_detection_object {
+            Some(smart_motion_detection_object) => smart_motion_detection_object,
+            None => {
+                return Ok(());
+            }
+        };
+
+        let smart_motion_detection_support = smart_motion_detection_object
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?
             .get("Support")
