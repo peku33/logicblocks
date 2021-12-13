@@ -6,11 +6,12 @@ use clap::Parser;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use http::uri::Authority;
 use logicblocks_controller::{
-    devices::dahua::ipc_hdw4631c_a::hardware::{
+    devices::dahua::ipc_a::hardware::{
         api::Api,
         configurator::{
             AudioMutationDetection, Configuration, Configurator, Grid22x18, MotionDetection,
             MotionDetectionRegion, Percentage, SceneMovedDetection, Sensitivity,
+            SmartMotionDetection, SmartMotionDetectionSensitivity,
         },
         event_stream::Manager,
     },
@@ -19,7 +20,7 @@ use logicblocks_controller::{
 use tokio::signal::ctrl_c;
 
 #[derive(Debug, Parser)]
-#[clap(name = "devices.dahua.ipc_hdw4631c_a")]
+#[clap(name = "devices.dahua.ipc_a")]
 struct Arguments {
     host: Authority,
     admin_password: String,
@@ -55,7 +56,6 @@ async fn main() -> Result<(), Error> {
     if let Some(ArgumentsSubcommand::Configure(command_configure)) = arguments.subcommand {
         let mut configurator = Configurator::connect(&api).await.context("connect")?;
         log::info!("basic_device_info: {:?}", configurator.basic_device_info());
-        log::info!("capabilities: {:?}", configurator.capabilities());
         log::info!("starting configuration");
         configurator
             .configure(Configuration {
@@ -71,6 +71,11 @@ async fn main() -> Result<(), Error> {
                     sensitivity: Percentage::new(75).unwrap(),
                     threshold: Percentage::new(10).unwrap(),
                 })),
+                smart_motion_detection: Some(SmartMotionDetection {
+                    human: true,
+                    vehicle: true,
+                    sensitivity: SmartMotionDetectionSensitivity::Medium,
+                }),
                 scene_moved_detection: Some(SceneMovedDetection {
                     sensitivity: Sensitivity::new(5).unwrap(),
                 }),
