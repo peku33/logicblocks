@@ -16,7 +16,14 @@ use futures::{
     join, pin_mut, select,
     stream::{StreamExt, TryStreamExt},
 };
-use std::{fmt, fs::Metadata, io, path::{Path, PathBuf}, process::Stdio, time::{Duration, SystemTime}};
+use std::{
+    fmt,
+    fs::Metadata,
+    io,
+    path::{Path, PathBuf},
+    process::Stdio,
+    time::{Duration, SystemTime},
+};
 use tokio::{
     fs,
     io::{AsyncBufReadExt, BufReader},
@@ -143,8 +150,8 @@ impl Recorder {
             .args(&["-threads", "1"])
             // input options
             .args(&["-f", "rtsp"])
+            .args(&["-rtsp_transport", "tcp"])
             .args(&["-use_wallclock_as_timestamps", "1"])
-            .args(&["-fflags", "+genpts"])
             .args(&["-stimeout", "1000000"])
             .args(&["-i", rtsp_url.to_string().as_str()])
             // i/o options
@@ -160,6 +167,7 @@ impl Recorder {
             .args(&["-strftime", "1"])
             .args(&["-break_non_keyframes", "1"])
             .args(&["-reset_timestamps", "1"])
+            .args(&["-avoid_negative_ts", "1"])
             .arg(self.temporary_storage_directory.join("%s.mkv").as_os_str());
         command
     }
