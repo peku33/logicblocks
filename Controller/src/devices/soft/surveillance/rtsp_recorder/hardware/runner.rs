@@ -417,7 +417,7 @@ impl<'f> RunnerModule<'f> {
         name: String,
         fs: &'f Fs,
     ) -> Self {
-        let runtime = Runtime::new("rtsp_recorder", 1, 1);
+        let runtime = Runtime::new(&format!("rtsp_recorder.{}", name), 1, 1);
 
         let inner = RunnerModuleInnerBuilder {
             runtime,
