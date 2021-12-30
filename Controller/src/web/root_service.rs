@@ -67,7 +67,7 @@ mod gui_responder {
         pub fn new() -> Self {
             let inner = GuiResponderInnerBuilder {
                 loader: Loader::new(include_bytes!(env!("CI_WEB_STATIC_PACK_GUI"))).unwrap(),
-                responder_builder: |loader| Responder::new(loader),
+                responder_builder: move |loader| Responder::new(loader),
             }
             .build();
 

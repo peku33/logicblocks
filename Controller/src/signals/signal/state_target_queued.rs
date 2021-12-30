@@ -27,7 +27,7 @@ impl<V: Value + Clone> Signal<V> {
     pub fn new() -> Self {
         let inner = Inner {
             last: None,
-            pending: Vec::new(),
+            pending: Vec::<Option<V>>::new(),
         };
 
         Self {
@@ -40,7 +40,7 @@ impl<V: Value + Clone> Signal<V> {
     pub fn take_pending(&self) -> Box<[Option<V>]> {
         let mut lock = self.inner.write();
 
-        let pending = replace(&mut lock.pending, Vec::new());
+        let pending = replace(&mut lock.pending, Vec::<Option<V>>::new());
 
         drop(lock);
 

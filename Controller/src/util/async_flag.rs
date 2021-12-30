@@ -24,7 +24,7 @@ impl Inner {
         let signaled = AtomicBool::new(signaled);
 
         #[allow(clippy::mutable_key_type)]
-        let receivers = HashSet::new();
+        let receivers = HashSet::<*const ReceiverInner>::new();
         let receivers = Mutex::new(receivers);
 
         Self {
@@ -154,7 +154,7 @@ impl LocalSender {
         let signaled = AtomicBool::new(signaled);
 
         #[allow(clippy::mutable_key_type)]
-        let receivers = HashSet::new();
+        let receivers = HashSet::<*const LocalReceiverInner>::new();
         let receivers = Mutex::new(receivers);
 
         Self {

@@ -43,7 +43,7 @@ impl ManagerSize {
 
         let jpeg_quality = self.jpeg_quality;
         let jpeg_bytes = tokio::task::spawn_blocking(move || -> Result<Bytes, Error> {
-            let mut jpeg_bytes = Vec::new();
+            let mut jpeg_bytes = Vec::<u8>::new();
             image
                 .write_to(&mut jpeg_bytes, ImageOutputFormat::Jpeg(jpeg_quality))
                 .context("write_to")?;

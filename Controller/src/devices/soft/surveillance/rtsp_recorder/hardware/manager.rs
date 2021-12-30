@@ -55,7 +55,8 @@ impl<'f> Manager<'f> {
     ) -> Self {
         let sqlite = SQLite::new(fs, format!("rtsp_recorder.manager.{}", name));
 
-        let (channel_segment_sender, channel_segment_receiver) = mpsc::unbounded();
+        let (channel_segment_sender, channel_segment_receiver) =
+            mpsc::unbounded::<ChannelIdSegment>();
         let channel_segment_receiver = AtomicCell::new(channel_segment_receiver);
 
         Self {

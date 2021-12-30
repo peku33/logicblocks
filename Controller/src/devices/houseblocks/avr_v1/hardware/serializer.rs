@@ -7,7 +7,7 @@ pub struct Serializer {
 impl Serializer {
     pub fn new() -> Self {
         Self {
-            container: Vec::new(),
+            container: Vec::<u8>::new(),
         }
     }
     pub fn into_payload(self) -> Payload {

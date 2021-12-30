@@ -40,7 +40,7 @@ where
     pub fn new() -> Self {
         let state = State {
             state: None,
-            events: Vec::new(),
+            events: Vec::<E>::new(),
             user_pending: false,
         };
         let state = Mutex::new(state);
@@ -135,7 +135,7 @@ where
         }
 
         let state = state_inner.state.clone();
-        let events = replace(&mut state_inner.events, Vec::new()).into_boxed_slice();
+        let events = replace(&mut state_inner.events, Vec::<E>::new()).into_boxed_slice();
         state_inner.user_pending = false;
 
         drop(state_inner);

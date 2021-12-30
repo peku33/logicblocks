@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_1() {
-        let property = Property::new();
+        let property = Property::<usize>::new();
         let sink = property.user_sink();
 
         // Initial state

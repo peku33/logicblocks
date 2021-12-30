@@ -12,7 +12,7 @@ pub struct Devices<'d> {
 impl<'d> Devices<'d> {
     pub fn new() -> Self {
         Self {
-            device_wrappers: Vec::new(),
+            device_wrappers: Vec::<DeviceWrapper<'d>>::new(),
         }
     }
 

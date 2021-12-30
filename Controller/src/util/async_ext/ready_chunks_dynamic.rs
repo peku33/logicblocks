@@ -19,7 +19,7 @@ where
     pub fn new(inner: S) -> Self {
         Self {
             inner: inner.fuse(),
-            buffer: Vec::new(),
+            buffer: Vec::<S::Item>::new(),
         }
     }
 }
@@ -44,7 +44,10 @@ where
                     if self_.buffer.is_empty() {
                         return Poll::Pending;
                     } else {
-                        return Poll::Ready(Some(replace(&mut self_.buffer, Vec::new())));
+                        return Poll::Ready(Some(replace(
+                            &mut self_.buffer,
+                            Vec::<S::Item>::new(),
+                        )));
                     }
                 }
                 Poll::Ready(Some(item)) => {
@@ -54,7 +57,10 @@ where
                     if self_.buffer.is_empty() {
                         return Poll::Ready(None);
                     } else {
-                        return Poll::Ready(Some(replace(&mut self_.buffer, Vec::new())));
+                        return Poll::Ready(Some(replace(
+                            &mut self_.buffer,
+                            Vec::<S::Item>::new(),
+                        )));
                     }
                 }
             }

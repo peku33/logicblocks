@@ -20,7 +20,7 @@ pub struct Signal<V: Value + Clone> {
 impl<V: Value + Clone> Signal<V> {
     pub fn new() -> Self {
         let inner = Inner {
-            pending: Vec::new(),
+            pending: Vec::<V>::new(),
         };
 
         Self {
@@ -31,7 +31,7 @@ impl<V: Value + Clone> Signal<V> {
     pub fn take_pending(&self) -> Box<[V]> {
         let mut lock = self.inner.write();
 
-        let pending = replace(&mut lock.pending, Vec::new());
+        let pending = replace(&mut lock.pending, Vec::<V>::new());
 
         drop(lock);
 

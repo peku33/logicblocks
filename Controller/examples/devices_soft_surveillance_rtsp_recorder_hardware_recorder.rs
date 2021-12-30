@@ -11,7 +11,7 @@ use futures::{
 };
 use logicblocks_controller::{
     datatypes::ipc_rtsp_url::IpcRtspUrl,
-    devices::soft::surveillance::rtsp_recorder::hardware::recorder::Recorder,
+    devices::soft::surveillance::rtsp_recorder::hardware::recorder::{Recorder, Segment},
     util::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
@@ -41,7 +41,7 @@ async fn main() -> Result<(), Error> {
     let exit_flag_sender = async_flag::Sender::new();
 
     // set up recorder
-    let (segment_sender, segment_receiver) = mpsc::unbounded();
+    let (segment_sender, segment_receiver) = mpsc::unbounded::<Segment>();
     let recorder = Recorder::new(
         Some(arguments.rtsp_url),
         Duration::from_secs(arguments.segment_time_seconds),

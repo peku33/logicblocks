@@ -83,7 +83,7 @@ impl DeviceFailSafe {
     }
 
     pub fn purge(&mut self) -> Result<(), Error> {
-        let mut errors = Vec::new();
+        let mut errors = Vec::<Error>::new();
         for retry_id in 0..self.retry_count {
             match try {
                 let device = self.device_get().context("device_get")?;
@@ -105,7 +105,7 @@ impl DeviceFailSafe {
         &mut self,
         data: &[u8],
     ) -> Result<(), Error> {
-        let mut errors = Vec::new();
+        let mut errors = Vec::<Error>::new();
         for retry_id in 0..self.retry_count {
             match try {
                 let device = self.device_get().context("device_get")?;
@@ -124,7 +124,7 @@ impl DeviceFailSafe {
         bail!(errors.into_iter().collect::<AnyhowMultipleError>())
     }
     pub fn read(&mut self) -> Result<Box<[u8]>, Error> {
-        let mut errors = Vec::new();
+        let mut errors = Vec::<Error>::new();
         for retry_id in 0..self.retry_count {
             match try {
                 let device = self.device_get().context("device_get")?;

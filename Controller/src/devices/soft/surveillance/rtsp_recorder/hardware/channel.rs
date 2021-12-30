@@ -86,7 +86,7 @@ impl Channel {
         let detection_level_tracker = DetectionLevelTracker::new();
         let detection_level_tracker = Mutex::new(detection_level_tracker);
 
-        let (recorder_segment_sender, recorder_segment_receiver) = mpsc::unbounded();
+        let (recorder_segment_sender, recorder_segment_receiver) = mpsc::unbounded::<Segment>();
         let recorder_segment_receiver = AtomicCell::new(recorder_segment_receiver);
 
         let recorder = Recorder::new(
@@ -96,7 +96,8 @@ impl Channel {
             recorder_segment_sender,
         );
 
-        let (channel_segment_sender, channel_segment_receiver) = mpsc::unbounded();
+        let (channel_segment_sender, channel_segment_receiver) =
+            mpsc::unbounded::<ChannelSegment>();
         let channel_segment_receiver = AtomicCell::new(channel_segment_receiver);
 
         Self {

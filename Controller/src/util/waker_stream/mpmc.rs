@@ -26,7 +26,7 @@ impl Common {
         let version = 0;
         let version = AtomicUsize::new(version);
 
-        let receivers = HashSet::new();
+        let receivers = HashSet::<ReceiverInnerPointer>::new();
         let receivers = RwLock::new(receivers);
 
         Self { version, receivers }

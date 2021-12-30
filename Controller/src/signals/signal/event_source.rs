@@ -20,7 +20,7 @@ pub struct Signal<V: Value + Clone> {
 impl<V: Value + Clone> Signal<V> {
     pub fn new() -> Self {
         let inner = Inner {
-            pending: Vec::new(),
+            pending: Vec::<V>::new(),
         };
 
         Self {
@@ -66,7 +66,7 @@ impl<V: Value + Clone> EventSourceRemoteBase for Signal<V> {
     fn take_pending(&self) -> Box<[Box<dyn ValueBase>]> {
         let mut lock = self.inner.write();
 
-        let pending = replace(&mut lock.pending, Vec::new());
+        let pending = replace(&mut lock.pending, Vec::<V>::new());
         let pending = pending
             .into_iter()
             .map(|value| Box::new(value) as Box<dyn ValueBase>)

@@ -79,7 +79,7 @@ impl Bus {
         request: &T,
         timeout: Duration,
     ) -> Result<T::Response, Error> {
-        let mut payload_buffer = Vec::new();
+        let mut payload_buffer = Vec::<u8>::new();
         let mut timeout = timeout;
 
         let response = loop {
@@ -236,12 +236,13 @@ impl AsyncBus {
         baud_rate: usize,
         parity: serial::Parity,
     ) -> Self {
-        let (transaction_sender, transaction_receiver) = channel::unbounded();
+        let (transaction_sender, transaction_receiver) =
+            channel::unbounded::<AsyncBusTransaction>();
 
         let worker_descriptor = descriptor.clone();
         let worker_thread = thread::Builder::new()
             .name(format!(
-                "{}/modbus_rtu",
+                "{}.modbus_rtu",
                 descriptor.serial_number.to_str().unwrap()
             ))
             .spawn(move || {
@@ -267,7 +268,8 @@ impl AsyncBus {
     ) -> Result<T::Response, Error> {
         let request = RequestErasedWrapper::from_original(request);
 
-        let (result_sender, result_receiver) = oneshot::channel();
+        let (result_sender, result_receiver) =
+            oneshot::channel::<Result<ResponseErasedWrapper, Error>>();
 
         let transaction = AsyncBusTransaction {
             address,

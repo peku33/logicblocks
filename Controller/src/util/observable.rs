@@ -27,7 +27,7 @@ where
 {
     pub fn new(initial: T) -> Self {
         #[allow(clippy::mutable_key_type)]
-        let remotes = HashSet::new();
+        let remotes = HashSet::<*const InnerRemote>::new();
 
         Self {
             value: initial,

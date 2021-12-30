@@ -314,7 +314,7 @@ impl Device {
                 ftdi_read_data_result,
             );
         } else if ftdi_read_data_result == 0 {
-            Ok(Vec::new().into_boxed_slice())
+            Ok(Vec::<u8>::new().into_boxed_slice())
         } else {
             Ok(Box::from(
                 &ftdi_read_data_buffer[0..ftdi_read_data_result as usize],

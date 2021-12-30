@@ -230,12 +230,12 @@ pub struct Master {
 }
 impl Master {
     pub fn new(ftdi_descriptor: FtdiDescriptor) -> Self {
-        let (transaction_sender, transaction_receiver) = channel::unbounded();
+        let (transaction_sender, transaction_receiver) = channel::unbounded::<Transaction>();
 
         let worker_ftdi_descriptor = ftdi_descriptor.clone();
         let worker_thread = thread::Builder::new()
             .name(format!(
-                "{}/houseblocks_v1/master",
+                "{}.houseblocks_v1.master",
                 ftdi_descriptor.serial_number.to_str().unwrap()
             ))
             .spawn(move || {
@@ -257,7 +257,7 @@ impl Master {
         address: Address,
         out_payload: Payload,
     ) -> Result<(), Error> {
-        let (result_sender, result_receiver) = oneshot::channel();
+        let (result_sender, result_receiver) = oneshot::channel::<Result<(), Error>>();
 
         self.transaction_sender
             .send(Transaction::FrameOut {
@@ -279,7 +279,7 @@ impl Master {
         out_payload: Payload,
         in_timeout: Duration,
     ) -> Result<Payload, Error> {
-        let (result_sender, result_receiver) = oneshot::channel();
+        let (result_sender, result_receiver) = oneshot::channel::<Result<Payload, Error>>();
 
         self.transaction_sender
             .send(Transaction::FrameOutIn {
@@ -295,7 +295,7 @@ impl Master {
         Ok(result)
     }
     pub async fn transaction_device_discovery(&self) -> Result<Address, Error> {
-        let (result_sender, result_receiver) = oneshot::channel();
+        let (result_sender, result_receiver) = oneshot::channel::<Result<Address, Error>>();
 
         self.transaction_sender
             .send(Transaction::DeviceDiscovery { result_sender })

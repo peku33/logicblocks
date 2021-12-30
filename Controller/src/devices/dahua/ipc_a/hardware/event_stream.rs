@@ -51,7 +51,7 @@ impl<'a> Manager<'a> {
     const ERROR_RESTART_DELAY: Duration = Duration::from_secs(1);
 
     pub fn new(api: &'a Api) -> Self {
-        let events_active = HashMap::new();
+        let events_active = HashMap::<Event, Instant>::new();
         let events_active = AtomicCell::new(events_active);
 
         let (events_sender, events_receiver) = watch::channel(Events::new());

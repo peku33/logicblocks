@@ -9,7 +9,7 @@ pub struct Extractor {
 }
 impl Extractor {
     pub fn new() -> Self {
-        let buffer = VecDeque::new();
+        let buffer = VecDeque::<u8>::new();
 
         Self { buffer }
     }

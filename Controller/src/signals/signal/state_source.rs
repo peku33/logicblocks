@@ -89,7 +89,7 @@ impl<V: Value + Clone> StateSourceRemoteBase for Signal<V> {
     fn take_pending(&self) -> Box<[Option<Box<dyn ValueBase>>]> {
         let mut lock = self.inner.write();
 
-        let pending = replace(&mut lock.pending, Vec::new());
+        let pending = replace(&mut lock.pending, Vec::<Option<V>>::new());
         let pending = pending
             .into_iter()
             .map(|value| value.map(|value| Box::new(value) as Box<dyn ValueBase>))

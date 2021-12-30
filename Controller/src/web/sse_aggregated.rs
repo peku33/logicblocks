@@ -30,9 +30,9 @@ pub trait NodeProvider {
 }
 
 fn build_recursive(node: Node) -> LinkedList<(ReceiverFactory, LinkedList<PathItem>)> {
-    let mut paths = LinkedList::new();
+    let mut paths = LinkedList::<(ReceiverFactory, LinkedList<PathItem>)>::new();
     if let Some(terminal) = node.terminal {
-        paths.push_back((terminal, LinkedList::new()));
+        paths.push_back((terminal, LinkedList::<PathItem>::new()));
     }
     for (path_item, child) in node.children {
         let mut child_paths = build_recursive(child);

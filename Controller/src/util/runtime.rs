@@ -28,7 +28,7 @@ impl Runtime {
     ) -> Self {
         let inner = TokioRuntimeBuilder::new_multi_thread()
             .enable_all()
-            .thread_name(format!("{}/runtime", name))
+            .thread_name(format!("{}.runtime", name))
             .worker_threads(worker_threads)
             .max_blocking_threads(blocking_threads_max)
             .build()
@@ -98,7 +98,7 @@ impl RuntimeScopeContext {
         let task_id_next = 0;
         let task_id_next = AtomicUsize::new(task_id_next);
 
-        let tasks = HashMap::new();
+        let tasks = HashMap::<usize, TokioJoinHandle<()>>::new();
         let tasks = Mutex::new(tasks);
 
         Self {
@@ -158,7 +158,7 @@ impl<'r, 'o, O> RuntimeScope<'r, 'o, O> {
         };
 
         let task_id = context.task_id_next.fetch_add(1, Ordering::Relaxed);
-        let (result_sender, result_receiver) = oneshot::channel();
+        let (result_sender, result_receiver) = oneshot::channel::<R>();
 
         let future = async move {
             // run task to completion

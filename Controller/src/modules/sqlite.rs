@@ -30,9 +30,10 @@ impl<'f> SQLite<'f> {
         let sqlite_file = fs
             .persistent_data_directory()
             .join([name.as_str(), ".sqlite"].concat());
-        let thread_name = format!("{}/sqlite", name);
 
-        let (operation_sender, operation_receiver) = channel::unbounded();
+        let thread_name = format!("{}.sqlite", name);
+
+        let (operation_sender, operation_receiver) = channel::unbounded::<Operation>();
         let operation_sender = ManuallyDrop::new(operation_sender);
 
         let sqlite_thread = thread::Builder::new()
@@ -91,7 +92,7 @@ impl<'f> SQLite<'f> {
         E: FnOnce(&Connection) -> R + Send + 'static,
         R: Send + 'static,
     {
-        let (result_sender, result_receiver) = oneshot::channel();
+        let (result_sender, result_receiver) = oneshot::channel::<R>();
         let operation = Box::new(move |connection: &mut Connection| {
             let result = e(connection);
             let _ = result_sender.send(result);
@@ -108,7 +109,7 @@ impl<'f> SQLite<'f> {
         E: FnOnce(&mut Transaction) -> R + Send + 'static,
         R: Send + 'static,
     {
-        let (result_sender, result_receiver) = oneshot::channel();
+        let (result_sender, result_receiver) = oneshot::channel::<Result<R, Error>>();
         let operation = Box::new(move |connection: &mut Connection| {
             let result = try {
                 let mut transaction_object = connection.transaction().context("transaction")?;
