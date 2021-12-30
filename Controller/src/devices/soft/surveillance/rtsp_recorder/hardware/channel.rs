@@ -220,14 +220,12 @@ impl Channel {
         let recorder_runner = self
             .recorder
             .run(recorder_exit_flag)
-            .then(async move |_: Exited| {
+            .inspect(move |_: &Exited| {
                 channel_segment_forwarder_exit_flag_sender.signal();
-                Exited
             });
 
-        let channel_segment_forwarder_runner = self
-            .channel_segment_forwarder_run(channel_segment_forwarder_exit_flag_receiver)
-            .then(async move |_: Exited| Exited);
+        let channel_segment_forwarder_runner =
+            self.channel_segment_forwarder_run(channel_segment_forwarder_exit_flag_receiver);
 
         let _: (Exited, Exited) = join!(recorder_runner, channel_segment_forwarder_runner);
 

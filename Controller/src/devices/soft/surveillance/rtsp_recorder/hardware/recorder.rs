@@ -588,19 +588,15 @@ impl Recorder {
 
         let fixer_runner = self
             .fixer_run(fixer_exit_flag_receiver)
-            .then(async move |_: Exited| {
+            .inspect(move |_: &Exited| {
                 ffmpeg_or_nop_run_exit_flag_sender.signal();
-                Exited
             });
         let ffmpeg_or_nop_runner = self
             .ffmpeg_or_nop_run(ffmpeg_or_nop_run_exit_flag_receiver)
-            .then(async move |_: Exited| {
+            .inspect(move |_: &Exited| {
                 inotify_exit_flag_sender.signal();
-                Exited
             });
-        let inotify_runner = self
-            .inotify_run(inotify_exit_flag_receiver)
-            .then(async move |_: Exited| Exited);
+        let inotify_runner = self.inotify_run(inotify_exit_flag_receiver);
 
         let _: (Exited, Exited, Exited) = join!(fixer_runner, ffmpeg_or_nop_runner, inotify_runner);
 

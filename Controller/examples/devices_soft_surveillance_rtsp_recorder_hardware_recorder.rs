@@ -3,12 +3,7 @@
 
 use anyhow::Error;
 use clap::Parser;
-use futures::{
-    channel::mpsc,
-    future::{FutureExt, TryFutureExt},
-    join,
-    stream::StreamExt,
-};
+use futures::{channel::mpsc, future::TryFutureExt, join, stream::StreamExt};
 use logicblocks_controller::{
     datatypes::ipc_rtsp_url::IpcRtspUrl,
     devices::soft::surveillance::rtsp_recorder::hardware::recorder::{Recorder, Segment},
@@ -63,20 +58,18 @@ async fn main() -> Result<(), Error> {
                 target_path
             );
             move_file(segment.path, target_path).await.unwrap();
-        })
-        .then(async move |()| Exited);
+        });
 
     // exit flag runner
     let exit_flag_runner = ctrl_c()
         .map_ok(|()| {
             log::info!("received exit signal, exiting");
             exit_flag_sender.signal();
-            Exited
         })
         .unwrap_or_else(|error| panic!("ctrl_c error: {:?}", error));
 
     // orchestrate all
-    let _: (Exited, Exited, Exited) = join!(recorder_runner, forwarder_runner, exit_flag_runner);
+    let _: (Exited, (), ()) = join!(recorder_runner, forwarder_runner, exit_flag_runner);
 
     Ok(())
 }

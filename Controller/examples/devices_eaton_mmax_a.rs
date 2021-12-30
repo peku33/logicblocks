@@ -127,11 +127,10 @@ async fn main() -> Result<(), Error> {
         .map_ok(|()| {
             log::info!("received exit signal, exiting");
             exit_flag_sender.signal();
-            Exited
         })
         .unwrap_or_else(|error| panic!("ctrl_c error: {:?}", error));
 
-    let _: (Exited, (), Exited) = join!(
+    let _: (Exited, (), ()) = join!(
         device_runner,
         output_state_receiver_runner,
         exit_flag_runner,

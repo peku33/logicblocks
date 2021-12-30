@@ -82,12 +82,11 @@ async fn main() -> Result<(), Error> {
         .map_ok(|()| {
             log::info!("received exit signal, exiting");
             exit_flag_sender.signal();
-            Exited
         })
         .unwrap_or_else(|error| panic!("ctrl_c error: {:?}", error));
 
     // orchestrate all
-    let _: (Exited, (), (), Exited) = join!(
+    let _: (Exited, (), (), ()) = join!(
         channel_runner,
         segment_deleter_runner,
         detection_level_set_runner,

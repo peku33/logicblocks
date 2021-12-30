@@ -29,204 +29,24 @@ use tokio::sync::{RwLock, RwLockReadGuard};
 type RunnerChannelRunners<'r> = HashMap<ChannelId, RunnerChannelRunner<'r>>;
 
 #[derive(Debug)]
-pub struct Runner<'r, 'f> {
-    runtime: &'r Runtime,
-
-    manager_runner: ManagerRunner<'r, 'f>,
-    runner_channel_runners: RwLock<RunnerChannelRunners<'r>>,
-
-    finalize_guard: FinalizeGuard,
-}
-impl<'r, 'f> Runner<'r, 'f> {
-    pub const SEGMENT_TIME: Duration = Duration::from_secs(60);
-
-    pub fn new(
-        runtime: &'r Runtime,
-        name: String,
-        fs: &'f Fs,
-    ) -> Self {
-        let manager = Manager::new(name, fs);
-        let manager_runner = ManagerRunner::new(runtime, manager);
-
-        let runner_channel_runners = RunnerChannelRunners::default();
-        let runner_channel_runners = RwLock::new(runner_channel_runners);
-
-        let finalize_guard = FinalizeGuard::new();
-
-        Self {
-            runtime,
-
-            manager_runner,
-            runner_channel_runners,
-
-            finalize_guard,
-        }
-    }
-
-    pub async fn finalize(self) {
-        self.runner_channel_runners
-            .into_inner()
-            .into_values()
-            .map(move |runner_channel| runner_channel.finalize())
-            .collect::<JoinAll<_>>()
-            .await;
-
-        // manager will still collect recordings created by closing channels
-        self.manager_runner.finalize().await;
-
-        self.finalize_guard.finalized();
-    }
-
-    pub async fn channels_reload(&self) -> Result<(), Error> {
-        // lock channels
-        let mut runner_channel_runners = self
-            .runner_channel_runners
-            .try_write()
-            .context("runner_channel_runners lock")?;
-
-        // finalize current channels
-        runner_channel_runners
-            .drain()
-            .map(move |(_, runner_channel)| runner_channel.finalize())
-            .collect::<JoinAll<_>>()
-            .await;
-
-        // get new channels data
-        let channels_data = self
-            .manager_runner
-            .manager()
-            .channels_data_get()
-            .await
-            .context("manager channels_data_get")?;
-
-        // create & run new channels
-        *runner_channel_runners = channels_data
-            .into_iter()
-            .map(move |(channel_id, channel_data)| {
-                let temporary_storage_directory = self
-                    .manager_runner
-                    .manager()
-                    .channel_temporary_directory_path_build(channel_id);
-
-                let channel = Channel::new(
-                    None,
-                    Self::SEGMENT_TIME,
-                    temporary_storage_directory,
-                    channel_data.detection_threshold,
-                );
-                let runner_channel = RunnerChannel::new(
-                    channel_id,
-                    channel_data.name,
-                    channel,
-                    self.manager_runner.manager(),
-                );
-                let runner_channel_runner = RunnerChannelRunner::new(self.runtime, runner_channel);
-                (channel_id, runner_channel_runner)
-            })
-            .collect();
-
-        // drop lock
-        drop(runner_channel_runners);
-
-        Ok(())
-    }
-    pub fn channels_lock(&self) -> Option<RunnerChannelsLock<'_, 'r>> {
-        let runner_channel_runners_lock = self.runner_channel_runners.try_read().ok()?;
-        let runner_channels_lock = RunnerChannelsLock::new(runner_channel_runners_lock);
-        Some(runner_channels_lock)
-    }
-}
-
-// Runner Manager
-#[self_referencing]
-#[derive(Debug)]
-struct ManagerRunnerInner<'r, 'f: 'r> {
-    manager: Manager<'f>,
-
-    #[borrows(manager)]
-    #[not_covariant]
-    manager_runtime_scope_runnable: ManuallyDrop<RuntimeScopeRunnable<'r, 'this, Manager<'f>>>,
-}
-
-#[derive(Debug)]
-struct ManagerRunner<'r, 'f> {
-    inner: ManagerRunnerInner<'r, 'f>,
-
-    finalize_guard: FinalizeGuard,
-}
-impl<'r, 'f> ManagerRunner<'r, 'f> {
-    pub fn new(
-        runtime: &'r Runtime,
-        manager: Manager<'f>,
-    ) -> Self {
-        let inner = ManagerRunnerInnerBuilder {
-            manager,
-            manager_runtime_scope_runnable_builder: |manager| {
-                let manager_runtime_scope_runnable = RuntimeScopeRunnable::new(runtime, manager);
-                let manager_runtime_scope_runnable =
-                    ManuallyDrop::new(manager_runtime_scope_runnable);
-                manager_runtime_scope_runnable
-            },
-        }
-        .build();
-
-        let finalize_guard = FinalizeGuard::new();
-
-        Self {
-            inner,
-            finalize_guard,
-        }
-    }
-    pub fn manager(&self) -> &Manager<'f> {
-        self.inner.borrow_manager()
-    }
-    pub async fn finalize(mut self) -> Manager<'f> {
-        let manager_runtime_scope_runnable =
-            self.inner
-                .with_manager_runtime_scope_runnable_mut(|manager_runtime_scope_runnable| {
-                    let manager_runtime_scope_runnable = unsafe {
-                        transmute::<
-                            &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, Manager<'_>>>,
-                            &mut ManuallyDrop<
-                                RuntimeScopeRunnable<'static, 'static, Manager<'static>>,
-                            >,
-                        >(manager_runtime_scope_runnable)
-                    };
-                    let manager_runtime_scope_runnable =
-                        unsafe { ManuallyDrop::take(manager_runtime_scope_runnable) };
-                    manager_runtime_scope_runnable
-                });
-        manager_runtime_scope_runnable.finalize().await;
-
-        self.finalize_guard.finalized();
-
-        let inner = self.inner.into_heads();
-        inner.manager
-    }
-}
-
-// Runner Channels Lock
-#[derive(Debug)]
 pub struct RunnerChannelsLock<'a, 'r> {
-    runner_channel_runners: RwLockReadGuard<'a, RunnerChannelRunners<'r>>,
+    inner: RwLockReadGuard<'a, RunnerChannelRunners<'r>>,
 }
 impl<'a, 'r> RunnerChannelsLock<'a, 'r> {
-    fn new(runner_channel_runners: RwLockReadGuard<'a, RunnerChannelRunners<'r>>) -> Self {
-        Self {
-            runner_channel_runners,
-        }
+    fn new(inner: RwLockReadGuard<'a, RunnerChannelRunners<'r>>) -> Self {
+        Self { inner }
     }
+
     pub fn channels(&self) -> HashMap<ChannelId, &RunnerChannel> {
-        self.runner_channel_runners
+        self.inner
             .iter()
-            .map(|(channel_id, runner_channel_runner)| {
+            .map(move |(channel_id, runner_channel_runner)| {
                 (*channel_id, runner_channel_runner.runner_channel())
             })
             .collect::<HashMap<ChannelId, &RunnerChannel>>()
     }
 }
 
-// Runner Channel
 #[derive(Debug)]
 pub struct RunnerChannel {
     channel_id: ChannelId,
@@ -296,13 +116,11 @@ impl RunnerChannel {
         let channel_runner =
             self.channel
                 .run(channel_run_exit_flag_receiver)
-                .then(async move |_: Exited| {
+                .inspect(move |_: &Exited| {
                     channel_segment_forwarder_exit_flag_sender.signal();
-                    Exited
                 });
-        let channel_segment_forwarder_runner = self
-            .channel_segment_forwarder_run(channel_segment_forwarder_exit_flag_receiver)
-            .then(async move |_: Exited| Exited);
+        let channel_segment_forwarder_runner =
+            self.channel_segment_forwarder_run(channel_segment_forwarder_exit_flag_receiver);
 
         let _: (Exited, Exited) = join!(channel_runner, channel_segment_forwarder_runner);
 
@@ -329,7 +147,6 @@ struct RunnerChannelRunnerInner<'r> {
     runner_channel_runtime_scope_runnable:
         ManuallyDrop<RuntimeScopeRunnable<'r, 'this, RunnerChannel>>,
 }
-
 #[derive(Debug)]
 struct RunnerChannelRunner<'r> {
     inner: RunnerChannelRunnerInner<'r>,
@@ -337,13 +154,13 @@ struct RunnerChannelRunner<'r> {
     finalize_guard: FinalizeGuard,
 }
 impl<'r> RunnerChannelRunner<'r> {
-    pub fn new(
+    fn new(
         runtime: &'r Runtime,
         runner_channel: RunnerChannel,
     ) -> Self {
         let inner = RunnerChannelRunnerInnerBuilder {
             runner_channel,
-            runner_channel_runtime_scope_runnable_builder: |runner_channel| {
+            runner_channel_runtime_scope_runnable_builder: move |runner_channel| {
                 let runner_channel_runtime_scope_runnable =
                     RuntimeScopeRunnable::new(runtime, runner_channel);
                 let runner_channel_runtime_scope_runnable =
@@ -365,7 +182,7 @@ impl<'r> RunnerChannelRunner<'r> {
         self.inner.borrow_runner_channel()
     }
 
-    pub async fn finalize(mut self) -> RunnerChannel {
+    async fn finalize(mut self) -> RunnerChannel {
         let runner_channel_runtime_scope_runnable =
             self.inner.with_runner_channel_runtime_scope_runnable_mut(
                 move |runner_channel_runtime_scope_runnable| {
@@ -391,10 +208,176 @@ impl<'r> RunnerChannelRunner<'r> {
     }
 }
 
-// Module
 #[self_referencing]
 #[derive(Debug)]
-struct RunnerModuleInner<'f> {
+struct ManagerRunnerInner<'r, 'f: 'r> {
+    manager: Manager<'f>,
+
+    #[borrows(manager)]
+    #[not_covariant]
+    manager_runtime_scope_runnable: ManuallyDrop<RuntimeScopeRunnable<'r, 'this, Manager<'f>>>,
+}
+#[derive(Debug)]
+struct ManagerRunner<'r, 'f> {
+    inner: ManagerRunnerInner<'r, 'f>,
+
+    finalize_guard: FinalizeGuard,
+}
+impl<'r, 'f> ManagerRunner<'r, 'f> {
+    fn new(
+        runtime: &'r Runtime,
+        manager: Manager<'f>,
+    ) -> Self {
+        let inner = ManagerRunnerInnerBuilder {
+            manager,
+            manager_runtime_scope_runnable_builder: move |manager| {
+                let manager_runtime_scope_runnable = RuntimeScopeRunnable::new(runtime, manager);
+                let manager_runtime_scope_runnable =
+                    ManuallyDrop::new(manager_runtime_scope_runnable);
+                manager_runtime_scope_runnable
+            },
+        }
+        .build();
+
+        let finalize_guard = FinalizeGuard::new();
+
+        Self {
+            inner,
+            finalize_guard,
+        }
+    }
+
+    pub fn manager(&self) -> &Manager<'f> {
+        self.inner.borrow_manager()
+    }
+
+    async fn finalize(mut self) -> Manager<'f> {
+        let manager_runtime_scope_runnable = self.inner.with_manager_runtime_scope_runnable_mut(
+            move |manager_runtime_scope_runnable| {
+                let manager_runtime_scope_runnable = unsafe {
+                    transmute::<
+                        &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, Manager<'_>>>,
+                        &mut ManuallyDrop<RuntimeScopeRunnable<'static, 'static, Manager<'static>>>,
+                    >(manager_runtime_scope_runnable)
+                };
+                let manager_runtime_scope_runnable =
+                    unsafe { ManuallyDrop::take(manager_runtime_scope_runnable) };
+                manager_runtime_scope_runnable
+            },
+        );
+        manager_runtime_scope_runnable.finalize().await;
+
+        self.finalize_guard.finalized();
+
+        let inner = self.inner.into_heads();
+        inner.manager
+    }
+}
+
+#[derive(Debug)]
+pub struct Runner<'r, 'f> {
+    runtime: &'r Runtime,
+
+    manager_runner: ManagerRunner<'r, 'f>,
+    runner_channel_runners: RwLock<RunnerChannelRunners<'r>>,
+}
+impl<'r, 'f> Runner<'r, 'f> {
+    pub const SEGMENT_TIME: Duration = Duration::from_secs(60);
+
+    pub fn new(
+        runtime: &'r Runtime,
+        name: String,
+        fs: &'f Fs,
+    ) -> Self {
+        let manager = Manager::new(name, fs);
+        let manager_runner = ManagerRunner::new(runtime, manager);
+
+        let runner_channel_runners = RunnerChannelRunners::default();
+        let runner_channel_runners = RwLock::new(runner_channel_runners);
+
+        Self {
+            runtime,
+
+            manager_runner,
+            runner_channel_runners,
+        }
+    }
+
+    pub async fn channels_reload(&self) -> Result<(), Error> {
+        // lock channels
+        let mut runner_channel_runners = self
+            .runner_channel_runners
+            .try_write()
+            .context("runner_channel_runners lock")?;
+
+        // finalize current channels
+        runner_channel_runners
+            .drain()
+            .map(move |(_, runner_channel)| runner_channel.finalize())
+            .collect::<JoinAll<_>>()
+            .await;
+
+        // get new channels data
+        let channels_data = self
+            .manager_runner
+            .manager()
+            .channels_data_get()
+            .await
+            .context("manager channels_data_get")?;
+
+        // create & run new channels
+        *runner_channel_runners = channels_data
+            .into_iter()
+            .map(move |(channel_id, channel_data)| {
+                let temporary_storage_directory = self
+                    .manager_runner
+                    .manager()
+                    .channel_temporary_directory_path_build(channel_id);
+
+                let channel = Channel::new(
+                    None,
+                    Self::SEGMENT_TIME,
+                    temporary_storage_directory,
+                    channel_data.detection_threshold,
+                );
+                let runner_channel = RunnerChannel::new(
+                    channel_id,
+                    channel_data.name,
+                    channel,
+                    self.manager_runner.manager(),
+                );
+                let runner_channel_runner = RunnerChannelRunner::new(self.runtime, runner_channel);
+                (channel_id, runner_channel_runner)
+            })
+            .collect();
+
+        // drop lock
+        drop(runner_channel_runners);
+
+        Ok(())
+    }
+    pub fn channels_lock(&self) -> Option<RunnerChannelsLock<'_, 'r>> {
+        let runner_channel_runners_lock = self.runner_channel_runners.try_read().ok()?;
+        let runner_channels_lock = RunnerChannelsLock::new(runner_channel_runners_lock);
+        Some(runner_channels_lock)
+    }
+
+    pub async fn finalize(self) {
+        self.runner_channel_runners
+            .into_inner()
+            .into_values()
+            .map(move |runner_channel| runner_channel.finalize())
+            .collect::<JoinAll<_>>()
+            .await;
+
+        // manager will still collect recordings created by closing channels
+        self.manager_runner.finalize().await;
+    }
+}
+
+#[self_referencing]
+#[derive(Debug)]
+struct RunnerOwnedInner<'f> {
     runtime: Runtime,
 
     #[borrows(runtime)]
@@ -405,30 +388,29 @@ struct RunnerModuleInner<'f> {
     #[not_covariant]
     runner_runtime_scope: ManuallyDrop<RuntimeScope<'this, 'this, Runner<'this, 'f>>>,
 }
-
 #[derive(Debug)]
-pub struct RunnerModule<'f> {
-    inner: RunnerModuleInner<'f>,
+pub struct RunnerOwned<'f> {
+    inner: RunnerOwnedInner<'f>,
 
     finalize_guard: FinalizeGuard,
 }
-impl<'f> RunnerModule<'f> {
+impl<'f> RunnerOwned<'f> {
     pub fn new(
         name: String,
         fs: &'f Fs,
     ) -> Self {
-        let runtime = Runtime::new(&format!("rtsp_recorder.{}", name), 1, 1);
+        let runtime = Runtime::new(&format!("{}.rtsp_recorder", name), 1, 1);
 
-        let inner = RunnerModuleInnerBuilder {
+        let inner = RunnerOwnedInnerBuilder {
             runtime,
 
-            runner_builder: |runtime| {
+            runner_builder: move |runtime| {
                 let runner = Runner::new(runtime, name, fs);
                 let runner = ManuallyDrop::new(runner);
                 runner
             },
 
-            runner_runtime_scope_builder: |runtime, runner| {
+            runner_runtime_scope_builder: move |runtime, runner| {
                 let runner_runtime_scope = RuntimeScope::new(runtime, &**runner);
                 let runner_runtime_scope = ManuallyDrop::new(runner_runtime_scope);
                 runner_runtime_scope
@@ -447,7 +429,7 @@ impl<'f> RunnerModule<'f> {
     pub async fn channels_reload(&self) -> Result<(), Error> {
         let runner_runtime_scope: &RuntimeScope<'f, 'f, Runner<'f, 'f>> = self
             .inner
-            .with_runner_runtime_scope(|runner_runtime_scope| unsafe {
+            .with_runner_runtime_scope(move |runner_runtime_scope| unsafe {
                 #[allow(clippy::transmute_ptr_to_ptr)]
                 transmute::<
                     &RuntimeScope<'_, '_, Runner<'_, '_>>,
@@ -455,11 +437,11 @@ impl<'f> RunnerModule<'f> {
                 >(runner_runtime_scope)
             });
         runner_runtime_scope
-            .execute(|runner| runner.channels_reload().boxed())
+            .execute(move |runner| runner.channels_reload().boxed())
             .await
     }
     pub fn channels_lock(&self) -> Option<RunnerChannelsLock<'_, '_>> {
-        let runner: &Runner<'_, '_> = self.inner.with_runner(|runner| unsafe {
+        let runner: &Runner<'_, '_> = self.inner.with_runner(move |runner| unsafe {
             #[allow(clippy::transmute_ptr_to_ptr)]
             transmute::<&Runner<'_, '_>, &Runner<'static, 'static>>(runner)
         });
@@ -467,23 +449,23 @@ impl<'f> RunnerModule<'f> {
     }
 
     pub async fn finalize(self) {
-        let runner_runtime_scope = self
-            .inner
-            .with_runner_runtime_scope(|runner_runtime_scope| {
-                #[allow(mutable_transmutes)]
-                let runner_runtime_scope = unsafe {
-                    #[allow(clippy::transmute_ptr_to_ptr)]
-                    transmute::<
-                        &ManuallyDrop<RuntimeScope<'_, '_, Runner<'_, '_>>>,
-                        &mut ManuallyDrop<RuntimeScope<'f, 'f, Runner<'f, 'f>>>,
-                    >(runner_runtime_scope)
-                };
-                let runner_runtime_scope = unsafe { ManuallyDrop::take(runner_runtime_scope) };
-                runner_runtime_scope
-            });
+        let runner_runtime_scope =
+            self.inner
+                .with_runner_runtime_scope(move |runner_runtime_scope| {
+                    #[allow(mutable_transmutes)]
+                    let runner_runtime_scope = unsafe {
+                        #[allow(clippy::transmute_ptr_to_ptr)]
+                        transmute::<
+                            &ManuallyDrop<RuntimeScope<'_, '_, Runner<'_, '_>>>,
+                            &mut ManuallyDrop<RuntimeScope<'f, 'f, Runner<'f, 'f>>>,
+                        >(runner_runtime_scope)
+                    };
+                    let runner_runtime_scope = unsafe { ManuallyDrop::take(runner_runtime_scope) };
+                    runner_runtime_scope
+                });
         runner_runtime_scope.finalize().await;
 
-        let runner = self.inner.with_runner(|runner| {
+        let runner = self.inner.with_runner(move |runner| {
             #[allow(mutable_transmutes)]
             let runner = unsafe {
                 #[allow(clippy::transmute_ptr_to_ptr)]
