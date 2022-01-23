@@ -68,7 +68,7 @@ impl ReadBitsGenericResponse {
         }
         let bit_bytes_count_received = data[0] as usize;
 
-        let bit_bytes_count_expected = request.number_of_bits.unstable_div_ceil(8) as usize;
+        let bit_bytes_count_expected = request.number_of_bits.div_ceil(8) as usize;
         ensure!(
             bit_bytes_count_received == bit_bytes_count_expected,
             "bit bytes count mismatch"
@@ -859,12 +859,7 @@ impl Request for WriteMultipleRegistersRequest {
             .chain(((self.starting_address - 1) as u16).to_be_bytes())
             .chain((self.values.len() as u16).to_be_bytes())
             .chain(((self.values.len() * 2) as u8).to_be_bytes())
-            .chain(
-                self.values
-                    .iter()
-                    .map(|value| value.to_be_bytes())
-                    .flatten(),
-            )
+            .chain(self.values.iter().flat_map(|value| value.to_be_bytes()))
             .collect::<Box<[_]>>()
     }
 }

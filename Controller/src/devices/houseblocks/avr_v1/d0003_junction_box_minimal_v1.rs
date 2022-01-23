@@ -159,9 +159,7 @@ pub mod logic {
 
             // temperature
             if let Some(temperature) = self.properties_remote.temperature.take_pending() {
-                let temperature = temperature
-                    .map(|temperature| temperature.temperature())
-                    .flatten();
+                let temperature = temperature.and_then(|temperature| temperature.temperature());
 
                 if self.signal_temperature.set_one(temperature) {
                     signals_changed = true;
@@ -259,8 +257,7 @@ pub mod logic {
                     .properties_remote
                     .temperature
                     .peek_last()
-                    .map(|temperature| temperature.temperature())
-                    .flatten(),
+                    .and_then(|temperature| temperature.temperature()),
             };
             let gui_summary = Box::new(gui_summary);
             gui_summary

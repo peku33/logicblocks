@@ -8,6 +8,4 @@
     "stackable",
     "unstackable"
   ],
-  "editor.formatOnSave": true,
-  "files.insertFinalNewline": true,
 }

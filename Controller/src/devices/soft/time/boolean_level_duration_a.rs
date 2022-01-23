@@ -197,24 +197,20 @@ impl signals::Device for Device {
                     &self.signal_started as &dyn signal::Base,
                 ),
             ])
-            .chain(
-                self.signal_breakpoints
-                    .iter()
-                    .enumerate()
-                    .map(|(breakpoint_index, (signal_released, signal_expired))| {
-                        [
-                            (
-                                SignalIdentifier::Released(breakpoint_index),
-                                signal_released as &dyn signal::Base,
-                            ),
-                            (
-                                SignalIdentifier::Expired(breakpoint_index),
-                                signal_expired as &dyn signal::Base,
-                            ),
-                        ]
-                    })
-                    .flatten(),
-            )
+            .chain(self.signal_breakpoints.iter().enumerate().flat_map(
+                |(breakpoint_index, (signal_released, signal_expired))| {
+                    [
+                        (
+                            SignalIdentifier::Released(breakpoint_index),
+                            signal_released as &dyn signal::Base,
+                        ),
+                        (
+                            SignalIdentifier::Expired(breakpoint_index),
+                            signal_expired as &dyn signal::Base,
+                        ),
+                    ]
+                },
+            ))
             .chain([(
                 SignalIdentifier::Finished,
                 &self.signal_finished as &dyn signal::Base,

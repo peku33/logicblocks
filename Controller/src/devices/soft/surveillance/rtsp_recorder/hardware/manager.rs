@@ -3,6 +3,7 @@ use crate::{
     datatypes::ratio::Ratio,
     modules,
     util::{
+        async_barrier::Barrier,
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         atomic_cell::AtomicCell,
@@ -45,6 +46,8 @@ pub struct Manager<'f> {
 
     sqlite: SQLite<'f>,
 
+    initialized: Barrier,
+
     channel_segment_sender: mpsc::UnboundedSender<ChannelIdSegment>,
     channel_segment_receiver: AtomicCell<mpsc::UnboundedReceiver<ChannelIdSegment>>,
 }
@@ -55,6 +58,8 @@ impl<'f> Manager<'f> {
     ) -> Self {
         let sqlite = SQLite::new(fs, format!("rtsp_recorder.manager.{}", name));
 
+        let initialized = Barrier::new();
+
         let (channel_segment_sender, channel_segment_receiver) =
             mpsc::unbounded::<ChannelIdSegment>();
         let channel_segment_receiver = AtomicCell::new(channel_segment_receiver);
@@ -64,6 +69,8 @@ impl<'f> Manager<'f> {
             fs,
 
             sqlite,
+
+            initialized,
 
             channel_segment_sender,
             channel_segment_receiver,
@@ -105,6 +112,8 @@ impl<'f> Manager<'f> {
             .await
             .context("query")?;
 
+        self.initialized.release();
+
         Ok(())
     }
     async fn initialize(
@@ -129,6 +138,8 @@ impl<'f> Manager<'f> {
 
     // channels management
     pub async fn channels_data_get(&self) -> Result<HashMap<ChannelId, ChannelData>, Error> {
+        self.initialized.waiter().await;
+
         let channels = self
             .sqlite
             .query(
