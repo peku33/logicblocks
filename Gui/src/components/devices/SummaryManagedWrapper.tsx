@@ -1,47 +1,46 @@
 import Colors from "components/common/Colors";
 import MediaQueries from "components/common/MediaQueries";
-import { getByClass } from "components/devices/SummaryManagedFactory";
 import { getJson } from "lib/Api";
-import React, { useState } from "react";
+import { useState } from "react";
 import { endpointBuild } from "services/LogicDevicesRunner";
 import styled from "styled-components";
 import useAsyncEffect from "use-async-effect";
+import { getByClass } from "./SummaryManagedFactory";
 
-interface DeviceData {
-  name: string;
-  class: string;
-}
-
-const DeviceSummary: React.VFC<{
+const SummaryManagedWrapper: React.VFC<{
   deviceId: number;
 }> = (props) => {
   const { deviceId } = props;
 
-  const deviceData = useDeviceContext(deviceId);
-
+  const deviceData = useDeviceData(deviceId);
   if (deviceData === undefined) {
-    return null; // TODO
+    return null;
   }
 
   const Component = getByClass(deviceData.class);
 
   return (
     <Wrapper>
-      <DeviceDetails>
-        <DeviceDetailsName>{deviceData.name}</DeviceDetailsName>
-        <DeviceDetailsDetails>
+      <Details>
+        <DetailsName>{deviceData.name}</DetailsName>
+        <DetailsDetails>
           #{deviceId} {deviceData.class}
-        </DeviceDetailsDetails>
-      </DeviceDetails>
-      <DeviceComponentWrapper>
+        </DetailsDetails>
+      </Details>
+      <ComponentWrapper>
         <Component deviceId={deviceId} deviceClass={deviceData.class} />
-      </DeviceComponentWrapper>
+      </ComponentWrapper>
     </Wrapper>
   );
 };
-export default DeviceSummary;
+export default SummaryManagedWrapper;
 
-function useDeviceContext(deviceId: number): DeviceData | undefined {
+interface DeviceData {
+  name: string;
+  class: string;
+}
+
+function useDeviceData(deviceId: number): DeviceData | undefined {
   const [deviceData, setDeviceData] = useState<DeviceData>();
 
   useAsyncEffect(
@@ -70,18 +69,20 @@ const Wrapper = styled.div`
     grid-gap: 0.5rem;
   }
 `;
-const DeviceDetails = styled.div``;
-const DeviceDetailsName = styled.h2`
+
+const Details = styled.div``;
+const DetailsName = styled.h2`
   font-size: 1.25rem;
   font-weight: bold;
   word-break: break-all;
 `;
-const DeviceDetailsDetails = styled.h4`
+const DetailsDetails = styled.h4`
   font-size: 1.125rem;
   font-weight: 600;
   word-break: break-all;
 `;
-const DeviceComponentWrapper = styled.div`
+
+const ComponentWrapper = styled.div`
   @media ${MediaQueries.MOBILE_ONLY} {
     padding-top: 0.25rem;
     border-top: solid 1px ${Colors.GREY_LIGHTEST};

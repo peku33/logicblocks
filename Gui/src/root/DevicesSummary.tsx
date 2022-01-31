@@ -1,41 +1,30 @@
-import Colors from "components/common/Colors";
+import SummaryManagedWrapperList from "components/devices/SummaryManagedWrapperList";
 import { getJson } from "lib/Api";
 import React, { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import { endpointBuild } from "services/LogicDevicesRunner";
-import styled from "styled-components";
 import useAsyncEffect from "use-async-effect";
-import DeviceSummary from "./DeviceSummary";
 import Error404 from "./Error404";
 
 const DevicesSummary: React.VFC = () => {
+  return (
+    <Routes>
+      <Route path="" element={<DevicesSummaryListRoute />}></Route>
+      <Route path="*" element={<Error404 />} />
+    </Routes>
+  );
+};
+export default DevicesSummary;
+
+const DevicesSummaryListRoute: React.VFC = () => {
   const deviceIds = useDeviceIds();
 
   if (deviceIds === undefined) {
     return null; // TODO
   }
 
-  return (
-    <Routes>
-      <Route
-        path=""
-        element={
-          <>
-            <DevicesList>
-              {deviceIds.map((deviceId) => (
-                <DevicesListItem key={deviceId}>
-                  <DeviceSummary deviceId={deviceId} />
-                </DevicesListItem>
-              ))}
-            </DevicesList>
-          </>
-        }
-      ></Route>
-      <Route path="*" element={<Error404 />} />
-    </Routes>
-  );
+  return <SummaryManagedWrapperList deviceIds={deviceIds} />;
 };
-export default DevicesSummary;
 
 function useDeviceIds(): number[] | undefined {
   const [deviceIds, setDeviceIds] = useState<number[]>();
@@ -55,12 +44,3 @@ function useDeviceIds(): number[] | undefined {
 
   return deviceIds;
 }
-
-const DevicesList = styled.div``;
-const DevicesListItem = styled.div`
-  padding: 0.5rem;
-  border-bottom: solid 1px ${Colors.GREY_LIGHTEST};
-  &:last-child {
-    border-bottom: none;
-  }
-`;

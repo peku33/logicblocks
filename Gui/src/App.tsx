@@ -4,10 +4,12 @@ import Body from "./root/Body";
 
 const App: React.VFC = () => {
   return (
-    <BrowserRouter>
+    <>
       <GlobalStyles />
-      <Body />
-    </BrowserRouter>
+      <BrowserRouter>
+        <Body />
+      </BrowserRouter>
+    </>
   );
 };
 export default App;

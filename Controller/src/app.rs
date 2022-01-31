@@ -9,6 +9,7 @@ use super::{
         uri_cursor::{map_router::MapRouter, Handler},
     },
 };
+use crate::gui::dashboards::Dashboards;
 use anyhow::{Context, Error};
 use maplit::hashmap;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
@@ -17,6 +18,7 @@ use tokio::signal::ctrl_c;
 pub async fn run(
     devices: Devices<'_>,
     signals: Signals,
+    dashboards: Dashboards<'_>,
     bind_global: bool,
 ) -> Result<(), Error> {
     let device_wrappers_by_id = devices.into_device_wrappers_by_id();
@@ -27,8 +29,12 @@ pub async fn run(
         Runner::new(device_wrappers_by_id, &connections_requested).context("new")?;
 
     // web service
+    let gui_router = MapRouter::new(hashmap! {
+        "dashboards".to_owned() => &dashboards as &(dyn Handler + Sync),
+    });
     let root_router = MapRouter::new(hashmap! {
-        "devices-runner".to_owned() => &device_runner as &(dyn Handler + Sync)
+        "devices-runner".to_owned() => &device_runner as &(dyn Handler + Sync),
+        "gui".to_owned() => &gui_router as &(dyn Handler + Sync),
     });
     let root_service = RootService::new(&root_router);
     let server_runner = server::ServerRunner::new(

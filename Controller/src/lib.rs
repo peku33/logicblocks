@@ -28,6 +28,7 @@
 pub mod app;
 pub mod datatypes;
 pub mod devices;
+pub mod gui;
 pub mod interfaces;
 pub mod modules;
 pub mod signals;

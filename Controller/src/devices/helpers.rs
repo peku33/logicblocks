@@ -26,7 +26,7 @@ impl<'d> Devices<'d> {
 
         let device_wrapper = DeviceWrapper::new(name, device);
 
-        let device_id = self.device_wrappers.len() as DeviceId;
+        let device_id = (self.device_wrappers.len() + 1) as DeviceId; // starts from 1
         self.device_wrappers.push(device_wrapper);
 
         DeviceHandle::<D>::new(device_id)
@@ -36,7 +36,7 @@ impl<'d> Devices<'d> {
         self.device_wrappers
             .into_iter()
             .enumerate()
-            .map(|(device_id, device)| (device_id as u32, device))
+            .map(|(device_id, device)| ((device_id + 1) as u32, device))
             .collect::<HashMap<_, _>>()
     }
 }
@@ -163,6 +163,10 @@ impl<'d> DeviceHandleErased<'d> {
             device_id,
             phantom_data: PhantomData,
         }
+    }
+
+    pub fn device_id(&self) -> DeviceId {
+        self.device_id
     }
 
     pub fn signal<I: SignalIdentifier>(

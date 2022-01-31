@@ -1,6 +1,7 @@
 import Colors from "components/common/Colors";
-import { Link, Navigate, Route, Routes, useMatch } from "react-router-dom";
+import { Navigate, NavLink, Route, Routes, To } from "react-router-dom";
 import styled from "styled-components";
+import Dashboards from "./Dashboards";
 import DevicesSummary from "./DevicesSummary";
 import Error404 from "./Error404";
 
@@ -9,13 +10,15 @@ const Body: React.VFC = () => {
     <Layout>
       <TopBar>
         <Menu>
-          <MenuItem pattern="/devices_summary/*" target="/devices_summary" text="Devices" />
+          <MenuItem to="/dashboards">Dashboards</MenuItem>
+          <MenuItem to="/devices_summary">Devices</MenuItem>
         </Menu>
       </TopBar>
       <Content>
         <Routes>
-          <Route path="devices_summary/*" element={<DevicesSummary />} />
-          <Route path="" element={<Navigate to="devices_summary" />} />
+          <Route path="dashboards/*" element={<DashboardsRoute />} />
+          <Route path="devices_summary/*" element={<DevicesSummaryRoute />} />
+          <Route path="" element={<Navigate to="/dashboards" />} />
           <Route path="*" element={<Error404 />} />
         </Routes>
       </Content>
@@ -24,27 +27,33 @@ const Body: React.VFC = () => {
 };
 export default Body;
 
+const DashboardsRoute: React.VFC = () => {
+  return <Dashboards />;
+};
+const DevicesSummaryRoute: React.VFC = () => {
+  return <DevicesSummary />;
+};
+
 const Layout = styled.div`
   height: 100%;
   display: flex;
   flex-direction: column;
 `;
+
 const TopBar = styled.div`
   border-bottom: solid 1px ${Colors.GREY_LIGHTEST};
 `;
-const Menu = styled.div``;
-const MenuItem: React.VFC<{
-  pattern: string;
-  target: string;
-  text: string;
+const Menu = styled.div`
+  & > a {
+    color: inherit;
+  }
+`;
+const MenuItem: React.FC<{
+  to: To;
 }> = (props) => {
-  const match = useMatch(props.pattern) !== null;
+  const { to, children } = props;
 
-  return (
-    <MenuLink active={match}>
-      <Link to={props.target}>{props.text}</Link>
-    </MenuLink>
-  );
+  return <NavLink to={to}>{({ isActive }) => <MenuLink active={isActive}>{children}</MenuLink>}</NavLink>;
 };
 const MenuLink = styled.div<{
   active: boolean;
@@ -53,15 +62,11 @@ const MenuLink = styled.div<{
   padding: 1rem;
 
   background-color: ${(props) => (props.active ? Colors.BLUE : "unset")};
-  color: ${(props) => (props.active ? Colors.WHITE : "unset")};
+  color: ${(props) => (props.active ? Colors.WHITE : "inherit")};
 
   font-weight: bold;
-
-  & > a {
-    color: inherit;
-    text-decoration: none;
-  }
 `;
+
 const Content = styled.div`
   flex: auto;
 `;

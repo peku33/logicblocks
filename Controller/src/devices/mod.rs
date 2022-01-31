@@ -20,7 +20,6 @@ use derive_more::Constructor;
 use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
 use serde::{de::DeserializeOwned, Serialize};
-use serde_json::json;
 use std::{borrow::Cow, fmt};
 
 pub type Id = u32;
@@ -93,16 +92,18 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
         match uri_cursor {
             uri_cursor::UriCursor::Terminal => match *request.method() {
                 http::Method::GET => {
+                    #[derive(Serialize)]
+                    struct DeviceData {
+                        name: String,
+                        class: Cow<'static, str>,
+                    }
+
                     let name = self.name().clone();
                     let class = self.device().class();
-                    async move {
-                        let response = json!({
-                            "name": name,
-                            "class": class,
-                        });
-                        web::Response::ok_json(response)
-                    }
-                    .boxed()
+
+                    let device_data = DeviceData { name, class };
+
+                    async move { web::Response::ok_json(device_data) }.boxed()
                 }
                 _ => async move { web::Response::error_405() }.boxed(),
             },
