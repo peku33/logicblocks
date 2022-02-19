@@ -7,54 +7,54 @@ publish = false
 default-run = "logicblocks-controller"
 
 [dependencies]
-anyhow = "1.0.53"
+anyhow = "1.0.54"
 array-init = "2.0.0"
 arrayvec = "0.7.2"
 async-trait = "0.1.52"
 by_address = "1.0.4"
 bytes = "1.1.0"
 chrono = { version = "0.4.19", features = ["serde"] }
-clap = { version = "3.0.10", features = ["derive"] }
+clap = { version = "3.1.0", features = ["derive"] }
 crc = "2.1.0"
 crossbeam = "0.8.1"
 derive_more = "0.99.17"
-dialoguer = "0.9.0"
+dialoguer = "0.10.0"
 digest_auth = "0.3.0"
 env_logger = "0.9.0"
 erased-serde = "0.3.18"
-futures = "0.3.19"
+futures = "0.3.21"
 hex = "0.4.3"
 http = "0.2.6"
-hyper = { version = "0.14.16", features = ["full"] }
-image = { version = "0.23.14", default-features = false, features = ["jpeg"] } 
-indoc = "1.0.3"
+hyper = { version = "0.14.17", features = ["full"] }
+image = { version = "0.24.0", default-features = false, features = ["jpeg"] } 
+indoc = "1.0.4"
 itertools = "0.10.3"
 lazy_static = "1.4.0"
 log = { version = "0.4.14", features = ["release_max_level_info"] }
 maplit = "1.0.2"
-md-5 = "0.10.0"
-ouroboros = { git = "https://github.com/joshua-maros/ouroboros", branch = "main" }
-parking_lot = "0.11.2"
+md-5 = "0.10.1"
+ouroboros = "0.14.2"
+parking_lot = "0.12.0"
 percent-encoding = "2.1.0"
-rand = "0.8.4"
+rand = "0.8.5"
 regex = "1.5.4"
 reqwest = { version = "0.11.9", features = ["json", "stream"] }
 rusqlite = { version = "0.26.3", features = ["bundled", "array"] }
 scopeguard = "1.1.0"
-semver = "1.0.4"
-serde = { version = "1.0.135", features = ["derive"] }
-serde_json = "1.0.78"
+semver = "1.0.5"
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.79"
 stable_deref_trait = "1.2.0"
-tokio = { version = "1.15.0", features = ["full"] }
+tokio = { version = "1.17.0", features = ["full"] }
 tokio-stream = { version = "0.1.8", features = ["fs", "time", "io-util", "sync"] }
-tokio-util = "0.6.9"
+tokio-util = "0.7.0"
 web-static-pack = "0.4.2"
 xmltree = "0.10.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.10.0"
-libc = "0.2.113"
-libftdi1-sys = "1.1.1"
+libc = "0.2.118"
+libftdi1-sys = "1.1.2"
 libusb-sys = "0.2.3"
 
 [features]

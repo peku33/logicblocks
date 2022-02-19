@@ -7,7 +7,7 @@ use futures::{
 };
 use image::{imageops::FilterType, DynamicImage, ImageOutputFormat};
 use parking_lot::RwLock;
-use std::time::Duration;
+use std::{io::Cursor, time::Duration};
 
 #[derive(Debug)]
 struct ManagerSize {
@@ -45,7 +45,10 @@ impl ManagerSize {
         let jpeg_bytes = tokio::task::spawn_blocking(move || -> Result<Bytes, Error> {
             let mut jpeg_bytes = Vec::<u8>::new();
             image
-                .write_to(&mut jpeg_bytes, ImageOutputFormat::Jpeg(jpeg_quality))
+                .write_to(
+                    &mut Cursor::new(&mut jpeg_bytes),
+                    ImageOutputFormat::Jpeg(jpeg_quality),
+                )
                 .context("write_to")?;
             Ok(Bytes::from(jpeg_bytes))
         })
