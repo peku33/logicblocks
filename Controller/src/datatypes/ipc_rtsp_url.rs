@@ -1,4 +1,4 @@
-use anyhow::Error;
+use anyhow::{Context, Error};
 use http::uri::Uri;
 use serde::{Deserialize, Serialize};
 use std::{fmt, fmt::Display, str::FromStr};
@@ -19,7 +19,7 @@ impl FromStr for IpcRtspUrl {
     type Err = Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let uri: Uri = value.parse()?;
+        let uri: Uri = value.parse().context("parse")?;
         Ok(Self(uri))
     }
 }

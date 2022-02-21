@@ -292,7 +292,7 @@ impl<'f> Manager<'f> {
         let sink_items_to_buffer_to_storage_runner =
             self.sink_items_to_buffer_to_storage_run(exit_flag);
 
-        let _: (Exited,) = try_join!(sink_items_to_buffer_to_storage_runner)?;
+        let _: (Exited,) = try_join!(sink_items_to_buffer_to_storage_runner).context("try_join")?;
 
         Ok(Exited)
     }

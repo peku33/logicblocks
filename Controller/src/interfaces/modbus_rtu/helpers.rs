@@ -62,7 +62,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_bits_array_to_byte_1() {
+    fn bits_array_to_byte_1() {
         assert_eq!(
             bits_array_to_byte([true, false, true, true, false, false, true, true]),
             0xcd
@@ -70,7 +70,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bits_byte_to_array_1() {
+    fn bits_byte_to_array_1() {
         assert_eq!(
             bits_byte_to_array(0xcd),
             [true, false, true, true, false, false, true, true]
@@ -78,7 +78,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bits_byte_to_array_checked_1() {
+    fn bits_byte_to_array_checked_1() {
         assert_eq!(
             bits_byte_to_array_checked(0x05, 3).unwrap(),
             [true, false, true, false, false, false, false, false]
@@ -87,7 +87,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bits_slice_to_bytes_1() {
+    fn bits_slice_to_bytes_1() {
         assert_eq!(
             bits_slice_to_bytes(&[
                 true, false, true, true, false, false, true, true, // 0xcd
@@ -99,7 +99,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bits_bytes_to_slice_1() {
+    fn bits_bytes_to_slice_1() {
         assert_eq!(
             bits_bytes_to_slice(&[0xcd, 0x6b, 0x05]),
             vec![
@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bits_bytes_to_slice_checked_1() {
+    fn bits_bytes_to_slice_checked_1() {
         assert_eq!(
             bits_bytes_to_slice_checked(&[0xcd, 0x6b, 0x05], 19).unwrap(),
             vec![

@@ -6,7 +6,7 @@ use crate::interfaces::serial::{
     },
     Bits, Configuration as SerialConfiguration, Parity, StopBits,
 };
-use anyhow::{bail, Context, Error};
+use anyhow::{bail, ensure, Context, Error};
 use crossbeam::channel;
 use futures::channel::oneshot;
 use std::{fmt::Debug, mem::ManuallyDrop, thread, time::Duration};
@@ -92,9 +92,10 @@ impl Driver {
             }
 
             frame_buffer.extend_from_slice(&frame);
-            if frame_buffer.len() > FRAME_BUFFER_MAX_LENGTH {
-                bail!("frame_buffer size exceeded. Noise?");
-            }
+            ensure!(
+                frame_buffer.len() <= FRAME_BUFFER_MAX_LENGTH,
+                "frame_buffer size exceeded. Noise?"
+            );
 
             let char_begin_position = match frame_buffer
                 .iter()
@@ -157,9 +158,10 @@ impl Driver {
             }
 
             frame_buffer.extend_from_slice(&frame);
-            if frame_buffer.len() > ADDRESS_LENGTH {
-                bail!("frame_buffer size exceeded. Noise?");
-            }
+            ensure!(
+                frame_buffer.len() <= ADDRESS_LENGTH,
+                "frame_buffer size exceeded. Noise?"
+            );
 
             if frame_buffer.len() == ADDRESS_LENGTH {
                 let address_device_type = AddressDeviceType::new(

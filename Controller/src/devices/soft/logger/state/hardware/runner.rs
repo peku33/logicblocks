@@ -347,7 +347,7 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
 
                 Ok((sink_id, runner_sink_runner))
             })
-            .collect::<Result<HashMap<_, _>, Error>>()?;
+            .collect::<Result<HashMap<_, _>, Error>>().context("collect")?;
 
         let runner_sinks_runner = RunnerSinksRunner::new(runner_sink_runners);
 

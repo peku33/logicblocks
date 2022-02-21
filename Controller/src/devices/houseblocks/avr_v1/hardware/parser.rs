@@ -1,5 +1,5 @@
 use super::super::super::houseblocks_v1::common::Payload;
-use anyhow::{bail, Error};
+use anyhow::{bail, ensure, Context, Error};
 use std::slice;
 
 pub trait Parser {
@@ -14,7 +14,7 @@ pub trait Parser {
         Ok(byte)
     }
     fn expect_bool(&mut self) -> Result<bool, Error> {
-        let value = match self.expect_byte()? {
+        let value = match self.expect_byte().context("expect_byte")? {
             b'0' => false,
             b'1' => true,
             value => bail!("invalid character for bool: {}", value),
@@ -22,23 +22,27 @@ pub trait Parser {
         Ok(value)
     }
     fn expect_u8(&mut self) -> Result<u8, Error> {
-        let value_hex = [self.expect_byte()?, self.expect_byte()?];
+        let value_hex = [
+            self.expect_byte().context("expect_byte 1")?,
+            self.expect_byte().context("expect_byte 2")?,
+        ];
         let mut value = [0u8; 1];
-        hex::decode_to_slice(&value_hex, &mut value)?;
+        hex::decode_to_slice(&value_hex, &mut value).context("decode_to_slice")?;
         Ok(u8::from_be_bytes(value))
     }
     fn expect_u16(&mut self) -> Result<u16, Error> {
         let value_hex = [
-            self.expect_byte()?,
-            self.expect_byte()?,
-            self.expect_byte()?,
-            self.expect_byte()?,
+            self.expect_byte().context("expect_byte 1")?,
+            self.expect_byte().context("expect_byte 2")?,
+            self.expect_byte().context("expect_byte 3")?,
+            self.expect_byte().context("expect_byte 4")?,
         ];
         let mut value = [0u8; 2];
-        hex::decode_to_slice(&value_hex, &mut value)?;
+        hex::decode_to_slice(&value_hex, &mut value).context("decode_to_slice")?;
         Ok(u16::from_be_bytes(value))
     }
 }
+
 pub struct ParserPayload<'a> {
     iterator: slice::Iter<'a, u8>,
 }
@@ -54,9 +58,7 @@ impl<'a> Parser for ParserPayload<'a> {
         self.iterator.next().copied()
     }
     fn expect_end(&self) -> Result<(), Error> {
-        if !self.iterator.is_empty() {
-            bail!("more data available");
-        }
+        ensure!(self.iterator.is_empty(), "more data available");
         Ok(())
     }
 }

@@ -405,9 +405,11 @@ impl<'m> Device<'m> {
         }
 
         // if the code didn't go away - fail the device
-        if error_code > 0 {
-            bail!("device is failing with error code: {}", error_code);
-        }
+        ensure!(
+            error_code == 0,
+            "device is failing with error code: {}",
+            error_code
+        );
 
         Ok(())
     }

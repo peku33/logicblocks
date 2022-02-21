@@ -18,7 +18,7 @@ use crate::{
         runtime::{Exited, Runnable},
     },
 };
-use anyhow::{anyhow, bail, ensure, Error};
+use anyhow::{anyhow, bail, ensure, Error, Context};
 use async_trait::async_trait;
 use by_address::ByAddress;
 use derive_more::Constructor;
@@ -100,7 +100,7 @@ impl<'d> Exchanger<'d> {
         devices: &HashMap<DeviceId, DeviceBaseRef<'d>>,
         connections_requested: &[ConnectionRequested],
     ) -> Result<Self, Error> {
-        let inner = new_inner(devices, connections_requested)?;
+        let inner = new_inner(devices, connections_requested).context("new_inner")?;
         Ok(Self { inner })
     }
 
@@ -279,12 +279,12 @@ fn new_inner<'d>(
     connections_requested: &[ConnectionRequested],
 ) -> Result<ExchangerInner<'d>, Error> {
     let inner = ExchangerInner::try_new(
-        new_inner_parent(devices)?,
+        new_inner_parent(devices).context("new_inner_parent")?,
         move |parent| -> Result<_, Error> {
-            let child = new_inner_child(parent, connections_requested)?;
+            let child = new_inner_child(parent, connections_requested).context("new_inner_child")?;
             Ok(child)
         },
-    )?;
+    ).context("try_new")?;
 
     Ok(inner)
 }

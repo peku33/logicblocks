@@ -97,7 +97,7 @@ mod tests_read_bits_generic {
     use super::{ReadBitsGenericRequest, ReadBitsGenericResponse};
 
     #[test]
-    fn test_request_response_1() {
+    fn request_response_1() {
         let request = ReadBitsGenericRequest::new(20, 19).unwrap();
         assert_eq!(&*request.data(), &[0x00, 0x13, 0x00, 0x13]);
 
@@ -327,7 +327,7 @@ mod tests_read_words_generic {
     use super::{ReadWordsGenericRequest, ReadWordsGenericResponse};
 
     #[test]
-    fn test_request_response_1() {
+    fn request_response_1() {
         let request = ReadWordsGenericRequest::new(108, 3).unwrap();
         assert_eq!(&*request.data(), &[0x00, 0x6b, 0x00, 0x03]);
 
@@ -536,7 +536,7 @@ mod tests_write_single_coil {
     use super::{Request, Response, WriteSingleCoilRequest, WriteSingleCoilResponse};
 
     #[test]
-    fn test_request_response_1() {
+    fn request_response_1() {
         let request = WriteSingleCoilRequest::new(173, true).unwrap();
         assert_eq!(&*request.data(), &[0x00, 0xac, 0xff, 0x00]);
 
@@ -616,7 +616,7 @@ mod tests_write_single_register {
     use super::{Request, Response, WriteSingleRegisterRequest, WriteSingleRegisterResponse};
 
     #[test]
-    fn test_request_response_1() {
+    fn request_response_1() {
         let request = WriteSingleRegisterRequest::new(2, 3).unwrap();
         assert_eq!(&*request.data(), &[0x00, 0x01, 0x00, 0x03]);
 
@@ -685,7 +685,7 @@ mod tests_read_exception_status {
     use super::{ReadExceptionStatusRequest, ReadExceptionStatusResponse, Request, Response};
 
     #[test]
-    fn test_request_response_1() {
+    fn request_response_1() {
         let request = ReadExceptionStatusRequest::new();
         assert!(request.data().is_empty());
 
@@ -798,7 +798,7 @@ mod tests_write_multiple_coils {
     use super::{Request, Response, WriteMultipleCoilsRequest, WriteMultipleCoilsResponse};
 
     #[test]
-    fn test_request_response_1() {
+    fn request_response_1() {
         let request = WriteMultipleCoilsRequest::new(
             20,
             vec![
@@ -908,7 +908,7 @@ mod tests_write_multiple_registers {
     use super::{Request, Response, WriteMultipleRegistersRequest, WriteMultipleRegistersResponse};
 
     #[test]
-    fn test_request_response_1() {
+    fn request_response_1() {
         let request =
             WriteMultipleRegistersRequest::new(2, vec![0x00a, 0x0102].into_boxed_slice()).unwrap();
         assert_eq!(

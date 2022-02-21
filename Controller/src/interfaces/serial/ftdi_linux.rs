@@ -4,7 +4,7 @@ use super::{
     ftdi::{Descriptor, DeviceConfiguration},
     Bits, Configuration, Parity, StopBits,
 };
-use anyhow::{bail, Context, Error};
+use anyhow::{bail, ensure, Context, Error};
 use libftdi1_sys::*;
 use scopeguard::defer;
 use std::{cell::RefCell, ffi, mem::MaybeUninit, ptr};
@@ -25,9 +25,7 @@ impl Global {
 
         *context_rc.borrow_mut() = unsafe { ftdi_new() };
         let context = *context_rc.borrow_mut();
-        if context.is_null() {
-            bail!("ftdi_new() failed");
-        }
+        ensure!(!context.is_null(), "ftdi_new() failed");
 
         Ok(Self {
             context: context_rc.replace(ptr::null_mut()),
@@ -47,9 +45,11 @@ impl Global {
         let mut ftdi_device_list_ptr = *ftdi_device_list_ptr_rc.borrow_mut();
         let ftdi_usb_find_all_result =
             unsafe { ftdi_usb_find_all(self.context, &mut ftdi_device_list_ptr, 0, 0) };
-        if ftdi_usb_find_all_result < 0 {
-            bail!("ftdi_usb_find_all() returned {}", ftdi_usb_find_all_result);
-        }
+        ensure!(
+            ftdi_usb_find_all_result >= 0,
+            "ftdi_usb_find_all() returned {}",
+            ftdi_usb_find_all_result
+        );
 
         let mut descriptors = Vec::<Descriptor>::with_capacity(ftdi_usb_find_all_result as usize);
         let mut ftdi_device_list_ptr_iter = ftdi_device_list_ptr;
@@ -71,12 +71,11 @@ impl Global {
                     libusb_device_descriptor.as_mut_ptr(),
                 )
             };
-            if libusb_get_device_descriptor_result != 0 {
-                bail!(
-                    "libusb_get_device_descriptor() failed: {}",
-                    libusb_get_device_descriptor_result,
-                );
-            }
+            ensure!(
+                libusb_get_device_descriptor_result == 0,
+                "libusb_get_device_descriptor() failed: {}",
+                libusb_get_device_descriptor_result,
+            );
             let libusb_device_descriptor = unsafe { libusb_device_descriptor.assume_init() };
 
             // Check descriptors
@@ -191,9 +190,7 @@ impl Device {
         }}
 
         let context = *context_rc.borrow_mut();
-        if context.is_null() {
-            bail!("ftdi_new() failed");
-        }
+        ensure!(!context.is_null(), "ftdi_new() failed");
 
         let ftdi_usb_open_desc_result = unsafe {
             ftdi_usb_open_desc(
@@ -204,21 +201,19 @@ impl Device {
                 descriptor.serial_number.as_ptr(),
             )
         };
-        if ftdi_usb_open_desc_result != 0 {
-            bail!(
-                "ftdi_usb_open_desc() failed with code {}",
-                ftdi_usb_open_desc_result,
-            );
-        }
+        ensure!(
+            ftdi_usb_open_desc_result == 0,
+            "ftdi_usb_open_desc() failed with code {}",
+            ftdi_usb_open_desc_result,
+        );
 
         let ftdi_set_baudrate_result =
             unsafe { ftdi_set_baudrate(context, configuration.baud_rate as i32) };
-        if ftdi_set_baudrate_result != 0 {
-            bail!(
-                "ftdi_set_baudrate() failed with code {}",
-                ftdi_set_baudrate_result,
-            );
-        }
+        ensure!(
+            ftdi_set_baudrate_result == 0,
+            "ftdi_set_baudrate() failed with code {}",
+            ftdi_set_baudrate_result,
+        );
 
         let ftdi_set_line_property_result = unsafe {
             ftdi_set_line_property2(
@@ -229,33 +224,30 @@ impl Device {
                 ftdi_break_type::BREAK_OFF,
             )
         };
-        if ftdi_set_line_property_result != 0 {
-            bail!(
-                "ftdi_set_line_property() failed with code {}",
-                ftdi_set_line_property_result,
-            );
-        }
+        ensure!(
+            ftdi_set_line_property_result == 0,
+            "ftdi_set_line_property() failed with code {}",
+            ftdi_set_line_property_result,
+        );
 
         let ftdi_setflowctrl_result = unsafe {
             ftdi_setflowctrl(
                 context, 0, // SIO_DISABLE_FLOW_CTRL
             )
         };
-        if ftdi_setflowctrl_result != 0 {
-            bail!(
-                "ftdi_setflowctrl() failed with code {}",
-                ftdi_setflowctrl_result
-            );
-        }
+        ensure!(
+            ftdi_setflowctrl_result == 0,
+            "ftdi_setflowctrl() failed with code {}",
+            ftdi_setflowctrl_result
+        );
 
         let ftdi_set_latency_timer_result =
             unsafe { ftdi_set_latency_timer(context, device_configuration.latency_timer_ms) };
-        if ftdi_set_latency_timer_result != 0 {
-            bail!(
-                "ftdi_set_latency_timer() failed with code {}",
-                ftdi_set_latency_timer_result
-            );
-        }
+        ensure!(
+            ftdi_set_latency_timer_result == 0,
+            "ftdi_set_latency_timer() failed with code {}",
+            ftdi_set_latency_timer_result
+        );
 
         Ok(Self {
             context: context_rc.replace(ptr::null_mut()),
@@ -264,12 +256,11 @@ impl Device {
 
     pub fn purge(&mut self) -> Result<(), Error> {
         let ftdi_usb_purge_buffers_result = unsafe { ftdi_usb_purge_buffers(self.context) };
-        if ftdi_usb_purge_buffers_result != 0 {
-            bail!(
-                "ftdi_usb_purge_buffers() failed with code {}",
-                ftdi_usb_purge_buffers_result,
-            );
-        }
+        ensure!(
+            ftdi_usb_purge_buffers_result == 0,
+            "ftdi_usb_purge_buffers() failed with code {}",
+            ftdi_usb_purge_buffers_result,
+        );
         Ok(())
     }
     pub fn write(
@@ -283,18 +274,18 @@ impl Device {
                 data.len() as i32,
             )
         };
-        if ftdi_write_data_submit_result.is_null() {
-            bail!("ftdi_write_data_submit() failed with NULL");
-        }
+        ensure!(
+            !ftdi_write_data_submit_result.is_null(),
+            "ftdi_write_data_submit() failed with NULL"
+        );
 
         let ftdi_transfer_data_done_result =
             unsafe { ftdi_transfer_data_done(ftdi_write_data_submit_result) };
-        if ftdi_transfer_data_done_result != data.len() as i32 {
-            bail!(
-                "ftdi_transfer_data_done() failed with code {}",
-                ftdi_transfer_data_done_result,
-            );
-        }
+        ensure!(
+            ftdi_transfer_data_done_result == data.len() as i32,
+            "ftdi_transfer_data_done() failed with code {}",
+            ftdi_transfer_data_done_result,
+        );
 
         Ok(())
     }

@@ -251,14 +251,13 @@ impl<'a> Manager<'a> {
         }
     }
 }
-
 #[cfg(test)]
 mod tests_manager {
     use super::{Event, EventStateUpdate, Manager};
     use indoc::indoc;
 
     #[test]
-    fn test_unsupported() {
+    fn unsupported() {
         let event = indoc!(
             r##"
             Code=NTPAdjustTime;action=Pulse;index=0;data={
@@ -275,7 +274,7 @@ mod tests_manager {
     }
 
     #[test]
-    fn test_single() {
+    fn single() {
         let event_state_update =
             Manager::event_state_update_parse("Code=AudioMutation;action=Stop;index=0").unwrap();
 
@@ -289,7 +288,7 @@ mod tests_manager {
     }
 
     #[test]
-    fn test_video_motion_by_id() {
+    fn video_motion_by_id() {
         let event = indoc!(
             r##"
                 Code=VideoMotion;action=Start;index=0;data={
@@ -312,7 +311,7 @@ mod tests_manager {
     }
 
     #[test]
-    fn test_video_motion_by_name() {
+    fn video_motion_by_name() {
         let event = indoc!(
             r##"
                 Code=VideoMotion;action=Start;index=0;data={
@@ -333,7 +332,7 @@ mod tests_manager {
     }
 
     #[test]
-    fn test_smart_motion_human() {
+    fn smart_motion_human() {
         let event = indoc!(
             r##"
                 Code=SmartMotionHuman;action=Start;index=0;data={
@@ -361,7 +360,7 @@ mod tests_manager {
     }
 
     #[test]
-    fn test_smart_motion_vehicle() {
+    fn smart_motion_vehicle() {
         let event = indoc!(
             r##"
             Code=SmartMotionVehicle;action=Stop;index=0;data={
@@ -389,7 +388,7 @@ mod tests_manager {
     }
 
     #[test]
-    fn test_video_motion_multiple() {
+    fn video_motion_multiple() {
         let event = indoc!(
             r##"
             Code=VideoMotion;action=Stop;index=0;data={

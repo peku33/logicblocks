@@ -1,6 +1,6 @@
 use super::frame::{Exception, Request, Response};
 use crate::interfaces::serial::{self, ftdi};
-use anyhow::{bail, ensure, Context, Error};
+use anyhow::{ensure, Context, Error};
 use crc::{Crc, CRC_16_MODBUS};
 use crossbeam::channel;
 use futures::channel::oneshot;
@@ -83,9 +83,7 @@ impl Bus {
         let mut timeout = timeout;
 
         let response = loop {
-            if timeout <= Duration::ZERO {
-                bail!("timeout expired");
-            }
+            ensure!(timeout > Duration::ZERO, "timeout expired");
 
             let payload = self.ftdi_device.read().context("read")?;
             if payload.is_empty() {
@@ -95,9 +93,11 @@ impl Bus {
                 continue;
             }
 
-            if payload_buffer.len() + payload.len() > Self::RESPONSE_LENGTH_MAX {
-                bail!("payload size exceeded");
-            }
+            ensure!(
+                payload_buffer.len() + payload.len() <= Self::RESPONSE_LENGTH_MAX,
+                "payload size exceeded"
+            );
+
             let mut frame = payload.into_vec();
             payload_buffer.append(&mut frame);
 
@@ -218,6 +218,79 @@ impl Bus {
 
         // all done :)
         Ok(Some(response))
+    }
+}
+#[cfg(test)]
+mod tests_bus {
+    // https://ipc2u.com/articles/knowledge-base/modbus-rtu-made-simple-with-detailed-descriptions-and-examples/#read_discr_out
+
+    use super::{
+        super::frames_public::{ReadCoilsRequest, ReadCoilsResponse},
+        Bus,
+    };
+
+    #[test]
+    fn serialize_1() {
+        let request = ReadCoilsRequest::new(20, 37).unwrap();
+        assert_eq!(
+            Bus::serialize(0x11, &request).unwrap().into_vec(),
+            vec![0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84]
+        );
+    }
+
+    #[test]
+    fn parse_ok() {
+        let request = ReadCoilsRequest::new(20, 37).unwrap();
+        let response = ReadCoilsResponse::new(
+            vec![
+                true, false, true, true, false, false, true, true, // 20-27
+                true, true, false, true, false, true, true, false, // 28 - 35
+                false, true, false, false, true, true, false, true, // 36 - 43
+                false, true, true, true, false, false, false, false, // 44 - 51
+                true, true, false, true, true, // 52 - 56
+            ]
+            .into_boxed_slice(),
+        );
+
+        assert_eq!(
+            Bus::parse(
+                0x11,
+                &request,
+                &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6]
+            )
+            .unwrap()
+            .unwrap(),
+            response
+        );
+    }
+    #[test]
+    fn parse_too_short() {
+        let request = ReadCoilsRequest::new(20, 37).unwrap();
+
+        assert!(Bus::parse(
+            0x11,
+            &request,
+            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45]
+        )
+        .unwrap()
+        .is_none());
+    }
+    #[test]
+    fn parse_too_long() {
+        let request = ReadCoilsRequest::new(20, 37).unwrap();
+
+        assert!(Bus::parse(
+            0x11,
+            &request,
+            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6, 0x00]
+        )
+        .is_err());
+    }
+    #[test]
+    fn parse_empty() {
+        let request = ReadCoilsRequest::new(20, 37).unwrap();
+
+        assert!(Bus::parse(0x11, &request, &[]).unwrap().is_none());
     }
 }
 
@@ -414,80 +487,6 @@ impl Response for ResponseErasedWrapper {
 }
 
 #[cfg(test)]
-mod tests_bus {
-    // https://ipc2u.com/articles/knowledge-base/modbus-rtu-made-simple-with-detailed-descriptions-and-examples/#read_discr_out
-
-    use super::{
-        super::frames_public::{ReadCoilsRequest, ReadCoilsResponse},
-        Bus,
-    };
-
-    #[test]
-    fn test_serialize_1() {
-        let request = ReadCoilsRequest::new(20, 37).unwrap();
-        assert_eq!(
-            Bus::serialize(0x11, &request).unwrap().into_vec(),
-            vec![0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84]
-        );
-    }
-
-    #[test]
-    fn test_parse_ok() {
-        let request = ReadCoilsRequest::new(20, 37).unwrap();
-        let response = ReadCoilsResponse::new(
-            vec![
-                true, false, true, true, false, false, true, true, // 20-27
-                true, true, false, true, false, true, true, false, // 28 - 35
-                false, true, false, false, true, true, false, true, // 36 - 43
-                false, true, true, true, false, false, false, false, // 44 - 51
-                true, true, false, true, true, // 52 - 56
-            ]
-            .into_boxed_slice(),
-        );
-
-        assert_eq!(
-            Bus::parse(
-                0x11,
-                &request,
-                &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6]
-            )
-            .unwrap()
-            .unwrap(),
-            response
-        );
-    }
-    #[test]
-    fn test_parse_too_short() {
-        let request = ReadCoilsRequest::new(20, 37).unwrap();
-
-        assert!(Bus::parse(
-            0x11,
-            &request,
-            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45]
-        )
-        .unwrap()
-        .is_none());
-    }
-    #[test]
-    fn test_parse_too_long() {
-        let request = ReadCoilsRequest::new(20, 37).unwrap();
-
-        assert!(Bus::parse(
-            0x11,
-            &request,
-            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6, 0x00]
-        )
-        .is_err());
-    }
-    #[test]
-    fn test_parse_empty() {
-        let request = ReadCoilsRequest::new(20, 37).unwrap();
-
-        assert!(Bus::parse(0x11, &request, &[]).unwrap().is_none());
-    }
-}
-
-#[cfg(test)]
 mod tests_erased_wrappers {
     use super::{
         super::frames_public::{ReadCoilsRequest, ReadCoilsResponse},
@@ -495,7 +494,7 @@ mod tests_erased_wrappers {
     };
 
     #[test]
-    fn test_request_response() {
+    fn request_response() {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
         let request_erased = RequestErasedWrapper::from_original(request);
 

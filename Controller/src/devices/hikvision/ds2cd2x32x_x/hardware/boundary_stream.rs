@@ -73,13 +73,12 @@ impl Extractor {
         Ok(Some(element))
     }
 }
-
 #[cfg(test)]
 mod tests_extractor {
     use super::Extractor;
 
     #[test]
-    fn test_1() {
+    fn try_extract_1() {
         let mut extractor = Extractor::new();
         extractor.push("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: 478\r\n\r\n<EventNotificationAlert version=\"1.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n<ipAddress>10.0.2.101</ipAddress>\r\n<portNo>80</portNo>\r\n<protocol>HTTP</protocol>\r\n<macAddress>c0:56:e3:68:64:36</macAddress>\r\n<channelID>1</channelID>\r\n<dateTime>2020-11-07T14:40:23-00:00</dateTime>\r\n<activePostCount>0</activePostCount>\r\n<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>\r\n<eventDescription>videoloss alarm</eventDescription>\r\n</EventNotificationAlert>\r\n");
 
@@ -88,7 +87,7 @@ mod tests_extractor {
     }
 
     #[test]
-    fn test_2() {
+    fn try_extract_2() {
         let mut extractor = Extractor::new();
         extractor.push(
             "--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: 478",
@@ -102,7 +101,7 @@ mod tests_extractor {
     }
 
     #[test]
-    fn test_3() {
+    fn try_extract_3() {
         let mut extractor = Extractor::new();
         extractor.push("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: 478\r\n\r\n");
 
@@ -115,7 +114,7 @@ mod tests_extractor {
     }
 
     #[test]
-    fn test_4() {
+    fn try_extract_4() {
         let mut extractor = Extractor::new();
         extractor.push("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: 478\r\n\r\n<EventNotificationAlert version=\"1.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n<ipAddress>10.0.2.101</ipAddress>\r\n<portNo>80</portNo>\r\n<protocol>HTTP</protocol>\r\n<macAddress>c0:56:e3:68:64:36</macAddress>\r\n<channelID>1</channelID>\r\n<dateTime>2020-11-07T14:40:23-00:00</dateTime>\r\n<activePostCount>0</activePostCount>\r\n<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>\r\n<eventDescription>videoloss alarm</eventDescription>\r\n</EventNotificationAlert>");
 
@@ -128,7 +127,7 @@ mod tests_extractor {
     }
 
     #[test]
-    fn test_5() {
+    fn try_extract_5() {
         let mut extractor = Extractor::new();
         extractor.push("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: 478\r\n\r\n<EventNotificationAlert version=\"1.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n<ipAddress>10.0.2.101</ipAddress>\r\n<portNo>80</portNo>\r\n<protocol>HTTP</protocol>\r\n<macAddress>c0:56:e3:68:64:36</macAddress>\r\n<channelID>1</channelID>\r\n<dateTime>2020-11-07T14:40:23-00:00</dateTime>\r\n<activePostCount>0</activePostCount>\r\n<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>\r\n<eventDescription>videoloss alarm</eventDescription>\r\n</EventNotificationAlert>\r\n");
         extractor.push("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: 478\r\n\r\n<EventNotificationAlert version=\"1.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n<ipAddress>10.0.2.101</ipAddress>\r\n<portNo>80</portNo>\r\n<protocol>HTTP</protocol>\r\n<macAddress>c0:56:e3:68:64:36</macAddress>\r\n<channelID>1</channelID>\r\n<dateTime>2020-11-07T14:40:23-00:00</dateTime>\r\n<activePostCount>0</activePostCount>\r\n<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>\r\n<eventDescription>videoloss alarm</eventDescription>\r\n</EventNotificationAlert>\r\n");
@@ -139,7 +138,7 @@ mod tests_extractor {
     }
 
     #[test]
-    fn test_6() {
+    fn try_extract_6() {
         let mut extractor = Extractor::new();
         extractor.push("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: 478\r\n\r\n<EventNotificationAlert version=\"1.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n<ipAddress>10.0.2.101</ipAddress>\r\n<portNo>80</portNo>\r\n<protocol>HTTP</protocol>\r\n<macAddress>c0:56:e3:68:64:36</macAddress>\r\n<channelID>1</channelID>\r\n<dateTime>2020-11-07T14:40:23-00:00</dateTime>\r\n<activePostCount>0</activePostCount>\r\n<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>\r\n<eventDescription>videoloss alarm</eventDescription>\r\n</EventNotificationAlert>\r\n");
         extractor.push("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: 478\r\n\r\n<EventNotificationAlert version=\"1.0\" xmlns=\"http://www.hikvision.com/ver20/XMLSchema\">\r\n<ipAddress>10.0.2.101</ipAddress>\r\n<portNo>80</portNo>\r\n<protocol>HTTP</protocol>\r\n<macAddress>c0:56:e3:68:64:36</macAddress>\r\n<channelID>1</channelID>\r\n<dateTime>2020-11-07T14:40:23-00:00</dateTime>\r\n<activePostCount>0</activePostCount>\r\n<eventType>videoloss</eventType>\r\n<eventState>inactive</eventState>\r\n<eventDescription>videoloss alarm</eventDescription>\r\n</EventNotificationAlert>");

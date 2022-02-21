@@ -6,7 +6,7 @@ use crate::{
         runtime::{Exited, Runnable},
     },
 };
-use anyhow::{anyhow, bail, Context, Error};
+use anyhow::{anyhow, ensure, Context, Error};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
@@ -509,9 +509,10 @@ impl Recorder {
         let temporary_storage_directory_metadata = fs::metadata(&self.temporary_storage_directory)
             .await
             .context("metadata")?;
-        if !temporary_storage_directory_metadata.is_dir() {
-            bail!("temporary_storage_directory is not a directory");
-        }
+        ensure!(
+            temporary_storage_directory_metadata.is_dir(),
+            "temporary_storage_directory is not a directory"
+        );
 
         Ok(())
     }

@@ -4,7 +4,7 @@ pub mod sse;
 pub mod sse_aggregated;
 pub mod uri_cursor;
 
-use anyhow::{bail, Error};
+use anyhow::{ensure, Context, Error};
 use bytes::Bytes;
 use derive_more::Constructor;
 use futures::{
@@ -40,14 +40,13 @@ impl Request {
             .get(header::CONTENT_TYPE)
             .and_then(|header| header.to_str().ok());
 
-        if content_type != Some("application/json") {
-            bail!(
-                "expected content type application/json, got: {:?}",
-                content_type,
-            );
-        }
+        ensure!(
+            content_type.contains(&"application/json"),
+            "expected content type application/json, got: {:?}",
+            content_type,
+        );
 
-        let json = serde_json::from_slice(&self.body)?;
+        let json = serde_json::from_slice(&self.body).context("from_slice")?;
 
         Ok(json)
     }

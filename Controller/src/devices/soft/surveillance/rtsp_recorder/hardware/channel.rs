@@ -64,6 +64,42 @@ impl DetectionLevelTracker {
         segment_max
     }
 }
+#[cfg(test)]
+mod tests_detection_level_tracker {
+    use super::DetectionLevelTracker;
+    use crate::datatypes::ratio::Ratio;
+
+    #[test]
+    fn nop() {
+        let mut dlt = DetectionLevelTracker::new();
+        assert_eq!(dlt.segment_finalize(), None);
+        dlt.current_set(None);
+        assert_eq!(dlt.segment_finalize(), None);
+    }
+    #[test]
+    fn sequence_1() {
+        let mut dlt = DetectionLevelTracker::new();
+        dlt.current_set(None);
+        assert_eq!(dlt.segment_finalize(), None);
+        dlt.current_set(Some(Ratio::full()));
+        assert_eq!(dlt.segment_finalize(), Some(Ratio::full()));
+    }
+    #[test]
+    fn sequence_2() {
+        let mut dlt = DetectionLevelTracker::new();
+        dlt.current_set(Some(Ratio::full()));
+        dlt.current_set(Some(Ratio::zero()));
+        assert_eq!(dlt.segment_finalize(), Some(Ratio::full()));
+        dlt.current_set(Some(Ratio::epsilon()));
+        dlt.current_set(Some(Ratio::zero()));
+        assert_eq!(dlt.segment_finalize(), Some(Ratio::epsilon()));
+        assert_eq!(dlt.segment_finalize(), Some(Ratio::zero()));
+        assert_eq!(dlt.segment_finalize(), Some(Ratio::zero()));
+        dlt.current_set(None);
+        assert_eq!(dlt.segment_finalize(), Some(Ratio::zero()));
+        assert_eq!(dlt.segment_finalize(), None);
+    }
+}
 
 #[derive(Debug)]
 pub struct Channel {
@@ -247,42 +283,5 @@ impl fmt::Display for Channel {
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         write!(f, "Channel({})", self.recorder)
-    }
-}
-
-#[cfg(test)]
-mod tests_detection_level_tracker {
-    use super::DetectionLevelTracker;
-    use crate::datatypes::ratio::Ratio;
-
-    #[test]
-    fn test_nop() {
-        let mut dlt = DetectionLevelTracker::new();
-        assert_eq!(dlt.segment_finalize(), None);
-        dlt.current_set(None);
-        assert_eq!(dlt.segment_finalize(), None);
-    }
-    #[test]
-    fn test_sequence_1() {
-        let mut dlt = DetectionLevelTracker::new();
-        dlt.current_set(None);
-        assert_eq!(dlt.segment_finalize(), None);
-        dlt.current_set(Some(Ratio::full()));
-        assert_eq!(dlt.segment_finalize(), Some(Ratio::full()));
-    }
-    #[test]
-    fn test_sequence_2() {
-        let mut dlt = DetectionLevelTracker::new();
-        dlt.current_set(Some(Ratio::full()));
-        dlt.current_set(Some(Ratio::zero()));
-        assert_eq!(dlt.segment_finalize(), Some(Ratio::full()));
-        dlt.current_set(Some(Ratio::epsilon()));
-        dlt.current_set(Some(Ratio::zero()));
-        assert_eq!(dlt.segment_finalize(), Some(Ratio::epsilon()));
-        assert_eq!(dlt.segment_finalize(), Some(Ratio::zero()));
-        assert_eq!(dlt.segment_finalize(), Some(Ratio::zero()));
-        dlt.current_set(None);
-        assert_eq!(dlt.segment_finalize(), Some(Ratio::zero()));
-        assert_eq!(dlt.segment_finalize(), None);
     }
 }

@@ -256,6 +256,144 @@ impl Grid22x18 {
         .unwrap()
     }
 }
+#[cfg(test)]
+mod tests_grid22x18 {
+    use super::{Coordinate, Grid22x18, Point, RegionSquare};
+
+    #[test]
+    fn empty() {
+        let grid = Grid22x18::empty();
+        assert_eq!(grid.as_rows_ltr(), [0; Grid22x18::ROWS]);
+        assert_eq!(grid.as_rows_rtl(), [0; Grid22x18::ROWS]);
+        assert_eq!(
+            grid.as_region(),
+            RegionSquare::new(
+                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap()),
+                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap())
+            )
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn full() {
+        let grid = Grid22x18::full();
+        assert_eq!(grid.as_rows_ltr(), [4194303; 18]);
+        assert_eq!(grid.as_rows_rtl(), [4194303; 18]);
+        assert_eq!(
+            grid.as_region(),
+            RegionSquare::new(
+                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap()),
+                Point::new(
+                    Coordinate::new(8191).unwrap(),
+                    Coordinate::new(8191).unwrap()
+                )
+            )
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn top_left() {
+        let mut grid = [[false; Grid22x18::COLUMNS]; Grid22x18::ROWS];
+        grid[0][0] = true;
+
+        let grid = Grid22x18::new(grid);
+        assert_eq!(
+            grid.as_rows_ltr(),
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            grid.as_rows_rtl(),
+            [2097152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            grid.as_region(),
+            RegionSquare::new(
+                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap()),
+                Point::new(Coordinate::new(372).unwrap(), Coordinate::new(455).unwrap())
+            )
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn random_1() {
+        let mut grid = [[false; Grid22x18::COLUMNS]; Grid22x18::ROWS];
+
+        grid[0][0] = true;
+        grid[0][1] = true;
+
+        grid[0][21] = true;
+        grid[1][21] = true;
+        grid[2][21] = true;
+
+        grid[17][21] = true;
+        grid[17][20] = true;
+        grid[17][19] = true;
+        grid[17][18] = true;
+
+        grid[17][0] = true;
+        grid[16][0] = true;
+        grid[15][0] = true;
+        grid[14][0] = true;
+        grid[13][0] = true;
+
+        let grid = Grid22x18::new(grid);
+        assert_eq!(
+            grid.as_rows_ltr(),
+            [2097155, 2097152, 2097152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 3932161]
+        );
+        assert_eq!(
+            grid.as_rows_rtl(),
+            [
+                3145729, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2097152, 2097152, 2097152, 2097152,
+                2097167
+            ]
+        );
+        assert_eq!(
+            grid.as_region(),
+            RegionSquare::new(
+                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap()),
+                Point::new(
+                    Coordinate::new(8191).unwrap(),
+                    Coordinate::new(8191).unwrap()
+                )
+            )
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn random_2() {
+        let mut grid = [[false; Grid22x18::COLUMNS]; Grid22x18::ROWS];
+        grid[2][1] = true;
+        grid[4][21 - 3] = true;
+        grid[17 - 5][21 - 6] = true;
+        grid[17 - 7][8] = true;
+
+        let grid = Grid22x18::new(grid);
+        assert_eq!(
+            grid.as_rows_ltr(),
+            [0, 0, 2, 0, 262144, 0, 0, 0, 0, 0, 256, 0, 32768, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            grid.as_rows_rtl(),
+            [0, 0, 1048576, 0, 8, 0, 0, 0, 0, 0, 8192, 0, 64, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            grid.as_region(),
+            RegionSquare::new(
+                Point::new(Coordinate::new(372).unwrap(), Coordinate::new(910).unwrap()),
+                Point::new(
+                    Coordinate::new(7074).unwrap(),
+                    Coordinate::new(5915).unwrap()
+                )
+            )
+            .unwrap()
+        );
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct MotionDetectionRegion {
@@ -2060,143 +2198,4 @@ fn patch_nested_event_handler(
     .context("patch_object EventHandler")?;
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests_grid22x18 {
-    use super::{Coordinate, Grid22x18, Point, RegionSquare};
-
-    #[test]
-    fn test_empty() {
-        let grid = Grid22x18::empty();
-        assert_eq!(grid.as_rows_ltr(), [0; Grid22x18::ROWS]);
-        assert_eq!(grid.as_rows_rtl(), [0; Grid22x18::ROWS]);
-        assert_eq!(
-            grid.as_region(),
-            RegionSquare::new(
-                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap()),
-                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap())
-            )
-            .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_full() {
-        let grid = Grid22x18::full();
-        assert_eq!(grid.as_rows_ltr(), [4194303; 18]);
-        assert_eq!(grid.as_rows_rtl(), [4194303; 18]);
-        assert_eq!(
-            grid.as_region(),
-            RegionSquare::new(
-                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap()),
-                Point::new(
-                    Coordinate::new(8191).unwrap(),
-                    Coordinate::new(8191).unwrap()
-                )
-            )
-            .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_top_left() {
-        let mut grid = [[false; Grid22x18::COLUMNS]; Grid22x18::ROWS];
-        grid[0][0] = true;
-
-        let grid = Grid22x18::new(grid);
-        assert_eq!(
-            grid.as_rows_ltr(),
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        );
-        assert_eq!(
-            grid.as_rows_rtl(),
-            [2097152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        );
-        assert_eq!(
-            grid.as_region(),
-            RegionSquare::new(
-                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap()),
-                Point::new(Coordinate::new(372).unwrap(), Coordinate::new(455).unwrap())
-            )
-            .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_random_1() {
-        let mut grid = [[false; Grid22x18::COLUMNS]; Grid22x18::ROWS];
-
-        grid[0][0] = true;
-        grid[0][1] = true;
-
-        grid[0][21] = true;
-        grid[1][21] = true;
-        grid[2][21] = true;
-
-        grid[17][21] = true;
-        grid[17][20] = true;
-        grid[17][19] = true;
-        grid[17][18] = true;
-
-        grid[17][0] = true;
-        grid[16][0] = true;
-        grid[15][0] = true;
-        grid[14][0] = true;
-        grid[13][0] = true;
-
-        let grid = Grid22x18::new(grid);
-        assert_eq!(
-            grid.as_rows_ltr(),
-            [2097155, 2097152, 2097152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 3932161]
-        );
-        assert_eq!(
-            grid.as_rows_rtl(),
-            [
-                3145729, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2097152, 2097152, 2097152, 2097152,
-                2097167
-            ]
-        );
-        assert_eq!(
-            grid.as_region(),
-            RegionSquare::new(
-                Point::new(Coordinate::new(0).unwrap(), Coordinate::new(0).unwrap()),
-                Point::new(
-                    Coordinate::new(8191).unwrap(),
-                    Coordinate::new(8191).unwrap()
-                )
-            )
-            .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_random_2() {
-        let mut grid = [[false; Grid22x18::COLUMNS]; Grid22x18::ROWS];
-        grid[2][1] = true;
-        grid[4][21 - 3] = true;
-        grid[17 - 5][21 - 6] = true;
-        grid[17 - 7][8] = true;
-
-        let grid = Grid22x18::new(grid);
-        assert_eq!(
-            grid.as_rows_ltr(),
-            [0, 0, 2, 0, 262144, 0, 0, 0, 0, 0, 256, 0, 32768, 0, 0, 0, 0, 0]
-        );
-        assert_eq!(
-            grid.as_rows_rtl(),
-            [0, 0, 1048576, 0, 8, 0, 0, 0, 0, 0, 8192, 0, 64, 0, 0, 0, 0, 0]
-        );
-        assert_eq!(
-            grid.as_region(),
-            RegionSquare::new(
-                Point::new(Coordinate::new(372).unwrap(), Coordinate::new(910).unwrap()),
-                Point::new(
-                    Coordinate::new(7074).unwrap(),
-                    Coordinate::new(5915).unwrap()
-                )
-            )
-            .unwrap()
-        );
-    }
 }

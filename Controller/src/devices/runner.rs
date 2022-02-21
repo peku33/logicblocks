@@ -81,7 +81,7 @@ impl<'d> Runner<'d> {
                         (device_id, signals_device_base)
                     })
                     .collect::<HashMap<_, _>>();
-                let exchanger = Exchanger::new(&exchanger_devices, connections_requested)?;
+                let exchanger = Exchanger::new(&exchanger_devices, connections_requested).context("new")?;
                 Ok(exchanger)
             },
             devices_gui_summary_sse_aggregated_bus,
@@ -101,7 +101,7 @@ impl<'d> Runner<'d> {
                     ManuallyDrop::new(exchanger_runtime_scope_runnable);
                 Ok(exchanger_runtime_scope_runnable)
             },
-        )?;
+        ).context("try_new")?;
 
         let finalize_guard = FinalizeGuard::new();
 

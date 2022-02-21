@@ -5,7 +5,7 @@ use super::{
     },
     parser::{Parser, ParserPayload},
 };
-use anyhow::{bail, Context, Error};
+use anyhow::{ensure, Context, Error};
 use derive_more::Constructor;
 use std::time::Duration;
 
@@ -79,9 +79,11 @@ impl<'m> Driver<'m> {
             .await
             .context("transaction_out_in")?;
 
-        if response.as_bytes() != &b""[..] {
-            bail!("invalid healthcheck response");
-        }
+        ensure!(
+            response.as_bytes() == &b""[..],
+            "invalid healthcheck response"
+        );
+
         Ok(())
     }
 
@@ -111,7 +113,7 @@ impl<'m> Driver<'m> {
         let bod = parser.expect_bool().context("bod")?;
         let ext_reset = parser.expect_bool().context("ext_reset")?;
         let pon = parser.expect_bool().context("pon")?;
-        parser.expect_end()?;
+        parser.expect_end().context("expect_end")?;
 
         Ok(PowerFlags {
             wdt,
@@ -133,7 +135,7 @@ impl<'m> Driver<'m> {
         let mut parser = ParserPayload::new(&response);
         let avr_v1 = parser.expect_u16().context("avr_v1")?;
         let application = parser.expect_u16().context("application")?;
-        parser.expect_end()?;
+        parser.expect_end().context("expect_end")?;
 
         Ok(Version {
             avr_v1,
@@ -150,7 +152,7 @@ impl<'m> Driver<'m> {
 
         let mut parser = ParserPayload::new(&response);
         let checksum = parser.expect_u16().context("checksum")?;
-        parser.expect_end()?;
+        parser.expect_end().context("expect_end")?;
 
         Ok(checksum)
     }

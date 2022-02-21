@@ -67,19 +67,18 @@ impl Extractor {
         Ok(element)
     }
 }
-
 #[cfg(test)]
 mod tests_extractor {
     use super::Extractor;
 
     #[test]
-    fn test_empty() {
+    fn empty() {
         let mut buffer = Extractor::new();
         assert!(buffer.try_extract().unwrap().is_none());
     }
 
     #[test]
-    fn test_1() {
+    fn try_extract_1() {
         let mut buffer = Extractor::new();
         assert!(buffer.try_extract().unwrap().is_none());
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
@@ -90,7 +89,7 @@ mod tests_extractor {
         assert!(buffer.try_extract().unwrap().is_none());
     }
     #[test]
-    fn test_2() {
+    fn try_extract_2() {
         let mut buffer = Extractor::new();
         assert!(buffer.try_extract().unwrap().is_none());
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
@@ -101,7 +100,7 @@ mod tests_extractor {
         assert!(buffer.try_extract().unwrap().is_none());
     }
     #[test]
-    fn test_3() {
+    fn try_extract_3() {
         let mut buffer = Extractor::new();
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:38\r\nCode=AudioMutation;action=Stop;index=0\r\n\r\n");
@@ -116,7 +115,7 @@ mod tests_extractor {
         assert!(buffer.try_extract().unwrap().is_none());
     }
     #[test]
-    fn test_4() {
+    fn try_extract_4() {
         let mut buffer = Extractor::new();
         buffer.push("someshittttt--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\nsomeshit2");
         buffer.push("moreshitheeere--myboundary\r\nContent-Type: text/plain\r\nContent-Length:38\r\n\r\nCode=AudioMutation;action=Stop;index=0\r\n\r\nandhere");
@@ -132,7 +131,7 @@ mod tests_extractor {
     }
 
     #[test]
-    fn test_5() {
+    fn try_extract_5() {
         let mut buffer = Extractor::new();
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:40\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
