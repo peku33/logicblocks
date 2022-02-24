@@ -278,13 +278,12 @@ mod tests_manager {
         let event_state_update =
             Manager::event_state_update_parse("Code=AudioMutation;action=Stop;index=0").unwrap();
 
-        assert_eq!(
-            event_state_update,
-            Some(EventStateUpdate {
-                event: Event::AudioMutation,
-                active: false
-            })
-        );
+        let event_state_update_expected = EventStateUpdate {
+            event: Event::AudioMutation,
+            active: false,
+        };
+
+        assert_eq!(event_state_update, Some(event_state_update_expected));
     }
 
     #[test]
@@ -301,13 +300,12 @@ mod tests_manager {
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
 
-        assert_eq!(
-            event_state_update,
-            Some(EventStateUpdate {
-                event: Event::VideoMotion,
-                active: true,
-            }),
-        );
+        let event_state_update_expected = EventStateUpdate {
+            event: Event::VideoMotion,
+            active: true,
+        };
+
+        assert_eq!(event_state_update, Some(event_state_update_expected));
     }
 
     #[test]
@@ -322,13 +320,12 @@ mod tests_manager {
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
 
-        assert_eq!(
-            event_state_update,
-            Some(EventStateUpdate {
-                event: Event::VideoMotion,
-                active: true,
-            }),
-        );
+        let event_state_update_expected = EventStateUpdate {
+            event: Event::VideoMotion,
+            active: true,
+        };
+
+        assert_eq!(event_state_update, Some(event_state_update_expected));
     }
 
     #[test]
@@ -350,13 +347,12 @@ mod tests_manager {
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
 
-        assert_eq!(
-            event_state_update,
-            Some(EventStateUpdate {
-                event: Event::SmartMotionHuman,
-                active: true,
-            }),
-        );
+        let event_state_update_expected = EventStateUpdate {
+            event: Event::SmartMotionHuman,
+            active: true,
+        };
+
+        assert_eq!(event_state_update, Some(event_state_update_expected));
     }
 
     #[test]
@@ -378,13 +374,12 @@ mod tests_manager {
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
 
-        assert_eq!(
-            event_state_update,
-            Some(EventStateUpdate {
-                event: Event::SmartMotionVehicle,
-                active: false,
-            }),
-        );
+        let event_state_update_expected = EventStateUpdate {
+            event: Event::SmartMotionVehicle,
+            active: false,
+        };
+
+        assert_eq!(event_state_update, Some(event_state_update_expected));
     }
 
     #[test]
@@ -401,12 +396,11 @@ mod tests_manager {
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
 
-        assert_eq!(
-            event_state_update,
-            Some(EventStateUpdate {
-                event: Event::VideoMotion,
-                active: false,
-            })
-        );
+        let event_state_update_expected = EventStateUpdate {
+            event: Event::VideoMotion,
+            active: false,
+        };
+
+        assert_eq!(event_state_update, Some(event_state_update_expected));
     }
 }

@@ -129,7 +129,6 @@ mod tests_extractor {
         );
         assert!(buffer.try_extract().unwrap().is_none());
     }
-
     #[test]
     fn try_extract_5() {
         let mut buffer = Extractor::new();

@@ -99,22 +99,27 @@ mod tests_read_bits_generic {
     #[test]
     fn request_response_1() {
         let request = ReadBitsGenericRequest::new(20, 19).unwrap();
-        assert_eq!(&*request.data(), &[0x00, 0x13, 0x00, 0x13]);
+
+        let request_data = request.data();
+
+        let request_data_expected = [0x00, 0x13, 0x00, 0x13];
+
+        assert_eq!(&*request_data, &request_data_expected);
 
         let response = ReadBitsGenericResponse::from_data(&request, &[0x03, 0xcd, 0x6b, 0x05])
             .unwrap()
             .unwrap();
-        assert_eq!(
-            response,
-            ReadBitsGenericResponse::new(
-                vec![
-                    true, false, true, true, false, false, true, true, // 20-27
-                    true, true, false, true, false, true, true, false, // 28-35
-                    true, false, true, // 36-38
-                ]
-                .into_boxed_slice()
-            )
+
+        let response_expected = ReadBitsGenericResponse::new(
+            vec![
+                true, false, true, true, false, false, true, true, // 20-27
+                true, true, false, true, false, true, true, false, // 28-35
+                true, false, true, // 36-38
+            ]
+            .into_boxed_slice(),
         );
+
+        assert_eq!(response, response_expected);
     }
 }
 
@@ -329,7 +334,12 @@ mod tests_read_words_generic {
     #[test]
     fn request_response_1() {
         let request = ReadWordsGenericRequest::new(108, 3).unwrap();
-        assert_eq!(&*request.data(), &[0x00, 0x6b, 0x00, 0x03]);
+
+        let request_data = request.data();
+
+        let request_data_expected = [0x00, 0x6b, 0x00, 0x03];
+
+        assert_eq!(&*request_data, &request_data_expected);
 
         let response = ReadWordsGenericResponse::from_data(
             &request,
@@ -337,10 +347,10 @@ mod tests_read_words_generic {
         )
         .unwrap()
         .unwrap();
-        assert_eq!(
-            response,
-            ReadWordsGenericResponse::new(vec![555, 0, 100].into_boxed_slice()),
-        );
+
+        let response_expected = ReadWordsGenericResponse::new(vec![555, 0, 100].into_boxed_slice());
+
+        assert_eq!(response, response_expected);
     }
 }
 
@@ -538,12 +548,20 @@ mod tests_write_single_coil {
     #[test]
     fn request_response_1() {
         let request = WriteSingleCoilRequest::new(173, true).unwrap();
-        assert_eq!(&*request.data(), &[0x00, 0xac, 0xff, 0x00]);
+
+        let request_data = request.data();
+
+        let request_data_expected = [0x00, 0xac, 0xff, 0x00];
+
+        assert_eq!(&*request_data, &request_data_expected);
 
         let response = WriteSingleCoilResponse::from_data(&request, &[0x00, 0xac, 0xff, 0x00])
             .unwrap()
             .unwrap();
-        assert_eq!(response, WriteSingleCoilResponse::new());
+
+        let response_expected = WriteSingleCoilResponse::new();
+
+        assert_eq!(response, response_expected);
     }
 }
 
@@ -618,12 +636,20 @@ mod tests_write_single_register {
     #[test]
     fn request_response_1() {
         let request = WriteSingleRegisterRequest::new(2, 3).unwrap();
-        assert_eq!(&*request.data(), &[0x00, 0x01, 0x00, 0x03]);
+
+        let request_data = request.data();
+
+        let request_data_expected = [0x00, 0x01, 0x00, 0x03];
+
+        assert_eq!(&*request_data, &request_data_expected);
 
         let response = WriteSingleRegisterResponse::from_data(&request, &[0x00, 0x01, 0x00, 0x03])
             .unwrap()
             .unwrap();
-        assert_eq!(response, WriteSingleRegisterResponse::new());
+
+        let response_expected = WriteSingleRegisterResponse::new();
+
+        assert_eq!(response, response_expected);
     }
 }
 
@@ -687,15 +713,19 @@ mod tests_read_exception_status {
     #[test]
     fn request_response_1() {
         let request = ReadExceptionStatusRequest::new();
-        assert!(request.data().is_empty());
+
+        let request_data = request.data();
+
+        assert!(request_data.is_empty());
 
         let response = ReadExceptionStatusResponse::from_data(&request, &[0x6d])
             .unwrap()
             .unwrap();
-        assert_eq!(
-            response,
-            ReadExceptionStatusResponse::new([true, false, true, true, false, true, true, false])
-        );
+
+        let response_expected =
+            ReadExceptionStatusResponse::new([true, false, true, true, false, true, true, false]);
+
+        assert_eq!(response, response_expected);
     }
 }
 
@@ -807,15 +837,20 @@ mod tests_write_multiple_coils {
             .into_boxed_slice(),
         )
         .unwrap();
-        assert_eq!(
-            &*request.data(),
-            &[0x00, 0x13, 0x00, 0x0a, 0x02, 0xcd, 0x01]
-        );
+
+        let request_data = request.data();
+
+        let request_data_expected = [0x00, 0x13, 0x00, 0x0a, 0x02, 0xcd, 0x01];
+
+        assert_eq!(&*request_data, &request_data_expected);
 
         let response = WriteMultipleCoilsResponse::from_data(&request, &[0x00, 0x13, 0x00, 0x0a])
             .unwrap()
             .unwrap();
-        assert_eq!(response, WriteMultipleCoilsResponse::new());
+
+        let response_expected = WriteMultipleCoilsResponse::new();
+
+        assert_eq!(response, response_expected);
     }
 }
 
@@ -911,16 +946,21 @@ mod tests_write_multiple_registers {
     fn request_response_1() {
         let request =
             WriteMultipleRegistersRequest::new(2, vec![0x00a, 0x0102].into_boxed_slice()).unwrap();
-        assert_eq!(
-            &*request.data(),
-            &[0x00, 0x01, 0x00, 0x02, 0x04, 0x00, 0x0a, 0x01, 0x02]
-        );
+
+        let request_data = request.data();
+
+        let request_data_expected = [0x00, 0x01, 0x00, 0x02, 0x04, 0x00, 0x0a, 0x01, 0x02];
+
+        assert_eq!(&*request_data, &request_data_expected);
 
         let response =
             WriteMultipleRegistersResponse::from_data(&request, &[0x00, 0x01, 0x00, 0x02])
                 .unwrap()
                 .unwrap();
-        assert_eq!(response, WriteMultipleRegistersResponse::new());
+
+        let response_expected = WriteMultipleRegistersResponse::new();
+
+        assert_eq!(response, response_expected);
     }
 }
 

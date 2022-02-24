@@ -363,7 +363,6 @@ mod tests_grid22x18 {
             .unwrap()
         );
     }
-
     #[test]
     fn random_2() {
         let mut grid = [[false; Grid22x18::COLUMNS]; Grid22x18::ROWS];

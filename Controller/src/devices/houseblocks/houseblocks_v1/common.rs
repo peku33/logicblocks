@@ -44,7 +44,6 @@ mod tests_address_device_type {
         let address = AddressDeviceType::new(*b"000A");
         assert!(address.is_err());
     }
-
     #[test]
     fn new_2() {
         let address = AddressDeviceType::new(*b"0001");
@@ -86,7 +85,6 @@ mod tests_address_serial {
         let address = AddressSerial::new(*b"0000000A");
         assert!(address.is_err());
     }
-
     #[test]
     fn new_2() {
         let address = AddressSerial::new(*b"00000001");
@@ -140,7 +138,6 @@ mod tests_payload {
         let payload = Payload::new(Box::from(*b"aaa\n"));
         assert!(payload.is_err());
     }
-
     #[test]
     fn new_2() {
         let payload = Payload::new(Box::from(*b"aA09"));
@@ -256,37 +253,38 @@ mod tests_frame {
 
     #[test]
     fn out_build_1() {
-        assert_eq!(
-            Frame::out_build(
-                false,
-                &Address {
-                    device_type: AddressDeviceType::new(*b"0001").unwrap(),
-                    serial: AddressSerial::new(*b"98765432").unwrap(),
-                },
-                &Payload::new(Box::from(*b"ChujDupaKamieniKupa")).unwrap(),
-            )
-            .as_ref(),
-            &b"\n>000198765432BF20ChujDupaKamieniKupa\r"[..]
+        let frame = Frame::out_build(
+            false,
+            &Address {
+                device_type: AddressDeviceType::new(*b"0001").unwrap(),
+                serial: AddressSerial::new(*b"98765432").unwrap(),
+            },
+            &Payload::new(Box::from(*b"ChujDupaKamieniKupa")).unwrap(),
         );
+
+        let frame_expected = b"\n>000198765432BF20ChujDupaKamieniKupa\r";
+
+        assert_eq!(frame.as_ref(), &frame_expected[..]);
     }
     #[test]
     fn out_build_2() {
-        assert_eq!(
-            Frame::out_build(
-                true,
-                &Address {
-                    device_type: AddressDeviceType::new(*b"0006").unwrap(),
-                    serial: AddressSerial::new(*b"90083461").unwrap(),
-                },
-                &Payload::new(Box::from(*b"#")).unwrap(),
-            )
-            .as_ref(),
-            &b"\n}000690083461A17F#\r"[..]
+        let frame = Frame::out_build(
+            true,
+            &Address {
+                device_type: AddressDeviceType::new(*b"0006").unwrap(),
+                serial: AddressSerial::new(*b"90083461").unwrap(),
+            },
+            &Payload::new(Box::from(*b"#")).unwrap(),
         );
+
+        let frame_expected = b"\n}000690083461A17F#\r";
+
+        assert_eq!(frame.as_ref(), &frame_expected[..]);
     }
+
     #[test]
     fn in_parse_1() {
-        let frame = Frame::in_parse(
+        let payload = Frame::in_parse(
             b"",
             false,
             &Address {
@@ -294,21 +292,23 @@ mod tests_frame {
                 serial: AddressSerial::new(*b"98765432").unwrap(),
             },
         );
-        assert!(frame.is_err());
+
+        assert!(payload.is_err());
     }
     #[test]
     fn in_parse_2() {
-        assert_eq!(
-            Frame::in_parse(
-                b"\n<A721ChujDupaKamieniKupa\r",
-                false,
-                &Address {
-                    device_type: AddressDeviceType::new(*b"0001").unwrap(),
-                    serial: AddressSerial::new(*b"98765432").unwrap(),
-                },
-            )
-            .unwrap(),
-            Payload::new(Box::from(*b"ChujDupaKamieniKupa")).unwrap(),
-        );
+        let payload = Frame::in_parse(
+            b"\n<A721ChujDupaKamieniKupa\r",
+            false,
+            &Address {
+                device_type: AddressDeviceType::new(*b"0001").unwrap(),
+                serial: AddressSerial::new(*b"98765432").unwrap(),
+            },
+        )
+        .unwrap();
+
+        let payload_expected = Payload::new(Box::from(*b"ChujDupaKamieniKupa")).unwrap();
+
+        assert_eq!(payload, payload_expected,);
     }
 }

@@ -76,6 +76,7 @@ mod tests_detection_level_tracker {
         dlt.current_set(None);
         assert_eq!(dlt.segment_finalize(), None);
     }
+    
     #[test]
     fn sequence_1() {
         let mut dlt = DetectionLevelTracker::new();

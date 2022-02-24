@@ -232,16 +232,25 @@ mod tests_bus {
     #[test]
     fn serialize_1() {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
-        assert_eq!(
-            Bus::serialize(0x11, &request).unwrap().into_vec(),
-            vec![0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84]
-        );
+        let serialized = Bus::serialize(0x11, &request).unwrap().into_vec();
+
+        let serialized_expected = vec![0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84];
+
+        assert_eq!(serialized, serialized_expected);
     }
 
     #[test]
     fn parse_ok() {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
-        let response = ReadCoilsResponse::new(
+        let response = Bus::parse(
+            0x11,
+            &request,
+            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6],
+        )
+        .unwrap()
+        .unwrap();
+
+        let response_expected = ReadCoilsResponse::new(
             vec![
                 true, false, true, true, false, false, true, true, // 20-27
                 true, true, false, true, false, true, true, false, // 28 - 35
@@ -252,45 +261,42 @@ mod tests_bus {
             .into_boxed_slice(),
         );
 
-        assert_eq!(
-            Bus::parse(
-                0x11,
-                &request,
-                &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6]
-            )
-            .unwrap()
-            .unwrap(),
-            response
-        );
+        assert_eq!(response, response_expected);
     }
+
     #[test]
     fn parse_too_short() {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
-
-        assert!(Bus::parse(
+        let parsed = Bus::parse(
             0x11,
             &request,
-            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45]
-        )
-        .unwrap()
-        .is_none());
+            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45],
+        );
+
+        assert!(parsed.unwrap().is_none());
     }
+
     #[test]
     fn parse_too_long() {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
-
-        assert!(Bus::parse(
+        let parsed = Bus::parse(
             0x11,
             &request,
-            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6, 0x00]
-        )
-        .is_err());
+            &[
+                0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6, 0x00,
+            ],
+        );
+
+        assert!(parsed.is_err());
     }
+
     #[test]
     fn parse_empty() {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
 
-        assert!(Bus::parse(0x11, &request, &[]).unwrap().is_none());
+        let parsed = Bus::parse(0x11, &request, &[]);
+
+        assert!(parsed.unwrap().is_none());
     }
 }
 
@@ -498,12 +504,22 @@ mod tests_erased_wrappers {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
         let request_erased = RequestErasedWrapper::from_original(request);
 
-        assert_eq!(
-            Bus::serialize(0x11, &request_erased).unwrap().into_vec(),
-            vec![0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84]
-        );
+        let serialized = Bus::serialize(0x11, &request_erased).unwrap().into_vec();
 
-        let response = ReadCoilsResponse::new(
+        let serialized_expected = vec![0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84];
+
+        assert_eq!(serialized, serialized_expected);
+
+        let parsed_erased: ResponseErasedWrapper = Bus::parse(
+            0x11,
+            &request_erased,
+            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6],
+        )
+        .unwrap()
+        .unwrap();
+        let parsed = parsed_erased.into_original::<ReadCoilsResponse>();
+
+        let parsed_expected = ReadCoilsResponse::new(
             vec![
                 true, false, true, true, false, false, true, true, // 20-27
                 true, true, false, true, false, true, true, false, // 28 - 35
@@ -514,17 +530,6 @@ mod tests_erased_wrappers {
             .into_boxed_slice(),
         );
 
-        let response_erased: ResponseErasedWrapper = Bus::parse(
-            0x11,
-            &request_erased,
-            &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6],
-        )
-        .unwrap()
-        .unwrap();
-
-        assert_eq!(
-            response_erased.into_original::<ReadCoilsResponse>(),
-            response
-        );
+        assert_eq!(parsed, parsed_expected);
     }
 }

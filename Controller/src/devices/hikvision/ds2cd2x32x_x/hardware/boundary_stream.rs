@@ -85,7 +85,6 @@ mod tests_extractor {
         assert!(extractor.try_extract().unwrap().is_some());
         assert!(extractor.try_extract().unwrap().is_none());
     }
-
     #[test]
     fn try_extract_2() {
         let mut extractor = Extractor::new();
@@ -99,7 +98,6 @@ mod tests_extractor {
 
         assert!(extractor.try_extract().unwrap().is_some());
     }
-
     #[test]
     fn try_extract_3() {
         let mut extractor = Extractor::new();
@@ -112,7 +110,6 @@ mod tests_extractor {
         assert!(extractor.try_extract().unwrap().is_some());
         assert!(extractor.try_extract().unwrap().is_none());
     }
-
     #[test]
     fn try_extract_4() {
         let mut extractor = Extractor::new();
@@ -125,7 +122,6 @@ mod tests_extractor {
         assert!(extractor.try_extract().unwrap().is_some());
         assert!(extractor.try_extract().unwrap().is_none());
     }
-
     #[test]
     fn try_extract_5() {
         let mut extractor = Extractor::new();
@@ -136,7 +132,6 @@ mod tests_extractor {
         assert!(extractor.try_extract().unwrap().is_some());
         assert!(extractor.try_extract().unwrap().is_none());
     }
-
     #[test]
     fn try_extract_6() {
         let mut extractor = Extractor::new();
