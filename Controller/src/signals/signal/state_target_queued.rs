@@ -8,6 +8,7 @@ use std::{
     mem::replace,
 };
 
+#[derive(Debug)]
 pub struct Last<V: Value + Clone> {
     pub value: Option<V>,
     pub pending: bool,
