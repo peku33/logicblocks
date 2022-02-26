@@ -1,13 +1,12 @@
 use super::Base;
 use crate::util::atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease};
 use parking_lot::Mutex;
-use serde::Serialize;
 use std::ops::Deref;
 
 #[derive(Debug)]
 struct State<T>
 where
-    T: Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Send + Sync + 'static,
 {
     value: T,
     device_pending: bool,
@@ -16,7 +15,7 @@ where
 #[derive(Debug)]
 struct Inner<T>
 where
-    T: Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Send + Sync + 'static,
 {
     state: Mutex<State<T>>,
 }
@@ -24,13 +23,13 @@ where
 #[derive(Debug)]
 pub struct Property<T>
 where
-    T: Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Send + Sync + 'static,
 {
     inner: AtomicCellErased<Inner<T>>,
 }
 impl<T> Property<T>
 where
-    T: Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Send + Sync + 'static,
 {
     pub fn new(initial: T) -> Self {
         let state = State {
@@ -77,18 +76,18 @@ where
         true
     }
 }
-impl<T> Base for Property<T> where T: Eq + Clone + Serialize + Send + Sync + 'static {}
+impl<T> Base for Property<T> where T: Eq + Clone + Send + Sync + 'static {}
 
 #[derive(Debug)]
 pub struct Sink<T>
 where
-    T: Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Send + Sync + 'static,
 {
     inner: AtomicCellErasedLease<Inner<T>>,
 }
 impl<T> Sink<T>
 where
-    T: Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Send + Sync + 'static,
 {
     fn new(parent: &Property<T>) -> Self {
         let inner = parent.inner.lease();
@@ -127,14 +126,14 @@ where
 
 pub struct Pending<'p, T>
 where
-    T: Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Send + Sync + 'static,
 {
     property: &'p Property<T>,
     value: T,
 }
 impl<'p, T> Pending<'p, T>
 where
-    T: Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Send + Sync + 'static,
 {
     pub fn commit(self) {
         let mut lock = self.property.inner.state.lock();
@@ -146,7 +145,7 @@ where
 }
 impl<'p, T> Deref for Pending<'p, T>
 where
-    T: Eq + Clone + Serialize + Send + Sync + 'static,
+    T: Eq + Clone + Send + Sync + 'static,
 {
     type Target = T;
     fn deref(&self) -> &Self::Target {

@@ -11,7 +11,7 @@ use crate::{
 };
 use anyhow::{bail, ensure, Context, Error};
 use async_trait::async_trait;
-use futures::{pin_mut, select, FutureExt};
+use futures::{future::FutureExt, pin_mut, select};
 use itertools::Itertools;
 use std::time::Duration;
 

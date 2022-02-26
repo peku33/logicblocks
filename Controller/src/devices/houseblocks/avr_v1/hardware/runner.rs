@@ -4,7 +4,6 @@ use super::{
         master::Master,
     },
     driver::{ApplicationDriver, Driver},
-    property,
 };
 use crate::{
     devices,
@@ -24,7 +23,7 @@ use futures::{
 };
 use parking_lot::Mutex;
 use serde::Serialize;
-use std::{cmp::min, collections::HashMap, fmt, time::Duration};
+use std::{cmp::min, fmt, time::Duration};
 
 #[async_trait]
 pub trait BusDevice {
@@ -48,17 +47,14 @@ pub trait BusDevice {
 }
 
 pub trait Properties {
-    fn by_name(&self) -> HashMap<&'static str, &dyn property::Base>;
-
-    fn in_any_user_pending(&self) -> bool;
+    fn user_pending(&self) -> bool;
+    fn device_reset(&self);
 
     type Remote: Sync + Send;
     fn remote(&self) -> Self::Remote;
 }
 
 pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
-    fn new() -> Self;
-
     fn device_type_name() -> &'static str;
     fn address_device_type() -> AddressDeviceType;
 
@@ -99,6 +95,7 @@ impl<'m, D: Device> Runner<'m, D> {
 
     pub fn new(
         master: &'m Master,
+        device: D,
         address_serial: AddressSerial,
     ) -> Self {
         let driver = Driver::new(
@@ -108,8 +105,6 @@ impl<'m, D: Device> Runner<'m, D> {
                 serial: address_serial,
             },
         );
-        let device = D::new();
-
         let device_state = Mutex::new(DeviceState::Initializing);
 
         Self {
@@ -142,6 +137,12 @@ impl<'m, D: Device> Runner<'m, D> {
         *self.device_state.lock() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
 
+        // Make device properties in uninitialized state
+        self.device.properties().device_reset();
+        if self.device.properties().user_pending() {
+            self.properties_remote_in_change_waker.wake();
+        }
+
         // Hardware initializing & avr_v1
         self.driver.prepare().await.context("initial prepare")?;
 
@@ -153,7 +154,7 @@ impl<'m, D: Device> Runner<'m, D> {
             .initialize(&application_driver)
             .await
             .context("initialize")?;
-        if self.device.properties().in_any_user_pending() {
+        if self.device.properties().user_pending() {
             self.properties_remote_in_change_waker.wake();
         }
 
@@ -177,7 +178,7 @@ impl<'m, D: Device> Runner<'m, D> {
                 .poll(&application_driver)
                 .await
                 .context("poll")?;
-            if self.device.properties().in_any_user_pending() {
+            if self.device.properties().user_pending() {
                 self.properties_remote_in_change_waker.wake();
             }
 
@@ -200,9 +201,12 @@ impl<'m, D: Device> Runner<'m, D> {
             .deinitialize(&application_driver)
             .await
             .context("deinitialize")?;
-        if self.device.properties().in_any_user_pending() {
+        self.device.properties().device_reset();
+        if self.device.properties().user_pending() {
             self.properties_remote_in_change_waker.wake();
         }
+
+        // TODO: reset device to reinitialize state?
 
         *self.device_state.lock() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
@@ -224,8 +228,10 @@ impl<'m, D: Device> Runner<'m, D> {
             };
             log::error!("device {} failed: {:?}", self.driver.address(), error);
 
+            // Make device properties in uninitialized state
+            self.device.properties().device_reset();
             self.device.failed();
-            if self.device.properties().in_any_user_pending() {
+            if self.device.properties().user_pending() {
                 self.properties_remote_in_change_waker.wake();
             }
 
@@ -257,6 +263,10 @@ impl<'m, D: Device> Runner<'m, D> {
         let _: (Exited, Exited) = join!(driver_runner, device_runner);
 
         Exited
+    }
+
+    pub fn finalize(self) -> D {
+        self.device
     }
 }
 

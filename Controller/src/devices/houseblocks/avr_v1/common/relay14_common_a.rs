@@ -45,7 +45,9 @@ pub mod logic {
                 .signal_outputs
                 .iter()
                 .map(|signal_output| signal_output.take_last())
-                .collect::<ArrayVec<_, { hardware::OUTPUT_COUNT }>>();
+                .collect::<ArrayVec<_, { hardware::OUTPUT_COUNT }>>()
+                .into_inner()
+                .unwrap();
             if outputs_last.iter().any(|output_last| output_last.pending) {
                 let outputs = outputs_last
                     .iter()
@@ -181,18 +183,13 @@ pub mod hardware {
     use super::super::super::{
         super::houseblocks_v1::common::{AddressDeviceType, Payload},
         hardware::{
-            driver::ApplicationDriver,
-            parser::{Parser, ParserPayload},
-            property, runner,
-            serializer::Serializer,
+            driver::ApplicationDriver, parser::Parser, property, runner, serializer::Serializer,
         },
     };
-    use anyhow::{Context, Error};
+    use anyhow::{ensure, Context, Error};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
-    use derive_more::Constructor;
-    use maplit::hashmap;
-    use std::{collections::HashMap, fmt, marker::PhantomData, time::Duration};
+    use std::{fmt, iter, marker::PhantomData, time::Duration};
 
     pub const OUTPUT_COUNT: usize = 14;
     pub type OutputValues = [bool; OUTPUT_COUNT];
@@ -209,19 +206,16 @@ pub mod hardware {
     impl Properties {
         pub fn new() -> Self {
             Self {
-                outputs: property::state_out::Property::new([false; OUTPUT_COUNT]),
+                outputs: property::state_out::Property::<OutputValues>::new([false; OUTPUT_COUNT]),
             }
         }
     }
     impl runner::Properties for Properties {
-        fn by_name(&self) -> HashMap<&'static str, &dyn property::Base> {
-            hashmap! {
-                "outputs" => &self.outputs as &dyn property::Base,
-            }
-        }
-
-        fn in_any_user_pending(&self) -> bool {
+        fn user_pending(&self) -> bool {
             false
+        }
+        fn device_reset(&self) {
+            self.outputs.device_reset();
         }
 
         type Remote = PropertiesRemote;
@@ -241,13 +235,15 @@ pub mod hardware {
         properties: Properties,
         _phantom: PhantomData<S>,
     }
-    impl<S: Specification> runner::Device for Device<S> {
-        fn new() -> Self {
+    impl<S: Specification> Device<S> {
+        pub fn new() -> Self {
             Self {
                 properties: Properties::new(),
                 _phantom: PhantomData,
             }
         }
+    }
+    impl<S: Specification> runner::Device for Device<S> {
         fn device_type_name() -> &'static str {
             S::device_type_name()
         }
@@ -276,25 +272,27 @@ pub mod hardware {
             &self,
             driver: &ApplicationDriver<'_>,
         ) -> Result<(), Error> {
-            // Stage 1
             let outputs_pending = self.properties.outputs.device_pending();
 
-            let request = BusRequest::new(
-                outputs_pending
+            let request = BusRequest {
+                outputs: outputs_pending
                     .as_ref()
-                    .map(move |outputs| BusRequestOutputs::new(**outputs)),
-            );
-            let request_payload = request.into_payload();
+                    .map(move |outputs| BusRequestOutputs { values: **outputs }),
+            };
+            // we make a request no matter if it's required or not to confirm device is up
+            let request_payload = request.to_payload();
             let response_payload = driver
                 .transaction_out_in(request_payload, None)
                 .await
                 .context("transaction")?;
-            let _response = BusResponse::from_payload(response_payload).context("response")?;
+            let response = BusResponse::from_payload(&response_payload).context("response")?;
 
             // Propagate values to properties
             if let Some(outputs_pending) = outputs_pending {
-                outputs_pending.commit();
+                outputs_pending.commit()
             }
+
+            ensure!(response == BusResponse {});
 
             Ok(())
         }
@@ -306,34 +304,39 @@ pub mod hardware {
             Ok(())
         }
 
-        fn failed(&self) {
-            self.properties.outputs.device_reset();
-        }
+        fn failed(&self) {}
     }
 
-    #[derive(Constructor)]
+    #[derive(PartialEq, Eq, Debug)]
     struct BusRequestOutputs {
-        values: [bool; OUTPUT_COUNT],
+        pub values: [bool; OUTPUT_COUNT],
     }
     impl BusRequestOutputs {
         pub fn serialize(
             &self,
             serializer: &mut Serializer,
         ) {
-            let mut values = ArrayVec::<bool, 16>::new();
-            values.try_extend_from_slice(&self.values).unwrap();
-            values.push(false);
-            values.push(false);
+            let values = iter::empty()
+                .chain(self.values.iter().copied())
+                .chain(iter::repeat(false))
+                .take(16)
+                .collect::<ArrayVec<bool, 16>>()
+                .into_inner()
+                .unwrap();
             serializer.push_bool_array_16(values);
         }
     }
 
-    #[derive(Constructor)]
+    #[derive(PartialEq, Eq, Debug)]
     struct BusRequest {
-        outputs: Option<BusRequestOutputs>,
+        pub outputs: Option<BusRequestOutputs>,
     }
     impl BusRequest {
-        pub fn into_payload(self) -> Payload {
+        pub fn is_nop(&self) -> bool {
+            self.outputs.is_none()
+        }
+
+        pub fn to_payload(&self) -> Payload {
             let mut serializer = Serializer::new();
             self.serialize(&mut serializer);
             serializer.into_payload()
@@ -350,15 +353,16 @@ pub mod hardware {
         }
     }
 
+    #[derive(PartialEq, Eq, Debug)]
     struct BusResponse {}
     impl BusResponse {
-        pub fn from_payload(payload: Payload) -> Result<Self, Error> {
-            let mut parser = ParserPayload::new(&payload);
-            let self_ = Self::parse(&mut parser)?;
+        pub fn from_payload(payload: &Payload) -> Result<Self, Error> {
+            let mut parser = Parser::from_payload(payload);
+            let self_ = Self::parse(&mut parser).context("parse")?;
             Ok(self_)
         }
-        pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
-            parser.expect_end()?;
+        pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
+            parser.expect_end().context("expect_end")?;
             Ok(Self {})
         }
     }

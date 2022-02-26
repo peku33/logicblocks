@@ -7,6 +7,7 @@ pub enum Unit {
     Fahrenheit,
 }
 
+// FIXME: ensure struct field `kelvin` is deserialized in as finite
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Temperature {
@@ -17,6 +18,7 @@ impl Temperature {
         unit: Unit,
         value: f64,
     ) -> Self {
+        assert!(value.is_finite(), "value must be finite");
         let kelvin = match unit {
             Unit::Kelvin => value,
             Unit::Fahrenheit => (value + 459.67) * 5.0 / 9.0,

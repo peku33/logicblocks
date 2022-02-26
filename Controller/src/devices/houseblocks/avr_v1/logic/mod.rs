@@ -48,9 +48,10 @@ pub struct Runner<'m, D: Device> {
 impl<'m, D: Device> Runner<'m, D> {
     pub fn new(
         master: &'m Master,
+        hardware_device: D::HardwareDevice,
         address_serial: AddressSerial,
     ) -> Self {
-        let hardware_runner = runner::Runner::new(master, address_serial);
+        let hardware_runner = runner::Runner::new(master, hardware_device, address_serial);
         let properties_remote = hardware_runner.properties_remote();
 
         let device = D::new(properties_remote);
@@ -127,6 +128,10 @@ impl<'m, D: Device> Runner<'m, D> {
         );
 
         Exited
+    }
+
+    pub fn finalize(self) -> D::HardwareDevice {
+        self.hardware_runner.finalize()
     }
 }
 

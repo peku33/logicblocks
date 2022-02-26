@@ -42,7 +42,9 @@ pub mod logic {
                 .signal_leds
                 .iter()
                 .map(|signal_led| signal_led.take_last())
-                .collect::<ArrayVec<_, { hardware::LED_COUNT }>>();
+                .collect::<ArrayVec<_, { hardware::LED_COUNT }>>()
+                .into_inner()
+                .unwrap();
             if leds_last.iter().any(|led_last| led_last.pending) {
                 let leds = leds_last
                     .iter()
@@ -158,8 +160,8 @@ pub mod logic {
             }
 
             // temperature
-            if let Some(temperature) = self.properties_remote.temperature.take_pending() {
-                let temperature = temperature.and_then(|temperature| temperature.temperature());
+            if let Some(ds18x20) = self.properties_remote.ds18x20.take_pending() {
+                let temperature = ds18x20.and_then(|ds18x20| ds18x20.temperature);
 
                 if self.signal_temperature.set_one(temperature) {
                     signals_changed = true;
@@ -255,9 +257,9 @@ pub mod logic {
             let gui_summary = GuiSummary {
                 temperature: self
                     .properties_remote
-                    .temperature
+                    .ds18x20
                     .peek_last()
-                    .and_then(|temperature| temperature.temperature()),
+                    .and_then(|ds18x20| ds18x20.temperature),
             };
             let gui_summary = Box::new(gui_summary);
             gui_summary
@@ -273,21 +275,16 @@ pub mod hardware {
     use super::super::{
         super::houseblocks_v1::common::{AddressDeviceType, Payload},
         hardware::{
-            common::ds18x20,
-            driver::ApplicationDriver,
-            parser::{Parser, ParserPayload},
-            property, runner,
+            common::ds18x20, driver::ApplicationDriver, parser::Parser, property, runner,
             serializer::Serializer,
         },
     };
-    use anyhow::{bail, Context, Error};
+    use anyhow::{bail, ensure, Context, Error};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
-    use derive_more::Constructor;
-    use maplit::hashmap;
     use std::{
         cmp::{max, min},
-        collections::HashMap,
+        iter,
         time::Duration,
     };
 
@@ -303,30 +300,26 @@ pub mod hardware {
         keys: property::state_event_in::Property<KeyValues, KeyChangesCount>,
         leds: property::state_out::Property<LedValues>,
         buzzer: property::event_out_last::Property<Duration>,
-        temperature: property::state_in::Property<ds18x20::State>,
+        ds18x20: property::state_in::Property<ds18x20::State>,
     }
     impl Properties {
         pub fn new() -> Self {
             Self {
-                keys: property::state_event_in::Property::new(),
-                leds: property::state_out::Property::new([false; LED_COUNT]),
-                buzzer: property::event_out_last::Property::new(),
-                temperature: property::state_in::Property::new(),
+                keys: property::state_event_in::Property::<KeyValues, KeyChangesCount>::new(),
+                leds: property::state_out::Property::<LedValues>::new([false; LED_COUNT]),
+                buzzer: property::event_out_last::Property::<Duration>::new(),
+                ds18x20: property::state_in::Property::<ds18x20::State>::new(),
             }
         }
     }
     impl runner::Properties for Properties {
-        fn by_name(&self) -> HashMap<&'static str, &dyn property::Base> {
-            hashmap! {
-                "keys" => &self.keys as &dyn property::Base,
-                "leds" => &self.leds as &dyn property::Base,
-                "buzzer" => &self.buzzer as &dyn property::Base,
-                "temperature" => &self.temperature as &dyn property::Base,
-            }
+        fn user_pending(&self) -> bool {
+            self.keys.user_pending() || self.ds18x20.user_pending()
         }
-
-        fn in_any_user_pending(&self) -> bool {
-            self.keys.user_pending() || self.temperature.user_pending()
+        fn device_reset(&self) {
+            self.keys.device_reset();
+            self.leds.device_reset();
+            self.ds18x20.device_reset();
         }
 
         type Remote = PropertiesRemote;
@@ -335,7 +328,7 @@ pub mod hardware {
                 keys: self.keys.user_stream(),
                 leds: self.leds.user_sink(),
                 buzzer: self.buzzer.user_sink(),
-                temperature: self.temperature.user_stream(),
+                ds18x20: self.ds18x20.user_stream(),
             }
         }
     }
@@ -344,20 +337,21 @@ pub mod hardware {
         pub keys: property::state_event_in::Stream<KeyValues, KeyChangesCount>,
         pub leds: property::state_out::Sink<LedValues>,
         pub buzzer: property::event_out_last::Sink<Duration>,
-        pub temperature: property::state_in::Stream<ds18x20::State>,
+        pub ds18x20: property::state_in::Stream<ds18x20::State>,
     }
 
     #[derive(Debug)]
     pub struct Device {
         properties: Properties,
     }
-    impl runner::Device for Device {
-        fn new() -> Self {
+    impl Device {
+        pub fn new() -> Self {
             Self {
                 properties: Properties::new(),
             }
         }
-
+    }
+    impl runner::Device for Device {
         fn device_type_name() -> &'static str {
             "JunctionBox_Minimal_v1"
         }
@@ -393,61 +387,98 @@ pub mod hardware {
             let stage_1_request = BusRequest {
                 poll_request: true,
                 keys_request: false,
-                leds: leds_pending
-                    .as_ref()
-                    .map(|leds_pending| BusRequestLeds::new(**leds_pending)),
+                leds: leds_pending.as_ref().map(|leds_pending| BusRequestLeds {
+                    values: **leds_pending,
+                }),
                 buzzer: buzzer_pending.as_ref().map(|buzzer_pending| {
                     BusRequestBuzzer::from_duration_milliseconds(**buzzer_pending)
                 }),
-                temperature_request: false,
+                ds18x20_request: false,
             };
-            let stage_1_request_payload = stage_1_request.into_payload();
+            // stage 1 request is always used, to check device uptime
+            let stage_1_request_payload = stage_1_request.to_payload();
             let stage_1_response_payload = driver
                 .transaction_out_in(stage_1_request_payload, None)
                 .await
                 .context("stage 1 transaction")?;
             let stage_1_response =
-                BusResponse::from_payload(stage_1_response_payload).context("stage 1 response")?;
+                BusResponse::from_payload(&stage_1_response_payload).context("stage 1 response")?;
 
             if let Some(leds_pending) = leds_pending {
-                leds_pending.commit();
+                leds_pending.commit()
             }
             if let Some(buzzer_pending) = buzzer_pending {
-                buzzer_pending.commit();
+                buzzer_pending.commit()
             }
 
-            // Stage 2 - If poll returned something, handle it
-            let stage_1_response_poll = match stage_1_response.poll {
+            let BusResponse {
+                poll: stage_1_response_poll,
+                keys: stage_1_response_keys,
+                ds18x20: stage_1_response_ds18x20,
+            } = stage_1_response;
+
+            let stage_1_response_poll = match stage_1_response_poll {
                 Some(stage_1_response_poll) => stage_1_response_poll,
-                None => return Ok(()),
+                None => bail!("poll not returned after being requested"),
             };
+            ensure!(stage_1_response_keys.is_none());
+            ensure!(stage_1_response_ds18x20.is_none());
+
+            // Stage 2 - If poll returned something, handle it
             let stage_2_request = BusRequest {
                 poll_request: false,
-                keys_request: stage_1_response_poll.keys || self.properties.keys.device_must_read(),
+                keys_request: false
+                    || stage_1_response_poll.keys
+                    || self.properties.keys.device_must_read(),
                 leds: None,
                 buzzer: None,
-                temperature_request: stage_1_response_poll.temperature
-                    || self.properties.temperature.device_must_read(),
+                ds18x20_request: false
+                    || stage_1_response_poll.ds18x20
+                    || self.properties.ds18x20.device_must_read(),
             };
-            let stage_2_request_payload = stage_2_request.into_payload();
+
+            if stage_2_request.is_nop() {
+                return Ok(());
+            }
+
+            let stage_2_request_payload = stage_2_request.to_payload();
             let stage_2_response_payload = driver
                 .transaction_out_in(stage_2_request_payload, None)
                 .await
                 .context("stage 2 transaction")?;
             let stage_2_response =
-                BusResponse::from_payload(stage_2_response_payload).context("stage 2 response")?;
+                BusResponse::from_payload(&stage_2_response_payload).context("stage 2 response")?;
 
-            // Propagate values to properties
-            if let Some(response_keys) = stage_2_response.keys {
-                self.properties
-                    .keys
-                    .device_set(response_keys.values(), response_keys.changes_count());
+            let BusResponse {
+                poll: stage_2_response_poll,
+                keys: stage_2_response_keys,
+                ds18x20: stage_2_response_ds18x20,
+            } = stage_2_response;
+
+            ensure!(stage_2_response_poll.is_none());
+            let stage_2_response_keys = match (stage_2_request.keys_request, stage_2_response_keys)
+            {
+                (false, None) => None,
+                (true, Some(stage_2_response_keys)) => Some(stage_2_response_keys),
+                _ => bail!("keys mismatch"),
+            };
+            let stage_2_response_ds18x20 =
+                match (stage_2_request.ds18x20_request, stage_2_response_ds18x20) {
+                    (false, None) => None,
+                    (true, Some(stage_2_response_ds18x20)) => Some(stage_2_response_ds18x20),
+                    _ => bail!("ds18x20 mismatch"),
+                };
+
+            if let Some(stage_2_response_keys) = stage_2_response_keys {
+                self.properties.keys.device_set(
+                    stage_2_response_keys.values(),
+                    stage_2_response_keys.changes_count(),
+                );
             }
-
-            if let Some(response_temperature) = stage_2_response.temperature {
+            if let Some(stage_2_response_ds18x20) = stage_2_response_ds18x20 {
                 self.properties
-                    .temperature
-                    .device_set(response_temperature.state());
+                    .ds18x20
+                    .device_set(stage_2_response_ds18x20.state);
             }
 
             Ok(())
@@ -460,32 +491,31 @@ pub mod hardware {
             Ok(())
         }
 
-        fn failed(&self) {
-            self.properties.keys.device_reset();
-            self.properties.leds.device_reset();
-            self.properties.temperature.device_reset();
-        }
+        fn failed(&self) {}
     }
 
     // Bus
-    #[derive(Constructor, Debug)]
+    #[derive(PartialEq, Eq, Debug)]
     struct BusRequestLeds {
-        values: [bool; LED_COUNT],
+        pub values: [bool; LED_COUNT],
     }
     impl BusRequestLeds {
         pub fn serialize(
             &self,
             serializer: &mut Serializer,
         ) {
-            let mut values = ArrayVec::<bool, 8>::new();
-            values.try_extend_from_slice(&self.values).unwrap();
-            values.push(false);
-            values.push(false);
+            let values = iter::empty()
+                .chain(self.values.iter().copied())
+                .chain(iter::repeat(false))
+                .take(8)
+                .collect::<ArrayVec<bool, 8>>()
+                .into_inner()
+                .unwrap();
             serializer.push_bool_array_8(values);
         }
     }
 
-    #[derive(Debug)]
+    #[derive(PartialEq, Eq, Debug)]
     struct BusRequestBuzzer {
         ticks: u8,
     }
@@ -509,16 +539,27 @@ pub mod hardware {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(PartialEq, Eq, Debug)]
     struct BusRequest {
-        poll_request: bool,
-        keys_request: bool,
-        leds: Option<BusRequestLeds>,
-        buzzer: Option<BusRequestBuzzer>,
-        temperature_request: bool,
+        pub poll_request: bool,
+        pub keys_request: bool,
+        pub leds: Option<BusRequestLeds>,
+        pub buzzer: Option<BusRequestBuzzer>,
+        pub ds18x20_request: bool,
     }
     impl BusRequest {
-        pub fn into_payload(self) -> Payload {
+        pub fn is_nop(&self) -> bool {
+            *self
+                == (Self {
+                    poll_request: false,
+                    keys_request: false,
+                    leds: None,
+                    buzzer: None,
+                    ds18x20_request: false,
+                })
+        }
+
+        pub fn to_payload(&self) -> Payload {
             let mut serializer = Serializer::new();
             self.serialize(&mut serializer);
             serializer.into_payload()
@@ -542,12 +583,11 @@ pub mod hardware {
                 serializer.push_byte(b'B');
                 buzzer.serialize(serializer);
             }
-            if self.temperature_request {
+            if self.ds18x20_request {
                 serializer.push_byte(b'T');
             }
         }
     }
-
     #[cfg(test)]
     mod tests_bus_request {
         use super::{
@@ -556,19 +596,23 @@ pub mod hardware {
         };
 
         #[test]
-        fn test_1() {
+        fn empty() {
             let request = BusRequest {
                 poll_request: false,
                 keys_request: false,
                 leds: None,
                 buzzer: None,
-                temperature_request: false,
+                ds18x20_request: false,
             };
-            let payload = request.into_payload();
-            assert_eq!(payload, Payload::new(Box::from(*b"")).unwrap());
+            let payload = request.to_payload();
+
+            let payload_expected = Payload::new(Box::from(*b"")).unwrap();
+
+            assert_eq!(payload, payload_expected);
         }
+
         #[test]
-        fn test_2() {
+        fn full() {
             let request = BusRequest {
                 poll_request: true,
                 keys_request: true,
@@ -576,33 +620,36 @@ pub mod hardware {
                     values: [true, false, false, true, true, true],
                 }),
                 buzzer: Some(BusRequestBuzzer { ticks: 0xF1 }),
-                temperature_request: true,
+                ds18x20_request: true,
             };
-            let payload = request.into_payload();
-            assert_eq!(payload, Payload::new(Box::from(*b"PKL39BF1T")).unwrap());
+            let payload = request.to_payload();
+
+            let payload_expected = Payload::new(Box::from(*b"PKL39BF1T")).unwrap();
+
+            assert_eq!(payload, payload_expected);
         }
     }
 
-    #[derive(Debug)]
+    #[derive(PartialEq, Eq, Debug)]
     struct BusResponsePoll {
-        keys: bool,
-        temperature: bool,
+        pub keys: bool,
+        pub ds18x20: bool,
     }
     impl BusResponsePoll {
-        pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
+        pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
             let keys = parser.expect_bool().context("keys")?;
-            let temperature = parser.expect_bool().context("temperature")?;
-            Ok(Self { keys, temperature })
+            let ds18x20 = parser.expect_bool().context("ds18x20")?;
+            Ok(Self { keys, ds18x20 })
         }
     }
 
-    #[derive(Debug)]
+    #[derive(PartialEq, Eq, Debug)]
     struct BusResponseKey {
-        value: bool,
-        changes_count: u8,
+        pub value: bool,
+        pub changes_count: u8,
     }
     impl BusResponseKey {
-        pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
+        pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
             let value = parser.expect_bool().context("value")?;
             let changes_count = parser.expect_u8().context("changes_count")?;
             Ok(Self {
@@ -610,24 +657,18 @@ pub mod hardware {
                 changes_count,
             })
         }
-
-        pub fn value(&self) -> bool {
-            self.value
-        }
-        pub fn changes_count(&self) -> u8 {
-            self.changes_count
-        }
     }
 
-    #[derive(Debug)]
+    #[derive(PartialEq, Eq, Debug)]
     struct BusResponseKeys {
-        keys: [BusResponseKey; KEY_COUNT],
+        pub keys: [BusResponseKey; KEY_COUNT],
     }
     impl BusResponseKeys {
-        pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
+        pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
             let keys = (0..KEY_COUNT)
                 .map(|_| BusResponseKey::parse(parser))
-                .collect::<Result<ArrayVec<_, { KEY_COUNT }>, _>>()?
+                .collect::<Result<ArrayVec<_, { KEY_COUNT }>, _>>()
+                .context("collect")?
                 .into_inner()
                 .unwrap();
             Ok(Self { keys })
@@ -636,7 +677,7 @@ pub mod hardware {
         pub fn values(&self) -> KeyValues {
             self.keys
                 .iter()
-                .map(|key| key.value())
+                .map(|key| key.value)
                 .collect::<ArrayVec<_, { KEY_COUNT }>>()
                 .into_inner()
                 .unwrap()
@@ -644,176 +685,185 @@ pub mod hardware {
         pub fn changes_count(&self) -> KeyChangesCount {
             self.keys
                 .iter()
-                .map(|key| key.changes_count())
+                .map(|key| key.changes_count)
                 .collect::<ArrayVec<_, { KEY_COUNT }>>()
                 .into_inner()
                 .unwrap()
         }
     }
 
-    #[derive(Debug)]
-    struct BusResponseTemperature {
-        state: ds18x20::State,
+    #[derive(PartialEq, Eq, Debug)]
+    struct BusResponseDs18x20 {
+        pub state: ds18x20::State,
     }
-    impl BusResponseTemperature {
-        pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
+    impl BusResponseDs18x20 {
+        pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
             let state = ds18x20::State::parse(parser).context("state")?;
             Ok(Self { state })
         }
-
-        pub fn state(&self) -> ds18x20::State {
-            self.state
-        }
     }
 
-    #[derive(Debug)]
+    #[derive(PartialEq, Eq, Debug)]
     struct BusResponse {
-        poll: Option<BusResponsePoll>,
-        keys: Option<BusResponseKeys>,
-        temperature: Option<BusResponseTemperature>,
+        pub poll: Option<BusResponsePoll>,
+        pub keys: Option<BusResponseKeys>,
+        pub ds18x20: Option<BusResponseDs18x20>,
     }
     impl BusResponse {
-        pub fn from_payload(payload: Payload) -> Result<Self, Error> {
-            let mut parser = ParserPayload::new(&payload);
-            let self_ = Self::parse(&mut parser)?;
+        pub fn from_payload(payload: &Payload) -> Result<Self, Error> {
+            let mut parser = Parser::from_payload(payload);
+            let self_ = Self::parse(&mut parser).context("parse")?;
             Ok(self_)
         }
 
-        pub fn parse(parser: &mut impl Parser) -> Result<Self, Error> {
-            let mut poll = None;
-            let mut keys = None;
-            let mut temperature = None;
+        pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
+            let mut poll: Option<BusResponsePoll> = None;
+            let mut keys: Option<BusResponseKeys> = None;
+            let mut ds18x20: Option<BusResponseDs18x20> = None;
 
             while let Some(opcode) = parser.get_byte() {
                 match opcode {
                     b'P' => {
-                        if poll
-                            .replace(BusResponsePoll::parse(parser).context("poll")?)
-                            .is_some()
-                        {
-                            bail!("duplicated poll");
-                        }
+                        let value = BusResponsePoll::parse(parser).context("poll")?;
+                        ensure!(poll.replace(value).is_none(), "duplicated poll");
                     }
                     b'K' => {
-                        if keys
-                            .replace(BusResponseKeys::parse(parser).context("keys")?)
-                            .is_some()
-                        {
-                            bail!("duplicated keys");
-                        }
+                        let value = BusResponseKeys::parse(parser).context("keys")?;
+                        ensure!(keys.replace(value).is_none(), "duplicated keys");
                     }
                     b'T' => {
-                        if temperature
-                            .replace(BusResponseTemperature::parse(parser).context("temperature")?)
-                            .is_some()
-                        {
-                            bail!("duplicated temperature");
-                        }
+                        let value = BusResponseDs18x20::parse(parser).context("ds18x20")?;
+                        ensure!(ds18x20.replace(value).is_none(), "duplicated ds18x20");
                     }
                     opcode => bail!("unrecognized opcode: {}", opcode),
                 }
             }
 
+            parser.expect_end().context("expect_end")?;
+
             Ok(Self {
                 poll,
                 keys,
-                temperature,
+                ds18x20,
             })
         }
     }
-
     #[cfg(test)]
     mod tests_bus_response {
-        use super::{super::super::super::houseblocks_v1::common::Payload, BusResponse};
-        use crate::datatypes::temperature::{Temperature, Unit as TemperatureUnit};
+        use super::{
+            super::super::super::houseblocks_v1::common::Payload, BusResponse, BusResponseDs18x20,
+            BusResponseKey, BusResponseKeys, BusResponsePoll,
+        };
+        use crate::{
+            datatypes::temperature::{Temperature, Unit as TemperatureUnit},
+            devices::houseblocks::avr_v1::hardware::common::ds18x20,
+        };
 
         #[test]
-        fn empty_1() {
+        fn empty() {
             let payload = Payload::new(Box::from(*b"")).unwrap();
-            let bus_response = BusResponse::from_payload(payload).unwrap();
-            assert!(bus_response.poll.is_none());
-            assert!(bus_response.keys.is_none());
-            assert!(bus_response.temperature.is_none());
+            let bus_response = BusResponse::from_payload(&payload).unwrap();
+
+            let bus_response_expected = BusResponse {
+                poll: None,
+                keys: None,
+                ds18x20: None,
+            };
+
+            assert_eq!(bus_response, bus_response_expected);
         }
 
         #[test]
         fn invalid_1() {
             let payload = Payload::new(Box::from(*b"1")).unwrap();
-            BusResponse::from_payload(payload).unwrap_err();
+            BusResponse::from_payload(&payload).unwrap_err();
         }
         #[test]
         fn invalid_2() {
             let payload = Payload::new(Box::from(*b"P00P11")).unwrap();
-            BusResponse::from_payload(payload).unwrap_err();
+            BusResponse::from_payload(&payload).unwrap_err();
         }
 
         #[test]
         fn response_1() {
             let payload = Payload::new(Box::from(*b"P01TC7D0")).unwrap();
-            let bus_response = BusResponse::from_payload(payload).unwrap();
-            assert_eq!(bus_response.poll.as_ref().unwrap().keys, false);
-            assert_eq!(bus_response.poll.as_ref().unwrap().temperature, true);
-            assert!(bus_response.keys.is_none());
-            assert_eq!(
-                bus_response
-                    .temperature
-                    .unwrap()
-                    .state()
-                    .temperature()
-                    .unwrap(),
-                Temperature::new(TemperatureUnit::Celsius, 125.00)
-            );
+            let bus_response = BusResponse::from_payload(&payload).unwrap();
+
+            let bus_response_expected = BusResponse {
+                poll: Some(BusResponsePoll {
+                    keys: false,
+                    ds18x20: true,
+                }),
+                keys: None,
+                ds18x20: Some(BusResponseDs18x20 {
+                    state: ds18x20::State {
+                        sensor_type: ds18x20::SensorType::B,
+                        reset_count: 0,
+                        temperature: Some(Temperature::new(TemperatureUnit::Celsius, 125.00)),
+                    },
+                }),
+            };
+
+            assert_eq!(bus_response, bus_response_expected);
         }
         #[test]
         fn response_2() {
             let payload = Payload::new(Box::from(*b"P10K0001FF0121230AA1EE")).unwrap();
-            let bus_response = BusResponse::from_payload(payload).unwrap();
-            assert_eq!(bus_response.poll.as_ref().unwrap().keys, true);
-            assert_eq!(bus_response.poll.as_ref().unwrap().temperature, false);
+            let bus_response = BusResponse::from_payload(&payload).unwrap();
 
-            assert_eq!(bus_response.keys.as_ref().unwrap().keys[0].value, false);
-            assert_eq!(bus_response.keys.as_ref().unwrap().keys[0].changes_count, 0);
+            let bus_response_expected = BusResponse {
+                poll: Some(BusResponsePoll {
+                    keys: true,
+                    ds18x20: false,
+                }),
+                keys: Some(BusResponseKeys {
+                    keys: [
+                        BusResponseKey {
+                            value: false,
+                            changes_count: 0,
+                        },
+                        BusResponseKey {
+                            value: true,
+                            changes_count: 0xFF,
+                        },
+                        BusResponseKey {
+                            value: false,
+                            changes_count: 0x12,
+                        },
+                        BusResponseKey {
+                            value: true,
+                            changes_count: 0x23,
+                        },
+                        BusResponseKey {
+                            value: false,
+                            changes_count: 0xAA,
+                        },
+                        BusResponseKey {
+                            value: true,
+                            changes_count: 0xEE,
+                        },
+                    ],
+                }),
+                ds18x20: None,
+            };
 
-            assert_eq!(bus_response.keys.as_ref().unwrap().keys[1].value, true);
-            assert_eq!(
-                bus_response.keys.as_ref().unwrap().keys[1].changes_count,
-                0xFF
-            );
-
-            assert_eq!(bus_response.keys.as_ref().unwrap().keys[2].value, false);
-            assert_eq!(
-                bus_response.keys.as_ref().unwrap().keys[2].changes_count,
-                0x12
-            );
-
-            assert_eq!(bus_response.keys.as_ref().unwrap().keys[3].value, true);
-            assert_eq!(
-                bus_response.keys.as_ref().unwrap().keys[3].changes_count,
-                0x23
-            );
-
-            assert_eq!(bus_response.keys.as_ref().unwrap().keys[4].value, false);
-            assert_eq!(
-                bus_response.keys.as_ref().unwrap().keys[4].changes_count,
-                0xAA
-            );
-
-            assert_eq!(bus_response.keys.as_ref().unwrap().keys[5].value, true);
-            assert_eq!(
-                bus_response.keys.as_ref().unwrap().keys[5].changes_count,
-                0xEE
-            );
-
-            assert!(bus_response.temperature.is_none());
+            assert_eq!(bus_response, bus_response_expected);
         }
         #[test]
         fn response_3() {
             let payload = Payload::new(Box::from(*b"P01")).unwrap();
-            let bus_response = BusResponse::from_payload(payload).unwrap();
-            assert_eq!(bus_response.poll.as_ref().unwrap().keys, false);
-            assert_eq!(bus_response.poll.as_ref().unwrap().temperature, true);
-            assert!(bus_response.keys.is_none());
-            assert!(bus_response.temperature.is_none());
+            let bus_response = BusResponse::from_payload(&payload).unwrap();
+
+            let bus_response_expected = BusResponse {
+                poll: Some(BusResponsePoll {
+                    keys: false,
+                    ds18x20: true,
+                }),
+                keys: None,
+                ds18x20: None,
+            };
+
+            assert_eq!(bus_response, bus_response_expected);
         }
     }
 }

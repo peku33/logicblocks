@@ -3,7 +3,7 @@ use super::{
         common::{Address, Payload},
         master::Master,
     },
-    parser::{Parser, ParserPayload},
+    parser::{Parser},
 };
 use anyhow::{ensure, Context, Error};
 use derive_more::Constructor;
@@ -108,7 +108,7 @@ impl<'m> Driver<'m> {
             .await
             .context("transaction_out_in")?;
 
-        let mut parser = ParserPayload::new(&response);
+        let mut parser = Parser::from_payload(&response);
         let wdt = parser.expect_bool().context("wdt")?;
         let bod = parser.expect_bool().context("bod")?;
         let ext_reset = parser.expect_bool().context("ext_reset")?;
@@ -132,7 +132,7 @@ impl<'m> Driver<'m> {
             .await
             .context("transaction_out_in")?;
 
-        let mut parser = ParserPayload::new(&response);
+        let mut parser = Parser::from_payload(&response);
         let avr_v1 = parser.expect_u16().context("avr_v1")?;
         let application = parser.expect_u16().context("application")?;
         parser.expect_end().context("expect_end")?;
@@ -150,7 +150,7 @@ impl<'m> Driver<'m> {
             .await
             .context("transaction_out_in")?;
 
-        let mut parser = ParserPayload::new(&response);
+        let mut parser = Parser::from_payload(&response);
         let checksum = parser.expect_u16().context("checksum")?;
         parser.expect_end().context("expect_end")?;
 

@@ -1,5 +1,4 @@
 use super::super::super::houseblocks_v1::common::Payload;
-use arrayvec::ArrayVec;
 
 pub struct Serializer {
     container: Vec<u8>,
@@ -49,7 +48,7 @@ impl Serializer {
     }
     pub fn push_bool_array_8(
         &mut self,
-        value: ArrayVec<bool, 8>,
+        value: [bool; 8],
     ) {
         let mut bits = 0u8;
         for (index, item) in value.into_iter().enumerate() {
@@ -61,7 +60,7 @@ impl Serializer {
     }
     pub fn push_bool_array_16(
         &mut self,
-        value: ArrayVec<bool, 16>,
+        value: [bool; 16],
     ) {
         let mut bits = 0u16;
         for (index, item) in value.into_iter().enumerate() {
@@ -75,18 +74,26 @@ impl Serializer {
 #[cfg(test)]
 mod tests_serializer {
     use super::{super::super::super::houseblocks_v1::common::Payload, Serializer};
+
     #[test]
     fn empty() {
         let serializer = Serializer::new();
         let payload = serializer.into_payload();
-        assert_eq!(payload, Payload::new(Box::from(*b"")).unwrap());
+
+        let payload_expected = Payload::new(Box::from(*b"")).unwrap();
+
+        assert_eq!(payload, payload_expected);
     }
+
     #[test]
     fn push_byte_1() {
         let mut serializer = Serializer::new();
         serializer.push_byte(b'A');
         let payload = serializer.into_payload();
-        assert_eq!(payload, Payload::new(Box::from(*b"A")).unwrap());
+
+        let payload_expected = Payload::new(Box::from(*b"A")).unwrap();
+
+        assert_eq!(payload, payload_expected);
     }
     #[test]
     fn push_byte_2() {
@@ -94,8 +101,12 @@ mod tests_serializer {
         serializer.push_byte(b'A');
         serializer.push_byte(b'B');
         let payload = serializer.into_payload();
-        assert_eq!(payload, Payload::new(Box::from(*b"AB")).unwrap());
+
+        let payload_expected = Payload::new(Box::from(*b"AB")).unwrap();
+
+        assert_eq!(payload, payload_expected);
     }
+
     #[test]
     fn push_bool_1() {
         let mut serializer = Serializer::new();
@@ -109,8 +120,12 @@ mod tests_serializer {
         serializer.push_bool(true);
         serializer.push_bool(false);
         let payload = serializer.into_payload();
-        assert_eq!(payload, Payload::new(Box::from(*b"100111010")).unwrap());
+
+        let payload_expected = Payload::new(Box::from(*b"100111010")).unwrap();
+
+        assert_eq!(payload, payload_expected);
     }
+
     #[test]
     fn push_u8_1() {
         let mut serializer = Serializer::new();
@@ -122,11 +137,12 @@ mod tests_serializer {
         serializer.push_u8(0x45);
         serializer.push_u8(0xEE);
         let payload = serializer.into_payload();
-        assert_eq!(
-            payload,
-            Payload::new(Box::from(*b"00FFAA123445EE")).unwrap()
-        );
+
+        let payload_expected = Payload::new(Box::from(*b"00FFAA123445EE")).unwrap();
+
+        assert_eq!(payload, payload_expected);
     }
+
     #[test]
     fn push_u16_1() {
         let mut serializer = Serializer::new();
@@ -135,31 +151,34 @@ mod tests_serializer {
         serializer.push_u16(0x1234);
         serializer.push_u16(0xEDCB);
         let payload = serializer.into_payload();
-        assert_eq!(
-            payload,
-            Payload::new(Box::from(*b"0000FFFF1234EDCB")).unwrap()
-        );
+
+        let payload_expected = Payload::new(Box::from(*b"0000FFFF1234EDCB")).unwrap();
+
+        assert_eq!(payload, payload_expected);
     }
+
     #[test]
     fn push_bool_array_8() {
         let mut serializer = Serializer::new();
-
-        serializer.push_bool_array_8([true, true, false, false, false, true, false, true].into());
+        serializer.push_bool_array_8([true, true, false, false, false, true, false, true]);
         let payload = serializer.into_payload();
-        assert_eq!(payload, Payload::new(Box::from(*b"A3")).unwrap());
+
+        let payload_expected = Payload::new(Box::from(*b"A3")).unwrap();
+
+        assert_eq!(payload, payload_expected);
     }
+
     #[test]
     fn push_bool_array_16() {
         let mut serializer = Serializer::new();
-
-        serializer.push_bool_array_16(
-            [
-                false, true, false, false, false, false, true, true, false, false, false, false,
-                false, false, false, true,
-            ]
-            .into(),
-        );
+        serializer.push_bool_array_16([
+            false, true, false, false, false, false, true, true, // break
+            false, false, false, false, false, false, false, true, // break
+        ]);
         let payload = serializer.into_payload();
-        assert_eq!(payload, Payload::new(Box::from(*b"80C2")).unwrap());
+
+        let payload_expected = Payload::new(Box::from(*b"80C2")).unwrap();
+
+        assert_eq!(payload, payload_expected);
     }
 }
