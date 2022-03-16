@@ -13,7 +13,7 @@ use logicblocks_controller::{
         },
         houseblocks_v1::{common::AddressSerial, master::Master},
     },
-    util::async_flag::Sender,
+    util::{async_flag::Sender, runtime::Runnable},
 };
 use std::time::Duration;
 use tokio::signal::ctrl_c;
@@ -35,11 +35,14 @@ async fn run_inner(
     let runner = Runner::new(master, device, address_serial);
 
     let PropertiesRemote {
+        ins_changed_waker_remote,
+        outs_changed_waker_remote,
+
         keys,
         leds,
         buzzer,
         ds18x20,
-    } = runner.properties_remote();
+    } = runner.device().properties_remote();
 
     let exit_flag_sender = Sender::new();
 
@@ -66,7 +69,7 @@ async fn run_inner(
 
             log::info!("leds: {:?}", led_values);
             if leds.set(led_values) {
-                runner.properties_remote_out_change_waker_wake();
+                outs_changed_waker_remote.wake();
             }
 
             led_index += 1;
@@ -83,7 +86,7 @@ async fn run_inner(
         loop {
             log::info!("buzzer: {:?}", DURATION);
             if buzzer.push(DURATION) {
-                runner.properties_remote_out_change_waker_wake();
+                outs_changed_waker_remote.wake();
             }
 
             tokio::time::sleep(Duration::from_secs(5)).await;
@@ -104,23 +107,22 @@ async fn run_inner(
         }
     };
 
-    let properties_remote_in_changed_runner = async {
-        runner
-            .properties_remote_in_change_waker_receiver()
-            .by_ref()
+    let ins_changed_waker_remote_runner = async {
+        ins_changed_waker_remote
+            .stream(true)
             .for_each(|()| async move {
                 keys_changed();
                 ds18x20_changed();
             })
             .await;
     };
-    pin_mut!(properties_remote_in_changed_runner);
-    let mut properties_remote_in_changed_runner = properties_remote_in_changed_runner.fuse();
+    pin_mut!(ins_changed_waker_remote_runner);
+    let mut ins_changed_waker_remote_runner = ins_changed_waker_remote_runner.fuse();
 
     select! {
         _ = join(abort_runner, runner_runner).fuse() => {},
         _ = leds_runner => panic!("leds_runner"),
         _ = buzzer_runner => panic!("leds_runner"),
-        _ = properties_remote_in_changed_runner => panic!("properties_remote_in_changed_runner yielded"),
+        _ = ins_changed_waker_remote_runner => panic!("ins_changed_waker_remote_runner"),
     }
 }

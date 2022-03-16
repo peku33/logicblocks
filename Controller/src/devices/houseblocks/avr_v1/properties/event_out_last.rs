@@ -1,5 +1,3 @@
-use super::Base;
-use crate::util::atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease};
 use parking_lot::Mutex;
 use std::ops::Deref;
 
@@ -12,13 +10,17 @@ where
     user_version: usize,
     device_version: usize,
 }
-
-#[derive(Debug)]
-struct Inner<T>
+impl<T> State<T>
 where
     T: Clone + Send + Sync + 'static,
 {
-    state: Mutex<State<T>>,
+    pub fn new() -> Self {
+        Self {
+            value_last: None,
+            user_version: 0,
+            device_version: 0,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -26,34 +28,27 @@ pub struct Property<T>
 where
     T: Clone + Send + Sync + 'static,
 {
-    inner: AtomicCellErased<Inner<T>>,
+    state: Mutex<State<T>>,
 }
 impl<T> Property<T>
 where
     T: Clone + Send + Sync + 'static,
 {
     pub fn new() -> Self {
-        let state = State {
-            value_last: None,
-            user_version: 0,
-            device_version: 0,
-        };
+        let state = State::new();
         let state = Mutex::new(state);
 
-        let inner = Inner { state };
-        let inner = AtomicCellErased::new(inner);
-
-        Self { inner }
+        Self { state }
     }
 
     // User
-    pub fn user_sink(&self) -> Sink<T> {
-        Sink::new(self)
+    pub fn user_remote(&self) -> Remote<T> {
+        Remote::new(self)
     }
 
     // Device
     pub fn device_pending(&self) -> Option<Pending<T>> {
-        let state = self.inner.state.lock();
+        let state = self.state.lock();
 
         if state.device_version >= state.user_version {
             return None;
@@ -73,22 +68,20 @@ where
         Some(pending)
     }
 }
-impl<T> Base for Property<T> where T: Clone + Send + Sync + 'static {}
 
 #[derive(Debug)]
-pub struct Sink<T>
+pub struct Remote<'p, T>
 where
     T: Clone + Send + Sync + 'static,
 {
-    inner: AtomicCellErasedLease<Inner<T>>,
+    property: &'p Property<T>,
 }
-impl<T> Sink<T>
+impl<'p, T> Remote<'p, T>
 where
     T: Clone + Send + Sync + 'static,
 {
-    fn new(parent: &Property<T>) -> Self {
-        let inner = parent.inner.lease();
-        Self { inner }
+    fn new(property: &'p Property<T>) -> Self {
+        Self { property }
     }
 
     #[must_use = "use this value to wake properties changed waker"]
@@ -96,7 +89,7 @@ where
         &self,
         value: T,
     ) -> bool {
-        let mut state = self.inner.state.lock();
+        let mut state = self.property.state.lock();
 
         state.value_last.replace(value);
         state.user_version += 1;
@@ -114,7 +107,7 @@ pub struct Pending<'p, T: Clone + Send + Sync + 'static> {
 }
 impl<'p, T: Clone + Send + Sync + 'static> Pending<'p, T> {
     pub fn commit(self) {
-        let mut state = self.property.inner.state.lock();
+        let mut state = self.property.state.lock();
 
         state.device_version = self.version;
 
@@ -138,7 +131,7 @@ mod tests {
     #[test]
     fn test_1() {
         let property = Property::<usize>::new();
-        let sink = property.user_sink();
+        let sink = property.user_remote();
 
         // Initial state
         assert!(property.device_pending().is_none());

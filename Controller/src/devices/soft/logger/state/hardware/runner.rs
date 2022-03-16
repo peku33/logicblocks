@@ -66,6 +66,7 @@ impl RunnerSink {
     ) -> Exited {
         let mut sink_items_receiver = self.sink_base.items_receiver_lease();
 
+        // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
         let sink_items_receiver_runner = sink_items_receiver
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
@@ -347,7 +348,8 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
 
                 Ok((sink_id, runner_sink_runner))
             })
-            .collect::<Result<HashMap<_, _>, Error>>().context("collect")?;
+            .collect::<Result<HashMap<_, _>, Error>>()
+            .context("collect")?;
 
         let runner_sinks_runner = RunnerSinksRunner::new(runner_sink_runners);
 

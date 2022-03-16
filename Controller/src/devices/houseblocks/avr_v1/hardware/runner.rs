@@ -43,31 +43,17 @@ pub trait BusDevice {
         driver: &ApplicationDriver<'_>,
     ) -> Result<(), Error>;
 
-    fn failed(&self);
-}
-
-pub trait Properties {
-    fn user_pending(&self) -> bool;
-    fn device_reset(&self);
-
-    type Remote: Sync + Send;
-    fn remote(&self) -> Self::Remote;
+    // the device was internally reset, so need to clear internal state
+    fn reset(&self) {}
 }
 
 pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
     fn device_type_name() -> &'static str;
     fn address_device_type() -> AddressDeviceType;
 
-    fn as_runnable(&self) -> Option<&dyn Runnable> {
-        None
-    }
+    fn poll_waker(&self) -> Option<&waker_stream::mpsc_local::Signal>;
 
-    type Properties: Properties;
-    fn properties(&self) -> &Self::Properties;
-
-    fn poll_waker_receiver(&self) -> Option<waker_stream::mpsc::ReceiverLease> {
-        None
-    }
+    fn as_runnable(&self) -> Option<&dyn Runnable>;
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
@@ -83,9 +69,6 @@ pub struct Runner<'m, D: Device> {
     device: D,
 
     device_state: Mutex<DeviceState>,
-
-    properties_remote_in_change_waker: waker_stream::mpsc::SenderReceiver,
-    properties_remote_out_change_waker: waker_stream::mpsc::SenderReceiver,
 
     gui_summary_waker: waker_stream::mpmc::Sender,
 }
@@ -113,21 +96,12 @@ impl<'m, D: Device> Runner<'m, D> {
 
             device_state,
 
-            properties_remote_in_change_waker: waker_stream::mpsc::SenderReceiver::new(),
-            properties_remote_out_change_waker: waker_stream::mpsc::SenderReceiver::new(),
-
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
-    pub fn properties_remote(&self) -> <D::Properties as Properties>::Remote {
-        self.device.properties().remote()
-    }
-    pub fn properties_remote_in_change_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease {
-        self.properties_remote_in_change_waker.receiver()
-    }
-    pub fn properties_remote_out_change_waker_wake(&self) {
-        self.properties_remote_out_change_waker.wake();
+    pub fn device(&self) -> &D {
+        &self.device
     }
 
     async fn driver_run_once(
@@ -137,11 +111,7 @@ impl<'m, D: Device> Runner<'m, D> {
         *self.device_state.lock() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
 
-        // Make device properties in uninitialized state
-        self.device.properties().device_reset();
-        if self.device.properties().user_pending() {
-            self.properties_remote_in_change_waker.wake();
-        }
+        self.device.reset();
 
         // Hardware initializing & avr_v1
         self.driver.prepare().await.context("initial prepare")?;
@@ -154,23 +124,18 @@ impl<'m, D: Device> Runner<'m, D> {
             .initialize(&application_driver)
             .await
             .context("initialize")?;
-        if self.device.properties().user_pending() {
-            self.properties_remote_in_change_waker.wake();
-        }
 
         // Device is fully initialized
         *self.device_state.lock() = DeviceState::Running;
         self.gui_summary_waker.wake();
 
         // Main loop
-        let mut device_poll_waker_receiver = self.device.poll_waker_receiver();
-        let device_poll_waker = StreamOrPending::new(device_poll_waker_receiver.as_deref_mut());
+        let device_poll_waker = StreamOrPending::new(
+            self.device
+                .poll_waker()
+                .map(|poll_waker| poll_waker.receiver(false)),
+        );
         let mut device_poll_waker = device_poll_waker.fuse();
-
-        let mut properties_remote_out_change_waker =
-            self.properties_remote_out_change_waker.receiver();
-        let mut properties_remote_out_change_waker =
-            properties_remote_out_change_waker.by_ref().fuse();
 
         loop {
             // Poll
@@ -178,9 +143,6 @@ impl<'m, D: Device> Runner<'m, D> {
                 .poll(&application_driver)
                 .await
                 .context("poll")?;
-            if self.device.properties().user_pending() {
-                self.properties_remote_in_change_waker.wake();
-            }
 
             // Delay or wait for poll
             let mut poll_delay = Self::POLL_DELAY_MAX;
@@ -191,7 +153,6 @@ impl<'m, D: Device> Runner<'m, D> {
             select! {
                 () = tokio::time::sleep(poll_delay).fuse() => {},
                 () = device_poll_waker.select_next_some() => {},
-                () = properties_remote_out_change_waker.select_next_some() => {},
                 () = exit_flag => break,
             };
         }
@@ -201,12 +162,8 @@ impl<'m, D: Device> Runner<'m, D> {
             .deinitialize(&application_driver)
             .await
             .context("deinitialize")?;
-        self.device.properties().device_reset();
-        if self.device.properties().user_pending() {
-            self.properties_remote_in_change_waker.wake();
-        }
 
-        // TODO: reset device to reinitialize state?
+        self.device.reset();
 
         *self.device_state.lock() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
@@ -228,12 +185,7 @@ impl<'m, D: Device> Runner<'m, D> {
             };
             log::error!("device {} failed: {:?}", self.driver.address(), error);
 
-            // Make device properties in uninitialized state
-            self.device.properties().device_reset();
-            self.device.failed();
-            if self.device.properties().user_pending() {
-                self.properties_remote_in_change_waker.wake();
-            }
+            self.device.reset();
 
             *self.device_state.lock() = DeviceState::Error;
             self.gui_summary_waker.wake();
@@ -247,7 +199,7 @@ impl<'m, D: Device> Runner<'m, D> {
         Exited
     }
 
-    pub async fn run(
+    async fn run(
         &self,
         exit_flag: async_flag::Receiver,
     ) -> Exited {
@@ -267,6 +219,16 @@ impl<'m, D: Device> Runner<'m, D> {
 
     pub fn finalize(self) -> D {
         self.device
+    }
+}
+
+#[async_trait]
+impl<'m, D: Device> Runnable for Runner<'m, D> {
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.run(exit_flag).await
     }
 }
 

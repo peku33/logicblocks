@@ -14,14 +14,23 @@ pub mod logic {
     use array_init::array_init;
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
-    use futures::stream::StreamExt;
+    use futures::{future::FutureExt, join, stream::StreamExt};
     use serde::Serialize;
     use std::{iter, time::Duration};
 
     #[derive(Debug)]
-    pub struct Device {
-        properties_remote: hardware::PropertiesRemote,
-        properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver,
+    pub struct DeviceFactory;
+    impl logic::DeviceFactory for DeviceFactory {
+        type Device<'h> = Device<'h>;
+
+        fn new(hardware_device: &hardware::Device) -> Device {
+            Device::new(hardware_device)
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct Device<'h> {
+        properties_remote: hardware::PropertiesRemote<'h>,
 
         signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
         signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
@@ -33,9 +42,24 @@ pub mod logic {
         gui_summary_waker: waker_stream::mpmc::Sender,
     }
 
-    impl Device {
+    impl<'h> Device<'h> {
+        pub fn new(hardware_device: &'h hardware::Device) -> Self {
+            Self {
+                properties_remote: hardware_device.properties_remote(),
+
+                signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
+                signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
+                signal_keys: array_init(|_| signal::state_source::Signal::<bool>::new(None)),
+                signal_leds: array_init(|_| signal::state_target_last::Signal::<bool>::new()),
+                signal_buzzer: signal::event_target_last::Signal::<Duration>::new(),
+                signal_temperature: signal::state_source::Signal::<Temperature>::new(None),
+
+                gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            }
+        }
+
         fn signals_targets_changed(&self) {
-            let mut properties_remote_changed = false;
+            let mut properties_outs_changed = false;
 
             // leds
             let leds_last = self
@@ -54,69 +78,23 @@ pub mod logic {
                     .unwrap();
 
                 if self.properties_remote.leds.set(leds) {
-                    properties_remote_changed = true;
+                    properties_outs_changed = true;
                 }
             }
 
             // buzzer
             if let Some(buzzer) = self.signal_buzzer.take_pending() {
                 if self.properties_remote.buzzer.push(buzzer) {
-                    properties_remote_changed = true;
+                    properties_outs_changed = true;
                 }
             }
 
-            if properties_remote_changed {
-                self.properties_remote_out_changed_waker.wake();
+            if properties_outs_changed {
+                self.properties_remote.outs_changed_waker_remote.wake();
             }
         }
-
-        async fn run(
-            &self,
-            exit_flag: async_flag::Receiver,
-        ) -> Exited {
-            self.signals_targets_changed_waker
-                .stream(false)
-                .stream_take_until_exhausted(exit_flag)
-                .for_each(async move |()| {
-                    self.signals_targets_changed();
-                })
-                .await;
-
-            Exited
-        }
-    }
-
-    impl logic::Device for Device {
-        type HardwareDevice = hardware::Device;
-
-        fn new(properties_remote: hardware::PropertiesRemote) -> Self {
-            Self {
-                properties_remote,
-                properties_remote_out_changed_waker: waker_stream::mpsc::SenderReceiver::new(),
-
-                signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
-                signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-                signal_keys: array_init(|_| signal::state_source::Signal::<bool>::new(None)),
-                signal_leds: array_init(|_| signal::state_target_last::Signal::<bool>::new()),
-                signal_buzzer: signal::event_target_last::Signal::<Duration>::new(),
-                signal_temperature: signal::state_source::Signal::<Temperature>::new(None),
-
-                gui_summary_waker: waker_stream::mpmc::Sender::new(),
-            }
-        }
-        fn class() -> &'static str {
-            "junction_box_minimal_v1"
-        }
-
-        fn as_runnable(&self) -> &dyn Runnable {
-            self
-        }
-        fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
-            Some(self)
-        }
-
-        fn properties_remote_in_changed(&self) {
-            let mut signals_changed = false;
+        fn properties_ins_changed(&self) {
+            let mut signals_sources_changed = false;
             let mut gui_summary_changed = false;
 
             // keys
@@ -146,14 +124,14 @@ pub mod logic {
                                 })
                                 .collect::<Box<[_]>>();
                             if signal_key.set_many(key_values) {
-                                signals_changed = true;
+                                signals_sources_changed = true;
                             }
                         });
                 } else {
                     // Keys are broken
                     self.signal_keys.iter().for_each(|signal_key| {
                         if signal_key.set_one(None) {
-                            signals_changed = true;
+                            signals_sources_changed = true;
                         }
                     });
                 }
@@ -164,32 +142,66 @@ pub mod logic {
                 let temperature = ds18x20.and_then(|ds18x20| ds18x20.temperature);
 
                 if self.signal_temperature.set_one(temperature) {
-                    signals_changed = true;
+                    signals_sources_changed = true;
                 }
+
                 gui_summary_changed = true;
             }
 
-            if signals_changed {
+            if signals_sources_changed {
                 self.signals_sources_changed_waker.wake();
             }
             if gui_summary_changed {
                 self.gui_summary_waker.wake();
             }
         }
-        fn properties_remote_out_changed_waker_receiver(
-            &self
-        ) -> waker_stream::mpsc::ReceiverLease {
-            self.properties_remote_out_changed_waker.receiver()
-        }
-    }
 
-    #[async_trait]
-    impl Runnable for Device {
         async fn run(
             &self,
             exit_flag: async_flag::Receiver,
         ) -> Exited {
-            self.run(exit_flag).await
+            // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
+            let signals_targets_changed_runner = self
+                .signals_targets_changed_waker
+                .stream(false)
+                .stream_take_until_exhausted(exit_flag.clone())
+                .for_each(async move |()| {
+                    self.signals_targets_changed();
+                })
+                .boxed();
+
+            // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
+            let properties_ins_changed_runner = self
+                .properties_remote
+                .ins_changed_waker_remote
+                .stream(false)
+                .stream_take_until_exhausted(exit_flag.clone())
+                .for_each(async move |()| {
+                    self.properties_ins_changed();
+                })
+                .boxed();
+
+            let _: ((), ()) = join!(
+                signals_targets_changed_runner,
+                properties_ins_changed_runner
+            );
+
+            Exited
+        }
+    }
+
+    impl<'h> logic::Device for Device<'h> {
+        type HardwareDevice = hardware::Device;
+
+        fn class() -> &'static str {
+            "junction_box_minimal_v1"
+        }
+
+        fn as_runnable(&self) -> &dyn Runnable {
+            self
+        }
+        fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+            Some(self)
         }
     }
 
@@ -201,7 +213,7 @@ pub mod logic {
         Temperature,
     }
     impl signals::Identifier for SignalIdentifier {}
-    impl signals::Device for Device {
+    impl<'h> signals::Device for Device<'h> {
         fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
             Some(&self.signals_targets_changed_waker)
         }
@@ -248,11 +260,21 @@ pub mod logic {
         }
     }
 
+    #[async_trait]
+    impl<'h> Runnable for Device<'h> {
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            self.run(exit_flag).await
+        }
+    }
+
     #[derive(Serialize)]
     struct GuiSummary {
         temperature: Option<Temperature>,
     }
-    impl devices::GuiSummaryProvider for Device {
+    impl<'h> devices::GuiSummaryProvider for Device<'h> {
         fn value(&self) -> Box<dyn devices::GuiSummary> {
             let gui_summary = GuiSummary {
                 temperature: self
@@ -275,13 +297,21 @@ pub mod hardware {
     use super::super::{
         super::houseblocks_v1::common::{AddressDeviceType, Payload},
         hardware::{
-            common::ds18x20, driver::ApplicationDriver, parser::Parser, property, runner,
+            common::ds18x20, driver::ApplicationDriver, parser::Parser, runner,
             serializer::Serializer,
         },
+        properties,
+    };
+    use crate::util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        async_flag,
+        runtime::{Exited, Runnable},
+        waker_stream,
     };
     use anyhow::{bail, ensure, Context, Error};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
+    use futures::{future::FutureExt, join, stream::StreamExt};
     use std::{
         cmp::{max, min},
         iter,
@@ -296,61 +326,100 @@ pub mod hardware {
     pub type LedValues = [bool; LED_COUNT];
 
     #[derive(Debug)]
+    pub struct PropertiesRemote<'p> {
+        pub ins_changed_waker_remote: properties::waker::InsChangedWakerRemote<'p>,
+        pub outs_changed_waker_remote: properties::waker::OutsChangedWakerRemote<'p>,
+
+        pub keys: properties::state_event_in::Remote<'p, KeyValues, KeyChangesCount>,
+        pub leds: properties::state_out::Remote<'p, LedValues>,
+        pub buzzer: properties::event_out_last::Remote<'p, Duration>,
+        pub ds18x20: properties::state_in::Remote<'p, ds18x20::State>,
+    }
+
+    #[derive(Debug)]
     pub struct Properties {
-        keys: property::state_event_in::Property<KeyValues, KeyChangesCount>,
-        leds: property::state_out::Property<LedValues>,
-        buzzer: property::event_out_last::Property<Duration>,
-        ds18x20: property::state_in::Property<ds18x20::State>,
+        ins_changed_waker: properties::waker::InsChangedWaker,
+        outs_changed_waker: properties::waker::OutsChangedWaker,
+
+        keys: properties::state_event_in::Property<KeyValues, KeyChangesCount>,
+        leds: properties::state_out::Property<LedValues>,
+        buzzer: properties::event_out_last::Property<Duration>,
+        ds18x20: properties::state_in::Property<ds18x20::State>,
     }
     impl Properties {
         pub fn new() -> Self {
             Self {
-                keys: property::state_event_in::Property::<KeyValues, KeyChangesCount>::new(),
-                leds: property::state_out::Property::<LedValues>::new([false; LED_COUNT]),
-                buzzer: property::event_out_last::Property::<Duration>::new(),
-                ds18x20: property::state_in::Property::<ds18x20::State>::new(),
+                ins_changed_waker: properties::waker::InsChangedWaker::new(),
+                outs_changed_waker: properties::waker::OutsChangedWaker::new(),
+
+                keys: properties::state_event_in::Property::<KeyValues, KeyChangesCount>::new(),
+                leds: properties::state_out::Property::<LedValues>::new([false; LED_COUNT]),
+                buzzer: properties::event_out_last::Property::<Duration>::new(),
+                ds18x20: properties::state_in::Property::<ds18x20::State>::new(),
             }
-        }
-    }
-    impl runner::Properties for Properties {
-        fn user_pending(&self) -> bool {
-            self.keys.user_pending() || self.ds18x20.user_pending()
-        }
-        fn device_reset(&self) {
-            self.keys.device_reset();
-            self.leds.device_reset();
-            self.ds18x20.device_reset();
         }
 
-        type Remote = PropertiesRemote;
-        fn remote(&self) -> Self::Remote {
+        pub fn device_reset(&self) -> bool {
+            self.leds.device_reset();
+
+            false // break
+                || self.keys.device_reset()
+                || self.ds18x20.device_reset()
+        }
+
+        pub fn remote(&self) -> PropertiesRemote {
             PropertiesRemote {
-                keys: self.keys.user_stream(),
-                leds: self.leds.user_sink(),
-                buzzer: self.buzzer.user_sink(),
-                ds18x20: self.ds18x20.user_stream(),
+                ins_changed_waker_remote: self.ins_changed_waker.remote(),
+                outs_changed_waker_remote: self.outs_changed_waker.remote(),
+
+                keys: self.keys.user_remote(),
+                leds: self.leds.user_remote(),
+                buzzer: self.buzzer.user_remote(),
+                ds18x20: self.ds18x20.user_remote(),
             }
         }
-    }
-    #[derive(Debug)]
-    pub struct PropertiesRemote {
-        pub keys: property::state_event_in::Stream<KeyValues, KeyChangesCount>,
-        pub leds: property::state_out::Sink<LedValues>,
-        pub buzzer: property::event_out_last::Sink<Duration>,
-        pub ds18x20: property::state_in::Stream<ds18x20::State>,
     }
 
     #[derive(Debug)]
     pub struct Device {
         properties: Properties,
+
+        poll_waker: waker_stream::mpsc_local::Signal,
     }
     impl Device {
         pub fn new() -> Self {
             Self {
                 properties: Properties::new(),
+
+                poll_waker: waker_stream::mpsc_local::Signal::new(),
             }
         }
+
+        pub fn properties_remote(&self) -> PropertiesRemote {
+            self.properties.remote()
+        }
+
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
+            let properties_outs_changed_waker_runner = self
+                .properties
+                .outs_changed_waker
+                .stream(false)
+                .stream_take_until_exhausted(exit_flag.clone())
+                .for_each(async move |()| {
+                    self.poll_waker.wake();
+                })
+                .boxed();
+
+            let _: ((),) = join!(properties_outs_changed_waker_runner);
+
+            Exited
+        }
     }
+
     impl runner::Device for Device {
         fn device_type_name() -> &'static str {
             "JunctionBox_Minimal_v1"
@@ -359,11 +428,15 @@ pub mod hardware {
             AddressDeviceType::new_from_ordinal(3).unwrap()
         }
 
-        type Properties = Properties;
-        fn properties(&self) -> &Self::Properties {
-            &self.properties
+        fn poll_waker(&self) -> Option<&waker_stream::mpsc_local::Signal> {
+            Some(&self.poll_waker)
+        }
+
+        fn as_runnable(&self) -> Option<&dyn Runnable> {
+            Some(self)
         }
     }
+
     #[async_trait]
     impl runner::BusDevice for Device {
         async fn initialize(
@@ -425,6 +498,8 @@ pub mod hardware {
             ensure!(stage_1_response_ds18x20.is_none());
 
             // Stage 2 - If poll returned something, handle it
+            let mut stage_2_properties_ins_changed = false;
+
             let stage_2_request = BusRequest {
                 poll_request: false,
                 keys_request: false
@@ -470,15 +545,25 @@ pub mod hardware {
                 };
 
             if let Some(stage_2_response_keys) = stage_2_response_keys {
-                self.properties.keys.device_set(
+                if self.properties.keys.device_set(
                     stage_2_response_keys.values(),
                     stage_2_response_keys.changes_count(),
-                );
+                ) {
+                    stage_2_properties_ins_changed = true;
+                }
             }
             if let Some(stage_2_response_ds18x20) = stage_2_response_ds18x20 {
-                self.properties
+                if self
+                    .properties
                     .ds18x20
-                    .device_set(stage_2_response_ds18x20.state);
+                    .device_set(stage_2_response_ds18x20.state)
+                {
+                    stage_2_properties_ins_changed = true;
+                }
+            }
+
+            if stage_2_properties_ins_changed {
+                self.properties.ins_changed_waker.wake();
             }
 
             Ok(())
@@ -491,7 +576,21 @@ pub mod hardware {
             Ok(())
         }
 
-        fn failed(&self) {}
+        fn reset(&self) {
+            if self.properties.device_reset() {
+                self.properties.ins_changed_waker.wake();
+            }
+        }
+    }
+
+    #[async_trait]
+    impl Runnable for Device {
+        async fn run(
+            &self,
+            exit_flag: async_flag::Receiver,
+        ) -> Exited {
+            self.run(exit_flag).await
+        }
     }
 
     // Bus

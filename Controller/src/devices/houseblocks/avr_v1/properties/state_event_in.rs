@@ -1,5 +1,3 @@
-use super::Base;
-use crate::util::atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease};
 use parking_lot::Mutex;
 use std::mem::replace;
 
@@ -13,14 +11,18 @@ where
     events: Vec<E>,
     user_pending: bool,
 }
-
-#[derive(Debug)]
-struct Inner<S, E>
+impl<S, E> State<S, E>
 where
     S: Eq + Clone + Send + Sync + 'static,
     E: Clone + Send + Sync + 'static,
 {
-    state: Mutex<State<S, E>>,
+    pub fn new() -> Self {
+        Self {
+            state: None,
+            events: Vec::<E>::new(),
+            user_pending: false,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -29,7 +31,7 @@ where
     S: Eq + Clone + Send + Sync + 'static,
     E: Clone + Send + Sync + 'static,
 {
-    inner: AtomicCellErased<Inner<S, E>>,
+    state: Mutex<State<S, E>>,
 }
 impl<S, E> Property<S, E>
 where
@@ -37,36 +39,20 @@ where
     E: Clone + Send + Sync + 'static,
 {
     pub fn new() -> Self {
-        let state = State {
-            state: None,
-            events: Vec::<E>::new(),
-            user_pending: false,
-        };
+        let state = State::new();
         let state = Mutex::new(state);
 
-        let inner = Inner { state };
-        let inner = AtomicCellErased::new(inner);
-
-        Self { inner }
+        Self { state }
     }
 
     // User
-    pub fn user_pending(&self) -> bool {
-        let inner_state = self.inner.state.lock();
-
-        let user_pending = inner_state.user_pending;
-
-        drop(inner_state);
-
-        user_pending
-    }
-    pub fn user_stream(&self) -> Stream<S, E> {
-        Stream::new(self)
+    pub fn user_remote(&self) -> Remote<S, E> {
+        Remote::new(self)
     }
 
     // Device
     pub fn device_must_read(&self) -> bool {
-        let inner_state = self.inner.state.lock();
+        let inner_state = self.state.lock();
 
         let device_must_read = inner_state.state.is_none();
 
@@ -74,12 +60,13 @@ where
 
         device_must_read
     }
+    #[must_use = "use this value to wake properties changed waker"]
     pub fn device_set(
         &self,
         state: S,
         event: E,
     ) -> bool {
-        let mut inner_state = self.inner.state.lock();
+        let mut inner_state = self.state.lock();
 
         inner_state.state.replace(state);
         inner_state.events.push(event);
@@ -89,8 +76,9 @@ where
 
         true
     }
+    #[must_use = "use this value to wake properties changed waker"]
     pub fn device_reset(&self) -> bool {
-        let mut inner_state = self.inner.state.lock();
+        let mut inner_state = self.state.lock();
 
         inner_state.state = None;
         inner_state.events.clear();
@@ -101,33 +89,26 @@ where
         true
     }
 }
-impl<S, E> Base for Property<S, E>
-where
-    S: Eq + Clone + Send + Sync + 'static,
-    E: Clone + Send + Sync + 'static,
-{
-}
 
 #[derive(Debug)]
-pub struct Stream<S, E>
+pub struct Remote<'p, S, E>
 where
     S: Eq + Clone + Send + Sync + 'static,
     E: Clone + Send + Sync + 'static,
 {
-    inner: AtomicCellErasedLease<Inner<S, E>>,
+    property: &'p Property<S, E>,
 }
-impl<S, E> Stream<S, E>
+impl<'p, S, E> Remote<'p, S, E>
 where
     S: Eq + Clone + Send + Sync + 'static,
     E: Clone + Send + Sync + 'static,
 {
-    fn new(parent: &Property<S, E>) -> Self {
-        let inner = parent.inner.lease();
-        Self { inner }
+    fn new(property: &'p Property<S, E>) -> Self {
+        Self { property }
     }
 
     pub fn take_pending(&self) -> Option<(Option<S>, Box<[E]>)> {
-        let mut state_inner = self.inner.state.lock();
+        let mut state_inner = self.property.state.lock();
 
         if !state_inner.user_pending {
             return None;
@@ -143,7 +124,7 @@ where
     }
 
     pub fn peek_last(&self) -> Option<S> {
-        let state_inner = self.inner.state.lock();
+        let state_inner = self.property.state.lock();
 
         let value = state_inner.state.clone();
 
@@ -160,7 +141,7 @@ mod tests {
     #[test]
     fn test_1() {
         let property = Property::<[bool; 2], [u8; 2]>::new();
-        let stream = property.user_stream();
+        let stream = property.user_remote();
 
         assert!(stream.take_pending().is_none());
         assert!(property.device_must_read());

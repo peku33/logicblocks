@@ -16,15 +16,20 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::{future::FutureExt, join, stream::StreamExt};
+use ouroboros::self_referencing;
 use serde::Serialize;
-use std::{borrow::Cow, fmt};
+use std::{borrow::Cow, fmt, mem};
+
+pub trait DeviceFactory: Sync + Send + fmt::Debug + 'static {
+    type Device<'h>: Device;
+
+    fn new<'h>(
+        hardware_device: &'h <Self::Device<'h> as Device>::HardwareDevice
+    ) -> Self::Device<'h>;
+}
 
 pub trait Device: signals::Device + Sync + Send + fmt::Debug {
     type HardwareDevice: runner::Device;
-
-    fn new(
-        properties_remote: <<Self::HardwareDevice as runner::Device>::Properties as runner::Properties>::Remote
-    ) -> Self;
 
     fn class() -> &'static str;
 
@@ -32,74 +37,90 @@ pub trait Device: signals::Device + Sync + Send + fmt::Debug {
     fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
         None
     }
+}
 
-    fn properties_remote_in_changed(&self); // TODO: convert this to runnable stream
-    fn properties_remote_out_changed_waker_receiver(&self) -> waker_stream::mpsc::ReceiverLease;
+#[self_referencing]
+#[derive(Debug)]
+struct RunnerInner<'m, DF>
+where
+    DF: DeviceFactory,
+{
+    hardware_runner:
+        runner::Runner<'m, <<DF as DeviceFactory>::Device<'m> as Device>::HardwareDevice>,
+
+    #[borrows(hardware_runner)]
+    #[not_covariant]
+    device: <DF as DeviceFactory>::Device<'this>,
 }
 
 #[derive(Debug)]
-pub struct Runner<'m, D: Device> {
-    // device: D must declared used before hardware_runner to keep destruction order (device first)
-    device: D,
-    hardware_runner: runner::Runner<'m, D::HardwareDevice>,
+pub struct Runner<'m, DF>
+where
+    DF: DeviceFactory,
+{
+    inner: RunnerInner<'m, DF>,
 
     gui_summary_waker: waker_stream::mpmc::Sender,
 }
-impl<'m, D: Device> Runner<'m, D> {
+impl<'m, DF> Runner<'m, DF>
+where
+    DF: DeviceFactory,
+{
     pub fn new(
         master: &'m Master,
-        hardware_device: D::HardwareDevice,
+        hardware_device: <<DF as DeviceFactory>::Device<'m> as Device>::HardwareDevice,
         address_serial: AddressSerial,
     ) -> Self {
         let hardware_runner = runner::Runner::new(master, hardware_device, address_serial);
-        let properties_remote = hardware_runner.properties_remote();
 
-        let device = D::new(properties_remote);
+        let inner = RunnerInner::new(hardware_runner, |hardware_runner| {
+            // this should be safe as we narrow down the lifetime
+
+            let device_static = unsafe {
+                mem::transmute::<
+                    &'_ <<DF as DeviceFactory>::Device<'m> as Device>::HardwareDevice,
+                    &'_ <<DF as DeviceFactory>::Device<'_> as Device>::HardwareDevice,
+                >(hardware_runner.device())
+            };
+
+            DF::new(device_static)
+        });
 
         Self {
-            hardware_runner,
-            device,
-
+            inner,
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
-    pub async fn run(
+    fn device<'s>(&'s self) -> &<DF as DeviceFactory>::Device<'s> {
+        // this should be safe, as we narrow down the lifetime
+        self.inner.with_device(|device| unsafe {
+            mem::transmute::<
+                &'_ <DF as DeviceFactory>::Device<'_>,
+                &'s <DF as DeviceFactory>::Device<'s>,
+            >(device)
+        })
+    }
+
+    fn hardware_runner(
+        &self
+    ) -> &runner::Runner<'m, <<DF as DeviceFactory>::Device<'m> as Device>::HardwareDevice> {
+        self.inner.borrow_hardware_runner()
+    }
+
+    async fn run(
         &self,
         exit_flag: async_flag::Receiver,
     ) -> Exited {
-        // TODO: replace take_until with finalizing version
         // TODO: revise sequential exit of this futures
+        let hardware_runner_runner = self.hardware_runner().run(exit_flag.clone());
+
+        let device_runner = self.device().as_runnable().run(exit_flag.clone());
+
         // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
-        let hardware_runner_runner = self.hardware_runner.run(exit_flag.clone());
-
-        let device_runner = self.device.as_runnable().run(exit_flag.clone());
-
-        let mut properties_remote_in_change_waker_receiver = self
-            .hardware_runner
-            .properties_remote_in_change_waker_receiver();
-        let properties_remote_in_changed_forwarder = properties_remote_in_change_waker_receiver
-            .by_ref()
-            .stream_take_until_exhausted(exit_flag.clone())
-            .for_each(async move |()| {
-                self.device.properties_remote_in_changed();
-            })
-            .boxed();
-
-        let mut properties_remote_out_changed_waker_receiver =
-            self.device.properties_remote_out_changed_waker_receiver();
-        let properties_remote_out_changed_forwarder = properties_remote_out_changed_waker_receiver
-            .by_ref()
-            .stream_take_until_exhausted(exit_flag.clone())
-            .for_each(async move |()| {
-                self.hardware_runner
-                    .properties_remote_out_change_waker_wake();
-            })
-            .boxed();
-
         let hardware_runner_gui_summary_forwarder = self
-            .hardware_runner
-            .waker()
+            .hardware_runner()
+            .waker() // this is from GuiSummaryProvider
             .receiver()
             .stream_take_until_exhausted(exit_flag.clone())
             .for_each(async move |()| {
@@ -107,8 +128,9 @@ impl<'m, D: Device> Runner<'m, D> {
             })
             .boxed();
 
+        // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
         let device_gui_summary_forwarder = StreamOrPending::new(
-            self.device
+            self.device()
                 .as_gui_summary_provider()
                 .map(|gui_summary_provider| gui_summary_provider.waker().receiver()),
         )
@@ -118,11 +140,9 @@ impl<'m, D: Device> Runner<'m, D> {
         })
         .boxed();
 
-        let _: (Exited, Exited, (), (), (), ()) = join!(
+        let _: (Exited, Exited, (), ()) = join!(
             hardware_runner_runner,
             device_runner,
-            properties_remote_in_changed_forwarder,
-            properties_remote_out_changed_forwarder,
             hardware_runner_gui_summary_forwarder,
             device_gui_summary_forwarder,
         );
@@ -130,14 +150,21 @@ impl<'m, D: Device> Runner<'m, D> {
         Exited
     }
 
-    pub fn finalize(self) -> D::HardwareDevice {
-        self.hardware_runner.finalize()
+    pub fn finalize(self) -> <<DF as DeviceFactory>::Device<'m> as Device>::HardwareDevice {
+        let inner_heads = self.inner.into_heads();
+        inner_heads.hardware_runner.finalize()
     }
 }
 
-impl<'m, D: Device> devices::Device for Runner<'m, D> {
+impl<'m, DF> devices::Device for Runner<'m, DF>
+where
+    DF: DeviceFactory,
+{
     fn class(&self) -> Cow<'static, str> {
-        let class = format!("houseblocks/avr_v1/{}", D::class());
+        let class = format!(
+            "houseblocks/avr_v1/{}",
+            <DF as DeviceFactory>::Device::class()
+        );
         Cow::from(class)
     }
 
@@ -153,7 +180,10 @@ impl<'m, D: Device> devices::Device for Runner<'m, D> {
 }
 
 #[async_trait]
-impl<'m, D: Device> Runnable for Runner<'m, D> {
+impl<'m, DF> Runnable for Runner<'m, DF>
+where
+    DF: DeviceFactory,
+{
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -162,17 +192,29 @@ impl<'m, D: Device> Runnable for Runner<'m, D> {
     }
 }
 
-impl<'m, D: Device> signals::Device for Runner<'m, D> {
+impl<'m, DF> signals::Device for Runner<'m, DF>
+where
+    DF: DeviceFactory,
+{
     fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
-        self.device.targets_changed_waker()
+        self.device().targets_changed_waker()
     }
     fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
-        self.device.sources_changed_waker()
+        self.device().sources_changed_waker()
     }
 
-    type Identifier = <D as signals::Device>::Identifier;
+    // TODO: WTF is happening with the type in here?
+    // SAFE: The signal identifier itself is 'static, so there shouldn't be problems in here
+    type Identifier = <<DF as DeviceFactory>::Device<'static> as signals::Device>::Identifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-        self.device.by_identifier()
+        let device_static = unsafe {
+            mem::transmute::<
+                &'_ <DF as DeviceFactory>::Device<'_>,
+                &'_ <DF as DeviceFactory>::Device<'static>,
+            >(self.device())
+        };
+
+        device_static.by_identifier()
     }
 }
 
@@ -181,14 +223,17 @@ struct GuiSummary {
     device: Box<dyn devices::GuiSummary>,
     hardware_runner: Box<dyn devices::GuiSummary>,
 }
-impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
+impl<'m, DF> devices::GuiSummaryProvider for Runner<'m, DF>
+where
+    DF: DeviceFactory,
+{
     fn value(&self) -> Box<dyn devices::GuiSummary> {
         let gui_summary = GuiSummary {
-            device: match self.device.as_gui_summary_provider() {
+            device: match self.device().as_gui_summary_provider() {
                 Some(gui_summary_provider) => gui_summary_provider.value(),
                 None => Box::new(()),
             },
-            hardware_runner: self.hardware_runner.value(),
+            hardware_runner: self.hardware_runner().value(),
         };
         let gui_summary = Box::new(gui_summary);
         gui_summary

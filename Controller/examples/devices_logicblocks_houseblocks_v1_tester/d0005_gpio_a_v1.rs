@@ -18,7 +18,7 @@ use logicblocks_controller::{
         },
         houseblocks_v1::{common::AddressSerial, master::Master},
     },
-    util::async_flag::Sender,
+    util::{async_flag::Sender, runtime::Runnable},
 };
 use std::time::Duration;
 use tokio::signal::ctrl_c;
@@ -88,12 +88,15 @@ async fn run_inner(
     let runner = Runner::new(master, device, address_serial);
 
     let PropertiesRemote {
+        ins_changed_waker_remote,
+        outs_changed_waker_remote,
+
         status_led,
-        analog_in,
-        digital_in,
-        digital_out,
-        ds18x20,
-    } = runner.properties_remote();
+        analog_ins,
+        digital_ins,
+        digital_outs,
+        ds18x20s,
+    } = runner.device().properties_remote();
 
     let exit_flag_sender = Sender::new();
 
@@ -114,7 +117,7 @@ async fn run_inner(
 
             log::info!("status_led: {:?}", status_led_value);
             if status_led.set(status_led_value) {
-                runner.properties_remote_out_change_waker_wake();
+                outs_changed_waker_remote.wake();
             }
 
             index += 1;
@@ -126,20 +129,20 @@ async fn run_inner(
     pin_mut!(status_led_runner);
     let mut status_led_runner = status_led_runner.fuse();
 
-    let analog_in_changed = || {
-        let analog_in = match analog_in.take_pending() {
-            Some(analog_in) => analog_in,
+    let analog_ins_changed = || {
+        let analog_ins = match analog_ins.take_pending() {
+            Some(analog_ins) => analog_ins,
             None => return,
         };
-        log::info!("analog_in: {:?}", analog_in);
+        log::info!("analog_ins: {:?}", analog_ins);
     };
 
-    let digital_in_changed = || {
-        let digital_in = match digital_in.take_pending() {
-            Some(digital_in) => digital_in,
+    let digital_ins_changed = || {
+        let digital_ins = match digital_ins.take_pending() {
+            Some(digital_ins) => digital_ins,
             None => return,
         };
-        log::info!("digital_in: {:?}", digital_in);
+        log::info!("digital_ins: {:?}", digital_ins);
     };
 
     let digital_out_runner = async {
@@ -150,8 +153,8 @@ async fn run_inner(
             digital_out_values[index] = true;
 
             log::info!("digital_out: {:?}", digital_out_values);
-            if digital_out.set(digital_out_values) {
-                runner.properties_remote_out_change_waker_wake();
+            if digital_outs.set(digital_out_values) {
+                outs_changed_waker_remote.wake();
             }
 
             index += 1;
@@ -164,32 +167,31 @@ async fn run_inner(
     let mut digital_out_runner = digital_out_runner.fuse();
 
     let ds18x20_changed = || {
-        let ds18x20 = match ds18x20.take_pending() {
+        let ds18x20 = match ds18x20s.take_pending() {
             Some(ds18x20) => ds18x20,
             None => return,
         };
         log::info!("ds18x20: {:?}", ds18x20);
     };
 
-    let properties_remote_in_changed_runner = async {
-        runner
-            .properties_remote_in_change_waker_receiver()
-            .by_ref()
+    let ins_changed_waker_remote_runner = async {
+        ins_changed_waker_remote
+            .stream(true)
             .for_each(|()| async move {
-                analog_in_changed();
-                digital_in_changed();
+                analog_ins_changed();
+                digital_ins_changed();
                 ds18x20_changed();
             })
             .await;
     };
-    pin_mut!(properties_remote_in_changed_runner);
-    let mut properties_remote_in_changed_runner = properties_remote_in_changed_runner.fuse();
+    pin_mut!(ins_changed_waker_remote_runner);
+    let mut ins_changed_waker_remote_runner = ins_changed_waker_remote_runner.fuse();
 
     select! {
         _ = join(abort_runner, runner_runner).fuse() => {},
         _ = status_led_runner => panic!("status_led_runner"),
         _ = digital_out_runner => panic!("digital_out_runner"),
-        _ = properties_remote_in_changed_runner => panic!("properties_remote_in_changed_runner yielded"),
+        _ = ins_changed_waker_remote_runner => panic!("ins_changed_waker_remote_runner"),
     }
 }
 

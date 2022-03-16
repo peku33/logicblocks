@@ -1,5 +1,3 @@
-use super::Base;
-use crate::util::atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease};
 use parking_lot::Mutex;
 use std::ops::Deref;
 
@@ -11,13 +9,16 @@ where
     value: T,
     device_pending: bool,
 }
-
-#[derive(Debug)]
-struct Inner<T>
+impl<T> State<T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
-    state: Mutex<State<T>>,
+    pub fn new(initial: T) -> Self {
+        State {
+            value: initial,
+            device_pending: true,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -25,33 +26,27 @@ pub struct Property<T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
-    inner: AtomicCellErased<Inner<T>>,
+    state: Mutex<State<T>>,
 }
 impl<T> Property<T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
     pub fn new(initial: T) -> Self {
-        let state = State {
-            value: initial,
-            device_pending: true,
-        };
+        let state = State::new(initial);
         let state = Mutex::new(state);
 
-        let inner = Inner { state };
-        let inner = AtomicCellErased::new(inner);
-
-        Self { inner }
+        Self { state }
     }
 
     // User
-    pub fn user_sink(&self) -> Sink<T> {
-        Sink::new(self)
+    pub fn user_remote(&self) -> Remote<T> {
+        Remote::new(self)
     }
 
     // Device
     pub fn device_pending(&self) -> Option<Pending<T>> {
-        let state = self.inner.state.lock();
+        let state = self.state.lock();
 
         if !state.device_pending {
             return None;
@@ -66,32 +61,28 @@ where
 
         Some(pending)
     }
-    pub fn device_reset(&self) -> bool {
-        let mut state = self.inner.state.lock();
+    pub fn device_reset(&self) {
+        let mut state = self.state.lock();
 
         state.device_pending = true;
 
         drop(state);
-
-        true
     }
 }
-impl<T> Base for Property<T> where T: Eq + Clone + Send + Sync + 'static {}
 
 #[derive(Debug)]
-pub struct Sink<T>
+pub struct Remote<'p, T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
-    inner: AtomicCellErasedLease<Inner<T>>,
+    property: &'p Property<T>,
 }
-impl<T> Sink<T>
+impl<'p, T> Remote<'p, T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
-    fn new(parent: &Property<T>) -> Self {
-        let inner = parent.inner.lease();
-        Self { inner }
+    fn new(property: &'p Property<T>) -> Self {
+        Self { property }
     }
 
     #[must_use = "use this value to wake properties changed waker"]
@@ -99,7 +90,7 @@ where
         &self,
         value: T,
     ) -> bool {
-        let mut state = self.inner.state.lock();
+        let mut state = self.property.state.lock();
 
         if state.value == value {
             return false;
@@ -114,7 +105,7 @@ where
     }
 
     pub fn peek_last(&self) -> T {
-        let state = self.inner.state.lock();
+        let state = self.property.state.lock();
 
         let value = state.value.clone();
 
@@ -136,7 +127,7 @@ where
     T: Eq + Clone + Send + Sync + 'static,
 {
     pub fn commit(self) {
-        let mut lock = self.property.inner.state.lock();
+        let mut lock = self.property.state.lock();
 
         if lock.value == self.value {
             lock.device_pending = false;
@@ -160,7 +151,7 @@ mod tests {
     #[test]
     fn test_1() {
         let property = Property::new(1usize);
-        let sink = property.user_sink();
+        let remote = property.user_remote();
 
         // Initial value, no commit
         let pending = property.device_pending().unwrap();
@@ -174,22 +165,22 @@ mod tests {
         assert!(property.device_pending().is_none());
 
         // No change
-        assert_eq!(sink.set(1), false);
+        assert_eq!(remote.set(1), false);
         assert!(property.device_pending().is_none());
 
         // Change
-        assert_eq!(sink.set(2), true);
-        assert_eq!(sink.set(2), false);
+        assert_eq!(remote.set(2), true);
+        assert_eq!(remote.set(2), false);
         let pending = property.device_pending().unwrap();
         assert_eq!(*pending, 2);
         pending.commit();
         assert!(property.device_pending().is_none());
 
         // Two changes
-        assert_eq!(sink.set(3), true);
+        assert_eq!(remote.set(3), true);
         let pending = property.device_pending().unwrap();
         assert_eq!(*pending, 3);
-        assert_eq!(sink.set(4), true);
+        assert_eq!(remote.set(4), true);
         assert_eq!(*pending, 3);
         pending.commit();
 

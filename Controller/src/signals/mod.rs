@@ -6,8 +6,7 @@ pub mod waker;
 use std::{
     any::{type_name, Any, TypeId},
     collections::HashMap,
-    fmt,
-    hash::{self},
+    fmt, hash,
 };
 
 // Identifier

@@ -9,8 +9,9 @@ use logicblocks_controller::{
     devices::eaton::mmax_a,
     interfaces::{modbus_rtu, serial},
     util::{
-        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt, async_flag, logging,
-        runtime::Exited,
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
+        async_flag, logging,
+        runtime::{Exited, Runnable},
     },
 };
 use std::{collections::HashMap, str::FromStr};

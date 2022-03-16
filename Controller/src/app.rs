@@ -19,7 +19,7 @@ pub async fn run(
     devices: Devices<'_>,
     signals: Signals,
     dashboards: Dashboards<'_>,
-    bind_global: bool,
+    bind_custom: Option<SocketAddrV4>,
 ) -> Result<(), Error> {
     let device_wrappers_by_id = devices.into_device_wrappers_by_id();
     let connections_requested = signals.into_connections_requested();
@@ -38,14 +38,9 @@ pub async fn run(
     });
     let root_service = RootService::new(&root_router);
     let server_runner = server::ServerRunner::new(
-        SocketAddr::V4(SocketAddrV4::new(
-            if bind_global {
-                Ipv4Addr::new(0, 0, 0, 0)
-            } else {
-                Ipv4Addr::new(127, 0, 0, 1)
-            },
-            8080,
-        )),
+        SocketAddr::V4(
+            bind_custom.unwrap_or_else(|| SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 8080)),
+        ),
         &root_service,
     );
 

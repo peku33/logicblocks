@@ -4,18 +4,18 @@ import styled from "styled-components";
 
 const OUTPUT_COUNT = 14;
 
-interface DeviceState {
+interface DeviceSummary {
   values: boolean[];
 }
 
 const Summary: React.VFC<{
-  state?: DeviceState;
+  summary?: DeviceSummary;
 }> = (props) => {
-  const { state } = props;
+  const { summary } = props;
   return (
     <RelaysGrid>
       {Array.from(Array(OUTPUT_COUNT).keys()).map((index) => (
-        <Chip key={index} type={ChipType.INFO} enabled={state?.values[index] || false}>
+        <Chip key={index} type={ChipType.INFO} enabled={summary?.values[index] || false}>
           {(index + 1).toString().padStart(2, "0")}
         </Chip>
       ))}

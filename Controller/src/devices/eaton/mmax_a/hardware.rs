@@ -460,7 +460,7 @@ impl<'m> Device<'m> {
     }
 
     const ERROR_RESTART_DELAY: Duration = Duration::from_secs(5);
-    pub async fn run(
+    async fn run(
         &self,
         mut exit_flag: async_flag::Receiver,
     ) -> Exited {

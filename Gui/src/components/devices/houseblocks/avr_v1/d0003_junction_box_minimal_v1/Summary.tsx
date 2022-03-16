@@ -1,23 +1,23 @@
 import { kelvinToCelsius, kelvinToFahrenheit } from "lib/Temperature";
 import styled from "styled-components";
 
-interface DeviceState {
+interface DeviceSummary {
   temperature: number;
 }
 
 const Summary: React.VFC<{
-  state: DeviceState | undefined;
+  summary: DeviceSummary | undefined;
 }> = (props) => {
-  const { state } = props;
+  const { summary } = props;
   return (
     <Wrapper>
       <TemperatureWrapper>
         <TemperatureLabel>Temperature:</TemperatureLabel>
         <TemperatureValuePrimary>
-          {state !== undefined ? kelvinToCelsius(state.temperature).toFixed(2) : "?"}&deg;C
+          {summary !== undefined ? kelvinToCelsius(summary.temperature).toFixed(2) : "?"}&deg;C
         </TemperatureValuePrimary>
         <TemperatureValueSecondary>
-          {state !== undefined ? kelvinToFahrenheit(state.temperature).toFixed(2) : "?"}&deg;F
+          {summary !== undefined ? kelvinToFahrenheit(summary.temperature).toFixed(2) : "?"}&deg;F
         </TemperatureValueSecondary>
       </TemperatureWrapper>
     </Wrapper>
@@ -25,7 +25,7 @@ const Summary: React.VFC<{
 };
 export default Summary;
 
-const Wrapper = styled.h1`
+const Wrapper = styled.div`
   display: flex;
 `;
 const TemperatureWrapper = styled.div``;

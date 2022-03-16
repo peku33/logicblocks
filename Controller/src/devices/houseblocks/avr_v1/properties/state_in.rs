@@ -1,5 +1,3 @@
-use super::Base;
-use crate::util::atomic_cell_erased::{AtomicCellErased, AtomicCellErasedLease};
 use parking_lot::Mutex;
 
 #[derive(Debug)]
@@ -10,13 +8,16 @@ where
     value: Option<T>,
     user_pending: bool,
 }
-
-#[derive(Debug)]
-struct Inner<T>
+impl<T> State<T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
-    state: Mutex<State<T>>,
+    pub fn new() -> Self {
+        Self {
+            value: None,
+            user_pending: false,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -24,42 +25,27 @@ pub struct Property<T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
-    inner: AtomicCellErased<Inner<T>>,
+    state: Mutex<State<T>>,
 }
 impl<T> Property<T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
     pub fn new() -> Self {
-        let state = State {
-            value: None,
-            user_pending: false,
-        };
+        let state = State::new();
         let state = Mutex::new(state);
 
-        let inner = Inner { state };
-        let inner = AtomicCellErased::new(inner);
-
-        Self { inner }
+        Self { state }
     }
 
     // User
-    pub fn user_pending(&self) -> bool {
-        let state = self.inner.state.lock();
-
-        let user_pending = state.user_pending;
-
-        drop(state);
-
-        user_pending
-    }
-    pub fn user_stream(&self) -> Stream<T> {
-        Stream::new(self)
+    pub fn user_remote(&self) -> Remote<T> {
+        Remote::new(self)
     }
 
     // Device
     pub fn device_must_read(&self) -> bool {
-        let state = self.inner.state.lock();
+        let state = self.state.lock();
 
         let device_must_read = state.value.is_none();
 
@@ -67,11 +53,12 @@ where
 
         device_must_read
     }
+    #[must_use = "use this value to wake properties changed waker"]
     pub fn device_set(
         &self,
         value: T,
     ) -> bool {
-        let mut state = self.inner.state.lock();
+        let mut state = self.state.lock();
 
         if state.value.contains(&value) {
             return false;
@@ -84,8 +71,9 @@ where
 
         true
     }
+    #[must_use = "use this value to wake properties changed waker"]
     pub fn device_reset(&self) -> bool {
-        let mut state = self.inner.state.lock();
+        let mut state = self.state.lock();
 
         if state.value.is_none() {
             return false;
@@ -99,26 +87,24 @@ where
         true
     }
 }
-impl<T> Base for Property<T> where T: Eq + Clone + Send + Sync + 'static {}
 
 #[derive(Debug)]
-pub struct Stream<T>
+pub struct Remote<'p, T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
-    inner: AtomicCellErasedLease<Inner<T>>,
+    property: &'p Property<T>,
 }
-impl<T> Stream<T>
+impl<'p, T> Remote<'p, T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
-    fn new(parent: &Property<T>) -> Self {
-        let inner = parent.inner.lease();
-        Self { inner }
+    fn new(property: &'p Property<T>) -> Self {
+        Self { property }
     }
 
     pub fn take_pending(&self) -> Option<Option<T>> {
-        let mut state = self.inner.state.lock();
+        let mut state = self.property.state.lock();
 
         if !state.user_pending {
             return None;
@@ -133,7 +119,7 @@ where
     }
 
     pub fn peek_last(&self) -> Option<T> {
-        let state = self.inner.state.lock();
+        let state = self.property.state.lock();
 
         let value = state.value.clone();
 
@@ -150,7 +136,7 @@ mod tests {
     #[test]
     fn test_1() {
         let property = Property::<usize>::new();
-        let stream = property.user_stream();
+        let stream = property.user_remote();
 
         assert!(stream.take_pending().is_none());
         assert!(property.device_must_read());

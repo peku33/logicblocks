@@ -3,7 +3,6 @@ pub mod async_barrier;
 pub mod async_ext;
 pub mod async_flag;
 pub mod atomic_cell;
-pub mod atomic_cell_erased;
 pub mod fs;
 pub mod logging;
 pub mod observable;

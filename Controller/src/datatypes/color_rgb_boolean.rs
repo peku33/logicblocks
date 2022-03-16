@@ -1,11 +1,13 @@
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+use serde::Serialize;
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
 pub struct ColorRgbBoolean {
     pub r: bool,
     pub g: bool,
     pub b: bool,
 }
 impl ColorRgbBoolean {
-    pub fn off() -> Self {
+    pub const fn off() -> Self {
         Self {
             r: false,
             g: false,

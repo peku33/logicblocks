@@ -2,6 +2,7 @@ import dahuaIpcA from "./dahua/ipc_a/SummaryManaged";
 import eatonMmaxA from "./eaton/mmax_a/SummaryManaged";
 import hikvisionDs2cd2x32xX from "./hikvision/ds2cd2x32x_x/SummaryManaged";
 import houseblocksAvrV1D0003JunctionBoxMinimalV1 from "./houseblocks/avr_v1/d0003_junction_box_minimal_v1/SummaryManaged";
+import houseblocksAvrV1D0005GpioAV1 from "./houseblocks/avr_v1/d0005_gpio_a_v1/SummaryManaged";
 import houseblocksAvrV1D0006Relay14OptoAV1 from "./houseblocks/avr_v1/d0006_relay14_opto_a_v1/SummaryManaged";
 import houseblocksAvrV1D0007Relay14SSRAV2 from "./houseblocks/avr_v1/d0007_relay14_ssr_a_v2/SummaryManaged";
 import softLogicFlipflopRSTA from "./soft/logic/flipflop/rst_a/SummaryManaged";
@@ -23,6 +24,8 @@ export function getByClass(cls: string): SummaryManagedBase {
       return hikvisionDs2cd2x32xX;
     case "houseblocks/avr_v1/junction_box_minimal_v1":
       return houseblocksAvrV1D0003JunctionBoxMinimalV1;
+    case "houseblocks/avr_v1/gpio_a_v1":
+      return houseblocksAvrV1D0005GpioAV1;
     case "houseblocks/avr_v1/relay14_opto_a_v1":
       return houseblocksAvrV1D0006Relay14OptoAV1;
     case "houseblocks/avr_v1/relay14_ssr_a_v2":

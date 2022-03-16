@@ -14,7 +14,7 @@ use logicblocks_controller::{
         },
         houseblocks_v1::{common::AddressSerial, master::Master},
     },
-    util::async_flag::Sender,
+    util::{async_flag::Sender, runtime::Runnable},
 };
 use std::time::Duration;
 use tokio::signal::ctrl_c;
@@ -35,7 +35,11 @@ async fn run_inner<S: Specification>(
     let device = Device::<S>::new();
     let runner = Runner::new(master, device, address_serial);
 
-    let PropertiesRemote { outputs } = runner.properties_remote();
+    let PropertiesRemote {
+        outs_changed_waker_remote,
+
+        outputs,
+    } = runner.device().properties_remote();
 
     let exit_flag_sender = Sender::new();
 
@@ -54,7 +58,7 @@ async fn run_inner<S: Specification>(
 
             log::info!("outputs: {:?}", output_values);
             if outputs.set(output_values) {
-                runner.properties_remote_out_change_waker_wake();
+                outs_changed_waker_remote.wake()
             }
 
             output_index += 1;

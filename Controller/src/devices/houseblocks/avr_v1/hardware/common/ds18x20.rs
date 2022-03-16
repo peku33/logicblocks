@@ -1,5 +1,8 @@
 use super::super::parser::Parser;
-use crate::datatypes::temperature::{Temperature, Unit};
+use crate::{
+    datatypes::temperature::{Temperature, Unit},
+    signals,
+};
 use anyhow::{Context, Error};
 use serde::Serialize;
 use std::mem::transmute;
@@ -58,6 +61,7 @@ impl State {
         })
     }
 }
+impl signals::types::state::Value for State {}
 #[cfg(test)]
 mod tests_state {
     use super::*;

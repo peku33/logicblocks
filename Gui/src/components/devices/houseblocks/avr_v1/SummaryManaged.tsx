@@ -7,7 +7,7 @@ import styled from "styled-components";
 import HardwareRunnerSummary, { State as HardwareRunnerState } from "./hardware_runner/Summary";
 
 export type DeviceSummaryManagedBase = React.VFC<{
-  state: any | undefined;
+  summary: any | undefined;
 }>;
 
 interface DeviceSummary {
@@ -27,7 +27,7 @@ export function makeAvrV1SummaryManaged(DeviceSummaryManagedBase: DeviceSummaryM
           <HardwareRunnerSummary state={deviceSummary?.hardware_runner} />
         </HardwareRunnerWrapper>
         <DeviceComponentWrapper>
-          <DeviceSummaryManagedBase state={deviceSummary?.device} />
+          <DeviceSummaryManagedBase summary={deviceSummary?.device} />
         </DeviceComponentWrapper>
       </Wrapper>
     );

@@ -1036,6 +1036,7 @@ impl Device {
         })
         .boxed();
 
+        // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
         let signals_targets_changed_runner = self
             .signals_targets_changed_waker
             .stream(false)
