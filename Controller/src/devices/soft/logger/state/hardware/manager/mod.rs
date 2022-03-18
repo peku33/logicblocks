@@ -73,6 +73,7 @@ impl DbClass {
             Class::Ratio => Self::Real,
             Class::Real => Self::Real,
             Class::Temperature => Self::Real,
+            Class::Voltage => Self::Real,
         }
     }
 }
@@ -91,6 +92,7 @@ impl DbValue {
             Value::Temperature(value) => {
                 Self::Real(value.map(|value| value.to_unit(temperature::Unit::Kelvin)))
             }
+            Value::Voltage(value) => Self::Real(value.map(|value| value.to_volts())),
         }
     }
 }

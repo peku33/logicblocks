@@ -1,4 +1,4 @@
-use crate::datatypes::{ratio::Ratio, real::Real, temperature::Temperature};
+use crate::datatypes::{ratio::Ratio, real::Real, temperature::Temperature, voltage::Voltage};
 use chrono::{DateTime, Utc};
 use std::fmt;
 
@@ -10,6 +10,7 @@ pub enum Class {
     Ratio,
     Real,
     Temperature,
+    Voltage,
 }
 impl Class {
     pub fn from_string(input: &str) -> Option<Self> {
@@ -18,6 +19,7 @@ impl Class {
             "Ratio" => Some(Class::Ratio),
             "Real" => Some(Class::Real),
             "Temperature" => Some(Class::Temperature),
+            "Voltage" => Some(Class::Voltage),
             _ => None,
         }
     }
@@ -27,6 +29,7 @@ impl Class {
             Class::Ratio => "Ratio",
             Class::Real => "Real",
             Class::Temperature => "Temperature",
+            Class::Voltage => "Voltage",
         }
     }
 }
@@ -37,6 +40,7 @@ pub enum Value {
     Ratio(Option<Ratio>),
     Real(Option<Real>),
     Temperature(Option<Temperature>),
+    Voltage(Option<Voltage>),
 }
 
 pub trait Type: Sized + fmt::Debug + Send + Sync + 'static {
@@ -77,6 +81,15 @@ impl Type for Temperature {
     }
     fn into_value(value: Option<Self>) -> Value {
         Value::Temperature(value)
+    }
+}
+
+impl Type for Voltage {
+    fn class() -> Class {
+        Class::Voltage
+    }
+    fn into_value(value: Option<Self>) -> Value {
+        Value::Voltage(value)
     }
 }
 
