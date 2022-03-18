@@ -1,7 +1,7 @@
 #![cfg(target_os = "linux")]
 
 use super::{
-    ftdi::{Descriptor, DeviceConfiguration},
+    ftdi::{Descriptor, Descriptors, DeviceConfiguration},
     Bits, Configuration, Parity, StopBits,
 };
 use anyhow::{bail, ensure, Context, Error};
@@ -32,7 +32,7 @@ impl Global {
         })
     }
 
-    pub fn find_descriptors(&mut self) -> Result<Vec<Descriptor>, Error> {
+    pub fn find_descriptors(&mut self) -> Result<Descriptors, Error> {
         let ftdi_device_list_ptr_rc = RefCell::new(ptr::null_mut::<ftdi_device_list>());
 
         defer! {{
@@ -160,6 +160,7 @@ impl Global {
             };
             descriptors.push(descriptor);
         }
+        let descriptors = Descriptors::new(descriptors);
         Ok(descriptors)
     }
 }

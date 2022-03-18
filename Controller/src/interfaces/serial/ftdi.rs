@@ -6,7 +6,8 @@ pub use super::ftdi_stub::*;
 
 use super::Configuration;
 use crate::util::anyhow_multiple_error::AnyhowMultipleError;
-use anyhow::{bail, Context, Error};
+use anyhow::{anyhow, bail, Context, Error};
+use itertools::Itertools;
 use std::{ffi, fmt, fmt::Display, thread, time::Duration};
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -27,6 +28,43 @@ impl Display for Descriptor {
             self.pid,
             self.serial_number.to_string_lossy()
         );
+    }
+}
+
+#[derive(Debug)]
+pub struct Descriptors {
+    inner: Vec<Descriptor>,
+}
+impl Descriptors {
+    pub fn new(inner: Vec<Descriptor>) -> Self {
+        Self { inner }
+    }
+
+    pub fn all(&self) -> &[Descriptor] {
+        self.inner.as_slice()
+    }
+
+    pub fn descriptor_by_serial(
+        &self,
+        serial: &str,
+    ) -> Option<&Descriptor> {
+        let descriptor = self
+            .inner
+            .iter()
+            .filter(|descriptor| descriptor.serial_number.to_str().unwrap() == serial)
+            .at_most_one()
+            .unwrap()?;
+        Some(descriptor)
+    }
+
+    pub fn descriptor_by_serial_or_error(
+        &self,
+        serial: &str,
+    ) -> Result<&Descriptor, Error> {
+        let descriptor = self
+            .descriptor_by_serial(serial)
+            .ok_or_else(|| anyhow!("descriptor {serial} is missing"))?;
+        Ok(descriptor)
     }
 }
 

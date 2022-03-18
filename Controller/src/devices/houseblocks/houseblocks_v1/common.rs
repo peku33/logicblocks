@@ -10,21 +10,42 @@ impl AddressDeviceType {
     pub fn new(device_type: [u8; Self::LENGTH]) -> Result<Self, Error> {
         ensure!(
             device_type.iter().all(|item| item.is_ascii_digit()),
-            "invalid characters in device_type"
+            "invalid characters"
+        );
+        ensure!(
+            !device_type.iter().all(|item| *item == b'0'),
+            "cannot be all zeros",
         );
         Ok(Self(device_type))
     }
+    pub fn new_from_string(string: &str) -> Result<Self, Error> {
+        ensure!(
+            string.len() == Self::LENGTH,
+            "expected length of {}",
+            Self::LENGTH
+        );
+        let self_ = Self::new(string.as_bytes().try_into().unwrap()).context("new")?;
+        Ok(self_)
+    }
     pub fn new_from_ordinal(ordinal: usize) -> Result<Self, Error> {
+        ensure!(
+            (1..=9999).contains(&ordinal),
+            "ordinal must be in range 0001-9999"
+        );
         let device_type_string = format!("{:0>4}", ordinal);
-        Ok(Self(
-            device_type_string.as_bytes()[..]
-                .try_into()
-                .context("try_into")?,
-        ))
+        let self_ = Self::new_from_string(&device_type_string).context("new_from_string")?;
+        Ok(self_)
     }
 
     pub fn as_bytes(&self) -> &[u8; Self::LENGTH] {
         &self.0
+    }
+}
+impl str::FromStr for AddressDeviceType {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new_from_string(s)
     }
 }
 impl fmt::Display for AddressDeviceType {
@@ -40,14 +61,45 @@ mod tests_address_device_type {
     use super::*;
 
     #[test]
-    fn new_1() {
-        let address = AddressDeviceType::new(*b"000A");
-        assert!(address.is_err());
+    fn invalid_1() {
+        AddressDeviceType::new(*b"000A").unwrap_err();
     }
     #[test]
-    fn new_2() {
-        let address = AddressDeviceType::new(*b"0001");
-        assert!(address.is_ok());
+    fn invalid_2() {
+        AddressDeviceType::new(*b"0000").unwrap_err();
+    }
+    #[test]
+    fn invalid_3() {
+        AddressDeviceType::new_from_ordinal(0).unwrap_err();
+    }
+    #[test]
+    fn invalid_4() {
+        AddressDeviceType::new_from_ordinal(10000).unwrap_err();
+    }
+
+    #[test]
+    fn valid_1() {
+        AddressDeviceType::new(*b"0001").unwrap();
+    }
+    #[test]
+    fn valid_2() {
+        let address = AddressDeviceType::new(*b"9999").unwrap();
+        assert_eq!(*address.as_bytes(), [b'9', b'9', b'9', b'9']);
+    }
+    #[test]
+    fn valid_3() {
+        let address = AddressDeviceType::new(*b"1234").unwrap();
+        assert_eq!(*address.as_bytes(), [b'1', b'2', b'3', b'4']);
+    }
+    #[test]
+    fn valid_4() {
+        let address = AddressDeviceType::new_from_ordinal(1).unwrap();
+        assert_eq!(*address.as_bytes(), [b'0', b'0', b'0', b'1']);
+    }
+    #[test]
+    fn valid_5() {
+        let address = AddressDeviceType::new_from_ordinal(9998).unwrap();
+        assert_eq!(*address.as_bytes(), [b'9', b'9', b'9', b'8']);
     }
 }
 
@@ -59,13 +111,42 @@ impl AddressSerial {
     pub fn new(serial: [u8; Self::LENGTH]) -> Result<Self, Error> {
         ensure!(
             serial.iter().all(|item| item.is_ascii_digit()),
-            "invalid characters in serial"
+            "invalid characters"
+        );
+        ensure!(
+            !serial.iter().all(|item| *item == b'0'),
+            "cannot be all zeros",
         );
         Ok(Self(serial))
+    }
+    pub fn new_from_string(string: &str) -> Result<Self, Error> {
+        ensure!(
+            string.len() == Self::LENGTH,
+            "expected length of {}",
+            Self::LENGTH
+        );
+        let self_ = Self::new(string.as_bytes().try_into().unwrap()).context("new")?;
+        Ok(self_)
+    }
+    pub fn new_from_ordinal(ordinal: usize) -> Result<Self, Error> {
+        ensure!(
+            (1..=9999_9999).contains(&ordinal),
+            "ordinal must be in range 00000001-99999999"
+        );
+        let serial = format!("{:0>8}", ordinal);
+        let self_ = Self::new_from_string(&serial).context("new_from_string")?;
+        Ok(self_)
     }
 
     pub fn as_bytes(&self) -> &[u8; Self::LENGTH] {
         &self.0
+    }
+}
+impl str::FromStr for AddressSerial {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new_from_string(s)
     }
 }
 impl fmt::Display for AddressSerial {
@@ -81,14 +162,57 @@ mod tests_address_serial {
     use super::*;
 
     #[test]
-    fn new_1() {
-        let address = AddressSerial::new(*b"0000000A");
-        assert!(address.is_err());
+    fn invalid_1() {
+        AddressSerial::new(*b"0000000A").unwrap_err();
     }
     #[test]
-    fn new_2() {
-        let address = AddressSerial::new(*b"00000001");
-        assert!(address.is_ok());
+    fn invalid_2() {
+        AddressSerial::new(*b"00000000").unwrap_err();
+    }
+    #[test]
+    fn invalid_3() {
+        AddressSerial::new_from_ordinal(0).unwrap_err();
+    }
+    #[test]
+    fn invalid_4() {
+        AddressSerial::new_from_ordinal(1_0000_0000).unwrap_err();
+    }
+
+    #[test]
+    fn valid_1() {
+        AddressSerial::new(*b"00000001").unwrap();
+    }
+    #[test]
+    fn valid_2() {
+        let address = AddressSerial::new(*b"99999999").unwrap();
+        assert_eq!(
+            *address.as_bytes(),
+            [b'9', b'9', b'9', b'9', b'9', b'9', b'9', b'9']
+        );
+    }
+    #[test]
+    fn valid_3() {
+        let address = AddressSerial::new(*b"12345678").unwrap();
+        assert_eq!(
+            *address.as_bytes(),
+            [b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8']
+        );
+    }
+    #[test]
+    fn valid_4() {
+        let address = AddressSerial::new_from_ordinal(1).unwrap();
+        assert_eq!(
+            *address.as_bytes(),
+            [b'0', b'0', b'0', b'0', b'0', b'0', b'0', b'1']
+        );
+    }
+    #[test]
+    fn valid_5() {
+        let address = AddressSerial::new_from_ordinal(99999998).unwrap();
+        assert_eq!(
+            *address.as_bytes(),
+            [b'9', b'9', b'9', b'9', b'9', b'9', b'9', b'8']
+        );
     }
 }
 

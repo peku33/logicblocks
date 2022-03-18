@@ -56,6 +56,7 @@ pub fn menu(
 
     while let Some(option) = dialoguer::Select::new()
         .with_prompt("Select action")
+        .default(0)
         .item("Configure")
         .item("Run")
         .interact_opt()?
@@ -198,6 +199,7 @@ async fn run_inner(
 fn menu_configuration(configuration: &mut Configuration) -> Result<(), Error> {
     while let Some(option) = dialoguer::Select::new()
         .with_prompt("Select configuration option")
+        .default(0)
         .item("Block Functions")
         .interact_opt()?
     {
@@ -213,6 +215,7 @@ fn menu_configuration(configuration: &mut Configuration) -> Result<(), Error> {
 fn menu_block_functions(block_functions: &mut BlockFunctions) -> Result<(), Error> {
     while let Some(index) = dialoguer::Select::new()
         .with_prompt("Select block")
+        .default(0)
         .item(format!(
             "Block 1 ({})",
             block_functions
@@ -262,6 +265,7 @@ fn menu_block_functions(block_functions: &mut BlockFunctions) -> Result<(), Erro
 fn menu_block_1_functions(block_1_functions: &mut Block1Functions) -> Result<(), Error> {
     while let Some(index) = dialoguer::Select::new()
         .with_prompt("Select functions for block #1")
+        .default(0)
         .items(
             block_1_functions
                 .iter()
@@ -293,6 +297,7 @@ fn menu_block_1_function(pin_index: usize) -> Result<Block1Function, Error> {
 
     let option_index = dialoguer::Select::new()
         .with_prompt(format!("Select function for block #1 pin #{}", pin_index))
+        .default(0)
         .items(
             options
                 .iter()
@@ -318,6 +323,7 @@ fn block_1_function_to_string(block_1_function: &Block1Function) -> &'static str
 fn menu_block_2_functions(block_2_functions: &mut Block2Functions) -> Result<(), Error> {
     while let Some(index) = dialoguer::Select::new()
         .with_prompt("Select functions for block #2")
+        .default(0)
         .items(
             block_2_functions
                 .iter()
@@ -349,6 +355,7 @@ fn menu_block_2_function(pin_index: usize) -> Result<Block2Function, Error> {
 
     let option_index = dialoguer::Select::new()
         .with_prompt(format!("Select function for block #2 pin #{}", pin_index))
+        .default(0)
         .items(
             options
                 .iter()
@@ -374,6 +381,7 @@ fn block_2_function_to_string(block_2_function: &Block2Function) -> &'static str
 fn menu_block_3_functions(block_3_functions: &mut Block3Functions) -> Result<(), Error> {
     while let Some(index) = dialoguer::Select::new()
         .with_prompt("Select functions for block #3")
+        .default(0)
         .items(
             block_3_functions
                 .iter()
@@ -400,6 +408,7 @@ fn menu_block_3_function(pin_index: usize) -> Result<Block3Function, Error> {
 
     let option_index = dialoguer::Select::new()
         .with_prompt(format!("Select function for block #3 pin #{}", pin_index))
+        .default(0)
         .items(
             options
                 .iter()
@@ -423,6 +432,7 @@ fn block_3_function_to_string(block_3_function: &Block3Function) -> &'static str
 fn menu_block_4_functions(block_4_functions: &mut Block4Functions) -> Result<(), Error> {
     while let Some(index) = dialoguer::Select::new()
         .with_prompt("Select functions for block #4")
+        .default(0)
         .items(
             block_4_functions
                 .iter()
@@ -449,6 +459,7 @@ fn menu_block_4_function(pin_index: usize) -> Result<Block4Function, Error> {
 
     let option_index = dialoguer::Select::new()
         .with_prompt(format!("Select function for block #4 pin #{}", pin_index))
+        .default(0)
         .items(
             options
                 .iter()

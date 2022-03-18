@@ -1,5 +1,5 @@
 use super::{
-    ftdi::{Descriptor, DeviceConfiguration},
+    ftdi::{Descriptor, Descriptors, DeviceConfiguration},
     Configuration,
 };
 use anyhow::Error;
@@ -9,7 +9,7 @@ impl Global {
     pub fn new() -> Result<Self, Error> {
         unimplemented!();
     }
-    pub fn find_descriptors(&mut self) -> Result<Vec<Descriptor>, Error> {
+    pub fn find_descriptors(&mut self) -> Result<Descriptors, Error> {
         unimplemented!();
     }
 }

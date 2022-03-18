@@ -1,7 +1,7 @@
 #![feature(async_closure)]
 #![allow(clippy::unused_unit)]
 
-use anyhow::{anyhow, bail, Context, Error};
+use anyhow::{bail, Context, Error};
 use clap::Parser;
 use futures::{future::TryFutureExt, join, stream::StreamExt};
 use logicblocks_controller::{
@@ -14,7 +14,7 @@ use logicblocks_controller::{
         runtime::{Exited, Runnable},
     },
 };
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 use tokio::signal::ctrl_c;
 
 #[derive(Debug)]
@@ -81,23 +81,14 @@ async fn main() -> Result<(), Error> {
     let ftdi_descriptors = ftdi_global_context
         .find_descriptors()
         .context("find_descriptors")?;
-    let ftdi_descriptors = ftdi_descriptors
-        .into_iter()
-        .map(|descriptor| {
-            (
-                descriptor.serial_number.to_string_lossy().to_string(),
-                descriptor,
-            )
-        })
-        .collect::<HashMap<_, _>>();
 
-    let ftdi_descriptor = ftdi_descriptors
-        .get(&arguments.ftdi_serial)
-        .ok_or_else(|| anyhow!("descriptor not found on available descriptor list"))?
-        .clone();
+    let ftdi_descriptor = ftdi_descriptors.descriptor_by_serial_or_error(&arguments.ftdi_serial)?;
 
-    let modbus_bus =
-        modbus_rtu::bus::AsyncBus::new(ftdi_descriptor, arguments.baud_rate, arguments.parity.0);
+    let modbus_bus = modbus_rtu::bus::AsyncBus::new(
+        ftdi_descriptor.clone(),
+        arguments.baud_rate,
+        arguments.parity.0,
+    );
 
     let device = mmax_a::hardware::Device::new(&modbus_bus, arguments.device_address);
 
