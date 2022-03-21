@@ -1,5 +1,5 @@
 pub mod logic {
-    use super::{super::logic, hardware};
+    use super::{super::logic::runner, hardware};
     use crate::{
         datatypes::temperature::Temperature,
         devices,
@@ -20,7 +20,7 @@ pub mod logic {
 
     #[derive(Debug)]
     pub struct DeviceFactory;
-    impl logic::DeviceFactory for DeviceFactory {
+    impl runner::DeviceFactory for DeviceFactory {
         type Device<'h> = Device<'h>;
 
         fn new(hardware_device: &hardware::Device) -> Device {
@@ -190,7 +190,7 @@ pub mod logic {
         }
     }
 
-    impl<'h> logic::Device for Device<'h> {
+    impl<'h> runner::Device for Device<'h> {
         type HardwareDevice = hardware::Device;
 
         fn class() -> &'static str {
@@ -296,9 +296,10 @@ pub mod logic {
 pub mod hardware {
     use super::super::{
         super::houseblocks_v1::common::{AddressDeviceType, Payload},
+        datatypes::ds18x20::State as Ds18x20State,
         hardware::{
-            common::ds18x20, driver::ApplicationDriver, parser::Parser, runner,
-            serializer::Serializer,
+            datatypes::ds18x20::SensorState as Ds18x20SensorState, driver::ApplicationDriver,
+            parser::Parser, runner, serializer::Serializer,
         },
         properties,
     };
@@ -333,7 +334,7 @@ pub mod hardware {
         pub keys: properties::state_event_in::Remote<'p, KeyValues, KeyChangesCount>,
         pub leds: properties::state_out::Remote<'p, LedValues>,
         pub buzzer: properties::event_out_last::Remote<'p, Duration>,
-        pub ds18x20: properties::state_in::Remote<'p, ds18x20::State>,
+        pub ds18x20: properties::state_in::Remote<'p, Ds18x20State>,
     }
 
     #[derive(Debug)]
@@ -344,7 +345,7 @@ pub mod hardware {
         keys: properties::state_event_in::Property<KeyValues, KeyChangesCount>,
         leds: properties::state_out::Property<LedValues>,
         buzzer: properties::event_out_last::Property<Duration>,
-        ds18x20: properties::state_in::Property<ds18x20::State>,
+        ds18x20: properties::state_in::Property<Ds18x20State>,
     }
     impl Properties {
         pub fn new() -> Self {
@@ -355,7 +356,7 @@ pub mod hardware {
                 keys: properties::state_event_in::Property::<KeyValues, KeyChangesCount>::new(),
                 leds: properties::state_out::Property::<LedValues>::new([false; LED_COUNT]),
                 buzzer: properties::event_out_last::Property::<Duration>::new(),
-                ds18x20: properties::state_in::Property::<ds18x20::State>::new(),
+                ds18x20: properties::state_in::Property::<Ds18x20State>::new(),
             }
         }
 
@@ -793,11 +794,13 @@ pub mod hardware {
 
     #[derive(PartialEq, Eq, Debug)]
     struct BusResponseDs18x20 {
-        pub state: ds18x20::State,
+        pub state: Ds18x20State,
     }
     impl BusResponseDs18x20 {
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
-            let state = ds18x20::State::parse(parser).context("state")?;
+            let state = Ds18x20SensorState::parse(parser)
+                .context("state")?
+                .into_inner();
             Ok(Self { state })
         }
     }
@@ -850,13 +853,13 @@ pub mod hardware {
     #[cfg(test)]
     mod tests_bus_response {
         use super::{
-            super::super::super::houseblocks_v1::common::Payload, BusResponse, BusResponseDs18x20,
-            BusResponseKey, BusResponseKeys, BusResponsePoll,
+            super::super::{
+                super::houseblocks_v1::common::Payload,
+                datatypes::ds18x20::{SensorType as Ds18x20SensorType, State as Ds18x20State},
+            },
+            BusResponse, BusResponseDs18x20, BusResponseKey, BusResponseKeys, BusResponsePoll,
         };
-        use crate::{
-            datatypes::temperature::{Temperature, Unit as TemperatureUnit},
-            devices::houseblocks::avr_v1::hardware::common::ds18x20,
-        };
+        use crate::datatypes::temperature::{Temperature, Unit as TemperatureUnit};
 
         #[test]
         fn empty() {
@@ -895,10 +898,12 @@ pub mod hardware {
                 }),
                 keys: None,
                 ds18x20: Some(BusResponseDs18x20 {
-                    state: ds18x20::State {
-                        sensor_type: ds18x20::SensorType::B,
+                    state: Ds18x20State {
+                        sensor_type: Ds18x20SensorType::B,
                         reset_count: 0,
-                        temperature: Some(Temperature::new(TemperatureUnit::Celsius, 125.00)),
+                        temperature: Some(
+                            Temperature::new(TemperatureUnit::Celsius, 125.00).unwrap(),
+                        ),
                     },
                 }),
             };

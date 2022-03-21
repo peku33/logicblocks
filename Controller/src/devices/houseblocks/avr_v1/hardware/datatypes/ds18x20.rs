@@ -1,27 +1,20 @@
-use super::super::parser::Parser;
-use crate::{
-    datatypes::temperature::{Temperature, Unit},
-    signals,
+use super::super::{
+    super::datatypes::ds18x20::{SensorType, State},
+    parser::Parser,
 };
+use crate::datatypes::temperature::{Temperature, Unit};
 use anyhow::{Context, Error};
-use serde::Serialize;
 use std::mem::transmute;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
-pub enum SensorType {
-    Empty,
-    Invalid,
-    S,
-    B,
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct SensorState {
+    inner: State,
 }
+impl SensorState {
+    pub fn into_inner(self) -> State {
+        self.inner
+    }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize)]
-pub struct State {
-    pub sensor_type: SensorType,
-    pub reset_count: u8,
-    pub temperature: Option<Temperature>,
-}
-impl State {
     pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
         let value = parser.expect_u16().context("expect_u16")?;
         let value = Self::from_u16(value).context("from_u16")?;
@@ -48,27 +41,31 @@ impl State {
                     temperature |= 0b1111_0000_0000_0000;
                 }
                 let temperature = unsafe { transmute::<u16, i16>(temperature) } as f64 / 16.0;
-                let temperature = Temperature::new(Unit::Celsius, temperature);
+                let temperature = Temperature::new(Unit::Celsius, temperature).unwrap();
                 Some(temperature)
             }
             _ => None,
         };
 
-        Ok(Self {
+        let state = State {
             sensor_type,
             reset_count,
             temperature,
-        })
+        };
+
+        Ok(Self { inner: state })
     }
 }
-impl signals::types::state::Value for State {}
+
 #[cfg(test)]
 mod tests_state {
     use super::*;
 
     #[test]
     fn invalid_1() {
-        let state = State::from_u16(0b0000_0000_0000_0000).unwrap();
+        let state = SensorState::from_u16(0b0000_0000_0000_0000)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::Empty,
             reset_count: 0,
@@ -78,7 +75,9 @@ mod tests_state {
     }
     #[test]
     fn invalid_2() {
-        let state = State::from_u16(0b0111_0111_1101_0000).unwrap();
+        let state = SensorState::from_u16(0b0111_0111_1101_0000)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::Invalid,
             reset_count: 3,
@@ -89,101 +88,121 @@ mod tests_state {
 
     #[test]
     fn from_u16_1() {
-        let state = State::from_u16(0b1000_0111_1101_0000).unwrap();
+        let state = SensorState::from_u16(0b1000_0111_1101_0000)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 0,
-            temperature: Some(Temperature::new(Unit::Celsius, 125.0)),
+            temperature: Some(Temperature::new(Unit::Celsius, 125.0).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
     #[test]
     fn from_u16_2() {
-        let state = State::from_u16(0b1100_0101_0101_0000).unwrap();
+        let state = SensorState::from_u16(0b1100_0101_0101_0000)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 0,
-            temperature: Some(Temperature::new(Unit::Celsius, 85.0)),
+            temperature: Some(Temperature::new(Unit::Celsius, 85.0).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
     #[test]
     fn from_u16_3() {
-        let state = State::from_u16(0b1001_0001_1001_0001).unwrap();
+        let state = SensorState::from_u16(0b1001_0001_1001_0001)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 1,
-            temperature: Some(Temperature::new(Unit::Celsius, 25.0625)),
+            temperature: Some(Temperature::new(Unit::Celsius, 25.0625).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
     #[test]
     fn from_u16_4() {
-        let state = State::from_u16(0b1101_0000_1010_0010).unwrap();
+        let state = SensorState::from_u16(0b1101_0000_1010_0010)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 1,
-            temperature: Some(Temperature::new(Unit::Celsius, 10.125)),
+            temperature: Some(Temperature::new(Unit::Celsius, 10.125).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
     #[test]
     fn from_u16_5() {
-        let state = State::from_u16(0b1010_0000_0000_1000).unwrap();
+        let state = SensorState::from_u16(0b1010_0000_0000_1000)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 2,
-            temperature: Some(Temperature::new(Unit::Celsius, 0.5)),
+            temperature: Some(Temperature::new(Unit::Celsius, 0.5).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
     #[test]
     fn from_u16_6() {
-        let state = State::from_u16(0b1110_0000_0000_0000).unwrap();
+        let state = SensorState::from_u16(0b1110_0000_0000_0000)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 2,
-            temperature: Some(Temperature::new(Unit::Celsius, 0.0)),
+            temperature: Some(Temperature::new(Unit::Celsius, 0.0).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
     #[test]
     fn from_u16_7() {
-        let state = State::from_u16(0b1011_1111_1111_1000).unwrap();
+        let state = SensorState::from_u16(0b1011_1111_1111_1000)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 3,
-            temperature: Some(Temperature::new(Unit::Celsius, -0.5)),
+            temperature: Some(Temperature::new(Unit::Celsius, -0.5).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
     #[test]
     fn from_u16_8() {
-        let state = State::from_u16(0b1111_1111_0101_1110).unwrap();
+        let state = SensorState::from_u16(0b1111_1111_0101_1110)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 3,
-            temperature: Some(Temperature::new(Unit::Celsius, -10.125)),
+            temperature: Some(Temperature::new(Unit::Celsius, -10.125).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
     #[test]
     fn from_u16_9() {
-        let state = State::from_u16(0b1000_1110_0110_1111).unwrap();
+        let state = SensorState::from_u16(0b1000_1110_0110_1111)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 0,
-            temperature: Some(Temperature::new(Unit::Celsius, -25.0625)),
+            temperature: Some(Temperature::new(Unit::Celsius, -25.0625).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
     #[test]
     fn from_u16_10() {
-        let state = State::from_u16(0b1100_1100_1001_0000).unwrap();
+        let state = SensorState::from_u16(0b1100_1100_1001_0000)
+            .unwrap()
+            .into_inner();
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 0,
-            temperature: Some(Temperature::new(Unit::Celsius, -55.0)),
+            temperature: Some(Temperature::new(Unit::Celsius, -55.0).unwrap()),
         };
         assert_eq!(state, state_expected);
     }

@@ -18,7 +18,7 @@ use crate::{
         runtime::{Exited, Runnable},
     },
 };
-use anyhow::{anyhow, bail, ensure, Error, Context};
+use anyhow::{anyhow, bail, ensure, Context, Error};
 use async_trait::async_trait;
 use by_address::ByAddress;
 use derive_more::Constructor;
@@ -281,10 +281,12 @@ fn new_inner<'d>(
     let inner = ExchangerInner::try_new(
         new_inner_parent(devices).context("new_inner_parent")?,
         move |parent| -> Result<_, Error> {
-            let child = new_inner_child(parent, connections_requested).context("new_inner_child")?;
+            let child =
+                new_inner_child(parent, connections_requested).context("new_inner_child")?;
             Ok(child)
         },
-    ).context("try_new")?;
+    )
+    .context("try_new")?;
 
     Ok(inner)
 }
@@ -395,14 +397,14 @@ fn new_inner_child<'p, 'd>(
             // check for waker in direction
             match remote_base_variant {
                 RemoteBaseVariant::StateSource(_) | RemoteBaseVariant::EventSource(_) => {
-                    let sources_changed_waker_remote =
-                        sources_changed_waker_remote.as_ref().unwrap_or_else(|| {
-                            panic!(
-                                "missing source waker for device #{} ({}) with sources",
-                                device_id,
-                                device.type_name(),
-                            )
-                        });
+                    let sources_changed_waker_remote = match sources_changed_waker_remote {
+                        Some(ref sources_changed_waker_remote) => sources_changed_waker_remote,
+                        None => panic!(
+                            "missing source waker for device #{} ({}) with sources",
+                            device_id,
+                            device.type_name(),
+                        ),
+                    };
 
                     let (connections_state, connections_event) = connections
                         .entry(ByAddress(sources_changed_waker_remote))
@@ -426,12 +428,14 @@ fn new_inner_child<'p, 'd>(
                     }
                 }
                 RemoteBaseVariant::StateTarget(_) | RemoteBaseVariant::EventTarget(_) => {
-                    assert!(
-                        targets_changed_waker_remote.is_some(),
-                        "missing target waker for device #{} ({}) with targets",
-                        device_id,
-                        device.type_name(),
-                    );
+                    let _targets_changed_waker_remote = match targets_changed_waker_remote {
+                        Some(ref targets_changed_waker_remote) => targets_changed_waker_remote,
+                        None => panic!(
+                            "missing target waker for device #{} ({}) with targets",
+                            device_id,
+                            device.type_name(),
+                        ),
+                    };
                 }
             }
 

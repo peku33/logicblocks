@@ -40,7 +40,7 @@ async fn main() -> Result<(), Error> {
         Some(arguments.rtsp_url),
         SEGMENT_TIME,
         arguments.temporary_storage_directory,
-        (0.50).try_into().unwrap(),
+        Ratio::from_f64(0.50).unwrap(),
     );
     let channel_runner = channel.run(exit_flag_sender.receiver());
 
@@ -64,7 +64,7 @@ async fn main() -> Result<(), Error> {
         let mut rng = rand::thread_rng();
         let detection_level: Option<Ratio> = if rng.gen_bool(0.7) {
             let ratio_f64: f64 = rng.gen_range(0.0..1.0);
-            Some(ratio_f64.try_into().unwrap())
+            Some(Ratio::from_f64(ratio_f64).unwrap())
         } else {
             None
         };

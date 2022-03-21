@@ -235,31 +235,31 @@ impl<'m> Device<'m> {
             .unwrap();
 
         // 101 - Minimum frequency
-        let motor_frequency_min_hz = Real::try_from(motor_frequency_min_hz as f64 / 100f64)
+        let motor_frequency_min_hz = Real::from_f64(motor_frequency_min_hz as f64 / 100f64)
             .context("motor_frequency_min_hz")?;
 
         // 102 - Maximum frequency
-        let motor_frequency_max_hz = Real::try_from(motor_frequency_max_hz as f64 / 100f64)
+        let motor_frequency_max_hz = Real::from_f64(motor_frequency_max_hz as f64 / 100f64)
             .context("motor_frequency_max_hz")?;
 
         // 107 - Current limit
         let motor_current_max_a =
-            Real::try_from(motor_current_max_a as f64 / 100f64).context("motor_current_max_a")?;
+            Real::from_f64(motor_current_max_a as f64 / 100f64).context("motor_current_max_a")?;
 
         // 110 - Motor, rated operating voltage
         let motor_voltage_max_v =
-            Real::try_from(motor_voltage_max_v as f64).context("motor_voltage_max_v")?;
+            Real::from_f64(motor_voltage_max_v as f64).context("motor_voltage_max_v")?;
 
         // 111 - Motor, rated frequency
-        let motor_frequency_rated_hz = Real::try_from(motor_frequency_rated_hz as f64 / 100f64)
+        let motor_frequency_rated_hz = Real::from_f64(motor_frequency_rated_hz as f64 / 100f64)
             .context("motor_frequency_rated_hz")?;
 
         // 112 - Motor, rated speed
         let motor_speed_rated_rpm =
-            Real::try_from(motor_speed_rated_rpm as f64).context("motor_speed_rated_rpm")?;
+            Real::from_f64(motor_speed_rated_rpm as f64).context("motor_speed_rated_rpm")?;
 
         // 113 - Motor, rated operational current
-        let motor_current_rated_a = Real::try_from(motor_current_rated_a as f64 / 100f64)
+        let motor_current_rated_a = Real::from_f64(motor_current_rated_a as f64 / 100f64)
             .context("motor_current_rated_a")?;
 
         // 2101 - Fieldbus status word
@@ -279,29 +279,33 @@ impl<'m> Device<'m> {
 
         // 2103 - Fieldbus actual speed
         let speed_actual =
-            Ratio::try_from(speed_actual as f64 / 10_000f64).context("speed_actual")?;
+            Ratio::from_f64(speed_actual as f64 / 10_000f64).context("speed_actual")?;
 
         // 2104 - Motor frequency
-        let motor_frequency_hz = Real::from_f64(motor_frequency_hz as f64 / 100f64);
+        let motor_frequency_hz =
+            Real::from_f64(motor_frequency_hz as f64 / 100f64).context("motor_frequency_hz")?;
 
         // 2105 - Motor speed
-        let motor_speed_rpm = Real::from_f64(motor_speed_rpm as f64);
+        let motor_speed_rpm = Real::from_f64(motor_speed_rpm as f64).context("motor_speed_rpm")?;
 
         // 2106 - Motor current
-        let motor_current_a = Real::from_f64(motor_current_a as f64 / 100f64);
+        let motor_current_a =
+            Real::from_f64(motor_current_a as f64 / 100f64).context("motor_current_a")?;
 
         // 2107 - Motor torque
         let motor_torque =
-            Ratio::try_from(motor_torque as f64 / 1_000f64).context("motor_torque")?;
+            Ratio::from_f64(motor_torque as f64 / 1_000f64).context("motor_torque")?;
 
         // 2108 - Motor power
-        let motor_power = Ratio::try_from(motor_power as f64 / 1_000f64).context("motor_power")?;
+        let motor_power = Ratio::from_f64(motor_power as f64 / 1_000f64).context("motor_power")?;
 
         // 2109 - Motor Voltage
-        let motor_voltage_v = Real::from_f64(motor_voltage_v as f64 / 10f64);
+        let motor_voltage_v =
+            Real::from_f64(motor_voltage_v as f64 / 10f64).context("motor_voltage_v")?;
 
         // 2110 - DC-link voltage (DC)
-        let dc_link_voltage_v = Real::from_f64(dc_link_voltage_v as f64);
+        let dc_link_voltage_v =
+            Real::from_f64(dc_link_voltage_v as f64).context("dc_link_voltage_v")?;
 
         // check for device errors
         if fault {

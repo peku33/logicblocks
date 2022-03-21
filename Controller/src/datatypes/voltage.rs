@@ -1,3 +1,4 @@
+use anyhow::{ensure, Error};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -7,9 +8,9 @@ pub struct Voltage {
     volts: f64,
 }
 impl Voltage {
-    pub fn from_volts(volts: f64) -> Self {
-        assert!(volts.is_finite(), "volts must be finite");
-        Self { volts }
+    pub fn from_volts(volts: f64) -> Result<Self, Error> {
+        ensure!(volts.is_finite(), "volts must be finite");
+        Ok(Self { volts })
     }
     pub fn to_volts(&self) -> f64 {
         self.volts

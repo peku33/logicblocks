@@ -156,7 +156,7 @@ impl Global {
             let descriptor = Descriptor {
                 vid: libusb_device_descriptor.idVendor,
                 pid: libusb_device_descriptor.idProduct,
-                serial_number: serial_number.into(),
+                serial_number: serial_number.to_owned(),
             };
             descriptors.push(descriptor);
         }

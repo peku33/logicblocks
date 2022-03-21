@@ -648,7 +648,7 @@ impl Device {
                     DeviceStatePausedChannelState::Disabled => {}
                     DeviceStatePausedChannelState::Paused { ref mut queue }
                     | DeviceStatePausedChannelState::Enabled { ref mut queue } => {
-                        *queue += channel_configuration.base_time.mul_f64(multiplier.into());
+                        *queue += channel_configuration.base_time.mul_f64(multiplier.as_f64());
                         gui_summary_changed = true;
                     }
                 }
@@ -663,7 +663,7 @@ impl Device {
                     DeviceStateEnabledChannelState::Paused { ref mut queue }
                     | DeviceStateEnabledChannelState::EnabledQueued { ref mut queue, .. }
                     | DeviceStateEnabledChannelState::EnabledActive { ref mut queue, .. } => {
-                        *queue += channel_configuration.base_time.mul_f64(multiplier.into());
+                        *queue += channel_configuration.base_time.mul_f64(multiplier.as_f64());
                         gui_summary_changed = true;
                     }
                 }
@@ -841,7 +841,7 @@ impl Device {
                         DeviceStatePausedChannelState::Disabled => {}
                         DeviceStatePausedChannelState::Paused { ref mut queue }
                         | DeviceStatePausedChannelState::Enabled { ref mut queue, .. } => {
-                            *queue += channel_configuration.base_time.mul_f64(multiplier.into());
+                            *queue += channel_configuration.base_time.mul_f64(multiplier.as_f64());
                             gui_summary_changed = true;
                         }
                     }
@@ -858,7 +858,7 @@ impl Device {
                         DeviceStateEnabledChannelState::Paused { ref mut queue, .. }
                         | DeviceStateEnabledChannelState::EnabledQueued { ref mut queue, .. }
                         | DeviceStateEnabledChannelState::EnabledActive { ref mut queue, .. } => {
-                            *queue += channel_configuration.base_time.mul_f64(multiplier.into());
+                            *queue += channel_configuration.base_time.mul_f64(multiplier.as_f64());
                             gui_summary_changed = true;
                         }
                     }
@@ -1202,7 +1202,7 @@ impl devices::GuiSummaryProvider for Device {
             .map(|channel_configuration| GuiSummaryChannelConfiguration {
                 name: channel_configuration.name.clone(),
                 base_time_seconds: channel_configuration.base_time.as_secs_f64(),
-                power_required: channel_configuration.power_required.into(),
+                power_required: channel_configuration.power_required.as_f64(),
                 round_min_seconds: channel_configuration.round_min.as_secs_f64(),
                 round_max_seconds: channel_configuration.round_max.as_secs_f64(),
             })
@@ -1210,7 +1210,7 @@ impl devices::GuiSummaryProvider for Device {
 
         let gui_summary_configuration = GuiSummaryConfiguration {
             channels: gui_summary_configuration_channels,
-            power_max: self.configuration.power_max.into(),
+            power_max: self.configuration.power_max.as_f64(),
         };
 
         let gui_summary_state = match state.device_state {
@@ -1324,7 +1324,7 @@ impl devices::GuiSummaryProvider for Device {
 
                 GuiSummaryState::Enabled {
                     channels: gui_channels,
-                    power: power.into(),
+                    power: power.as_f64(),
                 }
             }
         };

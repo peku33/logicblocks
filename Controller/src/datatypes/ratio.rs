@@ -17,6 +17,14 @@ impl Ratio {
         Self(1.0)
     }
 
+    pub fn from_f64(value: f64) -> Result<Self, Error> {
+        ensure!(value.is_finite(), "value must be finite");
+        ensure!(
+            (0.0..=1.0).contains(&value),
+            "value must be between 0.0 and 1.0"
+        );
+        Ok(Self(value))
+    }
     pub fn as_f64(&self) -> f64 {
         self.0
     }
@@ -35,16 +43,11 @@ impl TryFrom<f64> for Ratio {
     type Error = Error;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        ensure!(value.is_finite(), "value must be finite");
-        ensure!(
-            (0.0..=1.0).contains(&value),
-            "value must be between 0.0 and 1.0"
-        );
-        Ok(Self(value))
+        Self::from_f64(value)
     }
 }
 impl Into<f64> for Ratio {
     fn into(self) -> f64 {
-        self.0
+        self.as_f64()
     }
 }

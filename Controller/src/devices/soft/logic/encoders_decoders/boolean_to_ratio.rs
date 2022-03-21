@@ -65,7 +65,7 @@ impl Device {
 
         let ratio = (counts_one as f64) / (counts_known as f64);
         let ratio: Option<Ratio> = if ratio.is_finite() {
-            Some(Ratio::try_from(ratio).unwrap())
+            Some(Ratio::from_f64(ratio).unwrap())
         } else {
             // eg. division by zero
             None

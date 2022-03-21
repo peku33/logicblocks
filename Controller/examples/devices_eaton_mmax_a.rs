@@ -41,7 +41,7 @@ impl FromStr for ArgumentsSpeedSetpoint {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let value = f64::from_str(s).context("from_str")?;
-        let value = Ratio::try_from(value).context("try_from")?;
+        let value = Ratio::from_f64(value).context("from_f64")?;
         Ok(Self(value))
     }
 }

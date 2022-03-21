@@ -162,7 +162,7 @@ impl<'f> Manager<'f> {
                             let channel_id = row.get_ref_unwrap(0).as_i64()? as usize;
                             let name = row.get_ref_unwrap(1).as_str()?.to_owned();
                             let detection_threshold =
-                                row.get_ref_unwrap(2).as_f64()?.try_into().unwrap();
+                                Ratio::from_f64(row.get_ref_unwrap(2).as_f64()?).unwrap();
                             Ok((channel_id, name, detection_threshold))
                         })?
                         .collect::<rusqlite::Result<_>>()?;

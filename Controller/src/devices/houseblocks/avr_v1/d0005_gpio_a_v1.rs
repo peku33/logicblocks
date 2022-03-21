@@ -1,5 +1,5 @@
 pub mod logic {
-    use super::{super::logic, hardware};
+    use super::{super::logic::runner, hardware};
     use crate::{
         datatypes::color_rgb_boolean::ColorRgbBoolean,
         devices,
@@ -20,7 +20,7 @@ pub mod logic {
 
     #[derive(Debug)]
     pub struct DeviceFactory;
-    impl logic::DeviceFactory for DeviceFactory {
+    impl runner::DeviceFactory for DeviceFactory {
         type Device<'h> = Device<'h>;
 
         fn new(hardware_device: &hardware::Device) -> Device {
@@ -313,7 +313,7 @@ pub mod logic {
         }
     }
 
-    impl<'h> logic::Device for Device<'h> {
+    impl<'h> runner::Device for Device<'h> {
         type HardwareDevice = hardware::Device;
 
         fn class() -> &'static str {
@@ -544,9 +544,10 @@ pub mod logic {
 pub mod hardware {
     use super::super::{
         super::houseblocks_v1::common::{AddressDeviceType, Payload},
+        datatypes::ds18x20::State as Ds18x20State,
         hardware::{
-            common::ds18x20, driver::ApplicationDriver, parser::Parser, runner,
-            serializer::Serializer,
+            datatypes::ds18x20::SensorState as Ds18x20SensorState, driver::ApplicationDriver,
+            parser::Parser, runner, serializer::Serializer,
         },
         properties,
     };
@@ -625,7 +626,7 @@ pub mod hardware {
     pub const DIGITAL_OUT_COUNT: usize = BLOCK_1_SIZE + BLOCK_2_SIZE + BLOCK_4_SIZE;
     pub type DigitalOutValues = [DigitalOutValue; DIGITAL_OUT_COUNT];
 
-    pub type Ds18x20Value = ds18x20::State;
+    pub type Ds18x20Value = Ds18x20State;
     pub const DS18X20_COUNT: usize = BLOCK_2_SIZE;
     pub type Ds18x20Values = [Ds18x20Value; DS18X20_COUNT];
 
@@ -1402,7 +1403,8 @@ pub mod hardware {
                 bail!("index out of bounds");
             };
 
-            let analog_in_value = Voltage::from_volts((value as f64) / 1024.0 * multiplier);
+            let analog_in_value =
+                Voltage::from_volts((value as f64) / 1024.0 * multiplier).unwrap();
             Ok(analog_in_value)
         }
 
@@ -1441,7 +1443,10 @@ pub mod hardware {
     impl BusResponseDs18x20s {
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
             let values = (0..DS18X20_COUNT)
-                .map(|_| ds18x20::State::parse(parser))
+                .map(|_| {
+                    Ds18x20SensorState::parse(parser)
+                        .map(|ds18x20_sensor_state| ds18x20_sensor_state.into_inner())
+                })
                 .collect::<Result<ArrayVec<_, { DS18X20_COUNT }>, _>>()
                 .context("collect")?
                 .into_inner()
@@ -1508,8 +1513,9 @@ pub mod hardware {
     #[cfg(test)]
     mod tests_bus_response {
         use super::{
-            super::super::super::{
-                avr_v1::hardware::common::ds18x20, houseblocks_v1::common::Payload,
+            super::super::{
+                super::houseblocks_v1::common::Payload,
+                datatypes::ds18x20::{SensorType as Ds18x20SensorType, State as Ds18x20State},
             },
             BusResponse, BusResponseAnalogIns, BusResponseDigitalIns, BusResponseDs18x20s,
             BusResponsePoll,
@@ -1549,12 +1555,12 @@ pub mod hardware {
                 }),
                 analog_ins: Some(BusResponseAnalogIns {
                     values: [
-                        Voltage::from_volts(0.0),
-                        Voltage::from_volts(1.2765),
-                        Voltage::from_volts(2.553),
-                        Voltage::from_volts(5.106),
-                        Voltage::from_volts(13.8635),
-                        Voltage::from_volts(27.727),
+                        Voltage::from_volts(0.0).unwrap(),
+                        Voltage::from_volts(1.2765).unwrap(),
+                        Voltage::from_volts(2.553).unwrap(),
+                        Voltage::from_volts(5.106).unwrap(),
+                        Voltage::from_volts(13.8635).unwrap(),
+                        Voltage::from_volts(27.727).unwrap(),
                     ],
                 }),
                 digital_ins: Some(BusResponseDigitalIns {
@@ -1562,25 +1568,31 @@ pub mod hardware {
                 }),
                 ds18x20s: Some(BusResponseDs18x20s {
                     values: [
-                        ds18x20::State {
-                            sensor_type: ds18x20::SensorType::Empty,
+                        Ds18x20State {
+                            sensor_type: Ds18x20SensorType::Empty,
                             reset_count: 0,
                             temperature: None,
                         },
-                        ds18x20::State {
-                            sensor_type: ds18x20::SensorType::S,
+                        Ds18x20State {
+                            sensor_type: Ds18x20SensorType::S,
                             reset_count: 0,
-                            temperature: Some(Temperature::new(TemperatureUnit::Celsius, 125.0)),
+                            temperature: Some(
+                                Temperature::new(TemperatureUnit::Celsius, 125.0).unwrap(),
+                            ),
                         },
-                        ds18x20::State {
-                            sensor_type: ds18x20::SensorType::S,
+                        Ds18x20State {
+                            sensor_type: Ds18x20SensorType::S,
                             reset_count: 1,
-                            temperature: Some(Temperature::new(TemperatureUnit::Celsius, 25.0625)),
+                            temperature: Some(
+                                Temperature::new(TemperatureUnit::Celsius, 25.0625).unwrap(),
+                            ),
                         },
-                        ds18x20::State {
-                            sensor_type: ds18x20::SensorType::B,
+                        Ds18x20State {
+                            sensor_type: Ds18x20SensorType::B,
                             reset_count: 0,
-                            temperature: Some(Temperature::new(TemperatureUnit::Celsius, -55.0)),
+                            temperature: Some(
+                                Temperature::new(TemperatureUnit::Celsius, -55.0).unwrap(),
+                            ),
                         },
                     ],
                 }),

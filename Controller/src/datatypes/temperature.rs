@@ -1,3 +1,4 @@
+use anyhow::{ensure, Error};
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
 
@@ -17,14 +18,14 @@ impl Temperature {
     pub fn new(
         unit: Unit,
         value: f64,
-    ) -> Self {
-        assert!(value.is_finite(), "value must be finite");
+    ) -> Result<Self, Error> {
+        ensure!(value.is_finite(), "value must be finite");
         let kelvin = match unit {
             Unit::Kelvin => value,
             Unit::Fahrenheit => (value + 459.67) * 5.0 / 9.0,
             Unit::Celsius => value + 273.15,
         };
-        Self { kelvin }
+        Ok(Self { kelvin })
     }
     pub fn to_unit(
         self,

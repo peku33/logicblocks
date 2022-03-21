@@ -7,8 +7,9 @@ use std::cmp::Ordering;
 #[serde(into = "f64")]
 pub struct Real(f64);
 impl Real {
-    pub fn from_f64(inner: f64) -> Self {
-        Self::try_from(inner).unwrap()
+    pub fn from_f64(value: f64) -> Result<Self, Error> {
+        ensure!(value.is_finite(), "value must be finite");
+        Ok(Self(value))
     }
     pub fn as_f64(&self) -> f64 {
         self.0
@@ -28,12 +29,11 @@ impl TryFrom<f64> for Real {
     type Error = Error;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        ensure!(value.is_finite(), "value must be finite");
-        Ok(Self(value))
+        Self::from_f64(value)
     }
 }
 impl Into<f64> for Real {
     fn into(self) -> f64 {
-        self.0
+        self.as_f64()
     }
 }

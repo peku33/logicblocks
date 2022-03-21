@@ -1,5 +1,5 @@
 pub mod logic {
-    use super::{super::super::logic, hardware};
+    use super::{super::super::logic::runner, hardware};
     use crate::{
         devices,
         signals::{self, signal},
@@ -27,7 +27,7 @@ pub mod logic {
     pub struct DeviceFactory<S: Specification> {
         _phantom: PhantomData<S>,
     }
-    impl<S: Specification> logic::DeviceFactory for DeviceFactory<S> {
+    impl<S: Specification> runner::DeviceFactory for DeviceFactory<S> {
         type Device<'h> = Device<'h, S>;
 
         fn new(hardware_device: &hardware::Device<S::HardwareSpecification>) -> Device<S> {
@@ -110,7 +110,7 @@ pub mod logic {
         }
     }
 
-    impl<'h, S: Specification> logic::Device for Device<'h, S> {
+    impl<'h, S: Specification> runner::Device for Device<'h, S> {
         type HardwareDevice = hardware::Device<S::HardwareSpecification>;
 
         fn class() -> &'static str {
