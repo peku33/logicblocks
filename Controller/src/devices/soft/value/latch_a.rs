@@ -42,7 +42,9 @@ where
 
         if let Some(()) = self.signal_trigger.take_pending() {
             let value = self.signal_input.take_last().value;
-            signal_sources_changed |= self.signal_output.set_one(value);
+            if self.signal_output.set_one(value) {
+                signal_sources_changed = true;
+            }
         }
 
         if signal_sources_changed {

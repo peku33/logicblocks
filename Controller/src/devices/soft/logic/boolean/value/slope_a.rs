@@ -51,11 +51,11 @@ impl Device {
 
         let mut signal_sources_changed = false;
 
-        if raising {
-            signal_sources_changed |= self.signal_output_raising.push_one(());
+        if raising && self.signal_output_raising.push_one(()) {
+            signal_sources_changed = true;
         }
-        if falling {
-            signal_sources_changed |= self.signal_output_falling.push_one(());
+        if falling && self.signal_output_falling.push_one(()) {
+            signal_sources_changed = true;
         }
 
         if signal_sources_changed {

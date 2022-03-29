@@ -39,7 +39,9 @@ where
         let mut signal_sources_changed = false;
 
         let values = self.signal_input.take_pending();
-        signal_sources_changed |= self.signal_output.push_many(values);
+        if self.signal_output.push_many(values) {
+            signal_sources_changed = true;
+        }
 
         if signal_sources_changed {
             self.signals_sources_changed_waker.wake();

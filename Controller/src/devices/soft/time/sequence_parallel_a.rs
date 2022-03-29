@@ -203,9 +203,13 @@ impl Device {
         }
 
         // disable all channels
-        signal_sources_changed |= self.signal_power.set_one(Some(Multiplier::zero()));
+        if self.signal_power.set_one(Some(Multiplier::zero())) {
+            signal_sources_changed = true;
+        }
         for signal_output in &self.signals_outputs {
-            signal_sources_changed |= signal_output.set_one(Some(false));
+            if signal_output.set_one(Some(false)) {
+                signal_sources_changed = true;
+            }
         }
 
         if signal_sources_changed {
@@ -277,9 +281,13 @@ impl Device {
         }
 
         // disable all channels
-        signal_sources_changed |= self.signal_power.set_one(Some(Multiplier::zero()));
+        if self.signal_power.set_one(Some(Multiplier::zero())) {
+            signal_sources_changed = true;
+        }
         for signal_output in &self.signals_outputs {
-            signal_sources_changed |= signal_output.set_one(Some(false));
+            if signal_output.set_one(Some(false)) {
+                signal_sources_changed = true;
+            }
         }
 
         if signal_sources_changed {
@@ -410,11 +418,15 @@ impl Device {
                     DeviceStateEnabledChannelState::EnabledActive { .. } => {
                         *channel_state = DeviceStateEnabledChannelState::Disabled;
 
-                        signal_sources_changed |=
-                            self.signals_outputs[channel_id].set_one(Some(false));
-                        signal_sources_changed |= self
+                        if self.signals_outputs[channel_id].set_one(Some(false)) {
+                            signal_sources_changed = true;
+                        }
+                        if self
                             .signal_power
-                            .set_one(Some(self.power_calculate(channels)));
+                            .set_one(Some(self.power_calculate(channels)))
+                        {
+                            signal_sources_changed = true;
+                        }
 
                         gui_summary_changed = true;
                     }
@@ -488,11 +500,15 @@ impl Device {
                             queue: *queue + *round,
                         };
 
-                        signal_sources_changed |=
-                            self.signals_outputs[channel_id].set_one(Some(false));
-                        signal_sources_changed |= self
+                        if self.signals_outputs[channel_id].set_one(Some(false)) {
+                            signal_sources_changed = true;
+                        }
+                        if self
                             .signal_power
-                            .set_one(Some(self.power_calculate(channels)));
+                            .set_one(Some(self.power_calculate(channels)))
+                        {
+                            signal_sources_changed = true;
+                        }
 
                         gui_summary_changed = true;
                     }
@@ -648,7 +664,7 @@ impl Device {
                     DeviceStatePausedChannelState::Disabled => {}
                     DeviceStatePausedChannelState::Paused { ref mut queue }
                     | DeviceStatePausedChannelState::Enabled { ref mut queue } => {
-                        *queue += channel_configuration.base_time.mul_f64(multiplier.as_f64());
+                        *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                         gui_summary_changed = true;
                     }
                 }
@@ -663,7 +679,7 @@ impl Device {
                     DeviceStateEnabledChannelState::Paused { ref mut queue }
                     | DeviceStateEnabledChannelState::EnabledQueued { ref mut queue, .. }
                     | DeviceStateEnabledChannelState::EnabledActive { ref mut queue, .. } => {
-                        *queue += channel_configuration.base_time.mul_f64(multiplier.as_f64());
+                        *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                         gui_summary_changed = true;
                     }
                 }
@@ -757,11 +773,15 @@ impl Device {
                             queue: *queue + *round,
                         };
 
-                        signal_sources_changed |=
-                            self.signals_outputs[channel_id].set_one(Some(false));
-                        signal_sources_changed |= self
+                        if self.signals_outputs[channel_id].set_one(Some(false)) {
+                            signal_sources_changed = true;
+                        }
+                        if self
                             .signal_power
-                            .set_one(Some(self.power_calculate(channels)));
+                            .set_one(Some(self.power_calculate(channels)))
+                        {
+                            signal_sources_changed = true;
+                        }
 
                         gui_summary_changed = true;
                     }
@@ -841,7 +861,7 @@ impl Device {
                         DeviceStatePausedChannelState::Disabled => {}
                         DeviceStatePausedChannelState::Paused { ref mut queue }
                         | DeviceStatePausedChannelState::Enabled { ref mut queue, .. } => {
-                            *queue += channel_configuration.base_time.mul_f64(multiplier.as_f64());
+                            *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
                     }
@@ -858,7 +878,7 @@ impl Device {
                         DeviceStateEnabledChannelState::Paused { ref mut queue, .. }
                         | DeviceStateEnabledChannelState::EnabledQueued { ref mut queue, .. }
                         | DeviceStateEnabledChannelState::EnabledActive { ref mut queue, .. } => {
-                            *queue += channel_configuration.base_time.mul_f64(multiplier.as_f64());
+                            *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
                     }
@@ -919,7 +939,9 @@ impl Device {
                             order_index: *order_index_last as i64,
                         };
 
-                        signal_sources_changed |= signal_output.set_one(Some(false));
+                        if signal_output.set_one(Some(false)) {
+                            signal_sources_changed = true;
+                        }
                     }
 
                     gui_summary_changed = true;
@@ -973,7 +995,9 @@ impl Device {
                         // enough power and time to start!
                         power_left -= channel_configuration.power_required;
 
-                        signal_sources_changed |= signal_output.set_one(Some(true));
+                        if signal_output.set_one(Some(true)) {
+                            signal_sources_changed = true;
+                        }
                         gui_summary_changed = true;
                     } else {
                         // to prevent starvation we end iterating when first channel does not meet power condition
@@ -985,7 +1009,9 @@ impl Device {
         }
 
         let power = self.configuration.power_max - power_left;
-        signal_sources_changed |= self.signal_power.set_one(Some(power));
+        if self.signal_power.set_one(Some(power)) {
+            signal_sources_changed = true;
+        }
 
         if signal_sources_changed {
             self.signals_sources_changed_waker.wake();
@@ -1124,6 +1150,7 @@ impl signals::Device for Device {
     }
 }
 
+// TODO: use newtype inestead of f64
 #[derive(Serialize)]
 struct GuiSummaryChannelConfiguration {
     name: String,
@@ -1202,7 +1229,7 @@ impl devices::GuiSummaryProvider for Device {
             .map(|channel_configuration| GuiSummaryChannelConfiguration {
                 name: channel_configuration.name.clone(),
                 base_time_seconds: channel_configuration.base_time.as_secs_f64(),
-                power_required: channel_configuration.power_required.as_f64(),
+                power_required: channel_configuration.power_required.to_f64(),
                 round_min_seconds: channel_configuration.round_min.as_secs_f64(),
                 round_max_seconds: channel_configuration.round_max.as_secs_f64(),
             })
@@ -1210,7 +1237,7 @@ impl devices::GuiSummaryProvider for Device {
 
         let gui_summary_configuration = GuiSummaryConfiguration {
             channels: gui_summary_configuration_channels,
-            power_max: self.configuration.power_max.as_f64(),
+            power_max: self.configuration.power_max.to_f64(),
         };
 
         let gui_summary_state = match state.device_state {
@@ -1324,7 +1351,7 @@ impl devices::GuiSummaryProvider for Device {
 
                 GuiSummaryState::Enabled {
                     channels: gui_channels,
-                    power: power.as_f64(),
+                    power: power.to_f64(),
                 }
             }
         };
@@ -1373,7 +1400,7 @@ impl uri_cursor::Handler for Device {
                 },
                 _ => async move { web::Response::error_404() }.boxed(),
             },
-            uri_cursor::UriCursor::Next("channels", uri_cursor) => match &**uri_cursor {
+            uri_cursor::UriCursor::Next("channels", uri_cursor) => match uri_cursor.as_ref() {
                 uri_cursor::UriCursor::Next("all", uri_cursor) => match uri_cursor.as_last() {
                     Some("clear") => match *request.method() {
                         http::Method::POST => {

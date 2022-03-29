@@ -67,15 +67,18 @@ impl<'m> Device<'m> {
     fn device_to_signals(&self) {
         let output = self.hardware_device.output_getter().get();
 
+        let output_ok = match output {
+            hardware::Output::Running(output_running) => {
+                output_running.warning.is_none() && output_running.ready
+            }
+            hardware::Output::Initializing | hardware::Output::Error => false,
+        };
+
         let mut signal_sources_changed = false;
 
-        signal_sources_changed |= self.signal_output_ok.set_one(
-            if let hardware::Output::Running(output_running) = output {
-                Some(output_running.warning.is_none() && output_running.ready)
-            } else {
-                Some(false)
-            },
-        );
+        if self.signal_output_ok.set_one(Some(output_ok)) {
+            signal_sources_changed = true;
+        }
 
         if signal_sources_changed {
             self.signals_sources_changed_waker.wake();

@@ -152,26 +152,44 @@ impl Device {
         }
         self.gui_summary_waker.wake();
 
-        let mut signals_changed = false;
-        signals_changed |= self
+        let mut signals_sources_changed = false;
+        if self
             .signal_event_camera_failure
-            .set_one(Some(events.camera_failure));
-        signals_changed |= self // break
+            .set_one(Some(events.camera_failure))
+        {
+            signals_sources_changed = true;
+        }
+        if self
             .signal_event_video_loss
-            .set_one(Some(events.video_loss));
-        signals_changed |= self
+            .set_one(Some(events.video_loss))
+        {
+            signals_sources_changed = true;
+        }
+        if self
             .signal_event_tampering_detection
-            .set_one(Some(events.tampering_detection));
-        signals_changed |= self
+            .set_one(Some(events.tampering_detection))
+        {
+            signals_sources_changed = true;
+        }
+        if self
             .signal_event_motion_detection
-            .set_one(Some(events.motion_detection));
-        signals_changed |= self
+            .set_one(Some(events.motion_detection))
+        {
+            signals_sources_changed = true;
+        }
+        if self
             .signal_event_line_detection
-            .set_one(Some(events.line_detection));
-        signals_changed |= self
+            .set_one(Some(events.line_detection))
+        {
+            signals_sources_changed = true;
+        }
+        if self
             .signal_event_field_detection
-            .set_one(Some(events.field_detection));
-        if signals_changed {
+            .set_one(Some(events.field_detection))
+        {
+            signals_sources_changed = true;
+        }
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
     }

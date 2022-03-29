@@ -85,7 +85,9 @@ where
                 (Some(a), Some(b)) => Some(self.configuration.operation.execute(a, b)),
                 _ => None,
             };
-            signal_sources_changed |= self.signal_output.set_one(output);
+            if self.signal_output.set_one(output) {
+                signal_sources_changed = true;
+            }
         }
 
         if signal_sources_changed {
