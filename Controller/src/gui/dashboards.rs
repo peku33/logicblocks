@@ -54,7 +54,7 @@ impl<'d> uri_cursor::Handler for Dashboard<'d> {
         uri_cursor: &uri_cursor::UriCursor,
     ) -> BoxFuture<'static, web::Response> {
         match uri_cursor {
-            uri_cursor::UriCursor::Next("summary", uri_cursor) => match **uri_cursor {
+            uri_cursor::UriCursor::Next("summary", uri_cursor) => match uri_cursor.as_ref() {
                 uri_cursor::UriCursor::Terminal => match *request.method() {
                     http::Method::GET => {
                         #[derive(Serialize)]
@@ -113,7 +113,7 @@ impl<'d> uri_cursor::Handler for Dashboards<'d> {
         uri_cursor: &uri_cursor::UriCursor,
     ) -> BoxFuture<'static, web::Response> {
         match uri_cursor {
-            uri_cursor::UriCursor::Next("summary", uri_cursor) => match **uri_cursor {
+            uri_cursor::UriCursor::Next("summary", uri_cursor) => match uri_cursor.as_ref() {
                 uri_cursor::UriCursor::Terminal => match *request.method() {
                     http::Method::GET => {
                         #[derive(Serialize)]
@@ -174,7 +174,7 @@ impl<'d> uri_cursor::Handler for Dashboards<'d> {
                     Some(dashboard) => dashboard,
                     None => return async move { web::Response::error_404() }.boxed(),
                 };
-                dashboard.handle(request, &*uri_cursor)
+                dashboard.handle(request, uri_cursor.as_ref())
             }
             _ => async move { web::Response::error_404() }.boxed(),
         }

@@ -109,7 +109,7 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
             },
             uri_cursor::UriCursor::Next("gui-summary", uri_cursor) => {
                 match self.device().as_gui_summary_provider() {
-                    Some(gui_summary_provider) => match **uri_cursor {
+                    Some(gui_summary_provider) => match uri_cursor.as_ref() {
                         uri_cursor::UriCursor::Terminal => match *request.method() {
                             http::Method::GET => {
                                 let value = gui_summary_provider.value();

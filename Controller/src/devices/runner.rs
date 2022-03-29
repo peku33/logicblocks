@@ -81,7 +81,8 @@ impl<'d> Runner<'d> {
                         (device_id, signals_device_base)
                     })
                     .collect::<HashMap<_, _>>();
-                let exchanger = Exchanger::new(&exchanger_devices, connections_requested).context("new")?;
+                let exchanger =
+                    Exchanger::new(&exchanger_devices, connections_requested).context("new")?;
                 Ok(exchanger)
             },
             devices_gui_summary_sse_aggregated_bus,
@@ -101,7 +102,8 @@ impl<'d> Runner<'d> {
                     ManuallyDrop::new(exchanger_runtime_scope_runnable);
                 Ok(exchanger_runtime_scope_runnable)
             },
-        ).context("try_new")?;
+        )
+        .context("try_new")?;
 
         let finalize_guard = FinalizeGuard::new();
 
@@ -174,8 +176,8 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
         uri_cursor: &uri_cursor::UriCursor,
     ) -> BoxFuture<'static, web::Response> {
         match uri_cursor {
-            uri_cursor::UriCursor::Next("devices", uri_cursor) => match &**uri_cursor {
-                uri_cursor::UriCursor::Next("list", uri_cursor) => match **uri_cursor {
+            uri_cursor::UriCursor::Next("devices", uri_cursor) => match uri_cursor.as_ref() {
+                uri_cursor::UriCursor::Next("list", uri_cursor) => match uri_cursor.as_ref() {
                     uri_cursor::UriCursor::Terminal => match *request.method() {
                         http::Method::GET => {
                             let device_ids = self
@@ -190,20 +192,21 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
                     },
                     _ => async move { web::Response::error_404() }.boxed(),
                 },
-                uri_cursor::UriCursor::Next("gui-summary-events", uri_cursor) => match **uri_cursor
-                {
-                    uri_cursor::UriCursor::Terminal => match *request.method() {
-                        http::Method::GET => {
-                            let sse_stream = self
-                                .inner
-                                .borrow_devices_gui_summary_sse_aggregated_bus()
-                                .sse_stream();
-                            async move { web::Response::ok_sse_stream(sse_stream) }.boxed()
-                        }
-                        _ => async move { web::Response::error_405() }.boxed(),
-                    },
-                    _ => async move { web::Response::error_404() }.boxed(),
-                },
+                uri_cursor::UriCursor::Next("gui-summary-events", uri_cursor) => {
+                    match uri_cursor.as_ref() {
+                        uri_cursor::UriCursor::Terminal => match *request.method() {
+                            http::Method::GET => {
+                                let sse_stream = self
+                                    .inner
+                                    .borrow_devices_gui_summary_sse_aggregated_bus()
+                                    .sse_stream();
+                                async move { web::Response::ok_sse_stream(sse_stream) }.boxed()
+                            }
+                            _ => async move { web::Response::error_405() }.boxed(),
+                        },
+                        _ => async move { web::Response::error_404() }.boxed(),
+                    }
+                }
                 uri_cursor::UriCursor::Next(device_id_str, uri_cursor) => {
                     let device_id: DeviceId = match device_id_str.parse().context("device_id") {
                         Ok(device_id) => device_id,
@@ -217,7 +220,7 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
                             Some(device_wrapper) => device_wrapper,
                             None => return async move { web::Response::error_404() }.boxed(),
                         };
-                    device_wrapper.handle(request, &*uri_cursor)
+                    device_wrapper.handle(request, uri_cursor.as_ref())
                 }
                 _ => async move { web::Response::error_404() }.boxed(),
             },
