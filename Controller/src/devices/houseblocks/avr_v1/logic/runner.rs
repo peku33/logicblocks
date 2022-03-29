@@ -68,10 +68,10 @@ where
 {
     pub fn new(
         master: &'m Master,
-        hardware_device: <<DF as DeviceFactory>::Device<'m> as Device>::HardwareDevice,
         address_serial: AddressSerial,
+        hardware_device: <<DF as DeviceFactory>::Device<'m> as Device>::HardwareDevice,
     ) -> Self {
-        let hardware_runner = runner::Runner::new(master, hardware_device, address_serial);
+        let hardware_runner = runner::Runner::new(master, address_serial, hardware_device);
 
         let inner = RunnerInner::new(hardware_runner, |hardware_runner| {
             // this should be safe as we narrow down the lifetime

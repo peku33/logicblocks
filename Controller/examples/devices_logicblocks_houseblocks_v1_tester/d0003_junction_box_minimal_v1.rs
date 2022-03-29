@@ -32,7 +32,7 @@ async fn run_inner(
     address_serial: AddressSerial,
 ) {
     let device = Device::new();
-    let runner = Runner::new(master, device, address_serial);
+    let runner = Runner::new(master, address_serial, device);
 
     let PropertiesRemote {
         ins_changed_waker_remote,

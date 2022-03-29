@@ -86,7 +86,7 @@ async fn run_inner(
     configuration: Configuration,
 ) {
     let device = Device::new(configuration);
-    let runner = Runner::new(master, device, address_serial);
+    let runner = Runner::new(master, address_serial, device);
 
     let PropertiesRemote {
         ins_changed_waker_remote,

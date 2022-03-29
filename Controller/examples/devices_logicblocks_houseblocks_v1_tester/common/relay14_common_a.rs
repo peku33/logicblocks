@@ -33,7 +33,7 @@ async fn run_inner<S: Specification>(
     address_serial: AddressSerial,
 ) {
     let device = Device::<S>::new();
-    let runner = Runner::new(master, device, address_serial);
+    let runner = Runner::new(master, address_serial, device);
 
     let PropertiesRemote {
         outs_changed_waker_remote,

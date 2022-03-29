@@ -78,8 +78,8 @@ impl<'m, D: Device> Runner<'m, D> {
 
     pub fn new(
         master: &'m Master,
-        device: D,
         address_serial: AddressSerial,
+        device: D,
     ) -> Self {
         let driver = Driver::new(
             master,
