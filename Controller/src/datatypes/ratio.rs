@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
-#[serde(try_from = "f64")]
-#[serde(into = "f64")]
+#[serde(try_from = "RatioSerde")]
+#[serde(into = "RatioSerde")]
 pub struct Ratio(f64);
 impl Ratio {
     pub const fn zero() -> Self {
@@ -25,7 +25,7 @@ impl Ratio {
         );
         Ok(Self(value))
     }
-    pub fn as_f64(&self) -> f64 {
+    pub fn to_f64(&self) -> f64 {
         self.0
     }
 }
@@ -39,15 +39,18 @@ impl Ord for Ratio {
         self.partial_cmp(other).unwrap()
     }
 }
-impl TryFrom<f64> for Ratio {
+impl TryFrom<RatioSerde> for Ratio {
     type Error = Error;
 
-    fn try_from(value: f64) -> Result<Self, Self::Error> {
-        Self::from_f64(value)
+    fn try_from(value: RatioSerde) -> Result<Self, Self::Error> {
+        Self::from_f64(value.0)
     }
 }
-impl Into<f64> for Ratio {
-    fn into(self) -> f64 {
-        self.as_f64()
+impl Into<RatioSerde> for Ratio {
+    fn into(self) -> RatioSerde {
+        RatioSerde(self.to_f64())
     }
 }
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct RatioSerde(f64);

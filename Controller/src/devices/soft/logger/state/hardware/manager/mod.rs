@@ -87,8 +87,8 @@ impl DbValue {
     pub fn from_value(value: Value) -> Self {
         match value {
             Value::Boolean(value) => Self::Boolean(value),
-            Value::Ratio(value) => Self::Real(value.map(|value| value.as_f64())),
-            Value::Real(value) => Self::Real(value.map(|value| value.as_f64())),
+            Value::Ratio(value) => Self::Real(value.map(|value| value.to_f64())),
+            Value::Real(value) => Self::Real(value.map(|value| value.to_f64())),
             Value::Temperature(value) => {
                 Self::Real(value.map(|value| value.to_unit(temperature::Unit::Kelvin)))
             }

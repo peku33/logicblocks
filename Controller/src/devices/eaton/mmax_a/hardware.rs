@@ -169,7 +169,7 @@ impl<'m> Device<'m> {
 
         let general_control_word: u16 = 0;
 
-        let speed_setpoint: u16 = (input.speed.as_f64() * 10_000f64) as u16;
+        let speed_setpoint: u16 = (input.speed.to_f64() * 10_000f64) as u16;
 
         self.modbus_write(
             2001,

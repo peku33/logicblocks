@@ -2,6 +2,8 @@ use anyhow::{ensure, Error};
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
 
+// TODO: maybe don't use Unit, use from_ and to_ methods
+
 pub enum Unit {
     Kelvin,
     Celsius,

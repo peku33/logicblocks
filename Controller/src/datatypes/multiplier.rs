@@ -18,8 +18,8 @@ use std::cmp::Ordering;
     Serialize,
     Deserialize,
 )]
-#[serde(try_from = "f64")]
-#[serde(into = "f64")]
+#[serde(try_from = "MultiplierSerde")]
+#[serde(into = "MultiplierSerde")]
 pub struct Multiplier(f64);
 impl Multiplier {
     pub const fn zero() -> Self {
@@ -34,7 +34,7 @@ impl Multiplier {
         ensure!(value >= 0.0, "value must be greater then 0.0");
         Ok(Self(value))
     }
-    pub fn as_f64(&self) -> f64 {
+    pub fn to_f64(&self) -> f64 {
         self.0
     }
 }
@@ -48,15 +48,18 @@ impl Ord for Multiplier {
         self.partial_cmp(other).unwrap()
     }
 }
-impl TryFrom<f64> for Multiplier {
+impl TryFrom<MultiplierSerde> for Multiplier {
     type Error = Error;
 
-    fn try_from(value: f64) -> Result<Self, Self::Error> {
-        Self::from_f64(value)
+    fn try_from(value: MultiplierSerde) -> Result<Self, Self::Error> {
+        Self::from_f64(value.0)
     }
 }
-impl Into<f64> for Multiplier {
-    fn into(self) -> f64 {
-        self.as_f64()
+impl Into<MultiplierSerde> for Multiplier {
+    fn into(self) -> MultiplierSerde {
+        MultiplierSerde(self.to_f64())
     }
 }
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct MultiplierSerde(f64);

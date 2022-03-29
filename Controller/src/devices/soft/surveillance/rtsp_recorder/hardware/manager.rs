@@ -225,7 +225,7 @@ impl<'f> Manager<'f> {
                         channel_id as i64,
                         channel_segment.segment.time_start_utc.timestamp(),
                         channel_segment.segment.time_end_utc.timestamp(),
-                        channel_segment.detection_level.as_f64(),
+                        channel_segment.detection_level.to_f64(),
                         segment_path_storage_relative.to_str().unwrap(),
                         channel_segment.segment.metadata.len() as i64,
                     ])?;
