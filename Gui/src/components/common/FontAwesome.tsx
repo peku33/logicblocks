@@ -10,6 +10,7 @@ const FontAwesomeIcon: React.VFC<{
   icon: Icon;
 }> = (props) => {
   const { icon } = props;
+
   return <Inner icon={[icon.prefix, icon.name]} />;
 };
 export default FontAwesomeIcon;

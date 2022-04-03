@@ -1,17 +1,13 @@
 import { Meta, Story } from "@storybook/react";
-import Summary from "./Summary";
+import Component from "./Summary";
 
 export default {
-  component: Summary,
-  title: "devices/eaton/mmax_a/Summary",
+  title: "components/devices/eaton/mmax_a/Summary",
 } as Meta;
 
-export const Error: Story<{}> = () => <Summary deviceSummary={{ state: "Error" }} />;
-export const Initializing: Story<{}> = () => <Summary deviceSummary={{ state: "Initializing" }} />;
-
 export const Running: Story<{}> = () => (
-  <Summary
-    deviceSummary={{
+  <Component
+    data={{
       state: "Running",
 
       warning: 7,
@@ -44,3 +40,8 @@ export const Running: Story<{}> = () => (
     }}
   />
 );
+
+export const Error: Story<{}> = () => <Component data={{ state: "Error" }} />;
+export const Initializing: Story<{}> = () => <Component data={{ state: "Initializing" }} />;
+
+export const Empty: Story<{}> = () => <Component data={undefined} />;

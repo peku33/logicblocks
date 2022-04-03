@@ -1,12 +1,12 @@
-import { SummaryManagedBase } from "components/devices/SummaryManaged";
-import { useDeviceSummary } from "services/LogicDevicesRunner";
-import Summary, { DeviceSummary } from "./Summary";
+import { ComponentManagedBase } from "components/devices/SummaryManaged";
+import { useDeviceSummaryData } from "services/LogicDevicesRunner";
+import Component, { Data } from "./Summary";
 
-const SummaryManaged: SummaryManagedBase = (props) => {
+const ComponentManaged: ComponentManagedBase = (props) => {
   const { deviceId } = props;
 
-  const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
+  const data = useDeviceSummaryData<Data>(deviceId);
 
-  return <Summary deviceSummary={deviceSummary} />;
+  return <Component data={data} />;
 };
-export default SummaryManaged;
+export default ComponentManaged;

@@ -6,28 +6,12 @@ function valueSerializer(value: number): string {
 }
 
 export default {
-  component: GaugeLinear,
-  title: "components/common/gauge_linear",
+  title: "components/common/GaugeLinear",
   argTypes: {
     value: {
       type: "number",
       defaultValue: 0.0,
       control: { type: "range", min: 0, max: 1, step: 0.01 },
-    },
-    valueMin: {
-      table: {
-        disable: true,
-      },
-    },
-    valueMax: {
-      table: {
-        disable: true,
-      },
-    },
-    valueSerializer: {
-      table: {
-        disable: true,
-      },
     },
   },
 } as Meta;

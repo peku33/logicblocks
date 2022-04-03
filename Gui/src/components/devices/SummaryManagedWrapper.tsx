@@ -1,5 +1,4 @@
-import Colors from "components/common/Colors";
-import MediaQueries from "components/common/MediaQueries";
+import { Line } from "components/common/Line";
 import { getJson } from "lib/Api";
 import { useState } from "react";
 import { endpointBuild } from "services/LogicDevicesRunner";
@@ -27,6 +26,7 @@ const SummaryManagedWrapper: React.VFC<{
           #{deviceId} {deviceData.class}
         </DetailsDetails>
       </Details>
+      <Line />
       <ComponentWrapper>
         <Component deviceId={deviceId} deviceClass={deviceData.class} />
       </ComponentWrapper>
@@ -59,36 +59,18 @@ function useDeviceData(deviceId: number): DeviceData | undefined {
 }
 
 const Wrapper = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-gap: 0.25rem;
-  align-items: center;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    grid-template-columns: 1fr 2fr;
-    grid-gap: 0.5rem;
-  }
+  display: flex;
+  flex-direction: column;
 `;
 
 const Details = styled.div``;
-const DetailsName = styled.h2`
-  font-size: 1.25rem;
+const DetailsName = styled.div`
+  font-size: large;
   font-weight: bold;
-  word-break: break-all;
 `;
-const DetailsDetails = styled.h4`
-  font-size: 1.125rem;
-  font-weight: 600;
-  word-break: break-all;
+const DetailsDetails = styled.div`
+  font-size: x-small;
+  font-size: normal;
 `;
 
-const ComponentWrapper = styled.div`
-  @media ${MediaQueries.MOBILE_ONLY} {
-    padding-top: 0.25rem;
-    border-top: solid 1px ${Colors.GREY_LIGHTEST};
-  }
-  @media ${MediaQueries.COMPUTER_ONLY} {
-    padding-left: 0.5rem;
-    border-left: solid 1px ${Colors.GREY_LIGHTEST};
-  }
-`;
+const ComponentWrapper = styled.div``;

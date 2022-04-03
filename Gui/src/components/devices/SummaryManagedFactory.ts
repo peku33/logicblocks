@@ -5,16 +5,17 @@ import houseblocksAvrV1D0003JunctionBoxMinimalV1 from "./houseblocks/avr_v1/d000
 import houseblocksAvrV1D0005GpioAV1 from "./houseblocks/avr_v1/d0005_gpio_a_v1/SummaryManaged";
 import houseblocksAvrV1D0006Relay14OptoAV1 from "./houseblocks/avr_v1/d0006_relay14_opto_a_v1/SummaryManaged";
 import houseblocksAvrV1D0007Relay14SSRAV2 from "./houseblocks/avr_v1/d0007_relay14_ssr_a_v2/SummaryManaged";
-import softLogicFlipflopRSTA from "./soft/logic/flipflop/rst_a/SummaryManaged";
+import softLogicBooleanFlipFlopOverrideA from "./soft/logic/boolean/flip_flop/override_a/SummaryManaged";
+import softLogicBooleanFlipFlopRSTA from "./soft/logic/boolean/flip_flop/rst_a/SummaryManaged";
 import softTimeSequenceParallelA from "./soft/time/sequence_parallel_a/SummaryManaged";
 import softWebButtonEventA from "./soft/web/button_event_a/SummaryManaged";
 import softWebButtonEventBooleanA from "./soft/web/button_event_boolean_a/SummaryManaged";
 import softWebButtonStateMonostableA from "./soft/web/button_state_monostable_a/SummaryManaged";
 import softWebRatioSliderA from "./soft/web/ratio_slider_a/SummaryManaged";
-import { SummaryManagedBase } from "./SummaryManaged";
-import UnknownDeviceSummaryManaged from "./UnknownDeviceSummaryManaged";
+import { ComponentManagedBase } from "./SummaryManaged";
+import UnknownDevice from "./UnknownDeviceSummaryManaged";
 
-export function getByClass(cls: string): SummaryManagedBase {
+export function getByClass(cls: string): ComponentManagedBase {
   switch (cls) {
     case "dahua/ipc_a":
       return dahuaIpcA;
@@ -30,8 +31,10 @@ export function getByClass(cls: string): SummaryManagedBase {
       return houseblocksAvrV1D0006Relay14OptoAV1;
     case "houseblocks/avr_v1/relay14_ssr_a_v2":
       return houseblocksAvrV1D0007Relay14SSRAV2;
-    case "soft/logic/flipflop/rst_a":
-      return softLogicFlipflopRSTA;
+    case "soft/logic/boolean/flip_flop/override_a":
+      return softLogicBooleanFlipFlopOverrideA;
+    case "soft/logic/boolean/flip_flop/rst_a":
+      return softLogicBooleanFlipFlopRSTA;
     case "soft/time/sequence_parallel_a":
       return softTimeSequenceParallelA;
     case "soft/web/button_event_a":
@@ -43,5 +46,5 @@ export function getByClass(cls: string): SummaryManagedBase {
     case "soft/web/ratio_slider_a":
       return softWebRatioSliderA;
   }
-  return UnknownDeviceSummaryManaged;
+  return UnknownDevice;
 }

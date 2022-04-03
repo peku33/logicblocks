@@ -1,10 +1,8 @@
 import { Meta, Story } from "@storybook/react";
-import { ComponentProps } from "react";
-import Summary from "./Summary";
+import Component from "./Summary";
 
 export default {
-  component: Summary,
-  title: "devices/soft/web/button_state_monostable_a/Summary",
+  title: "components/devices/soft/web/button_state_monostable_a/Summary",
   argTypes: {
     value: {
       type: "boolean",
@@ -16,4 +14,14 @@ export default {
   },
 } as Meta;
 
-export const Default: Story<ComponentProps<typeof Summary>> = (props) => <Summary {...props} />;
+export const Basic: Story<{
+  value: boolean;
+  onValueChanged: (value: boolean) => void;
+}> = (props) => {
+  const { value, onValueChanged } = props;
+  return (
+    <>
+      <Component data={value} onValueChanged={onValueChanged} />
+    </>
+  );
+};

@@ -1,4 +1,5 @@
 import FontAwesomeIcon, { Icon } from "components/common/FontAwesome";
+import MediaQueries from "components/common/MediaQueries";
 import { getJson } from "lib/Api";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -12,7 +13,7 @@ const DashboardsList: React.VFC = () => {
   }
 
   return (
-    <ListWrapper>
+    <List>
       {dashboardsSummary.map((dashboardSummary) => (
         <Link key={dashboardSummary.id} to={`${dashboardSummary.id}`}>
           <ListItem>
@@ -23,7 +24,7 @@ const DashboardsList: React.VFC = () => {
           </ListItem>
         </Link>
       ))}
-    </ListWrapper>
+    </List>
   );
 };
 export default DashboardsList;
@@ -53,19 +54,26 @@ function useDashboardsSummary(): DashboardsSummary | undefined {
   return dashboardsSummary;
 }
 
-const ListWrapper = styled.div`
+const List = styled.div`
+  margin: 0.25rem;
+
   display: grid;
-  margin: 0.5rem;
-  grid-gap: 0.5rem;
+  grid-gap: 0.25rem;
 
-  justify-content: center;
-
-  grid-template-columns: repeat(auto-fit, minmax(320px, 480px));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   grid-auto-rows: 1fr;
+
+  align-items: center;
+  justify-content: center;
 
   & > a {
     color: inherit;
     text-decoration: none;
+  }
+
+  @media ${MediaQueries.COMPUTER_AT_LEAST} {
+    margin: 0.5rem;
+    grid-gap: 0.5rem;
   }
 `;
 const ListItem = styled.div`

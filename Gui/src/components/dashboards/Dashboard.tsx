@@ -11,6 +11,7 @@ const Dashboard: React.VFC<{
   id: number;
 }> = (props) => {
   const { id } = props;
+
   const dashboardSummary = useDashboardSummary(id);
   if (dashboardSummary === undefined) {
     return null;

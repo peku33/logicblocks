@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { clamp } from "../../util/number";
+import { clamp } from "util/number";
 import Colors from "./Colors";
 
 const GaugeLinear: React.FC<{
@@ -25,11 +25,12 @@ const GaugeLinear: React.FC<{
 export default GaugeLinear;
 
 const Wrapper = styled.div`
-  margin: 0.5rem;
+  width: 100%;
 `;
 
 const Description = styled.div`
-  margin-bottom: 0.25rem;
+  font-size: small;
+  font-weight: bold;
 `;
 
 const GaugeContainer = styled.div`
@@ -43,6 +44,7 @@ const GaugeContainer = styled.div`
   background-color: ${Colors.WHITE};
 `;
 const GaugeLabel = styled.div`
+  font-size: small;
   margin: 0.25rem;
 
   z-index: 1;

@@ -1,10 +1,8 @@
 import { Meta, Story } from "@storybook/react";
-import { ComponentProps } from "react";
-import Summary from "./Summary";
+import Component from "./Summary";
 
 export default {
-  component: Summary,
-  title: "devices/soft/web/button_event_boolean_a/Summary",
+  title: "components/devices/soft/web/button_event_boolean_a/Summary",
   argTypes: {
     onPush: {
       action: "onPush",
@@ -12,4 +10,12 @@ export default {
   },
 } as Meta;
 
-export const Default: Story<ComponentProps<typeof Summary>> = (props) => <Summary {...props} />;
+export const Basic: Story<{
+  onPush: () => void;
+}> = (props) => {
+  return (
+    <>
+      <Component onPush={props.onPush} />
+    </>
+  );
+};

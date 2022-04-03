@@ -1,29 +1,30 @@
-import { kelvinToCelsius, kelvinToFahrenheit } from "lib/Temperature";
+import { kelvinToCelsius, kelvinToFahrenheit } from "datatypes/Temperature";
 import styled from "styled-components";
 
-interface DeviceSummary {
+export interface Data {
   temperature: number;
 }
 
-const Summary: React.VFC<{
-  summary: DeviceSummary | undefined;
+const Component: React.VFC<{
+  data: Data | undefined;
 }> = (props) => {
-  const { summary } = props;
+  const { data } = props;
+
   return (
     <Wrapper>
       <TemperatureWrapper>
         <TemperatureLabel>Temperature:</TemperatureLabel>
         <TemperatureValuePrimary>
-          {summary !== undefined ? kelvinToCelsius(summary.temperature).toFixed(2) : "?"}&deg;C
+          {data !== undefined ? kelvinToCelsius(data.temperature).toFixed(2) : "?"}&deg;C
         </TemperatureValuePrimary>
         <TemperatureValueSecondary>
-          {summary !== undefined ? kelvinToFahrenheit(summary.temperature).toFixed(2) : "?"}&deg;F
+          {data !== undefined ? kelvinToFahrenheit(data.temperature).toFixed(2) : "?"}&deg;F
         </TemperatureValueSecondary>
       </TemperatureWrapper>
     </Wrapper>
   );
 };
-export default Summary;
+export default Component;
 
 const Wrapper = styled.div`
   display: flex;

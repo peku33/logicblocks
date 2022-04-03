@@ -1,15 +1,13 @@
-import { SummaryManagedBase } from "components/devices/SummaryManaged";
+import { ComponentManagedBase } from "components/devices/SummaryManaged";
 import { urlBuild } from "lib/Api";
-import { deviceEndpointBuild, useDeviceSummary } from "services/LogicDevicesRunner";
-import Summary, { DeviceSummary } from "./Summary";
+import { deviceEndpointBuild, useDeviceSummaryData } from "services/LogicDevicesRunner";
+import Component, { Data } from "./Summary";
 
-const SummaryManaged: SummaryManagedBase = (props) => {
+const ComponentManaged: ComponentManagedBase = (props) => {
   const { deviceId } = props;
 
-  const deviceSummary = useDeviceSummary<DeviceSummary>(deviceId);
+  const data = useDeviceSummaryData<Data>(deviceId);
 
-  return (
-    <Summary deviceSummary={deviceSummary} snapshotBaseUrl={urlBuild(deviceEndpointBuild(deviceId, "/snapshot"))} />
-  );
+  return <Component data={data} snapshotBaseUrl={urlBuild(deviceEndpointBuild(deviceId, "/snapshot"))} />;
 };
-export default SummaryManaged;
+export default ComponentManaged;

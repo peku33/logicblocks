@@ -5,13 +5,18 @@ const Summary: React.VFC<{
   deviceClass: string;
 }> = (props) => {
   const { deviceId, deviceClass } = props;
+
   return (
-    <>
+    <Wrapper>
       Unknown device #<DetailsSpan>{deviceId}</DetailsSpan> <DetailsSpan>({deviceClass})</DetailsSpan>
-    </>
+    </Wrapper>
   );
 };
 export default Summary;
+
+const Wrapper = styled.div`
+  font-size: x-small;
+`;
 
 const DetailsSpan = styled.span`
   word-break: break-all;

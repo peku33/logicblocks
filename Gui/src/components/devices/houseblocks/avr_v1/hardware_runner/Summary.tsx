@@ -1,16 +1,16 @@
 import { Chip, ChipType } from "components/common/Chips";
 import styled from "styled-components";
 
-type DeviceState = "Error" | "Initializing" | "Running";
+export type DeviceState = "Error" | "Initializing" | "Running";
 
-export interface State {
+export interface Data {
   device_state: DeviceState;
 }
 
-const Summary: React.VFC<{
-  state: State | undefined;
+const Component: React.VFC<{
+  data: Data | undefined;
 }> = (props) => {
-  const { state } = props;
+  const { data: state } = props;
 
   return (
     <Wrapper>
@@ -20,7 +20,7 @@ const Summary: React.VFC<{
     </Wrapper>
   );
 };
-export default Summary;
+export default Component;
 
 const Wrapper = styled.div`
   display: flex;

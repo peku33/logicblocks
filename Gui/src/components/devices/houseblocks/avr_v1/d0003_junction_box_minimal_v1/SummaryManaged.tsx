@@ -1,4 +1,5 @@
+import { makeAvrV1Summary } from "../Summary";
 import { makeAvrV1SummaryManaged } from "../SummaryManaged";
-import Summary from "./Summary";
+import Component from "./SummaryInner";
 
-export default makeAvrV1SummaryManaged(Summary);
+export default makeAvrV1SummaryManaged(makeAvrV1Summary(Component));

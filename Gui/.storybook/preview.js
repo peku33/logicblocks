@@ -1,13 +1,23 @@
+import styled from 'styled-components';
 import GlobalStyles from '../src/GlobalStyles';
 
 export const decorators = [
   (Story) => (
     <>
       <GlobalStyles />
-      <Story />
+      <Container>
+        <Story />
+      </Container>
     </>
   ),
 ];
+
+const Container = styled.div`
+  & > * {
+    margin: 0.25rem;
+  }
+`;
+
 
 export const parameters = {
   actions: { argTypesRegex: "^on[A-Z].*" },

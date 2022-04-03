@@ -1,6 +1,7 @@
 import { ButtonGroup, ButtonLink } from "components/common/Button";
 import { Chip, ChipsGroup, ChipType } from "components/common/Chips";
-import Colors from "components/common/Colors";
+import { Line } from "components/common/Line";
+import MediaQueries from "components/common/MediaQueries";
 import {
   SnapshotDeviceInner,
   SnapshotDeviceInnerNone,
@@ -8,11 +9,34 @@ import {
 import React from "react";
 import styled from "styled-components";
 
-export interface DeviceSummaryRtspUrls {
+export type Data = DataInitializing | DataRunning | DataError;
+export interface DataInitializing {
+  state: "Initializing";
+}
+export function dataIsInitializing(data: Data): data is DataInitializing {
+  return data.state === "Initializing";
+}
+export interface DataRunning {
+  state: "Running";
+  snapshot_updated: string | null;
+  rtsp_urls: DataRtspUrls;
+  events: DataEvents;
+}
+export function dataIsRunning(data: Data): data is DataRunning {
+  return data.state === "Running";
+}
+export interface DataError {
+  state: "Error";
+}
+export function dataIsError(data: Data): data is DataError {
+  return data.state === "Error";
+}
+
+export interface DataRtspUrls {
   main: string;
   sub: string;
 }
-export interface DeviceSummaryEvents {
+export interface DataEvents {
   camera_failure: boolean;
   video_loss: boolean;
   tampering_detection: boolean;
@@ -21,97 +45,76 @@ export interface DeviceSummaryEvents {
   field_detection: boolean;
 }
 
-export interface DeviceSummaryInitializing {
-  state: "Initializing";
-}
-export interface DeviceSummaryRunning {
-  state: "Running";
-  snapshot_updated: string | null;
-  rtsp_urls: DeviceSummaryRtspUrls;
-  events: DeviceSummaryEvents;
-}
-export interface DeviceSummaryError {
-  state: "Error";
-}
-export type DeviceSummary = DeviceSummaryInitializing | DeviceSummaryRunning | DeviceSummaryError;
-export function deviceSummaryIsInitializing(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryInitializing {
-  return deviceSummary.state === "Initializing";
-}
-export function deviceSummaryIsRunning(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryRunning {
-  return deviceSummary.state === "Running";
-}
-export function deviceSummaryIsError(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryError {
-  return deviceSummary.state === "Error";
-}
-
-const Summary: React.VFC<{
-  deviceSummary: DeviceSummary | undefined;
+const Component: React.VFC<{
+  data: Data | undefined;
   snapshotBaseUrl: string | undefined;
 }> = (props) => {
-  const { deviceSummary, snapshotBaseUrl } = props;
+  const { data, snapshotBaseUrl } = props;
 
   return (
     <Wrapper>
       <Header>
         <State>
-          {deviceSummary !== undefined && deviceSummaryIsInitializing(deviceSummary) ? (
+          {data !== undefined && dataIsInitializing(data) ? (
             <Chip type={ChipType.ERROR} enabled={true}>
               Initializing
             </Chip>
           ) : null}
-          {deviceSummary !== undefined && deviceSummaryIsRunning(deviceSummary) ? (
+          {data !== undefined && dataIsRunning(data) ? (
             <Chip type={ChipType.OK} enabled={true}>
               Running
             </Chip>
           ) : null}
-          {deviceSummary !== undefined && deviceSummaryIsError(deviceSummary) ? (
+          {data !== undefined && dataIsError(data) ? (
             <Chip type={ChipType.ERROR} enabled={true}>
               Error
             </Chip>
           ) : null}
         </State>
         <Events>
-          {deviceSummary !== undefined && deviceSummaryIsRunning(deviceSummary) ? (
+          {data !== undefined && dataIsRunning(data) ? (
             <ChipsGroup>
-              <Chip type={ChipType.ERROR} enabled={deviceSummary.events.camera_failure}>
+              <Chip type={ChipType.ERROR} enabled={data.events.camera_failure}>
                 Camera failure
               </Chip>
-              <Chip type={ChipType.ERROR} enabled={deviceSummary.events.video_loss}>
+              <Chip type={ChipType.ERROR} enabled={data.events.video_loss}>
                 Video Loss
               </Chip>
-              <Chip type={ChipType.WARNING} enabled={deviceSummary.events.tampering_detection}>
+              <Chip type={ChipType.WARNING} enabled={data.events.tampering_detection}>
                 Tampering detection
               </Chip>
-              <Chip type={ChipType.INFO} enabled={deviceSummary.events.motion_detection}>
+              <Chip type={ChipType.INFO} enabled={data.events.motion_detection}>
                 Motion detection
               </Chip>
-              <Chip type={ChipType.INFO} enabled={deviceSummary.events.line_detection}>
+              <Chip type={ChipType.INFO} enabled={data.events.line_detection}>
                 Line detection
               </Chip>
-              <Chip type={ChipType.INFO} enabled={deviceSummary.events.field_detection}>
+              <Chip type={ChipType.INFO} enabled={data.events.field_detection}>
                 Field detection
               </Chip>
             </ChipsGroup>
           ) : null}
         </Events>
       </Header>
+      <Line />
       <Snapshot>
         {snapshotBaseUrl !== undefined &&
-        deviceSummary !== undefined &&
-        deviceSummaryIsRunning(deviceSummary) &&
-        deviceSummary.snapshot_updated !== null ? (
-          <SnapshotDeviceInner baseUrl={snapshotBaseUrl} lastUpdated={new Date(deviceSummary.snapshot_updated)} />
+        data !== undefined &&
+        dataIsRunning(data) &&
+        data.snapshot_updated !== null ? (
+          <SnapshotDeviceInner baseUrl={snapshotBaseUrl} lastUpdated={new Date(data.snapshot_updated)} />
         ) : (
           <SnapshotDeviceInnerNone />
         )}
       </Snapshot>
+      <Line />
       <RtspUrls>
-        {deviceSummary !== undefined && deviceSummaryIsRunning(deviceSummary) ? (
+        {data !== undefined && dataIsRunning(data) ? (
           <ButtonGroup>
-            <ButtonLink target="_blank" href={deviceSummary.rtsp_urls.main}>
+            <ButtonLink targetBlank href={data.rtsp_urls.main}>
               Main Stream
             </ButtonLink>
-            <ButtonLink target="_blank" href={deviceSummary.rtsp_urls.sub}>
+            <ButtonLink targetBlank href={data.rtsp_urls.sub}>
               Sub Stream
             </ButtonLink>
           </ButtonGroup>
@@ -120,19 +123,21 @@ const Summary: React.VFC<{
     </Wrapper>
   );
 };
-export default Summary;
+export default Component;
 
 const Wrapper = styled.div``;
 
 const Header = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, auto));
+  grid-auto-rows: auto;
+  grid-gap: 0.5rem;
   align-items: center;
   justify-content: space-between;
 
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.5rem;
-
-  border-bottom: solid 1px ${Colors.GREY_LIGHTEST};
+  @media ${MediaQueries.COMPUTER_AT_LEAST} {
+    grid-gap: 1rem;
+  }
 `;
 const State = styled.div``;
 const Events = styled.div``;
@@ -141,9 +146,4 @@ const Snapshot = styled.div`
   text-align: center;
 `;
 
-const RtspUrls = styled.div`
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-
-  border-top: solid 1px ${Colors.GREY_LIGHTEST};
-`;
+const RtspUrls = styled.div``;

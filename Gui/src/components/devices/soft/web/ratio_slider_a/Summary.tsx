@@ -1,24 +1,22 @@
 import { Button } from "components/common/Button";
 import styled from "styled-components";
 
+export type Data = number | null;
+
 const ButtonValues = [null, 0.0, 0.25, 0.5, 0.75, 1.0];
 const ButtonOffsets = [0.01, 0.05, 0.1];
 
 const Summary: React.VFC<{
-  value: number | null | undefined; // 0.0 - 1.0
-  onValueChanged: ((newValue: number | null) => void) | undefined;
+  data: Data | undefined; // 0.0 - 1.0
+  onValueChanged: (newValue: number | null) => void;
 }> = (props) => {
-  const { value, onValueChanged } = props;
+  const { data, onValueChanged } = props;
 
   return (
     <Wrapper>
       <LayoutLine>
         {ButtonValues.map((buttonValue) => (
-          <Button
-            key={buttonValue}
-            onClick={onValueChanged !== undefined ? () => onValueChanged(buttonValue) : () => ({})}
-            active={buttonValue === value}
-          >
+          <Button key={buttonValue} onClick={() => onValueChanged(buttonValue)} active={buttonValue === data}>
             {stringifyValue(buttonValue)}
           </Button>
         ))}
@@ -29,27 +27,19 @@ const Summary: React.VFC<{
           .map((offset) => (
             <Button
               key={offset}
-              onClick={
-                onValueChanged !== undefined && value !== undefined && value !== null
-                  ? () => onValueChanged(fixValue(value - offset))
-                  : () => ({})
-              }
+              onClick={data !== undefined && data !== null ? () => onValueChanged(fixValue(data - offset)) : () => ({})}
             >
               -{stringifyValue(offset)}
             </Button>
           ))}
         <CurrentValue>
           <CurrentValueLabel>CurrentValue</CurrentValueLabel>
-          <CurrentValueValue>{value !== undefined ? stringifyValue(value) : "?"}</CurrentValueValue>
+          <CurrentValueValue>{data !== undefined ? stringifyValue(data) : "?"}</CurrentValueValue>
         </CurrentValue>
         {ButtonOffsets.map((offset) => (
           <Button
             key={offset}
-            onClick={
-              onValueChanged !== undefined && value !== undefined && value !== null
-                ? () => onValueChanged(fixValue(value + offset))
-                : () => ({})
-            }
+            onClick={data !== undefined && data !== null ? () => onValueChanged(fixValue(data + offset)) : () => ({})}
           >
             +{stringifyValue(offset)}
           </Button>
@@ -67,11 +57,16 @@ const Wrapper = styled.div`
 const LayoutLine = styled.div`
   display: flex;
   justify-content: center;
+  align-items: center;
   margin: 0.25rem;
+
+  & > * {
+    margin: 0 0.25rem;
+  }
 `;
 
 const CurrentValue = styled.div`
-  margin: 0 1rem;
+  margin: 0 0.5rem;
   text-align: center;
 `;
 const CurrentValueLabel = styled.div``;

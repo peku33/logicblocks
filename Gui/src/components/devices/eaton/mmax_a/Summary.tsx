@@ -1,14 +1,19 @@
 import { Chip, ChipsGroup, ChipType } from "components/common/Chips";
 import GaugeLinear from "components/common/GaugeLinear";
+import MediaQueries from "components/common/MediaQueries";
 import GaugeLinearRatio from "components/datatypes/ratio/GaugeLinear";
 import styled from "styled-components";
 
 const DC_LINK_VOLTAGE_MAX = 400;
 
-export interface DeviceSummaryInitializing {
+export type Data = DataInitializing | DataRunning | DataError;
+export interface DataInitializing {
   state: "Initializing";
 }
-export interface DeviceSummaryRunning {
+export function dataIsInitializing(data: Data): data is DataInitializing {
+  return data.state === "Initializing";
+}
+export interface DataRunning {
   state: "Running";
 
   warning: number | null;
@@ -39,22 +44,18 @@ export interface DeviceSummaryRunning {
   dc_link_voltage_v: number;
   remote_input: boolean;
 }
-export interface DeviceSummaryError {
+export function dataIsRunning(data: Data): data is DataRunning {
+  return data.state === "Running";
+}
+export interface DataError {
   state: "Error";
 }
-export type DeviceSummary = DeviceSummaryInitializing | DeviceSummaryRunning | DeviceSummaryError;
-export function deviceSummaryIsInitializing(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryInitializing {
-  return deviceSummary.state === "Initializing";
-}
-export function deviceSummaryIsRunning(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryRunning {
-  return deviceSummary.state === "Running";
-}
-export function deviceSummaryIsError(deviceSummary: DeviceSummary): deviceSummary is DeviceSummaryError {
-  return deviceSummary.state === "Error";
+export function dataIsError(data: Data): data is DataError {
+  return data.state === "Error";
 }
 
-const Summary: React.VFC<{ deviceSummary: DeviceSummary | undefined }> = (props) => {
-  const { deviceSummary } = props;
+const Component: React.VFC<{ data: Data | undefined }> = (props) => {
+  const { data } = props;
 
   return (
     <Wrapper>
@@ -62,48 +63,45 @@ const Summary: React.VFC<{ deviceSummary: DeviceSummary | undefined }> = (props)
         <SectionTitle>Device status</SectionTitle>
         <SectionContent>
           <ChipsGroup>
-            <Chip
-              type={ChipType.INFO}
-              enabled={deviceSummary !== undefined && deviceSummaryIsInitializing(deviceSummary)}
-            >
+            <Chip type={ChipType.INFO} enabled={data !== undefined && dataIsInitializing(data)}>
               Initializing
             </Chip>
-            <Chip type={ChipType.OK} enabled={deviceSummary !== undefined && deviceSummaryIsRunning(deviceSummary)}>
+            <Chip type={ChipType.OK} enabled={data !== undefined && dataIsRunning(data)}>
               Running
             </Chip>
-            <Chip type={ChipType.ERROR} enabled={deviceSummary !== undefined && deviceSummaryIsError(deviceSummary)}>
+            <Chip type={ChipType.ERROR} enabled={data !== undefined && dataIsError(data)}>
               Error
             </Chip>
           </ChipsGroup>
         </SectionContent>
       </Section>
-      {deviceSummary && deviceSummaryIsRunning(deviceSummary) ? (
+      {data && dataIsRunning(data) ? (
         <>
           <Section>
             <SectionTitle>Drive status</SectionTitle>
             <SectionContent>
               <ChipsGroup>
-                <Chip type={ChipType.WARNING} enabled={deviceSummary.warning !== null}>
-                  Warning: {deviceSummary.warning !== null ? deviceSummary.warning : "None"}
+                <Chip type={ChipType.WARNING} enabled={data.warning !== null}>
+                  Warning: {data.warning !== null ? data.warning : "None"}
                 </Chip>
-                <Chip type={ChipType.OK} enabled={deviceSummary.ready}>
+                <Chip type={ChipType.OK} enabled={data.ready}>
                   Ready
                 </Chip>
-                <Chip type={ChipType.INFO} enabled={deviceSummary.running}>
+                <Chip type={ChipType.INFO} enabled={data.running}>
                   Running
                 </Chip>
               </ChipsGroup>
             </SectionContent>
             <SectionContent>
-              <GaugeLinearRatio value={deviceSummary.speed_setpoint}>Speed Setpoint</GaugeLinearRatio>
-              <GaugeLinearRatio value={deviceSummary.speed_actual}>Speed Actual</GaugeLinearRatio>
+              <GaugeLinearRatio value={data.speed_setpoint}>Speed Setpoint</GaugeLinearRatio>
+              <GaugeLinearRatio value={data.speed_actual}>Speed Actual</GaugeLinearRatio>
             </SectionContent>
             <SectionContent>
               <ChipsGroup>
-                <Chip type={ChipType.INFO} enabled={deviceSummary.reverse}>
+                <Chip type={ChipType.INFO} enabled={data.reverse}>
                   Reverse
                 </Chip>
-                <Chip type={ChipType.INFO} enabled={deviceSummary.speed_control_active}>
+                <Chip type={ChipType.INFO} enabled={data.speed_control_active}>
                   Speed Control Mode Active
                 </Chip>
               </ChipsGroup>
@@ -113,46 +111,46 @@ const Summary: React.VFC<{ deviceSummary: DeviceSummary | undefined }> = (props)
             <SectionTitle>Motor status</SectionTitle>
             <SectionContent>
               <GaugeLinear
-                value={deviceSummary.motor_voltage_v}
+                value={data.motor_voltage_v}
                 valueMin={0.0}
-                valueMax={deviceSummary.motor_voltage_max_v}
+                valueMax={data.motor_voltage_max_v}
                 valueSerializer={voltageSerializer}
               >
                 Voltage
               </GaugeLinear>
               <GaugeLinear
-                value={deviceSummary.motor_current_a}
+                value={data.motor_current_a}
                 valueMin={0.0}
-                valueMax={deviceSummary.motor_current_rated_a}
+                valueMax={data.motor_current_rated_a}
                 valueSerializer={currentSerializer}
               >
                 Current
               </GaugeLinear>
               <GaugeLinear
-                value={deviceSummary.motor_frequency_hz}
-                valueMin={deviceSummary.motor_frequency_min_hz}
-                valueMax={deviceSummary.motor_frequency_max_hz}
+                value={data.motor_frequency_hz}
+                valueMin={data.motor_frequency_min_hz}
+                valueMax={data.motor_frequency_max_hz}
                 valueSerializer={frequencySerializer}
               >
                 Frequency
               </GaugeLinear>
               <GaugeLinear
-                value={deviceSummary.motor_speed_rpm}
+                value={data.motor_speed_rpm}
                 valueMin={0}
-                valueMax={deviceSummary.motor_speed_rated_rpm}
+                valueMax={data.motor_speed_rated_rpm}
                 valueSerializer={rpmSerializer}
               >
                 RPM
               </GaugeLinear>
-              <GaugeLinearRatio value={deviceSummary.motor_torque}>Torque</GaugeLinearRatio>
-              <GaugeLinearRatio value={deviceSummary.motor_power}>Power</GaugeLinearRatio>
+              <GaugeLinearRatio value={data.motor_torque}>Torque</GaugeLinearRatio>
+              <GaugeLinearRatio value={data.motor_power}>Power</GaugeLinearRatio>
             </SectionContent>
           </Section>
           <Section>
             <SectionTitle>Other</SectionTitle>
             <SectionContent>
               <GaugeLinear
-                value={deviceSummary.dc_link_voltage_v}
+                value={data.dc_link_voltage_v}
                 valueMin={0}
                 valueMax={DC_LINK_VOLTAGE_MAX}
                 valueSerializer={voltageSerializer}
@@ -166,16 +164,25 @@ const Summary: React.VFC<{ deviceSummary: DeviceSummary | undefined }> = (props)
     </Wrapper>
   );
 };
-export default Summary;
+export default Component;
 
 const Wrapper = styled.div``;
 
 const Section = styled.div`
   margin-bottom: 0.5rem;
 `;
-const SectionTitle = styled.h3``;
+const SectionTitle = styled.div`
+  font-weight: bold;
+`;
 const SectionContent = styled.div`
   padding-left: 1rem;
+  & > * {
+    margin-bottom: 0.25rem;
+  }
+
+  @media ${MediaQueries.COMPUTER_AT_LEAST} {
+    margin-bottom: 0.5rem;
+  }
 `;
 
 function voltageSerializer(voltage: number): string {

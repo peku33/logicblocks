@@ -8,7 +8,7 @@ export function endpointBuild(endpoint: string): string {
 
 const devicesSummaryEvents = new Client(endpointBuild("/devices/gui-summary-events"));
 
-export function useDeviceSummary<S>(deviceId: number): S | undefined {
+export function useDeviceSummaryData<S>(deviceId: number): S | undefined {
   return useObservableState(endpointBuild(`/devices/${deviceId}/gui-summary`), devicesSummaryEvents, [deviceId]);
 }
 

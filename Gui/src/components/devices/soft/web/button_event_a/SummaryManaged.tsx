@@ -1,15 +1,15 @@
-import { SummaryManagedBase } from "components/devices/SummaryManaged";
+import { ComponentManagedBase } from "components/devices/SummaryManaged";
 import { useCallback } from "react";
 import { devicePostEmpty } from "services/LogicDevicesRunner";
-import Summary from "./Summary";
+import Component from "./Summary";
 
-const SummaryManaged: SummaryManagedBase = (props) => {
+const ComponentManaged: ComponentManagedBase = (props) => {
   const { deviceId } = props;
 
   const onSignal = useCallback((): void => {
     devicePostEmpty(deviceId, "");
   }, [deviceId]);
 
-  return <Summary onSignal={onSignal} />;
+  return <Component onSignal={onSignal} />;
 };
-export default SummaryManaged;
+export default ComponentManaged;

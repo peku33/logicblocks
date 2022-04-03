@@ -2,27 +2,28 @@ import { Chip, ChipType } from "components/common/Chips";
 import MediaQueries from "components/common/MediaQueries";
 import styled from "styled-components";
 
-const OUTPUT_COUNT = 14;
+export const OUTPUT_COUNT = 14;
 
-interface DeviceSummary {
+export interface Data {
   values: boolean[];
 }
 
-const Summary: React.VFC<{
-  summary?: DeviceSummary;
+const Component: React.VFC<{
+  data: Data | undefined;
 }> = (props) => {
-  const { summary } = props;
+  const { data } = props;
+
   return (
     <RelaysGrid>
       {Array.from(Array(OUTPUT_COUNT).keys()).map((index) => (
-        <Chip key={index} type={ChipType.INFO} enabled={summary?.values[index] || false}>
+        <Chip key={index} type={ChipType.INFO} enabled={data?.values[index] || false}>
           {(index + 1).toString().padStart(2, "0")}
         </Chip>
       ))}
     </RelaysGrid>
   );
 };
-export default Summary;
+export default Component;
 
 const RelaysGrid = styled.div`
   display: grid;
