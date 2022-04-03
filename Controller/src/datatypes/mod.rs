@@ -1,6 +1,9 @@
+pub mod angle;
 pub mod color_rgb_boolean;
+pub mod geography;
 pub mod ipc_rtsp_url;
 pub mod multiplier;
+pub mod pressure;
 pub mod ratio;
 pub mod real;
 pub mod temperature;
