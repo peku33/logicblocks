@@ -119,7 +119,7 @@ impl Device {
 
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/logic/flipflop/rst_a")
+        Cow::from("soft/logic/boolean/flip_flop/rst_a")
     }
 
     fn as_runnable(&self) -> &dyn Runnable {
