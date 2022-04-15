@@ -2,26 +2,40 @@ use crate::{
     devices,
     signals::{self, signal},
     util::{
+        async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         runtime::{Exited, Runnable},
+        waker_stream,
     },
     web::{self, uri_cursor},
 };
 use async_trait::async_trait;
-use futures::future::{BoxFuture, FutureExt};
+use futures::{
+    future::{BoxFuture, FutureExt},
+    stream::StreamExt,
+};
 use maplit::hashmap;
+use serde::Serialize;
 use std::borrow::Cow;
 
 #[derive(Debug)]
 pub struct Device {
+    signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
+    signal_input: signal::state_target_last::Signal<bool>,
     signal_output: signal::event_source::Signal<bool>,
+
+    gui_summary_waker: waker_stream::mpmc::Sender,
 }
 impl Device {
     pub fn new() -> Self {
         Self {
+            signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
+            signal_input: signal::state_target_last::Signal::<bool>::new(),
             signal_output: signal::event_source::Signal::<bool>::new(),
+
+            gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
     }
 
@@ -32,6 +46,33 @@ impl Device {
         if self.signal_output.push_one(value) {
             self.signals_sources_changed_waker.wake();
         }
+    }
+
+    fn signals_targets_changed(&self) {
+        let mut gui_summary_changed = false;
+
+        if let Some(_value) = self.signal_input.take_pending() {
+            gui_summary_changed = true;
+        }
+
+        if gui_summary_changed {
+            self.gui_summary_waker.wake();
+        }
+    }
+
+    async fn run(
+        &self,
+        exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        self.signals_targets_changed_waker
+            .stream(false)
+            .stream_take_until_exhausted(exit_flag)
+            .for_each(async move |()| {
+                self.signals_targets_changed();
+            })
+            .await;
+
+        Exited
     }
 }
 
@@ -46,6 +87,9 @@ impl devices::Device for Device {
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
+    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+        Some(self)
+    }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
         Some(self)
     }
@@ -57,19 +101,39 @@ impl Runnable for Device {
         &self,
         exit_flag: async_flag::Receiver,
     ) -> Exited {
-        exit_flag.await;
-        Exited
+        self.run(exit_flag).await
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(transparent)]
+struct GuiSummary {
+    value: Option<bool>,
+}
+
+impl devices::GuiSummaryProvider for Device {
+    fn value(&self) -> Box<dyn devices::GuiSummary> {
+        let value = self.signal_input.peek_last();
+
+        let gui_summary = GuiSummary { value };
+        let gui_summary = Box::new(gui_summary);
+        gui_summary
+    }
+
+    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
+        self.gui_summary_waker.receiver_factory()
     }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum SignalIdentifier {
+    Input,
     Output,
 }
 impl signals::Identifier for SignalIdentifier {}
 impl signals::Device for Device {
     fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
-        None
+        Some(&self.signals_targets_changed_waker)
     }
     fn sources_changed_waker(&self) -> Option<&signals::waker::SourcesChangedWaker> {
         Some(&self.signals_sources_changed_waker)
@@ -78,6 +142,7 @@ impl signals::Device for Device {
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         hashmap! {
+            SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
             SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
         }
     }
