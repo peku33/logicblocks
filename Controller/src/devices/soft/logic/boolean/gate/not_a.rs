@@ -39,7 +39,7 @@ impl Device {
             .collect::<Box<[_]>>();
 
         if self.signal_output.set_many(values) {
-            self.signals_sources_changed_waker.wake()
+            self.signals_sources_changed_waker.wake();
         }
     }
 
@@ -61,7 +61,7 @@ impl Device {
 
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/logic/boolean/gate/invert_state_a")
+        Cow::from("soft/logic/boolean/gate/not_a")
     }
 
     fn as_runnable(&self) -> &dyn Runnable {

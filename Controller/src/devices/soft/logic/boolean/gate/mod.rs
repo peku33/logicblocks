@@ -1,1 +1,2 @@
-pub mod invert_state_a;
+pub mod not_a;
+pub mod or_a;
