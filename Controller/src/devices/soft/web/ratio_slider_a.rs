@@ -12,6 +12,7 @@ use crate::{
 use async_trait::async_trait;
 use futures::future::{BoxFuture, FutureExt};
 use maplit::hashmap;
+use serde::Serialize;
 use std::borrow::Cow;
 
 #[derive(Debug)]
@@ -104,9 +105,17 @@ impl signals::Device for Device {
     }
 }
 
+#[derive(Debug, Serialize)]
+#[serde(transparent)]
+struct GuiSummary {
+    value: Option<Ratio>,
+}
+
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let gui_summary = self.signal_output.peek_last();
+        let value = self.signal_output.peek_last();
+
+        let gui_summary = GuiSummary { value };
         let gui_summary = Box::new(gui_summary);
         gui_summary
     }

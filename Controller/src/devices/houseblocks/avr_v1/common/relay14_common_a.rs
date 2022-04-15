@@ -90,7 +90,7 @@ pub mod logic {
                 self.properties_remote.outs_changed_waker_remote.wake();
             }
             if gui_summary_changed {
-                self.gui_summary_waker.wake()
+                self.gui_summary_waker.wake();
             }
         }
 

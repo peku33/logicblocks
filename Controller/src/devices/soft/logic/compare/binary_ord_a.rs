@@ -55,8 +55,8 @@ where
 
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signal_input_a: signal::state_target_last::Signal<V>,
-    signal_input_b: signal::state_target_last::Signal<V>,
+    signal_a: signal::state_target_last::Signal<V>,
+    signal_b: signal::state_target_last::Signal<V>,
     signal_output: signal::state_source::Signal<bool>,
 }
 impl<V> Device<V>
@@ -69,8 +69,8 @@ where
 
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-            signal_input_a: signal::state_target_last::Signal::<V>::new(),
-            signal_input_b: signal::state_target_last::Signal::<V>::new(),
+            signal_a: signal::state_target_last::Signal::<V>::new(),
+            signal_b: signal::state_target_last::Signal::<V>::new(),
             signal_output: signal::state_source::Signal::<bool>::new(None),
         }
     }
@@ -78,8 +78,8 @@ where
     fn signals_targets_changed(&self) {
         let mut signal_sources_changed = false;
 
-        let a = self.signal_input_a.take_last();
-        let b = self.signal_input_b.take_last();
+        let a = self.signal_a.take_last();
+        let b = self.signal_b.take_last();
         if a.pending || b.pending {
             let output = match (a.value, b.value) {
                 (Some(a), Some(b)) => Some(self.configuration.operation.execute(a, b)),
@@ -145,8 +145,8 @@ where
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum SignalIdentifier {
-    InputA,
-    InputB,
+    A,
+    B,
     Output,
 }
 impl signals::Identifier for SignalIdentifier {}
@@ -164,8 +164,8 @@ where
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         hashmap! {
-            SignalIdentifier::InputA => &self.signal_input_a as &dyn signal::Base,
-            SignalIdentifier::InputB => &self.signal_input_b as &dyn signal::Base,
+            SignalIdentifier::A => &self.signal_a as &dyn signal::Base,
+            SignalIdentifier::B => &self.signal_b as &dyn signal::Base,
             SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
         }
     }

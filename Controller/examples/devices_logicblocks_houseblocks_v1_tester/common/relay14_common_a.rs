@@ -58,7 +58,7 @@ async fn run_inner<S: Specification>(
 
             log::info!("outputs: {:?}", output_values);
             if outputs.set(output_values) {
-                outs_changed_waker_remote.wake()
+                outs_changed_waker_remote.wake();
             }
 
             output_index += 1;

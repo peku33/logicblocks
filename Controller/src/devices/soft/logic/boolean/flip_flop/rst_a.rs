@@ -175,9 +175,17 @@ impl signals::Device for Device {
     }
 }
 
+#[derive(Debug, Serialize)]
+#[serde(transparent)]
+struct GuiSummary {
+    value: bool,
+}
+
 impl devices::GuiSummaryProvider for Device {
     fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let gui_summary = self.signal_output.peek_last().unwrap();
+        let value = self.signal_output.peek_last().unwrap();
+
+        let gui_summary = GuiSummary { value };
         let gui_summary = Box::new(gui_summary);
         gui_summary
     }
