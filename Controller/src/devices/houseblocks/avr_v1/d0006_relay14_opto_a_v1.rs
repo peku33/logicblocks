@@ -13,6 +13,7 @@ pub mod logic {
 
     pub type DeviceFactory = logic::DeviceFactory<Specification>;
     pub type Device<'h> = logic::Device<'h, Specification>;
+    pub type SignalIdentifier = logic::SignalIdentifier;
 }
 pub mod hardware {
     pub use super::super::common::relay14_common_a::hardware::{PropertiesRemote, OUTPUT_COUNT};
