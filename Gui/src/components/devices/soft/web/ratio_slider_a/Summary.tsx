@@ -1,4 +1,6 @@
 import { Button } from "components/common/Button";
+import { Chip, ChipType } from "components/common/Chips";
+import { Line } from "components/common/Line";
 import styled from "styled-components";
 
 export type Data = number | null;
@@ -14,63 +16,77 @@ const Summary: React.VFC<{
 
   return (
     <Wrapper>
-      <LayoutLine>
+      <SetpointsLayout>
         {ButtonValues.map((buttonValue) => (
           <Button key={buttonValue} onClick={() => onValueChanged(buttonValue)} active={buttonValue === data}>
             {stringifyValue(buttonValue)}
           </Button>
         ))}
-      </LayoutLine>
-      <LayoutLine>
-        {ButtonOffsets.slice()
-          .reverse()
-          .map((offset) => (
+      </SetpointsLayout>
+      <Line />
+      <OffsetsLayout>
+        <OffsetsLayoutItem>
+          {ButtonOffsets.slice()
+            .reverse()
+            .map((offset) => (
+              <Button
+                key={offset}
+                onClick={
+                  data != null ? () => onValueChanged(fixValue(data - offset)) : () => ({})
+                }
+              >
+                -{stringifyValue(offset)}
+              </Button>
+            ))}
+        </OffsetsLayoutItem>
+        <OffsetsLayoutItem>
+          <Chip type={ChipType.INFO} enabled={data != null && data > 0}>
+            {data !== undefined ? stringifyValue(data) : "?"}
+          </Chip>
+        </OffsetsLayoutItem>
+        <OffsetsLayoutItem>
+          {ButtonOffsets.map((offset) => (
             <Button
               key={offset}
-              onClick={data !== undefined && data !== null ? () => onValueChanged(fixValue(data - offset)) : () => ({})}
+              onClick={data != null ? () => onValueChanged(fixValue(data + offset)) : () => ({})}
             >
-              -{stringifyValue(offset)}
+              +{stringifyValue(offset)}
             </Button>
           ))}
-        <CurrentValue>
-          <CurrentValueLabel>CurrentValue</CurrentValueLabel>
-          <CurrentValueValue>{data !== undefined ? stringifyValue(data) : "?"}</CurrentValueValue>
-        </CurrentValue>
-        {ButtonOffsets.map((offset) => (
-          <Button
-            key={offset}
-            onClick={data !== undefined && data !== null ? () => onValueChanged(fixValue(data + offset)) : () => ({})}
-          >
-            +{stringifyValue(offset)}
-          </Button>
-        ))}
-      </LayoutLine>
+        </OffsetsLayoutItem>
+      </OffsetsLayout>
     </Wrapper>
   );
 };
 export default Summary;
 
-const Wrapper = styled.div`
-  display: flex;
-  flex-direction: column;
+const Wrapper = styled.div``;
+
+const SetpointsLayout = styled.div`
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: 1fr;
+
+  grid-gap: 0.25rem;
 `;
-const LayoutLine = styled.div`
-  display: flex;
-  justify-content: center;
+
+const OffsetsLayout = styled.div`
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  grid-gap: 0.25rem;
+`;
+const OffsetsLayoutItem = styled.div`
+  display: grid;
+
+  grid-auto-rows: 1fr;
+
+  grid-gap: 0.25rem;
+
   align-items: center;
-  margin: 0.25rem;
-
-  & > * {
-    margin: 0 0.25rem;
-  }
 `;
-
-const CurrentValue = styled.div`
-  margin: 0 0.5rem;
-  text-align: center;
-`;
-const CurrentValueLabel = styled.div``;
-const CurrentValueValue = styled.div``;
 
 function fixValue(value: number): number {
   if (value > 1.0) {
