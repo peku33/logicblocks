@@ -20,6 +20,9 @@ where
     pub value: V,
 }
 
+/**
+ * When empty event is received sends predefined event value
+ */
 #[derive(Debug)]
 pub struct Device<V>
 where

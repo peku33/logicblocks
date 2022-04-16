@@ -48,9 +48,13 @@ impl SinkBase {
             items_receiver,
         }
     }
-    pub fn typed_ref<T: Type>(&self) -> SinkTypedRef<'_, T> {
-        assert!(self.class == T::class(), "class mismatch");
-        SinkTypedRef::new(self)
+    pub fn typed_ref<T: Type>(&self) -> Option<SinkTypedRef<'_, T>> {
+        if self.class != T::class() {
+            return None;
+        }
+
+        let typed_ref = SinkTypedRef::new(self);
+        Some(typed_ref)
     }
 
     pub fn items_receiver_lease(&self) -> AtomicCellLease<mpsc::UnboundedReceiver<TimeValue>> {
