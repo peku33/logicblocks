@@ -53,7 +53,7 @@ where
         exit_flag: async_flag::Receiver,
     ) -> Exited {
         self.signals_targets_changed_waker
-            .stream(false)
+            .stream(true)
             .stream_take_until_exhausted(exit_flag)
             .for_each(async move |()| {
                 self.signals_targets_changed();

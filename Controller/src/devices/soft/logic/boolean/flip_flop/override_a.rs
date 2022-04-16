@@ -56,6 +56,11 @@ impl Device {
     pub fn new(configuration: Configuration) -> Self {
         let mode = configuration.initial_mode;
 
+        let initial_value = match mode {
+            Mode::Override(value) => Some(value),
+            Mode::PassThrough => None,
+        };
+
         Self {
             configuration,
             mode: RwLock::new(mode),
@@ -66,7 +71,7 @@ impl Device {
             signal_mode_set_pass_through: signal::event_target_last::Signal::<()>::new(),
             signal_mode_set_override: signal::event_target_last::Signal::<bool>::new(),
             signal_mode_cycle: signal::event_target_last::Signal::<()>::new(),
-            signal_output: signal::state_source::Signal::<bool>::new(None),
+            signal_output: signal::state_source::Signal::<bool>::new(initial_value),
 
             gui_summary_waker: waker_stream::mpmc::Sender::new(),
         }
