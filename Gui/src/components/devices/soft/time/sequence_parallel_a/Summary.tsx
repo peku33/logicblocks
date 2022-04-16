@@ -204,7 +204,7 @@ const Component: React.VFC<{
           </Button>
         </ButtonGroup>
 
-        {(dataStateIsPaused(data.state) || dataStateIsEnabled(data.state)) ? (
+        {dataStateIsPaused(data.state) || dataStateIsEnabled(data.state) ? (
           <ButtonGroup>
             <Button onClick={onChannelsAllClear}>Clear</Button>
             <Button onClick={() => onChannelsAllAdd(0.25)}>+1/4</Button>
