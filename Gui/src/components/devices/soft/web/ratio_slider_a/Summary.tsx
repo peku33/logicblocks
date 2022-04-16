@@ -29,12 +29,7 @@ const Summary: React.VFC<{
           {ButtonOffsets.slice()
             .reverse()
             .map((offset) => (
-              <Button
-                key={offset}
-                onClick={
-                  data != null ? () => onValueChanged(fixValue(data - offset)) : () => ({})
-                }
-              >
+              <Button key={offset} onClick={data != null ? () => onValueChanged(fixValue(data - offset)) : () => ({})}>
                 -{stringifyValue(offset)}
               </Button>
             ))}
@@ -46,10 +41,7 @@ const Summary: React.VFC<{
         </OffsetsLayoutItem>
         <OffsetsLayoutItem>
           {ButtonOffsets.map((offset) => (
-            <Button
-              key={offset}
-              onClick={data != null ? () => onValueChanged(fixValue(data + offset)) : () => ({})}
-            >
+            <Button key={offset} onClick={data != null ? () => onValueChanged(fixValue(data + offset)) : () => ({})}>
               +{stringifyValue(offset)}
             </Button>
           ))}
