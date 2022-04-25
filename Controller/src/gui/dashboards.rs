@@ -38,7 +38,7 @@ impl<'d> Dashboard<'d> {
         &mut self,
         device_handle: DeviceHandle<'d, D>,
     ) {
-        self.insert_erased(device_handle.erased())
+        self.insert_erased(device_handle.into_erased())
     }
     pub fn insert_erased(
         &mut self,
