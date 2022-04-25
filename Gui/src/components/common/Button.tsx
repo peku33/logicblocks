@@ -1,6 +1,5 @@
 import styled from "styled-components";
 import Colors from "./Colors";
-import MediaQueries from "./MediaQueries";
 
 export const Button: React.FC<{
   active?: boolean;
@@ -35,10 +34,6 @@ const ButtonInner = styled.div<{
   font-weight: bold;
   cursor: pointer;
 
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    padding: 1rem 2rem;
-  }
-
   :hover {
     background-color: ${(props) => (props.active ? Colors.GREEN : Colors.GREY_DARK)};
   }
@@ -72,10 +67,6 @@ const ButtonLinkInner = styled.a`
   cursor: pointer;
 
   text-decoration: none;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    padding: 1rem 2rem;
-  }
 
   :hover {
     background-color: ${Colors.GREY_DARK};

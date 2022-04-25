@@ -1,7 +1,6 @@
 import { Button, ButtonGroup } from "components/common/Button";
 import { Chip, ChipType } from "components/common/Chips";
 import Colors from "components/common/Colors";
-import MediaQueries from "components/common/MediaQueries";
 import styled from "styled-components";
 
 export interface Data {
@@ -454,11 +453,6 @@ const Section = styled.div`
 const ChannelSection = styled.div`
   margin-left: 0.5rem;
   padding: 0.25rem 0.5rem;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    margin-left: 1rem;
-    padding: 0.5rem 1rem;
-  }
 `;
 const ChannelSections = styled.div`
   & > ${ChannelSection} {

@@ -1,5 +1,4 @@
 import { Button, ButtonGroup } from "components/common/Button";
-import MediaQueries from "components/common/MediaQueries";
 import React from "react";
 import styled from "styled-components";
 
@@ -74,10 +73,6 @@ const Wrapper = styled.div`
 
   /* justify-items: center; */
   align-items: center;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    grid-gap: 0.5rem;
-  }
 `;
 
 const ButtonContent = styled.div`

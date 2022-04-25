@@ -1,5 +1,4 @@
 import { Chip, ChipType } from "components/common/Chips";
-import MediaQueries from "components/common/MediaQueries";
 import styled from "styled-components";
 
 export const OUTPUT_COUNT = 14;
@@ -30,8 +29,4 @@ const RelaysGrid = styled.div`
   grid-auto-rows: 1fr;
   grid-template-columns: repeat(7, 1fr);
   grid-gap: 0.25rem;
-
-  @media ${MediaQueries.COMPUTER_ONLY} {
-    grid-template-columns: repeat(14, 1fr);
-  }
 `;

@@ -1,4 +1,3 @@
-import MediaQueries from "components/common/MediaQueries";
 import { Property } from "csstype";
 import ColorRgbBoolean from "datatypes/ColorRgbBoolean";
 import Ds18x20State from "datatypes/Ds18x20";
@@ -189,11 +188,6 @@ const Layout = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(4rem, 1fr));
   grid-auto-rows: 1fr;
   grid-gap: 0.125rem;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    grid-template-columns: repeat(11, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-  }
 `;
 const LayoutItem = styled.div<{
   column: number;
@@ -203,10 +197,6 @@ const LayoutItem = styled.div<{
   align-items: center;
   justify-content: center;
   aspect-ratio: 1;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    grid-area: ${({ column, row }) => `${row} / ${column} / ${row} / ${column}`};
-  }
 `;
 
 const LayoutItemStatusLed: React.VFC<{
@@ -397,18 +387,10 @@ const LayoutItemInner = styled.div<{
 `;
 const LayoutItemInnerLabel = styled.div`
   font-size: x-small;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    font-size: small;
-  }
 `;
 const LayoutItemInnerValue = styled.div`
   font-size: small;
   font-weight: bold;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    font-size: initial;
-  }
 `;
 
 const LayoutItemInnerBlockPinLabel: React.VFC<{
@@ -425,8 +407,4 @@ const LayoutItemInnerBlockPinLabel: React.VFC<{
 };
 const LayoutItemInnerBlockPinLabelInner = styled.div`
   font-size: x-small;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    font-size: small;
-  }
 `;

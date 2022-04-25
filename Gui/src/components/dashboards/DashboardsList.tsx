@@ -1,5 +1,4 @@
 import FontAwesomeIcon, { Icon } from "components/common/FontAwesome";
-import MediaQueries from "components/common/MediaQueries";
 import { getJson } from "lib/Api";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -69,11 +68,6 @@ const List = styled.div`
   & > a {
     color: inherit;
     text-decoration: none;
-  }
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    margin: 0.5rem;
-    grid-gap: 0.5rem;
   }
 `;
 const ListItem = styled.div`

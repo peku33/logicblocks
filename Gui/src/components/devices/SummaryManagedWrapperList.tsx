@@ -1,5 +1,4 @@
 import Colors from "components/common/Colors";
-import MediaQueries from "components/common/MediaQueries";
 import styled from "styled-components";
 import SummaryManagedWrapper from "./SummaryManagedWrapper";
 
@@ -31,18 +30,9 @@ const Grid = styled.div`
 
   align-items: start;
   justify-content: center;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    margin: 0.5rem;
-    grid-gap: 0.5rem;
-  }
 `;
 const GridItem = styled.div`
   padding: 0.25rem;
 
   border: solid 1px ${Colors.GREY};
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    padding: 0.5rem;
-  }
 `;

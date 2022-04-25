@@ -1,6 +1,5 @@
 import styled from "styled-components";
 import Colors from "./Colors";
-import MediaQueries from "./MediaQueries";
 
 export enum ChipType {
   OK,
@@ -34,10 +33,6 @@ const ChipInner = styled.div<{
 
   color: ${(props) => (props.enabled ? Colors.WHITE : enabledColor(props.type))};
   background-color: ${(props) => (props.enabled ? enabledColor(props.type) : Colors.WHITE)};
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    padding: 0.5rem 1rem;
-  }
 `;
 export const Chip: React.FC<{
   type: ChipType;
@@ -62,13 +57,5 @@ export const ChipsGroup = styled.div`
   & > ${ChipInner} {
     flex: auto;
     margin: 0.125rem;
-
-    @media ${MediaQueries.COMPUTER_AT_LEAST} {
-      margin: 0.25rem;
-    }
-  }
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    margin: -0.25rem;
   }
 `;

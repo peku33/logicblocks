@@ -1,6 +1,5 @@
 import { Chip, ChipsGroup, ChipType } from "components/common/Chips";
 import GaugeLinear from "components/common/GaugeLinear";
-import MediaQueries from "components/common/MediaQueries";
 import GaugeLinearRatio from "components/datatypes/ratio/GaugeLinear";
 import styled from "styled-components";
 
@@ -178,10 +177,6 @@ const SectionContent = styled.div`
   padding-left: 1rem;
   & > * {
     margin-bottom: 0.25rem;
-  }
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    margin-bottom: 0.5rem;
   }
 `;
 

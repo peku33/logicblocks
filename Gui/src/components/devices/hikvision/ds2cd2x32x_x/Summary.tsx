@@ -1,7 +1,6 @@
 import { ButtonGroup, ButtonLink } from "components/common/Button";
 import { Chip, ChipsGroup, ChipType } from "components/common/Chips";
 import { Line } from "components/common/Line";
-import MediaQueries from "components/common/MediaQueries";
 import {
   SnapshotDeviceInner,
   SnapshotDeviceInnerNone,
@@ -134,10 +133,6 @@ const Header = styled.div`
   grid-gap: 0.5rem;
   align-items: center;
   justify-content: space-between;
-
-  @media ${MediaQueries.COMPUTER_AT_LEAST} {
-    grid-gap: 1rem;
-  }
 `;
 const State = styled.div``;
 const Events = styled.div``;
