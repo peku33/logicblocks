@@ -4,4 +4,4 @@ CREATE TABLE IF NOT EXISTS `sinks` (
     `class` TEXT NOT NULL,
     `timestamp_divisor` REAL NOT NULL,
     `enabled` INTEGER NOT NULL
-);
+) STRICT;

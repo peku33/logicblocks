@@ -87,7 +87,7 @@ impl<'f> Manager<'f> {
                         name TEXT NOT NULL,
                         size_bytes_max INTEGER NOT NULL,
                         detection_level_to_second_ratio REAL NOT NULL
-                    );
+                    ) STRICT;
 
                     CREATE TABLE IF NOT EXISTS channels (
                         channel_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -95,7 +95,7 @@ impl<'f> Manager<'f> {
                         storage_group_id REFERENCES storage_groups(storage_group_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
                         enabled INTEGER NOT NULL,
                         detection_threshold REAL NOT NULL
-                    );
+                    ) STRICT;
 
                     CREATE TABLE IF NOT EXISTS recordings (
                         recording_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -105,7 +105,7 @@ impl<'f> Manager<'f> {
                         detection_level REAL NOT NULL,
                         path_storage_relative TEXT NOT NULL,
                         size_bytes INTEGER NOT NULL
-                    );
+                    ) STRICT;
                 "))?;
                 Ok(())
             })
