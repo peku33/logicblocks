@@ -20,26 +20,56 @@ fi
 
 WORKSPACE_DIR=$CI_DIR/Workspace
 mkdir -p $WORKSPACE_DIR
+cd $WORKSPACE_DIR
 
-# Build WEB
-echo "Building GUI >"
-cd $ROOT_DIR/Gui
-export NPM_CONFIG_PROGRESS=false
-export NPM_CONFIG_SPIN=false
-npm ci
-npm run-script build
-echo "Building GUI <"
+function web_static_pack_gui_ensure {
+    echo "web_static_pack_gui: starting"
+    cd $ROOT_DIR/Gui
+    
+    HASH_CURRENT="HASH_CURRENT:NULL"
+    if [ -d ./build ]
+    then
+        HASH_CURRENT=$(find . -not -path './node_modules/*' -not -path './build/*' -type f | sort | xargs cat | sha256sum | awk '{ print $1 }')
+    fi
 
-# Create GUI PACK
-echo "Creating GUI Pack >"
-WEB_STATIC_PACK_GUI=$WORKSPACE_DIR/web_static_pack_gui.bin
-web-static-pack-packer $ROOT_DIR/Gui/build $WEB_STATIC_PACK_GUI
-echo "Creating GUI Pack <"
+    cd $WORKSPACE_DIR
+    HASH_CACHED="HASH_CACHED:NULL"
+    if [ -f ./web_static_pack_gui.bin -a -f ./web_static_pack_gui.bin.sha256 ]
+    then
+        HASH_CACHED=$(cat ./web_static_pack_gui.bin.sha256)
+    fi
 
-# Build Controller
-echo "Building Controller >"
-cd $ROOT_DIR/Controller
-CI_WEB_STATIC_PACK_GUI=$WEB_STATIC_PACK_GUI cargo build --release --locked --features ci --example test_$EXAMPLE_NAME
-echo "Building Controller <"
+    if [ "$HASH_CURRENT" != "$HASH_CACHED" ]
+    then
+        echo "web_static_pack_gui: hash mismatch ($HASH_CURRENT) ($HASH_CACHED), rebuilding"
+        
+        cd $ROOT_DIR/Gui
+        export NPM_CONFIG_PROGRESS=false
+        export NPM_CONFIG_SPIN=false
+        npm install --only=production # using `ci` reinstalls everything, which is really slow
+        npm run-script build
 
-echo "All done!"
+        echo "web_static_pack_gui: packing"
+        cd $WORKSPACE_DIR
+        web-static-pack-packer $ROOT_DIR/Gui/build ./web_static_pack_gui.bin
+        echo $HASH_CURRENT > ./web_static_pack_gui.bin.sha256
+    else
+        echo "web_static_pack_gui: matches, skipping"
+    fi
+
+    echo "web_static_pack_gui: completed"
+}
+web_static_pack_gui_ensure
+
+function controller_build {
+    echo "controller_build: starting"
+    
+    cd $ROOT_DIR/Controller
+    export CI_WEB_STATIC_PACK_GUI=$WORKSPACE_DIR/web_static_pack_gui.bin
+    cargo build --release --locked --features ci --example test_$EXAMPLE_NAME
+    
+    echo "controller_build: completed"
+}
+controller_build
+
+echo "all: completed"
