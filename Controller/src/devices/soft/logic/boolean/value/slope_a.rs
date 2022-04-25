@@ -32,8 +32,8 @@ impl Device {
     }
 
     fn signals_targets_changed(&self) {
-        let mut raising = false;
-        let mut falling = true;
+        let mut raising = 0;
+        let mut falling = 0;
 
         for value in self
             .signal_input
@@ -43,19 +43,23 @@ impl Device {
             .flatten()
         {
             if value {
-                raising = true;
+                raising += 1;
             } else {
-                falling = true;
+                falling += 1;
             }
         }
 
         let mut signal_sources_changed = false;
 
-        if raising && self.signal_output_raising.push_one(()) {
-            signal_sources_changed = true;
+        for _ in 0..raising {
+            if self.signal_output_raising.push_one(()) {
+                signal_sources_changed = true;
+            }
         }
-        if falling && self.signal_output_falling.push_one(()) {
-            signal_sources_changed = true;
+        for _ in 0..falling {
+            if self.signal_output_falling.push_one(()) {
+                signal_sources_changed = true;
+            }
         }
 
         if signal_sources_changed {
