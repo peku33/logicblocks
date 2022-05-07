@@ -46,7 +46,7 @@ function web_static_pack_gui_ensure {
         cd $ROOT_DIR/Gui
         export NPM_CONFIG_PROGRESS=false
         export NPM_CONFIG_SPIN=false
-        npm install --only=production # using `ci` reinstalls everything, which is really slow
+        npm install # using `ci` reinstalls everything, which is really slow
         npm run-script build
 
         echo "web_static_pack_gui: packing"
