@@ -1,7 +1,7 @@
 import { Button } from "components/common/Button";
 import styled from "styled-components";
 
-const Component: React.VFC<{
+const Component: React.FC<{
   onSignal: () => void;
 }> = (props) => {
   const { onSignal } = props;

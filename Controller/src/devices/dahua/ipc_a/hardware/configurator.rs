@@ -551,7 +551,7 @@ impl<'a> Configurator<'a> {
     {
         let mut table = self.config_get(name).await.context("config_get")?;
 
-        let _: () = executor(&mut table).context("executor")?;
+        executor(&mut table).context("executor")?;
 
         self.config_set(name, table).await.context("config_set")?;
         Ok(())
@@ -569,7 +569,7 @@ impl<'a> Configurator<'a> {
                 .as_object_mut()
                 .ok_or_else(|| anyhow!("expected object"))?;
 
-            let _: () = executor(config).context("executor")?;
+            executor(config).context("executor")?;
 
             Ok(())
         })
@@ -597,7 +597,7 @@ impl<'a> Configurator<'a> {
                 .as_object_mut()
                 .ok_or_else(|| anyhow!("expected object"))?;
 
-            let _: () = executor(config).context("executor")?;
+            executor(config).context("executor")?;
 
             Ok(())
         })

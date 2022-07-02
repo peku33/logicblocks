@@ -6,6 +6,7 @@ export const Button: React.FC<{
   onClick?: () => void;
   onMouseDown?: () => void;
   onMouseUp?: () => void;
+  children?: React.ReactNode;
 }> = (props) => {
   // TODO: move mouse up/down to new ButtonPress
 
@@ -42,6 +43,7 @@ const ButtonInner = styled.div<{
 export const ButtonLink: React.FC<{
   href: string | undefined;
   targetBlank?: boolean;
+  children?: React.ReactNode;
 }> = (props) => {
   const { href, targetBlank, children } = props;
 
@@ -73,7 +75,9 @@ const ButtonLinkInner = styled.a`
   }
 `;
 
-export const ButtonGroup: React.FC<{}> = (props) => {
+export const ButtonGroup: React.FC<{
+  children?: React.ReactNode;
+}> = (props) => {
   return <ButtonGroupInner {...props} />;
 };
 const ButtonGroupInner = styled.div`

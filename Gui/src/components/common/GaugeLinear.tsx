@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { clamp } from "util/number";
+import { clamp } from "util/Number";
 import Colors from "./Colors";
 
 const GaugeLinear: React.FC<{
@@ -7,6 +7,7 @@ const GaugeLinear: React.FC<{
   valueMin: number;
   valueMax: number;
   valueSerializer: (value: number) => string;
+  children?: React.ReactNode;
 }> = (props) => {
   const { value, valueSerializer, children, valueMin, valueMax } = props;
 

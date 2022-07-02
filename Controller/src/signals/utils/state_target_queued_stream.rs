@@ -27,7 +27,7 @@ where
         waker: &'w TargetsChangedWaker,
         signal: &'s Signal<T>,
     ) -> Self {
-        let waker_stream = waker.stream(false);
+        let waker_stream = waker.stream();
         let buffer = VecDeque::<Option<T>>::new();
 
         Self {

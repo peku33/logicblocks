@@ -29,7 +29,7 @@ export const Group: Story<{}> = () => (
   </>
 );
 
-const Line: React.VFC<{ type: ChipType }> = (props) => {
+const Line: React.FC<{ type: ChipType }> = (props) => {
   const { type } = props;
 
   return (

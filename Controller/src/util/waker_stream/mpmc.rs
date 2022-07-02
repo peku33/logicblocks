@@ -1,146 +1,126 @@
-use futures::{
-    stream::{FusedStream, Stream},
-    task::{AtomicWaker, Context, Poll},
-};
+use futures::{stream::FusedStream, task::AtomicWaker, Stream};
+use parking_lot::RwLock;
 use std::{
     collections::HashSet,
     pin::Pin,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, RwLock,
-    },
+    sync::atomic::{AtomicBool, Ordering},
+    task::{Context, Poll},
 };
 
-#[derive(PartialEq, Eq, Hash, Debug)]
-struct ReceiverInnerPointer(*const ReceiverInner);
-unsafe impl Sync for ReceiverInnerPointer {}
-unsafe impl Send for ReceiverInnerPointer {}
-
 #[derive(Debug)]
-struct Common {
-    version: AtomicUsize,
-    receivers: RwLock<HashSet<ReceiverInnerPointer>>,
+pub struct Signal {
+    receiver_inners: RwLock<HashSet<*const ReceiverInner>>,
 }
-impl Common {
+impl Signal {
     pub fn new() -> Self {
-        let version = 0;
-        let version = AtomicUsize::new(version);
+        let receiver_inners = HashSet::<*const ReceiverInner>::new();
+        let receiver_inners = RwLock::new(receiver_inners);
 
-        let receivers = HashSet::<ReceiverInnerPointer>::new();
-        let receivers = RwLock::new(receivers);
-
-        Self { version, receivers }
+        Self { receiver_inners }
     }
+
     pub fn wake(&self) {
-        self.version.fetch_add(1, Ordering::Relaxed);
-        self.receivers
+        self.receiver_inners
             .read()
-            .unwrap()
             .iter()
-            .for_each(|receiver_inner_pointer| {
-                let receiver_common: &ReceiverInner = unsafe { &*receiver_inner_pointer.0 };
-                receiver_common.waker.wake();
+            .copied()
+            .for_each(|receiver_inner| {
+                let receiver_inner = unsafe { &*receiver_inner };
+                if !receiver_inner.flag.swap(true, Ordering::SeqCst) {
+                    receiver_inner.waker.wake();
+                }
             });
     }
+
+    pub fn sender(&self) -> Sender {
+        Sender::new(self)
+    }
+    pub fn receiver(&self) -> Receiver {
+        Receiver::new(self)
+    }
 }
+impl Drop for Signal {
+    fn drop(&mut self) {
+        debug_assert!(self.receiver_inners.read().is_empty());
+    }
+}
+unsafe impl Send for Signal {}
+unsafe impl Sync for Signal {}
 
 #[derive(Debug)]
-pub struct Sender {
-    common: Arc<Common>,
+pub struct Sender<'s> {
+    signal: &'s Signal,
 }
-impl Sender {
-    pub fn new() -> Self {
-        let common = Common::new();
-        Self {
-            common: Arc::new(common),
-        }
+impl<'s> Sender<'s> {
+    fn new(signal: &'s Signal) -> Self {
+        Self { signal }
     }
+
     pub fn wake(&self) {
-        self.common.wake();
-    }
-    pub fn receiver_factory(&self) -> ReceiverFactory {
-        ReceiverFactory::new(self.common.clone())
-    }
-    pub fn receiver(&self) -> Receiver {
-        Receiver::new(self.common.clone())
-    }
-}
-
-#[derive(Debug)]
-pub struct ReceiverFactory {
-    common: Arc<Common>,
-}
-impl ReceiverFactory {
-    fn new(common: Arc<Common>) -> Self {
-        Self { common }
-    }
-    pub fn receiver(&self) -> Receiver {
-        Receiver::new(self.common.clone())
+        self.signal.wake();
     }
 }
 
 #[derive(Debug)]
 struct ReceiverInner {
     waker: AtomicWaker,
+    flag: AtomicBool,
 }
-
 #[derive(Debug)]
-pub struct Receiver {
-    common: Arc<Common>,
-    version: AtomicUsize,
-    inner: Box<ReceiverInner>,
+pub struct Receiver<'s> {
+    signal: &'s Signal,
+    inner: Pin<Box<ReceiverInner>>,
 }
-impl Receiver {
-    fn new(common: Arc<Common>) -> Self {
-        let version = common.version.load(Ordering::Relaxed);
-        let version = AtomicUsize::new(version);
+impl<'s> Receiver<'s> {
+    fn new(signal: &'s Signal) -> Self {
+        let waker = AtomicWaker::new();
 
-        let inner = ReceiverInner {
-            waker: AtomicWaker::new(),
-        };
-        let inner = Box::new(inner);
+        let flag = false;
+        let flag = AtomicBool::new(flag);
 
-        common
-            .receivers
-            .write()
-            .unwrap()
-            .insert(ReceiverInnerPointer(&*inner));
+        let inner = ReceiverInner { waker, flag };
+        let inner = Box::pin(inner);
 
-        Self {
-            common,
-            version,
-            inner,
-        }
+        let receiver_inner_ptr = &*inner as *const ReceiverInner;
+        let inserted = signal.receiver_inners.write().insert(receiver_inner_ptr);
+        debug_assert!(inserted);
+
+        Self { signal, inner }
     }
 }
-impl Stream for Receiver {
+impl<'s> Stream for Receiver<'s> {
     type Item = ();
 
     fn poll_next(
         self: Pin<&mut Self>,
-        cx: &mut Context,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        self.inner.waker.register(cx.waker());
+        let self_ = unsafe { self.get_unchecked_mut() };
 
-        let version = self.common.version.load(Ordering::SeqCst);
-        if self.version.swap(version, Ordering::SeqCst) != version {
+        self_.inner.waker.register(cx.waker());
+
+        let pending = self_.inner.flag.swap(false, Ordering::SeqCst);
+
+        if pending {
             Poll::Ready(Some(()))
         } else {
             Poll::Pending
         }
     }
 }
-impl FusedStream for Receiver {
+impl<'s> FusedStream for Receiver<'s> {
     fn is_terminated(&self) -> bool {
         false
     }
 }
-impl Drop for Receiver {
+impl<'s> Drop for Receiver<'s> {
     fn drop(&mut self) {
-        self.common
-            .receivers
+        let receiver_inner_ptr = &*self.inner as *const ReceiverInner;
+        let removed = self
+            .signal
+            .receiver_inners
             .write()
-            .unwrap()
-            .remove(&ReceiverInnerPointer(&*self.inner));
+            .remove(&receiver_inner_ptr);
+        debug_assert!(removed);
     }
 }

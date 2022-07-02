@@ -6,7 +6,7 @@ export interface Icon {
   name: IconName;
 }
 
-const FontAwesomeIcon: React.VFC<{
+const FontAwesomeIcon: React.FC<{
   icon: Icon;
 }> = (props) => {
   const { icon } = props;

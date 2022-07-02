@@ -153,7 +153,7 @@ export function dataDeviceStateEnabledChannelStateIsEnabledActive(
   return dataDeviceStateEnabledChannelState.state === "EnabledActive";
 }
 
-const Component: React.VFC<{
+const Component: React.FC<{
   data: Data | undefined;
   onDeviceDisable: () => void;
   onDevicePause: () => void;

@@ -3,7 +3,7 @@ import styled from "styled-components";
 
 export type Data = boolean;
 
-const Component: React.VFC<{
+const Component: React.FC<{
   data: Data | undefined;
   onPush: (value: boolean) => void;
 }> = (props) => {

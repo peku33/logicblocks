@@ -1,14 +1,16 @@
 import styled from "styled-components";
+import { useDeviceData } from "./Device";
+import { DeviceSummaryManaged } from "./DeviceSummaryManaged";
 
-const Summary: React.VFC<{
-  deviceId: number;
-  deviceClass: string;
-}> = (props) => {
-  const { deviceId, deviceClass } = props;
+const Summary: DeviceSummaryManaged = (props) => {
+  const { deviceSummaryContext } = props;
+  const { deviceId } = deviceSummaryContext;
+
+  const deviceData = useDeviceData(deviceId);
 
   return (
     <Wrapper>
-      Unknown device #<DetailsSpan>{deviceId}</DetailsSpan> <DetailsSpan>({deviceClass})</DetailsSpan>
+      Unknown device #<DetailsSpan>{deviceId}</DetailsSpan> <DetailsSpan>({deviceData?.class})</DetailsSpan>
     </Wrapper>
   );
 };

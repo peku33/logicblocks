@@ -1,7 +1,9 @@
-import { ComponentManagedBase } from "./SummaryManaged";
+import { DeviceSummaryManaged } from "./DeviceSummaryManaged";
 import UnknownDeviceSummary from "./UnknownDeviceSummary";
 
-const ComponentManaged: ComponentManagedBase = (props) => {
-  return <UnknownDeviceSummary {...props} />;
+const ManagedComponent: DeviceSummaryManaged = (props) => {
+  const { deviceSummaryContext } = props;
+
+  return <UnknownDeviceSummary deviceSummaryContext={deviceSummaryContext} />;
 };
-export default ComponentManaged;
+export default ManagedComponent;

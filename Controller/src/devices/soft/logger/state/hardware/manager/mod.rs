@@ -29,7 +29,7 @@ use std::{
 };
 
 pub type SinkId = usize;
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SinkDataDetails {
     pub name: String,
     pub class: Class,

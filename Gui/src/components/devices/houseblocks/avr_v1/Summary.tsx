@@ -1,5 +1,4 @@
 import { Line } from "components/common/Line";
-import React from "react";
 import styled from "styled-components";
 import HardwareRunnerSummary, { Data as HardwareRunnerData } from "./hardware_runner/Summary";
 
@@ -10,10 +9,10 @@ export interface Data<D extends object> {
 
 export function makeAvrV1Summary<D extends object>(
   SummaryInnerComponent: React.ComponentType<{ data: D | undefined }>,
-): React.VFC<{
+): React.FC<{
   data: Data<D> | undefined;
 }> {
-  const Summary: React.VFC<{
+  const Summary: React.FC<{
     data: Data<D> | undefined;
   }> = (props) => {
     const { data } = props;

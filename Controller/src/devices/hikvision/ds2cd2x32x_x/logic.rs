@@ -11,10 +11,8 @@ use crate::{
     util::{
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
-    web,
-    web::uri_cursor,
+    web::{self, uri_cursor},
 };
 use anyhow::{Context, Error};
 use async_trait::async_trait;
@@ -104,7 +102,7 @@ pub struct Device {
     signal_event_line_detection: signal::state_source::Signal<bool>,
     signal_event_field_detection: signal::state_source::Signal<bool>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: devices::gui_summary::Waker,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -124,7 +122,7 @@ impl Device {
             signal_event_line_detection: signal::state_source::Signal::<bool>::new(None),
             signal_event_field_detection: signal::state_source::Signal::<bool>::new(None),
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
@@ -342,7 +340,7 @@ impl devices::Device for Device {
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
         Some(self)
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
@@ -405,14 +403,14 @@ impl signals::Device for Device {
     }
 }
 
-impl devices::GuiSummaryProvider for Device {
-    fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let gui_summary = self.device_state.read().clone();
-        let gui_summary = Box::new(gui_summary);
-        gui_summary
+impl devices::gui_summary::Device for Device {
+    fn waker(&self) -> &devices::gui_summary::Waker {
+        &self.gui_summary_waker
     }
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_waker.receiver_factory()
+
+    type Value = DeviceState;
+    fn value(&self) -> Self::Value {
+        self.device_state.read().clone()
     }
 }
 

@@ -182,7 +182,7 @@ impl Bus {
 
         // extract real crc
         let crc_received = u16::from_le_bytes(
-            (&payload[payload.len() - 2..payload.len()])
+            payload[payload.len() - 2..payload.len()]
                 .try_into()
                 .unwrap(),
         );

@@ -8,7 +8,6 @@ pub mod logic {
             async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
             async_flag,
             runtime::{Exited, Runnable},
-            waker_stream,
         },
     };
     use arrayvec::ArrayVec;
@@ -45,7 +44,7 @@ pub mod logic {
         signal_ds18x20s:
             [Option<signal::state_source::Signal<hardware::Ds18x20Value>>; hardware::DS18X20_COUNT],
 
-        gui_summary_waker: waker_stream::mpmc::Sender,
+        gui_summary_waker: devices::gui_summary::Waker,
     }
     impl<'h> Device<'h> {
         pub fn new(hardware_device: &'h hardware::Device) -> Self {
@@ -119,7 +118,7 @@ pub mod logic {
                     .into_inner()
                     .unwrap(),
 
-                gui_summary_waker: waker_stream::mpmc::Sender::new(),
+                gui_summary_waker: devices::gui_summary::Waker::new(),
             }
         }
 
@@ -286,7 +285,7 @@ pub mod logic {
             // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
             let signals_targets_changed_runner = self
                 .signals_targets_changed_waker
-                .stream(false)
+                .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
                 .for_each(async move |()| {
                     self.signals_targets_changed();
@@ -297,7 +296,7 @@ pub mod logic {
             let properties_ins_changed_runner = self
                 .properties_remote
                 .ins_changed_waker_remote
-                .stream(false)
+                .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
                 .for_each(async move |()| {
                     self.properties_ins_changed();
@@ -323,7 +322,7 @@ pub mod logic {
         fn as_runnable(&self) -> &dyn Runnable {
             self
         }
-        fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+        fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
             Some(self)
         }
     }
@@ -438,15 +437,20 @@ pub mod logic {
         DigitalOut(hardware::DigitalOutValue),
     }
     #[derive(Serialize)]
-    struct GuiSummary {
+    pub struct GuiSummary {
         status_led: hardware::StatusLedValue,
         block_1_values: [GuiSummaryBlock1Value; hardware::BLOCK_1_SIZE],
         block_2_values: [GuiSummaryBlock2Value; hardware::BLOCK_2_SIZE],
         block_3_values: [GuiSummaryBlock3Value; hardware::BLOCK_3_SIZE],
         block_4_values: [GuiSummaryBlock4Value; hardware::BLOCK_4_SIZE],
     }
-    impl<'h> devices::GuiSummaryProvider for Device<'h> {
-        fn value(&self) -> Box<dyn devices::GuiSummary> {
+    impl<'h> devices::gui_summary::Device for Device<'h> {
+        fn waker(&self) -> &devices::gui_summary::Waker {
+            &self.gui_summary_waker
+        }
+
+        type Value = GuiSummary;
+        fn value(&self) -> Self::Value {
             let configuration = self.hardware_device.configuration();
             let block_functions = &configuration.block_functions;
 
@@ -532,12 +536,7 @@ pub mod logic {
                 block_3_values,
                 block_4_values,
             };
-            let gui_summary = Box::new(gui_summary);
             gui_summary
-        }
-
-        fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-            self.gui_summary_waker.receiver_factory()
         }
     }
 }
@@ -816,7 +815,7 @@ pub mod hardware {
 
         properties: Properties,
 
-        poll_waker: waker_stream::mpsc_local::Signal,
+        poll_waker: waker_stream::mpsc::Signal,
     }
     impl Device {
         pub fn new(configuration: Configuration) -> Self {
@@ -829,7 +828,7 @@ pub mod hardware {
 
                 properties: Properties::new(),
 
-                poll_waker: waker_stream::mpsc_local::Signal::new(),
+                poll_waker: waker_stream::mpsc::Signal::new(),
             }
         }
 
@@ -851,7 +850,7 @@ pub mod hardware {
             let properties_outs_changed_waker_runner = self
                 .properties
                 .outs_changed_waker
-                .stream(false)
+                .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
                 .for_each(async move |()| {
                     self.poll_waker.wake();
@@ -872,7 +871,7 @@ pub mod hardware {
             AddressDeviceType::new_from_ordinal(5).unwrap()
         }
 
-        fn poll_waker(&self) -> Option<&waker_stream::mpsc_local::Signal> {
+        fn poll_waker(&self) -> Option<&waker_stream::mpsc::Signal> {
             Some(&self.poll_waker)
         }
 

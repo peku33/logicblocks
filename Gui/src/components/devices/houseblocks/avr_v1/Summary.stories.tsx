@@ -22,7 +22,7 @@ export const Empty: Story<{}> = () => (
   </>
 );
 
-const DeviceComponent: React.VFC<{
+const DeviceComponent: React.FC<{
   data:
     | {
         a: number;

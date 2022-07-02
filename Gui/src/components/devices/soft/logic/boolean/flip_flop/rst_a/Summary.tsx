@@ -1,10 +1,9 @@
 import { Button, ButtonGroup } from "components/common/Button";
-import React from "react";
 import styled from "styled-components";
 
 export type Data = boolean;
 
-const Component: React.VFC<{
+const Component: React.FC<{
   data: Data | undefined;
   onR: () => void;
   onS: () => void;

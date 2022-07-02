@@ -8,7 +8,6 @@ pub mod logic {
             async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
             async_flag,
             runtime::{Exited, Runnable},
-            waker_stream,
         },
     };
     use array_init::array_init;
@@ -39,7 +38,7 @@ pub mod logic {
         signal_buzzer: signal::event_target_last::Signal<Duration>,
         signal_temperature: signal::state_source::Signal<Temperature>,
 
-        gui_summary_waker: waker_stream::mpmc::Sender,
+        gui_summary_waker: devices::gui_summary::Waker,
     }
 
     impl<'h> Device<'h> {
@@ -54,7 +53,7 @@ pub mod logic {
                 signal_buzzer: signal::event_target_last::Signal::<Duration>::new(),
                 signal_temperature: signal::state_source::Signal::<Temperature>::new(None),
 
-                gui_summary_waker: waker_stream::mpmc::Sender::new(),
+                gui_summary_waker: devices::gui_summary::Waker::new(),
             }
         }
 
@@ -163,7 +162,7 @@ pub mod logic {
             // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
             let signals_targets_changed_runner = self
                 .signals_targets_changed_waker
-                .stream(false)
+                .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
                 .for_each(async move |()| {
                     self.signals_targets_changed();
@@ -174,7 +173,7 @@ pub mod logic {
             let properties_ins_changed_runner = self
                 .properties_remote
                 .ins_changed_waker_remote
-                .stream(false)
+                .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
                 .for_each(async move |()| {
                     self.properties_ins_changed();
@@ -200,7 +199,7 @@ pub mod logic {
         fn as_runnable(&self) -> &dyn Runnable {
             self
         }
-        fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+        fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
             Some(self)
         }
     }
@@ -271,24 +270,23 @@ pub mod logic {
     }
 
     #[derive(Serialize)]
-    struct GuiSummary {
+    pub struct GuiSummary {
         temperature: Option<Temperature>,
     }
-    impl<'h> devices::GuiSummaryProvider for Device<'h> {
-        fn value(&self) -> Box<dyn devices::GuiSummary> {
-            let gui_summary = GuiSummary {
-                temperature: self
-                    .properties_remote
-                    .ds18x20
-                    .peek_last()
-                    .and_then(|ds18x20| ds18x20.temperature),
-            };
-            let gui_summary = Box::new(gui_summary);
-            gui_summary
+    impl<'h> devices::gui_summary::Device for Device<'h> {
+        fn waker(&self) -> &devices::gui_summary::Waker {
+            &self.gui_summary_waker
         }
 
-        fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-            self.gui_summary_waker.receiver_factory()
+        type Value = GuiSummary;
+        fn value(&self) -> Self::Value {
+            let temperature = self
+                .properties_remote
+                .ds18x20
+                .peek_last()
+                .and_then(|ds18x20| ds18x20.temperature);
+
+            Self::Value { temperature }
         }
     }
 }
@@ -385,14 +383,14 @@ pub mod hardware {
     pub struct Device {
         properties: Properties,
 
-        poll_waker: waker_stream::mpsc_local::Signal,
+        poll_waker: waker_stream::mpsc::Signal,
     }
     impl Device {
         pub fn new() -> Self {
             Self {
                 properties: Properties::new(),
 
-                poll_waker: waker_stream::mpsc_local::Signal::new(),
+                poll_waker: waker_stream::mpsc::Signal::new(),
             }
         }
 
@@ -408,7 +406,7 @@ pub mod hardware {
             let properties_outs_changed_waker_runner = self
                 .properties
                 .outs_changed_waker
-                .stream(false)
+                .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
                 .for_each(async move |()| {
                     self.poll_waker.wake();
@@ -429,7 +427,7 @@ pub mod hardware {
             AddressDeviceType::new_from_ordinal(3).unwrap()
         }
 
-        fn poll_waker(&self) -> Option<&waker_stream::mpsc_local::Signal> {
+        fn poll_waker(&self) -> Option<&waker_stream::mpsc::Signal> {
             Some(&self.poll_waker)
         }
 

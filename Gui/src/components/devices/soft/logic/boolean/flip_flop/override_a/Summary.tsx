@@ -1,5 +1,4 @@
 import { Button, ButtonGroup } from "components/common/Button";
-import React from "react";
 import styled from "styled-components";
 
 export interface Data {
@@ -22,7 +21,7 @@ export function dataModeIsOverride(dataMode: DataMode): dataMode is DataModeOver
   return dataMode.mode === "Override";
 }
 
-const Component: React.VFC<{
+const Component: React.FC<{
   data: Data | undefined;
   onModeSet: (mode: boolean | null) => void; // true/false = Override, null = PassThrough
   onModeCycle: () => void;

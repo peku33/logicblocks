@@ -108,8 +108,8 @@ async fn run_inner(
     };
 
     let ins_changed_waker_remote_runner = async {
-        ins_changed_waker_remote
-            .stream(true)
+        futures::stream::once(async {})
+            .chain(ins_changed_waker_remote.stream())
             .for_each(|()| async move {
                 keys_changed();
                 ds18x20_changed();

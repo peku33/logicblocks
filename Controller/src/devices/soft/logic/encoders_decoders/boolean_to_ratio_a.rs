@@ -23,7 +23,7 @@ pub struct Device {
 
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signals_input: Vec<signal::state_target_last::Signal<bool>>,
+    signal_inputs: Vec<signal::state_target_last::Signal<bool>>,
     signal_output: signal::state_source::Signal<Ratio>,
 }
 impl Device {
@@ -35,7 +35,7 @@ impl Device {
 
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-            signals_input: (0..inputs_count)
+            signal_inputs: (0..inputs_count)
                 .map(|_input_id| signal::state_target_last::Signal::<bool>::new())
                 .collect::<Vec<_>>(),
             signal_output: signal::state_source::Signal::<Ratio>::new(None),
@@ -44,7 +44,7 @@ impl Device {
 
     fn signals_targets_changed(&self) {
         let inputs_values = self
-            .signals_input
+            .signal_inputs
             .iter()
             .map(|signal_input| signal_input.take_last())
             .collect::<Vec<_>>();
@@ -81,7 +81,7 @@ impl Device {
         exit_flag: async_flag::Receiver,
     ) -> Exited {
         self.signals_targets_changed_waker
-            .stream(false)
+            .stream()
             .stream_take_until_exhausted(exit_flag)
             .for_each(async move |()| {
                 self.signals_targets_changed();
@@ -133,7 +133,7 @@ impl signals::Device for Device {
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         iter::empty()
             .chain(
-                self.signals_input
+                self.signal_inputs
                     .iter()
                     .enumerate()
                     .map(|(input_index, input_signal)| {

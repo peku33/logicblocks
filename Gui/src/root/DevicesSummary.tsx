@@ -1,12 +1,12 @@
-import SummaryManagedWrapperList from "components/devices/SummaryManagedWrapperList";
+import { DeviceId, endpointBuild } from "components/devices/Device";
+import DeviceSummaryManagedWrapperList from "components/devices/DeviceSummaryManagedWrapperList";
 import { getJson } from "lib/Api";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
-import { endpointBuild } from "services/LogicDevicesRunner";
 import useAsyncEffect from "use-async-effect";
 import Error404 from "./Error404";
 
-const DevicesSummary: React.VFC = () => {
+const DevicesSummary: React.FC<{}> = () => {
   return (
     <Routes>
       <Route path="" element={<DevicesSummaryListRoute />}></Route>
@@ -16,22 +16,22 @@ const DevicesSummary: React.VFC = () => {
 };
 export default DevicesSummary;
 
-const DevicesSummaryListRoute: React.VFC = () => {
+const DevicesSummaryListRoute: React.FC<{}> = () => {
   const deviceIds = useDeviceIds();
 
   if (deviceIds === undefined) {
     return null; // TODO
   }
 
-  return <SummaryManagedWrapperList deviceIds={deviceIds} />;
+  return <DeviceSummaryManagedWrapperList deviceIds={deviceIds} />;
 };
 
-function useDeviceIds(): number[] | undefined {
-  const [deviceIds, setDeviceIds] = useState<number[]>();
+function useDeviceIds(): DeviceId[] | undefined {
+  const [deviceIds, setDeviceIds] = useState<DeviceId[]>();
 
   useAsyncEffect(
     async (isMounted) => {
-      const deviceIds = await getJson<number[]>(endpointBuild("/devices/list"));
+      const deviceIds = await getJson<DeviceId[]>(endpointBuild("/devices/list"));
       const deviceIdsSorted = deviceIds.sort((a, b) => a - b);
       if (!isMounted()) return;
       setDeviceIds(deviceIdsSorted);

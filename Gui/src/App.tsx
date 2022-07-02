@@ -2,7 +2,7 @@ import GlobalStyles from "GlobalStyles";
 import { BrowserRouter } from "react-router-dom";
 import Body from "./root/Body";
 
-const App: React.VFC = () => {
+const App: React.FC<{}> = () => {
   return (
     <>
       <GlobalStyles />

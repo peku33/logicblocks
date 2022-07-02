@@ -2,12 +2,14 @@ use anyhow::{ensure, Error};
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
 
-pub type AngleNormalized = AngleNormalizedBase<0.0, { 2.0 * std::f64::consts::PI }>;
+const ZERO: f64 = 0.0; // TODO: compiler bug https://github.com/rust-lang/rust/issues/98813
+
+pub type AngleNormalized = AngleNormalizedBase<ZERO, { 2.0 * std::f64::consts::PI }>;
 
 pub type AngleNormalizedZeroCentered =
     AngleNormalizedBase<{ -std::f64::consts::PI }, { std::f64::consts::PI }>;
 
-pub type AngleNormalizedHalf = AngleNormalizedBase<0.0, { std::f64::consts::PI }>;
+pub type AngleNormalizedHalf = AngleNormalizedBase<ZERO, { std::f64::consts::PI }>;
 
 pub type AngleNormalizedHalfZeroCentered =
     AngleNormalizedBase<{ -std::f64::consts::PI / 2.0 }, { std::f64::consts::PI / 2.0 }>;

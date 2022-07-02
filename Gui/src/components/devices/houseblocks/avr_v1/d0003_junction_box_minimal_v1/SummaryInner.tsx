@@ -5,7 +5,7 @@ export interface Data {
   temperature: number;
 }
 
-const Component: React.VFC<{
+const Component: React.FC<{
   data: Data | undefined;
 }> = (props) => {
   const { data } = props;

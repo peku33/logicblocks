@@ -1,15 +1,20 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { urlBuild } from "lib/Api";
+import { useMemo } from "react";
 import styled from "styled-components";
 
-export const SnapshotDeviceInner: React.VFC<{
-  baseUrl: string;
+export const SnapshotDeviceInner: React.FC<{
+  endpoint: string;
   lastUpdated: Date;
 }> = (props) => {
-  const { baseUrl, lastUpdated } = props;
+  const { endpoint, lastUpdated } = props;
+
+  const urlFull = useMemo(() => urlBuild(`${endpoint}/full?cache=${lastUpdated.getTime()}`), [endpoint, lastUpdated]);
+  const url320 = useMemo(() => urlBuild(`${endpoint}/320?cache=${lastUpdated.getTime()}`), [endpoint, lastUpdated]);
 
   return (
-    <SnapshotDeviceInnerUrl href={`${baseUrl}/full?cache=${lastUpdated.getTime()}`} target="_blank" rel="noreferrer">
-      <SnapshotDeviceInnerImage src={`${baseUrl}/320?cache=${lastUpdated.getTime()}`} alt="Preview" />
+    <SnapshotDeviceInnerUrl href={urlFull} target="_blank" rel="noreferrer">
+      <SnapshotDeviceInnerImage src={url320} alt="Preview" />
     </SnapshotDeviceInnerUrl>
   );
 };
@@ -22,7 +27,7 @@ const SnapshotDeviceInnerImage = styled.img`
   max-height: 100%;
 `;
 
-export const SnapshotDeviceInnerNone: React.VFC = () => {
+export const SnapshotDeviceInnerNone: React.FC<{}> = () => {
   return (
     <SnapshotDeviceInnerNoneInner>
       <FontAwesomeIcon icon={["fas", "circle-notch"]} spin />

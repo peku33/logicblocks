@@ -1,72 +1,74 @@
-import { ComponentManagedBase } from "components/devices/SummaryManaged";
+import { deviceClassPostEmpty, deviceClassPostJsonEmpty } from "components/devices/Device";
+import { useDeviceSummary } from "components/devices/DeviceSummary";
+import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
 import { useCallback } from "react";
-import { devicePostEmpty, devicePostJsonEmpty, useDeviceSummaryData } from "services/LogicDevicesRunner";
 import Component, { Data } from "./Summary";
 
-const ComponentManaged: ComponentManagedBase = (props) => {
-  const { deviceId } = props;
+const ManagedComponent: DeviceSummaryManaged = (props) => {
+  const { deviceSummaryContext } = props;
+  const { deviceId } = deviceSummaryContext;
 
-  const data = useDeviceSummaryData<Data>(deviceId);
+  const data = useDeviceSummary<Data>(deviceSummaryContext);
 
   const onDeviceDisable = useCallback((): void => {
-    devicePostEmpty(deviceId, "/device/disable");
+    deviceClassPostEmpty(deviceId, "/device/disable");
   }, [deviceId]);
   const onDevicePause = useCallback((): void => {
-    devicePostEmpty(deviceId, "/device/pause");
+    deviceClassPostEmpty(deviceId, "/device/pause");
   }, [deviceId]);
   const onDeviceEnable = useCallback((): void => {
-    devicePostEmpty(deviceId, "/device/enable");
+    deviceClassPostEmpty(deviceId, "/device/enable");
   }, [deviceId]);
 
   const onChannelsAllClear = useCallback((): void => {
-    devicePostEmpty(deviceId, "/channels/all/clear");
+    deviceClassPostEmpty(deviceId, "/channels/all/clear");
   }, [deviceId]);
   const onChannelsAllAdd = useCallback(
     (multiplier: number): void => {
-      devicePostJsonEmpty(deviceId, "/channels/all/add", multiplier);
+      deviceClassPostJsonEmpty(deviceId, "/channels/all/add", multiplier);
     },
     [deviceId],
   );
 
   const onChannelDisable = useCallback(
     (channelId: number) => {
-      devicePostEmpty(deviceId, `/channels/${channelId}/disable`);
+      deviceClassPostEmpty(deviceId, `/channels/${channelId}/disable`);
     },
     [deviceId],
   );
   const onChannelPause = useCallback(
     (channelId: number) => {
-      devicePostEmpty(deviceId, `/channels/${channelId}/pause`);
+      deviceClassPostEmpty(deviceId, `/channels/${channelId}/pause`);
     },
     [deviceId],
   );
   const onChannelEnable = useCallback(
     (channelId: number) => {
-      devicePostEmpty(deviceId, `/channels/${channelId}/enable`);
+      deviceClassPostEmpty(deviceId, `/channels/${channelId}/enable`);
     },
     [deviceId],
   );
   const onChannelClear = useCallback(
     (channelId: number) => {
-      devicePostEmpty(deviceId, `/channels/${channelId}/clear`);
+      deviceClassPostEmpty(deviceId, `/channels/${channelId}/clear`);
     },
     [deviceId],
   );
   const onChannelAdd = useCallback(
     (channelId: number, multiplier: number) => {
-      devicePostJsonEmpty(deviceId, `/channels/${channelId}/add`, multiplier);
+      deviceClassPostJsonEmpty(deviceId, `/channels/${channelId}/add`, multiplier);
     },
     [deviceId],
   );
   const onChannelMoveFront = useCallback(
     (channelId: number) => {
-      devicePostEmpty(deviceId, `/channels/${channelId}/move-front`);
+      deviceClassPostEmpty(deviceId, `/channels/${channelId}/move-front`);
     },
     [deviceId],
   );
   const onChannelMoveBack = useCallback(
     (channelId: number) => {
-      devicePostEmpty(deviceId, `/channels/${channelId}/move-back`);
+      deviceClassPostEmpty(deviceId, `/channels/${channelId}/move-back`);
     },
     [deviceId],
   );
@@ -89,4 +91,4 @@ const ComponentManaged: ComponentManagedBase = (props) => {
     />
   );
 };
-export default ComponentManaged;
+export default ManagedComponent;

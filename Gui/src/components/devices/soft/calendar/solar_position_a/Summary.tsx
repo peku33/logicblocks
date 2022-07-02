@@ -10,7 +10,7 @@ export interface DataInner {
 }
 export type Data = DataInner | null;
 
-const Component: React.VFC<{
+const Component: React.FC<{
   data: Data | undefined;
 }> = (props) => {
   const { data } = props;

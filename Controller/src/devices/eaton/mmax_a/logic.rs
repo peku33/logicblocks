@@ -8,7 +8,6 @@ use crate::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
 };
 use async_trait::async_trait;
@@ -27,7 +26,7 @@ pub struct Device<'m> {
     signal_input_reverse: signal::state_target_last::Signal<bool>,
     signal_output_ok: signal::state_source::Signal<bool>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: devices::gui_summary::Waker,
 }
 impl<'m> Device<'m> {
     pub fn new(
@@ -45,7 +44,7 @@ impl<'m> Device<'m> {
             signal_input_reverse: signal::state_target_last::Signal::<bool>::new(),
             signal_output_ok: signal::state_source::Signal::<bool>::new(None),
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
@@ -90,9 +89,8 @@ impl<'m> Device<'m> {
         exit_flag: async_flag::Receiver,
     ) -> Exited {
         // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
-        let input_runner = self
-            .signals_targets_changed_waker
-            .stream(true)
+        let input_runner = futures::stream::once(async {})
+            .chain(self.signals_targets_changed_waker.stream())
             .stream_take_until_exhausted(exit_flag.clone())
             .for_each(async move |()| {
                 self.signals_to_device();
@@ -130,7 +128,7 @@ impl<'m> devices::Device for Device<'m> {
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
         Some(self)
     }
 }
@@ -172,7 +170,7 @@ impl<'m> signals::Device for Device<'m> {
 
 #[derive(Copy, Clone, Debug, Serialize)]
 #[serde(tag = "state")]
-enum GuiSummary {
+pub enum GuiSummary {
     Initializing,
     Running {
         warning: Option<u16>,
@@ -205,8 +203,13 @@ enum GuiSummary {
     },
     Error,
 }
-impl<'m> devices::GuiSummaryProvider for Device<'m> {
-    fn value(&self) -> Box<dyn devices::GuiSummary> {
+impl<'m> devices::gui_summary::Device for Device<'m> {
+    fn waker(&self) -> &devices::gui_summary::Waker {
+        &self.gui_summary_waker
+    }
+
+    type Value = GuiSummary;
+    fn value(&self) -> Self::Value {
         let input = self.hardware_device.input_setter().get();
         let output = self.hardware_device.output_getter().get();
 
@@ -243,10 +246,6 @@ impl<'m> devices::GuiSummaryProvider for Device<'m> {
             },
             hardware::Output::Error => GuiSummary::Error,
         };
-        let gui_summary = Box::new(gui_summary);
         gui_summary
-    }
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_waker.receiver_factory()
     }
 }

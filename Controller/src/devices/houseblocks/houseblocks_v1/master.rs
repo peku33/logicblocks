@@ -270,8 +270,8 @@ impl Master {
             })
             .unwrap();
 
-        let result = result_receiver.await.unwrap().context("result_receiver")?;
-        Ok(result)
+        result_receiver.await.unwrap().context("result_receiver")?;
+        Ok(())
     }
     pub async fn transaction_out_in(
         &self,

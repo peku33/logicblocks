@@ -5,7 +5,6 @@ import {
   SnapshotDeviceInner,
   SnapshotDeviceInnerNone,
 } from "components/devices/soft/surveillance/ipc/SnapshotDeviceInner";
-import React from "react";
 import styled from "styled-components";
 
 export type Data = DataInitializing | DataRunning | DataError;
@@ -45,11 +44,11 @@ export interface DataEvents {
   smart_motion_vehicle: boolean;
 }
 
-const Component: React.VFC<{
+const Component: React.FC<{
   data: Data | undefined;
-  snapshotBaseUrl: string | undefined;
+  snapshotEndpoint: string | undefined;
 }> = (props) => {
-  const { data, snapshotBaseUrl } = props;
+  const { data, snapshotEndpoint } = props;
 
   return (
     <Wrapper>
@@ -98,11 +97,11 @@ const Component: React.VFC<{
       </Header>
       <Line />
       <Snapshot>
-        {snapshotBaseUrl !== undefined &&
+        {snapshotEndpoint !== undefined &&
         data !== undefined &&
         dataIsRunning(data) &&
         data.snapshot_updated !== null ? (
-          <SnapshotDeviceInner baseUrl={snapshotBaseUrl} lastUpdated={new Date(data.snapshot_updated)} />
+          <SnapshotDeviceInner endpoint={snapshotEndpoint} lastUpdated={new Date(data.snapshot_updated)} />
         ) : (
           <SnapshotDeviceInnerNone />
         )}

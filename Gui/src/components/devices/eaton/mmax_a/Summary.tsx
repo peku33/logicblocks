@@ -53,7 +53,7 @@ export function dataIsError(data: Data): data is DataError {
   return data.state === "Error";
 }
 
-const Component: React.VFC<{ data: Data | undefined }> = (props) => {
+const Component: React.FC<{ data: Data | undefined }> = (props) => {
   const { data } = props;
 
   return (

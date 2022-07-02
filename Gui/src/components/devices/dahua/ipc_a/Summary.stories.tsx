@@ -25,13 +25,13 @@ export const Basic: Story<{}> = () => (
           smart_motion_vehicle: false,
         },
       }}
-      snapshotBaseUrl={undefined}
+      snapshotEndpoint={undefined}
     />
   </>
 );
 
 export const Empty: Story<{}> = () => (
   <>
-    <Component data={undefined} snapshotBaseUrl={undefined} />
+    <Component data={undefined} snapshotEndpoint={undefined} />
   </>
 );

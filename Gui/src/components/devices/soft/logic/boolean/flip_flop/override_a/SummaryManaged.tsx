@@ -1,23 +1,25 @@
-import { ComponentManagedBase } from "components/devices/SummaryManaged";
+import { deviceClassPostEmpty, deviceClassPostJsonEmpty } from "components/devices/Device";
+import { useDeviceSummary } from "components/devices/DeviceSummary";
+import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
 import { useCallback } from "react";
-import { devicePostEmpty, devicePostJsonEmpty, useDeviceSummaryData } from "services/LogicDevicesRunner";
 import Component, { Data } from "./Summary";
 
-const ComponentManaged: ComponentManagedBase = (props) => {
-  const { deviceId } = props;
+const ManagedComponent: DeviceSummaryManaged = (props) => {
+  const { deviceSummaryContext } = props;
+  const { deviceId } = deviceSummaryContext;
 
-  const data = useDeviceSummaryData<Data>(deviceId);
+  const data = useDeviceSummary<Data>(deviceSummaryContext);
 
   const onModeSet = useCallback(
     (value: boolean | null): void => {
-      devicePostJsonEmpty(deviceId, "/mode/set", value);
+      deviceClassPostJsonEmpty(deviceId, "/mode/set", value);
     },
     [deviceId],
   );
   const onModeCycle = useCallback((): void => {
-    devicePostEmpty(deviceId, "/mode/cycle");
+    deviceClassPostEmpty(deviceId, "/mode/cycle");
   }, [deviceId]);
 
   return <Component data={data} onModeSet={onModeSet} onModeCycle={onModeCycle} />;
 };
-export default ComponentManaged;
+export default ManagedComponent;

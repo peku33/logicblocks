@@ -148,7 +148,7 @@ impl<'r, 'o, O> RuntimeScope<'r, 'o, O> {
         E: FnOnce(&'o O) -> BoxFuture<'s, R>,
         R: Send + 'static,
     {
-        let future = executor(&*self.owner);
+        let future = executor(self.owner);
         // SAFE: self.owner will outlive the future itself
         let future = unsafe { transmute::<BoxFuture<'s, R>, BoxFuture<'static, R>>(future) };
 

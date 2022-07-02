@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import styled from "styled-components";
 import useAsyncEffect from "use-async-effect";
 
-const DashboardsList: React.VFC = () => {
+const DashboardsList: React.FC<{}> = () => {
   const dashboardsSummary = useDashboardsSummary();
   if (dashboardsSummary === undefined) {
     return null;

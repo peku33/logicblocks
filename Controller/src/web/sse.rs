@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-#[derive(Default, Debug)]
+#[derive(Clone, Debug)]
 pub struct Event {
     pub id: Option<Cow<'static, str>>,
     pub data: Cow<'static, str>,

@@ -56,7 +56,7 @@ mod gui_responder {
         loader: Loader,
 
         #[borrows(loader)]
-        #[not_covariant]
+        #[covariant]
         responder: Responder<'this>,
     }
 
@@ -80,10 +80,7 @@ mod gui_responder {
             uri: &Uri,
             headers: &HeaderMap,
         ) -> Response {
-            let responder: &Responder<'static> = self.inner.with_responder(|responder| unsafe {
-                #[allow(clippy::transmute_ptr_to_ptr)]
-                mem::transmute::<&Responder<'_>, &Responder<'static>>(responder)
-            });
+            let responder = self.inner.borrow_responder();
 
             // If path is /, use index.html
             if uri.path() == "/" {

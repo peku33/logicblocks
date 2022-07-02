@@ -1,3 +1,6 @@
+#![allow(clippy::drop_non_drop)] // TODO: something in self_referencing
+#![allow(clippy::too_many_arguments)] // TODO: something in self_referencing
+
 use super::{DeviceWrapper, Id as DeviceId};
 use crate::{
     signals::{
@@ -5,7 +8,7 @@ use crate::{
         DeviceBaseRef as SignalsDeviceBaseRef,
     },
     util::runtime::{FinalizeGuard, Runtime, RuntimeScopeRunnable},
-    web::{self, sse_aggregated, uri_cursor},
+    web::{self, sse_topic, uri_cursor},
 };
 use anyhow::{Context, Error};
 use futures::future::{BoxFuture, FutureExt, JoinAll};
@@ -20,23 +23,32 @@ struct RunnerInner<'d> {
     runtime: Runtime,
     device_wrappers_by_id: HashMap<DeviceId, DeviceWrapper<'d>>,
 
-    #[borrows(device_wrappers_by_id)]
-    #[not_covariant]
-    exchanger: Exchanger<'this>,
-
-    // #[borrows(device_wrappers_by_id)]
-    // #[not_covariant]
-    devices_gui_summary_sse_aggregated_bus: sse_aggregated::Bus,
-
     #[borrows(runtime, device_wrappers_by_id)]
     #[not_covariant]
     devices_wrapper_runtime_scope_runnable:
         ManuallyDrop<Box<[RuntimeScopeRunnable<'this, 'this, DeviceWrapper<'d>>]>>,
 
+    #[borrows(device_wrappers_by_id)]
+    #[covariant]
+    exchanger: Exchanger<'this>,
+
     #[borrows(runtime, exchanger)]
     #[not_covariant]
     exchanger_runtime_scope_runnable:
         ManuallyDrop<RuntimeScopeRunnable<'this, 'this, Exchanger<'this>>>,
+
+    #[borrows(device_wrappers_by_id)]
+    #[covariant]
+    devices_gui_summary_sse_root_node: sse_topic::Node<'this>,
+
+    #[borrows(devices_gui_summary_sse_root_node)]
+    #[covariant]
+    devices_gui_summary_sse_responder: sse_topic::Responder<'this>,
+
+    #[borrows(runtime, devices_gui_summary_sse_responder)]
+    #[not_covariant]
+    devices_gui_summary_sse_responder_runtime_scope_runnable:
+        ManuallyDrop<RuntimeScopeRunnable<'this, 'this, sse_topic::Responder<'this>>>,
 }
 
 pub struct Runner<'d> {
@@ -50,24 +62,18 @@ impl<'d> Runner<'d> {
     ) -> Result<Self, Error> {
         let runtime = Runtime::new("devices", 4, 4);
 
-        let devices_gui_summary_sse_aggregated_node = sse_aggregated::Node {
-            terminal: None,
-            children: device_wrappers_by_id
-                .iter()
-                .map(|(device_id, device_wrapper)| {
-                    (
-                        sse_aggregated::PathItem::NumberU32(*device_id),
-                        device_wrapper.gui_summary_waker(),
-                    )
-                })
-                .collect(),
-        };
-        let devices_gui_summary_sse_aggregated_bus =
-            sse_aggregated::Bus::new(devices_gui_summary_sse_aggregated_node);
-
         let inner = RunnerInner::try_new(
             runtime,
             device_wrappers_by_id,
+            |runtime, device_wrappers_by_id| -> Result<_, Error> {
+                let devices_wrapper_runtime_scope_runnable = device_wrappers_by_id
+                    .values()
+                    .map(|device_wrapper| RuntimeScopeRunnable::new(runtime, device_wrapper))
+                    .collect::<Box<[_]>>();
+                let devices_wrapper_runtime_scope_runnable =
+                    ManuallyDrop::new(devices_wrapper_runtime_scope_runnable);
+                Ok(devices_wrapper_runtime_scope_runnable)
+            },
             |device_wrappers_by_id| -> Result<_, Error> {
                 let exchanger_devices = device_wrappers_by_id
                     .iter()
@@ -85,22 +91,45 @@ impl<'d> Runner<'d> {
                     Exchanger::new(&exchanger_devices, connections_requested).context("new")?;
                 Ok(exchanger)
             },
-            devices_gui_summary_sse_aggregated_bus,
-            |runtime, device_wrappers_by_id| -> Result<_, Error> {
-                let devices_wrapper_runtime_scope_runnable = device_wrappers_by_id
-                    .values()
-                    .map(|device_wrapper| RuntimeScopeRunnable::new(runtime, device_wrapper))
-                    .collect::<Box<[_]>>();
-                let devices_wrapper_runtime_scope_runnable =
-                    ManuallyDrop::new(devices_wrapper_runtime_scope_runnable);
-                Ok(devices_wrapper_runtime_scope_runnable)
-            },
             |runtime, exchanger| -> Result<_, Error> {
                 let exchanger_runtime_scope_runnable =
                     RuntimeScopeRunnable::new(runtime, exchanger);
                 let exchanger_runtime_scope_runnable =
                     ManuallyDrop::new(exchanger_runtime_scope_runnable);
                 Ok(exchanger_runtime_scope_runnable)
+            },
+            |device_wrappers_by_id| -> Result<_, Error> {
+                let devices_gui_summary_sse_root_node = sse_topic::Node::new(
+                    None,
+                    device_wrappers_by_id
+                        .iter()
+                        .map(|(device_id, device_wrapper)| {
+                            let signal = device_wrapper.device().as_gui_summary_device_base().map(
+                                |gui_summary_device_base| {
+                                    gui_summary_device_base.waker().as_signal()
+                                },
+                            );
+
+                            let topic = sse_topic::Topic::Number(*device_id as usize);
+                            let node = sse_topic::Node::new(signal, HashMap::new());
+
+                            (topic, node)
+                        })
+                        .collect(),
+                );
+                Ok(devices_gui_summary_sse_root_node)
+            },
+            |devices_gui_summary_sse_root_node| -> Result<_, Error> {
+                let devices_gui_summary_sse_responder =
+                    sse_topic::Responder::new(devices_gui_summary_sse_root_node);
+                Ok(devices_gui_summary_sse_responder)
+            },
+            |runtime, devices_gui_summary_sse_responder| -> Result<_, Error> {
+                let devices_gui_summary_sse_responder_runtime_scope_runnable =
+                    RuntimeScopeRunnable::new(runtime, devices_gui_summary_sse_responder);
+                let devices_gui_summary_sse_responder_runtime_scope_runnable =
+                    ManuallyDrop::new(devices_gui_summary_sse_responder_runtime_scope_runnable);
+                Ok(devices_gui_summary_sse_responder_runtime_scope_runnable)
             },
         )
         .context("try_new")?;
@@ -113,6 +142,36 @@ impl<'d> Runner<'d> {
         })
     }
     pub async fn finalize(mut self) -> HashMap<DeviceId, DeviceWrapper<'d>> {
+        let devices_gui_summary_sse_responder_runtime_scope_runnable = self
+            .inner
+            .with_devices_gui_summary_sse_responder_runtime_scope_runnable_mut(
+                |devices_gui_summary_sse_responder_runtime_scope_runnable| {
+                    let devices_gui_summary_sse_responder_runtime_scope_runnable = unsafe {
+                        transmute::<
+                            &mut ManuallyDrop<
+                                RuntimeScopeRunnable<'_, '_, sse_topic::Responder<'_>>,
+                            >,
+                            &mut ManuallyDrop<
+                                RuntimeScopeRunnable<
+                                    'static,
+                                    'static,
+                                    sse_topic::Responder<'static>,
+                                >,
+                            >,
+                        >(
+                            devices_gui_summary_sse_responder_runtime_scope_runnable
+                        )
+                    };
+                    let devices_gui_summary_sse_responder_runtime_scope_runnable = unsafe {
+                        ManuallyDrop::take(devices_gui_summary_sse_responder_runtime_scope_runnable)
+                    };
+                    devices_gui_summary_sse_responder_runtime_scope_runnable
+                },
+            );
+        devices_gui_summary_sse_responder_runtime_scope_runnable
+            .finalize()
+            .await;
+
         let exchanger_runtime_scope_runnable = self
             .inner
             .with_exchanger_runtime_scope_runnable_mut(|exchanger_runtime_scope_runnable| {
@@ -192,21 +251,10 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
                     },
                     _ => async move { web::Response::error_404() }.boxed(),
                 },
-                uri_cursor::UriCursor::Next("gui-summary-events", uri_cursor) => {
-                    match uri_cursor.as_ref() {
-                        uri_cursor::UriCursor::Terminal => match *request.method() {
-                            http::Method::GET => {
-                                let sse_stream = self
-                                    .inner
-                                    .borrow_devices_gui_summary_sse_aggregated_bus()
-                                    .sse_stream();
-                                async move { web::Response::ok_sse_stream(sse_stream) }.boxed()
-                            }
-                            _ => async move { web::Response::error_405() }.boxed(),
-                        },
-                        _ => async move { web::Response::error_404() }.boxed(),
-                    }
-                }
+                uri_cursor::UriCursor::Next("gui-summary-sse", uri_cursor) => self
+                    .inner
+                    .borrow_devices_gui_summary_sse_responder()
+                    .handle(request, uri_cursor),
                 uri_cursor::UriCursor::Next(device_id_str, uri_cursor) => {
                     let device_id: DeviceId = match device_id_str.parse().context("device_id") {
                         Ok(device_id) => device_id,

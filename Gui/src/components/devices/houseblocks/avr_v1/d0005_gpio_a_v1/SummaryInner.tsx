@@ -128,7 +128,7 @@ export function dataBlock4ValueIsDigitalOut(
   return dataBlock4Value.function === "DigitalOut";
 }
 
-const Component: React.VFC<{
+const Component: React.FC<{
   data: Data | undefined;
 }> = (props) => {
   const { data } = props;
@@ -199,7 +199,7 @@ const LayoutItem = styled.div<{
   aspect-ratio: 1;
 `;
 
-const LayoutItemStatusLed: React.VFC<{
+const LayoutItemStatusLed: React.FC<{
   value: ColorRgbBoolean | undefined;
 }> = (props) => {
   const { value } = props;
@@ -217,7 +217,7 @@ const LayoutItemStatusLedInner = styled.div<{
   background-color: ${({ r, g, b }) => `rgb(${r ? 255 : 0}, ${g ? 255 : 0}, ${b ? 255 : 0})`};
 `;
 
-const LayoutItemBlock1: React.VFC<{
+const LayoutItemBlock1: React.FC<{
   pin: number; // 1-base
   value: DataBlock1Value | undefined;
 }> = (props) => {
@@ -235,7 +235,7 @@ const LayoutItemBlock1: React.VFC<{
     throw new Error("unknown value type");
   }
 };
-const LayoutItemBlock2: React.VFC<{
+const LayoutItemBlock2: React.FC<{
   pin: number; // 1-base
   value: DataBlock2Value | undefined;
 }> = (props) => {
@@ -253,7 +253,7 @@ const LayoutItemBlock2: React.VFC<{
     throw new Error("unknown value type");
   }
 };
-const LayoutItemBlock3: React.VFC<{
+const LayoutItemBlock3: React.FC<{
   pin: number; // 1-base
   value: DataBlock3Value | undefined;
 }> = (props) => {
@@ -267,7 +267,7 @@ const LayoutItemBlock3: React.VFC<{
     throw new Error("unknown value type");
   }
 };
-const LayoutItemBlock4: React.VFC<{
+const LayoutItemBlock4: React.FC<{
   pin: number; // 1-base
   value: DataBlock4Value | undefined;
 }> = (props) => {
@@ -282,7 +282,7 @@ const LayoutItemBlock4: React.VFC<{
   }
 };
 
-const LayoutItemUnused: React.VFC<{
+const LayoutItemUnused: React.FC<{
   block: number; // 1-based
   pin: number; // 1-base
 }> = (props) => {
@@ -295,7 +295,7 @@ const LayoutItemUnused: React.VFC<{
     </LayoutItemInner>
   );
 };
-const LayoutItemAnalogIn: React.VFC<{
+const LayoutItemAnalogIn: React.FC<{
   block: number; // 1-based
   pin: number; // 1-base
   voltage: Voltage | null;
@@ -310,7 +310,7 @@ const LayoutItemAnalogIn: React.VFC<{
     </LayoutItemInner>
   );
 };
-const LayoutItemDigitalIn: React.VFC<{
+const LayoutItemDigitalIn: React.FC<{
   block: number; // 1-based
   pin: number; // 1-base
   value: boolean | null;
@@ -325,7 +325,7 @@ const LayoutItemDigitalIn: React.VFC<{
     </LayoutItemInner>
   );
 };
-const LayoutItemDigitalOut: React.VFC<{
+const LayoutItemDigitalOut: React.FC<{
   block: number; // 1-based
   pin: number; // 1-base
   value: boolean;
@@ -340,7 +340,7 @@ const LayoutItemDigitalOut: React.VFC<{
     </LayoutItemInner>
   );
 };
-const LayoutItemDs18x20: React.VFC<{
+const LayoutItemDs18x20: React.FC<{
   block: number; // 1-based
   pin: number; // 1-base
   state: Ds18x20State | null;
@@ -393,7 +393,7 @@ const LayoutItemInnerValue = styled.div`
   font-weight: bold;
 `;
 
-const LayoutItemInnerBlockPinLabel: React.VFC<{
+const LayoutItemInnerBlockPinLabel: React.FC<{
   block: number; // 1-based
   pin: number; // 1-base
 }> = (props) => {

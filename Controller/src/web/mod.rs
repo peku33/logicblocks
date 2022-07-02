@@ -1,7 +1,7 @@
 pub mod root_service;
 pub mod server;
 pub mod sse;
-pub mod sse_aggregated;
+pub mod sse_topic;
 pub mod uri_cursor;
 
 use anyhow::{ensure, Context, Error};
@@ -14,7 +14,7 @@ use futures::{
 use http::{header, request::Parts, HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use hyper::{Body, Response as HyperResponse};
 use serde::{Deserialize, Serialize};
-use std::{net::SocketAddr, ops::Deref};
+use std::net::SocketAddr;
 
 #[derive(Constructor, Debug)]
 pub struct Request {
@@ -95,9 +95,7 @@ impl Response {
 
         Response { hyper_response }
     }
-    pub fn ok_sse_stream<S: Stream<Item = impl Deref<Target = sse::Event>> + Send + 'static>(
-        sse_stream: S
-    ) -> Self {
+    pub fn ok_sse_stream<S: Stream<Item = sse::Event> + Send + 'static>(sse_stream: S) -> Self {
         let hyper_body =
             Body::wrap_stream(sse_stream.map(|event| Ok::<_, Error>(event.to_payload())));
         let hyper_response = HyperResponse::builder()

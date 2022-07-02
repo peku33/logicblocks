@@ -5,7 +5,6 @@ use crate::{
     util::{
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
     web::{self, uri_cursor},
 };
@@ -27,7 +26,7 @@ pub struct Device {
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_output: signal::state_source::Signal<Ratio>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: devices::gui_summary::Waker,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -39,7 +38,7 @@ impl Device {
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_output: signal::state_source::Signal::<Ratio>::new(initial),
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
@@ -65,7 +64,7 @@ impl devices::Device for Device {
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
         Some(self)
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
@@ -107,21 +106,19 @@ impl signals::Device for Device {
 
 #[derive(Debug, Serialize)]
 #[serde(transparent)]
-struct GuiSummary {
+pub struct GuiSummary {
     value: Option<Ratio>,
 }
-
-impl devices::GuiSummaryProvider for Device {
-    fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let value = self.signal_output.peek_last();
-
-        let gui_summary = GuiSummary { value };
-        let gui_summary = Box::new(gui_summary);
-        gui_summary
+impl devices::gui_summary::Device for Device {
+    fn waker(&self) -> &devices::gui_summary::Waker {
+        &self.gui_summary_waker
     }
 
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_waker.receiver_factory()
+    type Value = GuiSummary;
+    fn value(&self) -> Self::Value {
+        let value = self.signal_output.peek_last();
+
+        Self::Value { value }
     }
 }
 

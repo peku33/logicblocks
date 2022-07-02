@@ -37,6 +37,7 @@ const ChipInner = styled.div<{
 export const Chip: React.FC<{
   type: ChipType;
   enabled?: boolean;
+  children?: React.ReactNode;
 }> = (props) => {
   const { type, enabled, children } = props;
 

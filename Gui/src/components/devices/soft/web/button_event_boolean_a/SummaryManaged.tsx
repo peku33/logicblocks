@@ -1,20 +1,22 @@
-import { ComponentManagedBase } from "components/devices/SummaryManaged";
+import { deviceClassPostJsonEmpty } from "components/devices/Device";
+import { useDeviceSummary } from "components/devices/DeviceSummary";
+import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
 import { useCallback } from "react";
-import { devicePostJsonEmpty, useDeviceSummaryData } from "services/LogicDevicesRunner";
 import Component, { Data } from "./Summary";
 
-const ComponentManaged: ComponentManagedBase = (props) => {
-  const { deviceId } = props;
+const ManagedComponent: DeviceSummaryManaged = (props) => {
+  const { deviceSummaryContext } = props;
+  const { deviceId } = deviceSummaryContext;
 
-  const data = useDeviceSummaryData<Data>(deviceId);
+  const data = useDeviceSummary<Data>(deviceSummaryContext);
 
   const onPush = useCallback(
     (value: boolean): void => {
-      devicePostJsonEmpty(deviceId, "", value);
+      deviceClassPostJsonEmpty(deviceId, "", value);
     },
     [deviceId],
   );
 
   return <Component data={data} onPush={onPush} />;
 };
-export default ComponentManaged;
+export default ManagedComponent;

@@ -3,15 +3,13 @@ use super::super::{
     hardware::runner,
 };
 use crate::{
-    devices::{self, GuiSummaryProvider},
-    signals,
+    devices, signals,
     util::{
         async_ext::{
             optional::StreamOrPending, stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         },
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
 };
 use async_trait::async_trait;
@@ -34,7 +32,7 @@ pub trait Device: signals::Device + Sync + Send + fmt::Debug {
     fn class() -> &'static str;
 
     fn as_runnable(&self) -> &dyn Runnable;
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
         None
     }
 }
@@ -60,7 +58,7 @@ where
 {
     inner: RunnerInner<'m, DF>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: devices::gui_summary::Waker,
 }
 impl<'m, DF> Runner<'m, DF>
 where
@@ -88,7 +86,7 @@ where
 
         Self {
             inner,
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
@@ -118,21 +116,21 @@ where
         let device_runner = self.device().as_runnable().run(exit_flag.clone());
 
         // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
-        let hardware_runner_gui_summary_forwarder = self
-            .hardware_runner()
-            .waker() // this is from GuiSummaryProvider
-            .receiver()
-            .stream_take_until_exhausted(exit_flag.clone())
-            .for_each(async move |()| {
-                self.gui_summary_waker.wake();
-            })
-            .boxed();
+        let hardware_runner_gui_summary_forwarder =
+            devices::gui_summary::Device::waker(self.hardware_runner())
+                .as_signal()
+                .receiver()
+                .stream_take_until_exhausted(exit_flag.clone())
+                .for_each(async move |()| {
+                    self.gui_summary_waker.wake();
+                })
+                .boxed();
 
         // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
         let device_gui_summary_forwarder = StreamOrPending::new(
             self.device()
-                .as_gui_summary_provider()
-                .map(|gui_summary_provider| gui_summary_provider.waker().receiver()),
+                .as_gui_summary_device_base()
+                .map(|gui_summary_provider| gui_summary_provider.waker().as_signal().receiver()),
         )
         .stream_take_until_exhausted(exit_flag.clone())
         .for_each(async move |()| {
@@ -174,7 +172,7 @@ where
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
         Some(self)
     }
 }
@@ -219,27 +217,29 @@ where
 }
 
 #[derive(Serialize)]
-struct GuiSummary {
-    device: Box<dyn devices::GuiSummary>,
-    hardware_runner: Box<dyn devices::GuiSummary>,
+pub struct GuiSummary {
+    device: Option<Box<dyn erased_serde::Serialize + Send + Sync + 'static>>,
+    hardware_runner: runner::GuiSummary,
 }
-impl<'m, DF> devices::GuiSummaryProvider for Runner<'m, DF>
+impl<'m, DF> devices::gui_summary::Device for Runner<'m, DF>
 where
     DF: DeviceFactory,
 {
-    fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let gui_summary = GuiSummary {
-            device: match self.device().as_gui_summary_provider() {
-                Some(gui_summary_provider) => gui_summary_provider.value(),
-                None => Box::new(()),
-            },
-            hardware_runner: self.hardware_runner().value(),
-        };
-        let gui_summary = Box::new(gui_summary);
-        gui_summary
+    fn waker(&self) -> &devices::gui_summary::Waker {
+        &self.gui_summary_waker
     }
 
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_waker.receiver_factory()
+    type Value = GuiSummary;
+    fn value(&self) -> Self::Value {
+        let device = self
+            .device()
+            .as_gui_summary_device_base()
+            .map(|gui_summary_device_base| gui_summary_device_base.value());
+        let hardware_runner = self.hardware_runner().value();
+
+        Self::Value {
+            device,
+            hardware_runner,
+        }
     }
 }

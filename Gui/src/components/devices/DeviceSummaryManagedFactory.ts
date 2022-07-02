@@ -1,3 +1,5 @@
+import { DeviceSummaryManaged } from "./DeviceSummaryManaged";
+//
 import dahuaIpcA from "./dahua/ipc_a/SummaryManaged";
 import eatonMmaxA from "./eaton/mmax_a/SummaryManaged";
 import hikvisionDs2cd2x32xX from "./hikvision/ds2cd2x32x_x/SummaryManaged";
@@ -13,11 +15,10 @@ import softWebButtonEventA from "./soft/web/button_event_a/SummaryManaged";
 import softWebButtonEventBooleanA from "./soft/web/button_event_boolean_a/SummaryManaged";
 import softWebButtonStateMonostableA from "./soft/web/button_state_monostable_a/SummaryManaged";
 import softWebRatioSliderA from "./soft/web/ratio_slider_a/SummaryManaged";
-import { ComponentManagedBase } from "./SummaryManaged";
 import UnknownDevice from "./UnknownDeviceSummaryManaged";
 
-export function getByClass(cls: string): ComponentManagedBase {
-  switch (cls) {
+export function getByClass(class_: string): DeviceSummaryManaged {
+  switch (class_) {
     case "dahua/ipc_a":
       return dahuaIpcA;
     case "eaton/mmax_a":

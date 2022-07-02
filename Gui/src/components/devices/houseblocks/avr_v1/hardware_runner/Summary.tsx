@@ -7,7 +7,7 @@ export interface Data {
   device_state: DeviceState;
 }
 
-const Component: React.VFC<{
+const Component: React.FC<{
   data: Data | undefined;
 }> = (props) => {
   const { data: state } = props;

@@ -1,3 +1,3 @@
 pub mod mpmc;
+pub mod mpmc_static;
 pub mod mpsc;
-pub mod mpsc_local;

@@ -1,4 +1,4 @@
-use crate::util::waker_stream::mpsc_local;
+use crate::util::waker_stream::mpsc;
 use futures::stream::{FusedStream, Stream};
 use std::{
     pin::Pin,
@@ -7,19 +7,16 @@ use std::{
 
 #[derive(Debug)]
 pub struct TargetsChangedWaker {
-    inner: mpsc_local::Signal,
+    inner: mpsc::Signal,
 }
 impl TargetsChangedWaker {
     pub fn new() -> Self {
-        let inner = mpsc_local::Signal::new();
+        let inner = mpsc::Signal::new();
         Self { inner }
     }
 
-    pub fn stream(
-        &self,
-        initially_pending: bool,
-    ) -> TargetsChangedWakerStream {
-        TargetsChangedWakerStream::new(self, initially_pending)
+    pub fn stream(&self) -> TargetsChangedWakerStream {
+        TargetsChangedWakerStream::new(self)
     }
 
     pub(super) fn remote(&self) -> TargetsChangedWakerRemote {
@@ -28,14 +25,11 @@ impl TargetsChangedWaker {
 }
 #[derive(Debug)]
 pub struct TargetsChangedWakerStream<'a> {
-    inner: mpsc_local::Receiver<'a>,
+    inner: mpsc::Receiver<'a>,
 }
 impl<'a> TargetsChangedWakerStream<'a> {
-    fn new(
-        parent: &'a TargetsChangedWaker,
-        initially_pending: bool,
-    ) -> Self {
-        let inner = parent.inner.receiver(initially_pending);
+    fn new(parent: &'a TargetsChangedWaker) -> Self {
+        let inner = parent.inner.receiver();
         Self { inner }
     }
 }
@@ -57,7 +51,7 @@ impl<'a> FusedStream for TargetsChangedWakerStream<'a> {
 }
 #[derive(Debug)]
 pub struct TargetsChangedWakerRemote<'a> {
-    inner: mpsc_local::Sender<'a>,
+    inner: mpsc::Sender<'a>,
 }
 impl<'a> TargetsChangedWakerRemote<'a> {
     fn new(parent: &'a TargetsChangedWaker) -> Self {
@@ -71,11 +65,11 @@ impl<'a> TargetsChangedWakerRemote<'a> {
 
 #[derive(Debug)]
 pub struct SourcesChangedWaker {
-    inner: mpsc_local::Signal,
+    inner: mpsc::Signal,
 }
 impl SourcesChangedWaker {
     pub fn new() -> Self {
-        let inner = mpsc_local::Signal::new();
+        let inner = mpsc::Signal::new();
         Self { inner }
     }
 
@@ -95,23 +89,17 @@ impl<'a> SourcesChangedWakerRemote<'a> {
     fn new(parent: &'a SourcesChangedWaker) -> Self {
         Self { parent }
     }
-    pub fn stream(
-        &self,
-        initially_pending: bool,
-    ) -> SourcesChangedWakerRemoteStream {
-        SourcesChangedWakerRemoteStream::new(self, initially_pending)
+    pub fn stream(&self) -> SourcesChangedWakerRemoteStream {
+        SourcesChangedWakerRemoteStream::new(self)
     }
 }
 #[derive(Debug)]
 pub struct SourcesChangedWakerRemoteStream<'a> {
-    inner: mpsc_local::Receiver<'a>,
+    inner: mpsc::Receiver<'a>,
 }
 impl<'a> SourcesChangedWakerRemoteStream<'a> {
-    fn new(
-        parent: &'a SourcesChangedWakerRemote,
-        initially_pending: bool,
-    ) -> Self {
-        let inner = parent.parent.inner.receiver(initially_pending);
+    fn new(parent: &'a SourcesChangedWakerRemote) -> Self {
+        let inner = parent.parent.inner.receiver();
         Self { inner }
     }
 }

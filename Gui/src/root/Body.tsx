@@ -5,7 +5,7 @@ import Dashboards from "./Dashboards";
 import DevicesSummary from "./DevicesSummary";
 import Error404 from "./Error404";
 
-const Body: React.VFC = () => {
+const Body: React.FC<{}> = () => {
   return (
     <Layout>
       <TopBar>
@@ -27,10 +27,10 @@ const Body: React.VFC = () => {
 };
 export default Body;
 
-const DashboardsRoute: React.VFC = () => {
+const DashboardsRoute: React.FC<{}> = () => {
   return <Dashboards />;
 };
-const DevicesSummaryRoute: React.VFC = () => {
+const DevicesSummaryRoute: React.FC<{}> = () => {
   return <DevicesSummary />;
 };
 
@@ -50,6 +50,7 @@ const Menu = styled.div`
 `;
 const MenuItem: React.FC<{
   to: To;
+  children?: React.ReactNode;
 }> = (props) => {
   const { to, children } = props;
 

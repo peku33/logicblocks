@@ -6,7 +6,6 @@ use crate::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
     web::{self, uri_cursor},
 };
@@ -105,9 +104,9 @@ pub struct Device {
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_add_all: signal::event_target_queued::Signal<Multiplier>,
     signal_power: signal::state_source::Signal<Multiplier>,
-    signals_outputs: Vec<signal::state_source::Signal<bool>>,
+    signal_outputs: Vec<signal::state_source::Signal<bool>>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: devices::gui_summary::Waker,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -139,11 +138,11 @@ impl Device {
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_add_all: signal::event_target_queued::Signal::<Multiplier>::new(),
             signal_power: signal::state_source::Signal::<Multiplier>::new(Some(Multiplier::zero())),
-            signals_outputs: repeat_with(|| signal::state_source::Signal::<bool>::new(Some(false)))
+            signal_outputs: repeat_with(|| signal::state_source::Signal::<bool>::new(Some(false)))
                 .take(channels_count)
                 .collect::<Vec<_>>(),
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
@@ -206,7 +205,7 @@ impl Device {
         if self.signal_power.set_one(Some(Multiplier::zero())) {
             signal_sources_changed = true;
         }
-        for signal_output in &self.signals_outputs {
+        for signal_output in &self.signal_outputs {
             if signal_output.set_one(Some(false)) {
                 signal_sources_changed = true;
             }
@@ -284,7 +283,7 @@ impl Device {
         if self.signal_power.set_one(Some(Multiplier::zero())) {
             signal_sources_changed = true;
         }
-        for signal_output in &self.signals_outputs {
+        for signal_output in &self.signal_outputs {
             if signal_output.set_one(Some(false)) {
                 signal_sources_changed = true;
             }
@@ -418,7 +417,7 @@ impl Device {
                     DeviceStateEnabledChannelState::EnabledActive { .. } => {
                         *channel_state = DeviceStateEnabledChannelState::Disabled;
 
-                        if self.signals_outputs[channel_id].set_one(Some(false)) {
+                        if self.signal_outputs[channel_id].set_one(Some(false)) {
                             signal_sources_changed = true;
                         }
                         if self
@@ -500,7 +499,7 @@ impl Device {
                             queue: *queue + *round,
                         };
 
-                        if self.signals_outputs[channel_id].set_one(Some(false)) {
+                        if self.signal_outputs[channel_id].set_one(Some(false)) {
                             signal_sources_changed = true;
                         }
                         if self
@@ -773,7 +772,7 @@ impl Device {
                             queue: *queue + *round,
                         };
 
-                        if self.signals_outputs[channel_id].set_one(Some(false)) {
+                        if self.signal_outputs[channel_id].set_one(Some(false)) {
                             signal_sources_changed = true;
                         }
                         if self
@@ -914,7 +913,7 @@ impl Device {
         for (channel_configuration, channel_state, signal_output) in izip!(
             self.configuration.channels.iter(),
             channels.iter_mut(),
-            self.signals_outputs.iter()
+            self.signal_outputs.iter()
         ) {
             match channel_state {
                 DeviceStateEnabledChannelState::Disabled
@@ -973,7 +972,7 @@ impl Device {
         for channel_id in channel_ids {
             let channel_configuration = &self.configuration.channels[channel_id];
             let channel_state = &mut channels[channel_id];
-            let signal_output = &self.signals_outputs[channel_id];
+            let signal_output = &self.signal_outputs[channel_id];
 
             match channel_state {
                 // channel_ids should contain EnabledQueued only
@@ -1065,7 +1064,7 @@ impl Device {
         // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
         let signals_targets_changed_runner = self
             .signals_targets_changed_waker
-            .stream(false)
+            .stream()
             .stream_take_until_exhausted(exit_flag.clone())
             .for_each(async move |()| {
                 self.signals_targets_changed();
@@ -1089,7 +1088,7 @@ impl devices::Device for Device {
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
         Some(self)
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
@@ -1136,7 +1135,7 @@ impl signals::Device for Device {
                 ),
             ])
             .chain(
-                self.signals_outputs
+                self.signal_outputs
                     .iter()
                     .enumerate()
                     .map(|(output_index, output_signal)| {
@@ -1213,12 +1212,17 @@ enum GuiSummaryState {
     },
 }
 #[derive(Serialize)]
-struct GuiSummary {
+pub struct GuiSummary {
     configuration: GuiSummaryConfiguration,
     state: GuiSummaryState,
 }
-impl devices::GuiSummaryProvider for Device {
-    fn value(&self) -> Box<dyn devices::GuiSummary> {
+impl devices::gui_summary::Device for Device {
+    fn waker(&self) -> &devices::gui_summary::Waker {
+        &self.gui_summary_waker
+    }
+
+    type Value = GuiSummary;
+    fn value(&self) -> Self::Value {
         let state = self.state.read();
         let state = &*state;
 
@@ -1360,12 +1364,7 @@ impl devices::GuiSummaryProvider for Device {
             configuration: gui_summary_configuration,
             state: gui_summary_state,
         };
-        let gui_summary = Box::new(gui_summary);
         gui_summary
-    }
-
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_waker.receiver_factory()
     }
 }
 

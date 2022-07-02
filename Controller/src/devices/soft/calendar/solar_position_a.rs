@@ -9,7 +9,6 @@ use crate::{
     util::{
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
 };
 use async_trait::async_trait;
@@ -36,7 +35,7 @@ pub struct Device {
     signal_elevation: signal::state_source::Signal<AngleNormalizedHalfZeroCentered>,
     signal_asimuth: signal::state_source::Signal<AngleNormalized>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: devices::gui_summary::Waker,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -51,7 +50,7 @@ impl Device {
             ),
             signal_asimuth: signal::state_source::Signal::<AngleNormalized>::new(None),
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
@@ -121,7 +120,7 @@ impl devices::Device for Device {
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
         Some(self)
     }
 }
@@ -160,32 +159,32 @@ impl signals::Device for Device {
 }
 
 #[derive(Serialize)]
-#[serde(transparent)]
-struct GuiSummary {
-    inner: Option<GuiSummaryInner>,
-}
-#[derive(Serialize)]
 struct GuiSummaryInner {
     julian_day: Real,
     elevation: AngleNormalizedHalfZeroCentered,
     asimuth: AngleNormalized,
 }
-impl devices::GuiSummaryProvider for Device {
-    fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let spa = self.spa.read();
-        let gui_summary = GuiSummary {
-            inner: spa.map(|spa| GuiSummaryInner {
-                julian_day: spa.as_ref().julian_day(),
-                elevation: spa.topocentric_elevation_angle_without_refraction(),
-                asimuth: spa.topocentric_asimuth(),
-            }),
-        };
-        let gui_summary = Box::new(gui_summary);
-        gui_summary
+#[derive(Serialize)]
+#[serde(transparent)]
+pub struct GuiSummary {
+    inner: Option<GuiSummaryInner>,
+}
+impl devices::gui_summary::Device for Device {
+    fn waker(&self) -> &devices::gui_summary::Waker {
+        &self.gui_summary_waker
     }
 
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_waker.receiver_factory()
+    type Value = GuiSummary;
+    fn value(&self) -> Self::Value {
+        let spa = self.spa.read();
+
+        let inner = spa.map(|spa| GuiSummaryInner {
+            julian_day: spa.as_ref().julian_day(),
+            elevation: spa.topocentric_elevation_angle_without_refraction(),
+            asimuth: spa.topocentric_asimuth(),
+        });
+
+        Self::Value { inner }
     }
 }
 

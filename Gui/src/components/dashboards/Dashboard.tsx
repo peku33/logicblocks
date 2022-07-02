@@ -1,13 +1,14 @@
 import Colors from "components/common/Colors";
 import FontAwesomeIcon, { Icon } from "components/common/FontAwesome";
-import SummaryManagedWrapperList from "components/devices/SummaryManagedWrapperList";
+import { DeviceId } from "components/devices/Device";
+import DeviceSummaryManagedWrapperList from "components/devices/DeviceSummaryManagedWrapperList";
 import { getJson } from "lib/Api";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import useAsyncEffect from "use-async-effect";
 
-const Dashboard: React.VFC<{
+const Dashboard: React.FC<{
   id: number;
 }> = (props) => {
   const { id } = props;
@@ -25,7 +26,7 @@ const Dashboard: React.VFC<{
         <Title>{dashboardSummary.name}</Title>
       </Header>
       <ListWrapper>
-        <SummaryManagedWrapperList deviceIds={dashboardSummary.device_ids} />
+        <DeviceSummaryManagedWrapperList deviceIds={dashboardSummary.device_ids} />
       </ListWrapper>
     </Wrapper>
   );
@@ -35,7 +36,7 @@ export default Dashboard;
 interface DashboardSummary {
   name: string;
   icon: Icon;
-  device_ids: number[];
+  device_ids: DeviceId[];
 }
 
 function useDashboardSummary(id: number): DashboardSummary | undefined {

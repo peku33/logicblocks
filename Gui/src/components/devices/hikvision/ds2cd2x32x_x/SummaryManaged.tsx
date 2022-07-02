@@ -1,13 +1,17 @@
-import { ComponentManagedBase } from "components/devices/SummaryManaged";
-import { urlBuild } from "lib/Api";
-import { deviceEndpointBuild, useDeviceSummaryData } from "services/LogicDevicesRunner";
+import { deviceClassEndpointBuild } from "components/devices/Device";
+import { useDeviceSummary } from "components/devices/DeviceSummary";
+import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
+import { useMemo } from "react";
 import Component, { Data } from "./Summary";
 
-const ComponentManaged: ComponentManagedBase = (props) => {
-  const { deviceId } = props;
+const ManagedComponent: DeviceSummaryManaged = (props) => {
+  const { deviceSummaryContext } = props;
+  const { deviceId } = deviceSummaryContext;
 
-  const data = useDeviceSummaryData<Data>(deviceId);
+  const data = useDeviceSummary<Data>(deviceSummaryContext);
 
-  return <Component data={data} snapshotBaseUrl={urlBuild(deviceEndpointBuild(deviceId, "/snapshot"))} />;
+  const snapshotEndpoint = useMemo(() => deviceClassEndpointBuild(deviceId, "/snapshot"), [deviceId]);
+
+  return <Component data={data} snapshotEndpoint={snapshotEndpoint} />;
 };
-export default ComponentManaged;
+export default ManagedComponent;

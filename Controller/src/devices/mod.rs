@@ -1,5 +1,6 @@
 pub mod dahua;
 pub mod eaton;
+pub mod gui_summary;
 pub mod helpers;
 pub mod hikvision;
 pub mod houseblocks;
@@ -11,14 +12,12 @@ use crate::{
     util::{
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
-    web::{self, sse_aggregated, uri_cursor},
+    web::{self, uri_cursor},
 };
 use async_trait::async_trait;
 use derive_more::Constructor;
 use futures::future::{BoxFuture, FutureExt};
-use maplit::hashmap;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{borrow::Cow, fmt};
 
@@ -32,7 +31,7 @@ pub trait Device: Send + Sync + fmt::Debug {
 
     fn as_runnable(&self) -> &dyn Runnable;
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase;
-    fn as_gui_summary_provider(&self) -> Option<&dyn GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn gui_summary::DeviceBase> {
         None
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
@@ -50,17 +49,7 @@ impl<'d> DeviceWrapper<'d> {
         &self.name
     }
     pub fn device(&self) -> &dyn Device {
-        &*self.device
-    }
-
-    pub fn gui_summary_waker(&self) -> sse_aggregated::Node {
-        sse_aggregated::Node {
-            terminal: self
-                .device()
-                .as_gui_summary_provider()
-                .map(|gui_summary_provider| gui_summary_provider.waker()),
-            children: hashmap! {},
-        }
+        &*self.device as &dyn Device
     }
 
     async fn run(
@@ -108,11 +97,11 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
                 _ => async move { web::Response::error_405() }.boxed(),
             },
             uri_cursor::UriCursor::Next("gui-summary", uri_cursor) => {
-                match self.device().as_gui_summary_provider() {
-                    Some(gui_summary_provider) => match uri_cursor.as_ref() {
+                match self.device().as_gui_summary_device_base() {
+                    Some(gui_summary_device_base) => match uri_cursor.as_ref() {
                         uri_cursor::UriCursor::Terminal => match *request.method() {
                             http::Method::GET => {
-                                let value = gui_summary_provider.value();
+                                let value = gui_summary_device_base.value();
                                 async move { web::Response::ok_json(value) }.boxed()
                             }
                             _ => async move { web::Response::error_405() }.boxed(),
@@ -131,10 +120,4 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
             _ => async move { web::Response::error_404() }.boxed(),
         }
     }
-}
-
-pub trait GuiSummary = erased_serde::Serialize + Send + Sync;
-pub trait GuiSummaryProvider {
-    fn value(&self) -> Box<dyn GuiSummary>;
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory;
 }

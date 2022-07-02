@@ -171,8 +171,7 @@ impl<'d> Exchanger<'d> {
             .connections
             .keys()
             .map(move |sources_changed_waker_remote| {
-                let sources_changed_waker_remote_stream =
-                    sources_changed_waker_remote.stream(false);
+                let sources_changed_waker_remote_stream = sources_changed_waker_remote.stream();
 
                 (
                     sources_changed_waker_remote,

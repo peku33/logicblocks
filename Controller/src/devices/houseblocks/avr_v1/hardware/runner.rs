@@ -51,7 +51,7 @@ pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
     fn device_type_name() -> &'static str;
     fn address_device_type() -> AddressDeviceType;
 
-    fn poll_waker(&self) -> Option<&waker_stream::mpsc_local::Signal>;
+    fn poll_waker(&self) -> Option<&waker_stream::mpsc::Signal>;
 
     fn as_runnable(&self) -> Option<&dyn Runnable>;
 }
@@ -70,7 +70,7 @@ pub struct Runner<'m, D: Device> {
 
     device_state: Mutex<DeviceState>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: devices::gui_summary::Waker,
 }
 impl<'m, D: Device> Runner<'m, D> {
     const POLL_DELAY_MAX: Duration = Duration::from_secs(5);
@@ -96,7 +96,7 @@ impl<'m, D: Device> Runner<'m, D> {
 
             device_state,
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
@@ -133,7 +133,7 @@ impl<'m, D: Device> Runner<'m, D> {
         let device_poll_waker = StreamOrPending::new(
             self.device
                 .poll_waker()
-                .map(|poll_waker| poll_waker.receiver(false)),
+                .map(|poll_waker| poll_waker.receiver()),
         );
         let mut device_poll_waker = device_poll_waker.fuse();
 
@@ -233,19 +233,18 @@ impl<'m, D: Device> Runnable for Runner<'m, D> {
 }
 
 #[derive(Serialize)]
-struct GuiSummary {
+pub struct GuiSummary {
     device_state: DeviceState,
 }
-impl<'m, D: Device> devices::GuiSummaryProvider for Runner<'m, D> {
-    fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let gui_summary = GuiSummary {
-            device_state: *self.device_state.lock(),
-        };
-        let gui_summary = Box::new(gui_summary);
-        gui_summary
+impl<'m, D: Device> devices::gui_summary::Device for Runner<'m, D> {
+    fn waker(&self) -> &devices::gui_summary::Waker {
+        &self.gui_summary_waker
     }
 
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_waker.receiver_factory()
+    type Value = GuiSummary;
+    fn value(&self) -> Self::Value {
+        let device_state = *self.device_state.lock();
+
+        Self::Value { device_state }
     }
 }

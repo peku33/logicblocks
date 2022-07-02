@@ -3,7 +3,7 @@ import DashboardsList from "components/dashboards/DashboardsList";
 import { Route, Routes, useParams } from "react-router-dom";
 import Error404 from "./Error404";
 
-const Dashboards: React.VFC = () => {
+const Dashboards: React.FC<{}> = () => {
   return (
     <Routes>
       <Route path="" element={<DashboardsListRoute />} />
@@ -14,10 +14,10 @@ const Dashboards: React.VFC = () => {
 };
 export default Dashboards;
 
-const DashboardsListRoute: React.VFC = () => {
+const DashboardsListRoute: React.FC<{}> = () => {
   return <DashboardsList />;
 };
-const DashboardRoute: React.VFC = () => {
+const DashboardRoute: React.FC<{}> = () => {
   const params = useParams();
 
   const id = parseInt(params.id as string);

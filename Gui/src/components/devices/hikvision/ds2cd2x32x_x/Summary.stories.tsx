@@ -24,13 +24,13 @@ export const Basic: Story<{}> = () => (
           field_detection: false,
         },
       }}
-      snapshotBaseUrl={undefined}
+      snapshotEndpoint={undefined}
     />
   </>
 );
 
 export const Empty: Story<{}> = () => (
   <>
-    <Component data={undefined} snapshotBaseUrl={undefined} />
+    <Component data={undefined} snapshotEndpoint={undefined} />
   </>
 );

@@ -21,13 +21,13 @@ impl Display for Descriptor {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        return write!(
+        write!(
             f,
             "{:04X}:{:04X}:{}",
             self.vid,
             self.pid,
             self.serial_number.to_string_lossy()
-        );
+        )
     }
 }
 
@@ -125,8 +125,7 @@ impl DeviceFailSafe {
         for retry_id in 0..self.retry_count {
             match try {
                 let device = self.device_get().context("device_get")?;
-                let result = device.purge().context("purge")?;
-                result
+                device.purge().context("purge")?;
             } {
                 Ok(()) => return Ok(()),
                 Err(error) => {
@@ -147,8 +146,7 @@ impl DeviceFailSafe {
         for retry_id in 0..self.retry_count {
             match try {
                 let device = self.device_get().context("device_get")?;
-                let result = device.write(data).context("write")?;
-                result
+                device.write(data).context("write")?;
             } {
                 Ok(()) => return Ok(()),
                 Err(error) => {

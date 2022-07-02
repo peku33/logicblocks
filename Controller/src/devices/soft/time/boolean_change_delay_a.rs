@@ -4,7 +4,6 @@ use crate::{
     util::{
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
 };
 use async_trait::async_trait;
@@ -22,8 +21,6 @@ pub struct Configuration {
 pub struct Device {
     configuration: Configuration,
 
-    inner_waker: waker_stream::mpsc::SenderReceiver,
-
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input: signal::state_target_last::Signal<bool>,
@@ -33,8 +30,6 @@ impl Device {
     pub fn new(configuration: Configuration) -> Self {
         Self {
             configuration,
-
-            inner_waker: waker_stream::mpsc::SenderReceiver::new(),
 
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
@@ -49,7 +44,7 @@ impl Device {
     ) -> Exited {
         let signal_input_changed_stream = self
             .signals_targets_changed_waker
-            .stream(false)
+            .stream()
             .filter(async move |()| self.signal_input.take_pending().is_some());
         pin_mut!(signal_input_changed_stream);
 

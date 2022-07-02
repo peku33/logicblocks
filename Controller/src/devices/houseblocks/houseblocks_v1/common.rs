@@ -345,7 +345,7 @@ impl Frame {
             "invalid character in crc16"
         );
         let crc16_received = hex::decode(crc16_received).context("decode")?;
-        let crc16_received = u16::from_be_bytes((&crc16_received[..]).try_into().unwrap());
+        let crc16_received = u16::from_be_bytes(crc16_received[..].try_into().unwrap());
 
         let payload = Payload::new(Box::from(&frame[2 + 4..frame.len() - 1])).context("new")?;
 

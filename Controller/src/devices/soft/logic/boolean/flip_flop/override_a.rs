@@ -5,7 +5,6 @@ use crate::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
     web::{self, uri_cursor},
 };
@@ -50,7 +49,7 @@ pub struct Device {
     signal_mode_cycle: signal::event_target_last::Signal<()>,
     signal_output: signal::state_source::Signal<bool>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: devices::gui_summary::Waker,
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
@@ -73,7 +72,7 @@ impl Device {
             signal_mode_cycle: signal::event_target_last::Signal::<()>::new(),
             signal_output: signal::state_source::Signal::<bool>::new(initial_value),
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
@@ -170,7 +169,7 @@ impl Device {
         exit_flag: async_flag::Receiver,
     ) -> Exited {
         self.signals_targets_changed_waker
-            .stream(false)
+            .stream()
             .stream_take_until_exhausted(exit_flag)
             .for_each(async move |()| {
                 self.signals_targets_changed();
@@ -192,7 +191,7 @@ impl devices::Device for Device {
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
         Some(self)
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
@@ -246,28 +245,26 @@ enum GuiSummaryMode {
     Override { value: bool },
 }
 #[derive(Serialize)]
-struct GuiSummary {
+pub struct GuiSummary {
     input_value: Option<bool>,
     mode: GuiSummaryMode,
 }
-impl devices::GuiSummaryProvider for Device {
-    fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let input_value = self.signal_input.peek_last();
-        let mode = *self.mode.read();
+impl devices::gui_summary::Device for Device {
+    fn waker(&self) -> &devices::gui_summary::Waker {
+        &self.gui_summary_waker
+    }
 
-        let gui_summary_mode = match mode {
+    type Value = GuiSummary;
+    fn value(&self) -> Self::Value {
+        let input_value = self.signal_input.peek_last();
+
+        let mode = *self.mode.read();
+        let mode = match mode {
             Mode::PassThrough => GuiSummaryMode::PassThrough,
             Mode::Override(value) => GuiSummaryMode::Override { value },
         };
-        let gui_summary = GuiSummary {
-            input_value,
-            mode: gui_summary_mode,
-        };
-        let gui_summary = Box::new(gui_summary);
-        gui_summary
-    }
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_waker.receiver_factory()
+
+        Self::Value { input_value, mode }
     }
 }
 

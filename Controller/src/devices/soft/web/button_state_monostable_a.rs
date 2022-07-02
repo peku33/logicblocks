@@ -4,7 +4,6 @@ use crate::{
     util::{
         async_flag,
         runtime::{Exited, Runnable},
-        waker_stream,
     },
     web::{self, uri_cursor},
 };
@@ -14,6 +13,7 @@ use futures::{
     pin_mut, select,
 };
 use maplit::hashmap;
+use serde::Serialize;
 use std::{borrow::Cow, time::Duration};
 use tokio::sync::watch;
 
@@ -25,7 +25,7 @@ pub struct Device {
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_output: signal::state_source::Signal<bool>,
 
-    gui_summary_waker: waker_stream::mpmc::Sender,
+    gui_summary_waker: devices::gui_summary::Waker,
 }
 impl Device {
     const VALUE_TIMEOUT: Duration = Duration::from_secs(5);
@@ -40,7 +40,7 @@ impl Device {
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_output: signal::state_source::Signal::<bool>::new(Some(false)),
 
-            gui_summary_waker: waker_stream::mpmc::Sender::new(),
+            gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
@@ -114,7 +114,7 @@ impl devices::Device for Device {
     fn as_signals_device_base(&self) -> &dyn signals::DeviceBase {
         self
     }
-    fn as_gui_summary_provider(&self) -> Option<&dyn devices::GuiSummaryProvider> {
+    fn as_gui_summary_device_base(&self) -> Option<&dyn devices::gui_summary::DeviceBase> {
         Some(self)
     }
     fn as_web_handler(&self) -> Option<&dyn uri_cursor::Handler> {
@@ -153,15 +153,20 @@ impl signals::Device for Device {
     }
 }
 
-impl devices::GuiSummaryProvider for Device {
-    fn value(&self) -> Box<dyn devices::GuiSummary> {
-        let gui_summary = *self.value_beat_receiver.borrow();
-        let gui_summary = Box::new(gui_summary);
-        gui_summary
+#[derive(Serialize)]
+#[serde(transparent)]
+pub struct GuiSummary {
+    value: bool,
+}
+impl devices::gui_summary::Device for Device {
+    fn waker(&self) -> &devices::gui_summary::Waker {
+        &self.gui_summary_waker
     }
 
-    fn waker(&self) -> waker_stream::mpmc::ReceiverFactory {
-        self.gui_summary_waker.receiver_factory()
+    type Value = GuiSummary;
+    fn value(&self) -> Self::Value {
+        let value = *self.value_beat_receiver.borrow();
+        Self::Value { value }
     }
 }
 

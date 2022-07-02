@@ -1,107 +1,109 @@
-use crate::util::atomic_cell::{AtomicCell, AtomicCellLease};
-use futures::{stream::FusedStream, task::AtomicWaker, Stream};
+use futures::{
+    stream::{FusedStream, Stream},
+    task::AtomicWaker,
+};
 use std::{
+    self,
     pin::Pin,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::atomic::{AtomicBool, Ordering},
     task::{Context, Poll},
 };
 
 #[derive(Debug)]
-pub struct Common {
-    signaled: AtomicBool,
+pub struct Signal {
+    flag: AtomicBool,
     waker: AtomicWaker,
+
+    receiver_taken: AtomicBool,
 }
-impl Common {
-    fn new() -> Self {
-        let signaled = false;
-        let signaled = AtomicBool::new(signaled);
+impl Signal {
+    pub fn new() -> Self {
+        let flag = false;
+        let flag = AtomicBool::new(flag);
 
         let waker = AtomicWaker::new();
 
-        Self { signaled, waker }
-    }
-}
+        let receiver_taken = false;
+        let receiver_taken = AtomicBool::new(receiver_taken);
 
-#[derive(Clone, Debug)]
-pub struct Sender {
-    common: Arc<Common>,
-}
-impl Sender {
-    fn new(common: Arc<Common>) -> Self {
-        Self { common }
+        Self {
+            flag,
+            waker,
+            receiver_taken,
+        }
     }
+
     pub fn wake(&self) {
-        self.common.signaled.store(true, Ordering::Relaxed);
-        self.common.waker.wake();
+        if !self.flag.swap(true, Ordering::SeqCst) {
+            self.waker.wake();
+        }
+    }
+
+    pub fn sender(&self) -> Sender {
+        Sender::new(self)
+    }
+    pub fn receiver(&self) -> Receiver {
+        Receiver::new(self)
     }
 }
 
 #[derive(Debug)]
-pub struct Receiver {
-    common: Arc<Common>,
+pub struct Sender<'s> {
+    parent: &'s Signal,
 }
-impl Receiver {
-    fn new(common: Arc<Common>) -> Self {
-        Self { common }
+impl<'s> Sender<'s> {
+    fn new(parent: &'s Signal) -> Self {
+        Self { parent }
+    }
+
+    pub fn wake(&self) {
+        self.parent.wake();
     }
 }
-impl Stream for Receiver {
+
+#[derive(Debug)]
+pub struct Receiver<'s> {
+    parent: &'s Signal,
+}
+impl<'s> Receiver<'s> {
+    fn new(parent: &'s Signal) -> Self {
+        assert!(
+            !parent.receiver_taken.swap(true, Ordering::SeqCst),
+            "receiver already taken"
+        );
+        Self { parent }
+    }
+}
+impl<'s> Stream for Receiver<'s> {
     type Item = ();
 
     fn poll_next(
         self: Pin<&mut Self>,
-        cx: &mut Context,
+        cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        self.common.waker.register(cx.waker());
-        
-        if self.common.signaled.swap(false, Ordering::Relaxed) {
+        let self_ = unsafe { self.get_unchecked_mut() };
+
+        self_.parent.waker.register(cx.waker());
+
+        let pending = self_.parent.flag.swap(false, Ordering::SeqCst);
+
+        if pending {
             Poll::Ready(Some(()))
         } else {
             Poll::Pending
         }
     }
 }
-impl FusedStream for Receiver {
+impl<'s> FusedStream for Receiver<'s> {
     fn is_terminated(&self) -> bool {
         false
     }
 }
-
-pub fn channel() -> (Sender, Receiver) {
-    let common = Common::new();
-    let common = Arc::new(common);
-
-    let sender = Sender::new(common.clone());
-    let receiver = Receiver::new(common);
-
-    (sender, receiver)
-}
-
-// SenderReceiver
-pub type ReceiverLease<'a> = AtomicCellLease<'a, Receiver>;
-#[derive(Debug)]
-pub struct SenderReceiver {
-    sender: Sender,
-    receiver_cell: AtomicCell<Receiver>,
-}
-impl SenderReceiver {
-    pub fn new() -> Self {
-        let (sender, receiver) = channel();
-        let receiver_cell = AtomicCell::new(receiver);
-        Self {
-            sender,
-            receiver_cell,
-        }
-    }
-
-    pub fn wake(&self) {
-        self.sender.wake();
-    }
-
-    pub fn receiver(&self) -> ReceiverLease {
-        self.receiver_cell.lease()
+impl<'s> Drop for Receiver<'s> {
+    fn drop(&mut self) {
+        assert!(
+            self.parent.receiver_taken.swap(false, Ordering::SeqCst),
+            "receiver not taken?"
+        );
     }
 }

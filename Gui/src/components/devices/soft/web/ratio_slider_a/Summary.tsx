@@ -8,7 +8,7 @@ export type Data = number | null;
 const ButtonValues = [null, 0.0, 0.25, 0.5, 0.75, 1.0];
 const ButtonOffsets = [0.01, 0.05, 0.1];
 
-const Summary: React.VFC<{
+const Summary: React.FC<{
   data: Data | undefined; // 0.0 - 1.0
   onValueChanged: (newValue: number | null) => void;
 }> = (props) => {
