@@ -35,10 +35,12 @@ export function useVersions(endpoint: string, topicPaths_: TopicPath[]): number[
       return;
     }
 
-    const url = new URL(urlBuild(endpoint));
-    url.searchParams.append("filter", topicPathsUnique.map((topicPath) => topicPath.join("-")).join(","));
+    const url = urlBuild(endpoint);
+    const searchParams = new URLSearchParams({
+      filter: topicPathsUnique.map((topicPath) => topicPath.join("-")).join(","),
+    });
 
-    const eventSource = new EventSource(url);
+    const eventSource = new EventSource(`${url}?${searchParams.toString()}`);
     eventSource.addEventListener("error", (event) => {
       console.error("SSETopic", "useVersions", endpoint, event);
     });
