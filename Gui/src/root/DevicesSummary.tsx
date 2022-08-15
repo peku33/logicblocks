@@ -29,18 +29,12 @@ const DevicesSummaryListRoute: React.FC<{}> = () => {
 function useDeviceIds(): DeviceId[] | undefined {
   const [deviceIds, setDeviceIds] = useState<DeviceId[]>();
 
-  useAsyncEffect(
-    async (isMounted) => {
-      const deviceIds = await getJson<DeviceId[]>(endpointBuild("/devices/list"));
-      const deviceIdsSorted = deviceIds.sort((a, b) => a - b);
-      if (!isMounted()) return;
-      setDeviceIds(deviceIdsSorted);
-    },
-    () => {
-      setDeviceIds(undefined);
-    },
-    [],
-  );
+  useAsyncEffect(async (isMounted) => {
+    const deviceIds = await getJson<DeviceId[]>(endpointBuild("/devices/list"));
+    const deviceIdsSorted = deviceIds.sort((a, b) => a - b);
+    if (!isMounted()) return;
+    setDeviceIds(deviceIdsSorted);
+  }, []);
 
   return deviceIds;
 }

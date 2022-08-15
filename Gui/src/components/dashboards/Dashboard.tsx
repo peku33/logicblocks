@@ -48,9 +48,6 @@ function useDashboardSummary(id: number): DashboardSummary | undefined {
       if (!isMounted()) return;
       setDashboardSummary(dashboardsSummary);
     },
-    () => {
-      setDashboardSummary(undefined);
-    },
     [id],
   );
 

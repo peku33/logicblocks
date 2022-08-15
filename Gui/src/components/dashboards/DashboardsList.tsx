@@ -38,17 +38,11 @@ type DashboardsSummary = DashboardSummary[];
 function useDashboardsSummary(): DashboardsSummary | undefined {
   const [dashboardsSummary, setDashboardsSummary] = useState<DashboardsSummary>();
 
-  useAsyncEffect(
-    async (isMounted) => {
-      const dashboardsSummary = await getJson<DashboardsSummary>("/gui/dashboards/summary");
-      if (!isMounted()) return;
-      setDashboardsSummary(dashboardsSummary);
-    },
-    () => {
-      setDashboardsSummary(undefined);
-    },
-    [],
-  );
+  useAsyncEffect(async (isMounted) => {
+    const dashboardsSummary = await getJson<DashboardsSummary>("/gui/dashboards/summary");
+    if (!isMounted()) return;
+    setDashboardsSummary(dashboardsSummary);
+  }, []);
 
   return dashboardsSummary;
 }

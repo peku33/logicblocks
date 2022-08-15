@@ -19,9 +19,6 @@ export function useDeviceSummary<T>(deviceSummaryContext: DeviceSummaryContext):
       if (!isMounted()) return;
       setDeviceSummary(deviceSummary);
     },
-    () => {
-      setDeviceSummary(undefined);
-    },
     [deviceId, version],
   );
 

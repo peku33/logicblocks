@@ -27,9 +27,6 @@ export function useDeviceData(deviceId: DeviceId): DeviceData | undefined {
       if (!isMounted()) return;
       setDeviceData(deviceData);
     },
-    () => {
-      setDeviceData(undefined);
-    },
     [deviceId],
   );
 
