@@ -45,7 +45,7 @@ mod gui_responder {
     use super::super::Response;
     use http::{HeaderMap, Method, Uri};
     use ouroboros::self_referencing;
-    use std::{env, include_bytes, mem};
+    use std::{env, include_bytes};
     use web_static_pack::{
         hyper_loader::{Responder, ResponderError},
         loader::Loader,
