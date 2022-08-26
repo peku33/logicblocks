@@ -2,6 +2,7 @@
 #![feature(array_chunks)]
 #![feature(associated_type_defaults)]
 #![feature(async_closure)]
+#![feature(const_fn_floating_point_arithmetic)]
 #![feature(div_duration)]
 #![feature(drain_filter)]
 #![feature(duration_consts_float)]
