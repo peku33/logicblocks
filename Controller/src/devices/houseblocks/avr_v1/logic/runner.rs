@@ -90,6 +90,7 @@ where
         }
     }
 
+    #[allow(clippy::needless_lifetimes)]
     fn device<'s>(&'s self) -> &<DF as DeviceFactory>::Device<'s> {
         // this should be safe, as we narrow down the lifetime
         self.inner.with_device(|device| unsafe {
