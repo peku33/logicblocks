@@ -148,7 +148,6 @@ impl Device {
 
     pub fn device_disable(&self) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -220,7 +219,6 @@ impl Device {
     }
     pub fn device_pause(&self) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -298,7 +296,6 @@ impl Device {
     }
     pub fn device_enable(&self) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -372,7 +369,6 @@ impl Device {
         channel_id: usize,
     ) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -445,7 +441,6 @@ impl Device {
         channel_id: usize,
     ) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -527,7 +522,6 @@ impl Device {
         channel_id: usize,
     ) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -602,7 +596,6 @@ impl Device {
         channel_id: usize,
     ) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -649,7 +642,6 @@ impl Device {
         multiplier: Multiplier,
     ) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -697,7 +689,6 @@ impl Device {
         channel_id: usize,
     ) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -739,7 +730,6 @@ impl Device {
         channel_id: usize,
     ) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
@@ -798,7 +788,6 @@ impl Device {
 
     pub fn channels_clear(&self) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         let mut gui_summary_changed = false;
 
@@ -844,7 +833,6 @@ impl Device {
         multiplier: Multiplier,
     ) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         let mut gui_summary_changed = false;
 
@@ -893,7 +881,6 @@ impl Device {
     const CHANNELS_TICK_INTERVAL: Duration = Duration::from_secs(1);
     fn channels_tick(&self) {
         let mut state = self.state.write();
-        let state = &mut *state;
 
         // we do ticks only when device is in running state
         let (channels, order_index_last) = match state.device_state {
@@ -1224,7 +1211,6 @@ impl devices::gui_summary::Device for Device {
     type Value = GuiSummary;
     fn value(&self) -> Self::Value {
         let state = self.state.read();
-        let state = &*state;
 
         let gui_summary_configuration_channels = self
             .configuration

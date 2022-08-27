@@ -4,12 +4,12 @@ use crate::{
     util::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
-        atomic_cell::{AtomicCell, AtomicCellLease},
         runtime::{Exited, Runnable},
     },
 };
 use anyhow::{Context, Error};
 use async_trait::async_trait;
+use atomic_refcell::{AtomicRefCell, AtomicRefMut};
 use futures::{
     channel::mpsc,
     future::FutureExt,
@@ -76,7 +76,7 @@ mod tests_detection_level_tracker {
         dlt.current_set(None);
         assert_eq!(dlt.segment_finalize(), None);
     }
-    
+
     #[test]
     fn sequence_1() {
         let mut dlt = DetectionLevelTracker::new();
@@ -107,11 +107,11 @@ pub struct Channel {
     detection_level_threshold: Ratio,
     detection_level_tracker: Mutex<DetectionLevelTracker>,
 
-    recorder_segment_receiver: AtomicCell<mpsc::UnboundedReceiver<Segment>>,
+    recorder_segment_receiver: AtomicRefCell<mpsc::UnboundedReceiver<Segment>>,
     recorder: Recorder,
 
     channel_segment_sender: mpsc::UnboundedSender<ChannelSegment>,
-    channel_segment_receiver: AtomicCell<mpsc::UnboundedReceiver<ChannelSegment>>,
+    channel_segment_receiver: AtomicRefCell<mpsc::UnboundedReceiver<ChannelSegment>>,
 }
 impl Channel {
     pub fn new(
@@ -124,7 +124,7 @@ impl Channel {
         let detection_level_tracker = Mutex::new(detection_level_tracker);
 
         let (recorder_segment_sender, recorder_segment_receiver) = mpsc::unbounded::<Segment>();
-        let recorder_segment_receiver = AtomicCell::new(recorder_segment_receiver);
+        let recorder_segment_receiver = AtomicRefCell::new(recorder_segment_receiver);
 
         let recorder = Recorder::new(
             rtsp_url,
@@ -135,7 +135,7 @@ impl Channel {
 
         let (channel_segment_sender, channel_segment_receiver) =
             mpsc::unbounded::<ChannelSegment>();
-        let channel_segment_receiver = AtomicCell::new(channel_segment_receiver);
+        let channel_segment_receiver = AtomicRefCell::new(channel_segment_receiver);
 
         Self {
             detection_level_threshold,
@@ -149,10 +149,10 @@ impl Channel {
         }
     }
 
-    pub fn channel_segment_receiver_lease(
+    pub fn channel_segment_receiver_borrow_mut(
         &self
-    ) -> AtomicCellLease<mpsc::UnboundedReceiver<ChannelSegment>> {
-        self.channel_segment_receiver.lease()
+    ) -> AtomicRefMut<mpsc::UnboundedReceiver<ChannelSegment>> {
+        self.channel_segment_receiver.borrow_mut()
     }
 
     // state setters
@@ -202,7 +202,7 @@ impl Channel {
         exit_flag: async_flag::Receiver,
     ) -> Result<Exited, Error> {
         self.recorder_segment_receiver
-            .lease()
+            .borrow_mut()
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
             .map(Ok)

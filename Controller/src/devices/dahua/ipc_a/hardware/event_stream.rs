@@ -4,8 +4,8 @@
  * Even sometimes there are two ending regions, which makes it even more useless.
 */
 use super::api::Api;
-use crate::util::atomic_cell::AtomicCell;
 use anyhow::{anyhow, bail, Context, Error};
+use atomic_refcell::AtomicRefCell;
 use futures::{
     future::FutureExt,
     pin_mut, select,
@@ -40,7 +40,7 @@ pub struct EventStateUpdate {
 pub struct Manager<'a> {
     api: &'a Api,
 
-    events_active: AtomicCell<HashMap<Event, Instant>>, // {event: started}
+    events_active: AtomicRefCell<HashMap<Event, Instant>>, // {event: started}
 
     events_sender: watch::Sender<Events>,
     events_receiver: watch::Receiver<Events>,
@@ -52,7 +52,7 @@ impl<'a> Manager<'a> {
 
     pub fn new(api: &'a Api) -> Self {
         let events_active = HashMap::<Event, Instant>::new();
-        let events_active = AtomicCell::new(events_active);
+        let events_active = AtomicRefCell::new(events_active);
 
         let (events_sender, events_receiver) = watch::channel(Events::new());
 
@@ -130,8 +130,7 @@ impl<'a> Manager<'a> {
         event_time: Instant,
         event_state_update: EventStateUpdate,
     ) -> bool {
-        let mut events_active = self.events_active.lease();
-        let events_active = &mut *events_active;
+        let mut events_active = self.events_active.borrow_mut();
 
         let mut changed = false;
 
@@ -171,8 +170,8 @@ impl<'a> Manager<'a> {
     ) -> bool {
         let fix_before = now - Self::EVENT_DURATION_THRESHOLD;
 
-        let mut events_active = self.events_active.lease();
-        events_active
+        self.events_active
+            .borrow_mut()
             .drain_filter(move |event, started| {
                 if *started < fix_before {
                     log::warn!("removing outdated events: {:?}", event);
@@ -188,7 +187,7 @@ impl<'a> Manager<'a> {
     fn events_propagate(&self) {
         let events = self
             .events_active
-            .lease()
+            .borrow()
             .keys()
             .cloned()
             .collect::<Events>();

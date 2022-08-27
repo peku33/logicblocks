@@ -6,13 +6,13 @@ use crate::{
         async_barrier::Barrier,
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
-        atomic_cell::AtomicCell,
         fs::{move_file, remove_all_dir_empty},
         runtime::{Exited, Runnable},
     },
 };
 use anyhow::{Context, Error};
 use async_trait::async_trait;
+use atomic_refcell::AtomicRefCell;
 use chrono::{Datelike, Timelike};
 use futures::{
     channel::mpsc,
@@ -49,7 +49,7 @@ pub struct Manager<'f> {
     initialized: Barrier,
 
     channel_segment_sender: mpsc::UnboundedSender<ChannelIdSegment>,
-    channel_segment_receiver: AtomicCell<mpsc::UnboundedReceiver<ChannelIdSegment>>,
+    channel_segment_receiver: AtomicRefCell<mpsc::UnboundedReceiver<ChannelIdSegment>>,
 }
 impl<'f> Manager<'f> {
     pub fn new(
@@ -62,7 +62,7 @@ impl<'f> Manager<'f> {
 
         let (channel_segment_sender, channel_segment_receiver) =
             mpsc::unbounded::<ChannelIdSegment>();
-        let channel_segment_receiver = AtomicCell::new(channel_segment_receiver);
+        let channel_segment_receiver = AtomicRefCell::new(channel_segment_receiver);
 
         Self {
             name,
@@ -241,7 +241,7 @@ impl<'f> Manager<'f> {
         exit_flag: async_flag::Receiver,
     ) -> Result<Exited, Error> {
         self.channel_segment_receiver
-            .lease()
+            .borrow_mut()
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
             .map(Ok)

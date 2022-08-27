@@ -11,6 +11,7 @@ anyhow = "1.0.62"
 array-init = "2.0.1"
 arrayvec = "0.7.2"
 async-trait = "0.1.57"
+atomic_refcell = "0.1.8"
 by_address = "1.0.4"
 bytes = "1.2.1"
 chrono = { version = "0.4.22", features = ["serde"] }

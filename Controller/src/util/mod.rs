@@ -2,7 +2,6 @@ pub mod anyhow_multiple_error;
 pub mod async_barrier;
 pub mod async_ext;
 pub mod async_flag;
-pub mod atomic_cell;
 pub mod fs;
 pub mod logging;
 pub mod observable;

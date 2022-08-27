@@ -64,7 +64,7 @@ impl RunnerSink {
         &self,
         exit_flag: async_flag::Receiver,
     ) -> Exited {
-        let mut sink_items_receiver = self.sink_base.items_receiver_lease();
+        let mut sink_items_receiver = self.sink_base.items_receiver_borrow_mut();
 
         // TODO: remove .boxed() workaround for https://github.com/rust-lang/rust/issues/71723
         let sink_items_receiver_runner = sink_items_receiver

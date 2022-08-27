@@ -86,7 +86,7 @@ impl RunnerChannel {
         exit_flag: async_flag::Receiver,
     ) -> Exited {
         self.channel
-            .channel_segment_receiver_lease()
+            .channel_segment_receiver_borrow_mut()
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
             .for_each(async move |channel_segment| {

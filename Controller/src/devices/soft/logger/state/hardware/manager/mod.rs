@@ -6,12 +6,12 @@ use crate::{
         async_barrier::Barrier,
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
-        atomic_cell::AtomicCell,
         runtime::{Exited, Runnable},
     },
 };
 use anyhow::{ensure, Context, Error};
 use async_trait::async_trait;
+use atomic_refcell::AtomicRefCell;
 use chrono::{DateTime, Utc};
 use crossbeam::channel;
 use futures::{
@@ -106,7 +106,7 @@ pub struct Manager<'f> {
     initialized: Barrier,
 
     sink_items_sender: channel::Sender<SinkItem>,
-    sink_items_receiver: AtomicCell<channel::Receiver<SinkItem>>,
+    sink_items_receiver: AtomicRefCell<channel::Receiver<SinkItem>>,
 }
 impl<'f> Manager<'f> {
     // general
@@ -119,7 +119,7 @@ impl<'f> Manager<'f> {
         let initialized = Barrier::new();
 
         let (sink_items_sender, sink_items_receiver) = channel::unbounded::<SinkItem>();
-        let sink_items_receiver = AtomicCell::new(sink_items_receiver);
+        let sink_items_receiver = AtomicRefCell::new(sink_items_receiver);
 
         Self {
             name,
@@ -429,7 +429,7 @@ impl<'f> Manager<'f> {
         Ok(())
     }
     async fn db_sink_items_to_buffer_to_storage(&self) -> Result<(), Error> {
-        let sink_items_receiver = self.sink_items_receiver.lease();
+        let sink_items_receiver = self.sink_items_receiver.borrow();
 
         if sink_items_receiver.is_empty() {
             return Ok(());

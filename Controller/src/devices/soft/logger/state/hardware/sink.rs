@@ -1,5 +1,5 @@
 use super::types::{Class, TimeValue, Type};
-use crate::util::atomic_cell::{AtomicCell, AtomicCellLease};
+use atomic_refcell::{AtomicRefCell, AtomicRefMut};
 use chrono::{DateTime, Utc};
 use futures::channel::mpsc;
 use std::marker::PhantomData;
@@ -35,12 +35,12 @@ pub struct SinkBase {
     class: Class,
 
     items_sender: mpsc::UnboundedSender<TimeValue>,
-    items_receiver: AtomicCell<mpsc::UnboundedReceiver<TimeValue>>,
+    items_receiver: AtomicRefCell<mpsc::UnboundedReceiver<TimeValue>>,
 }
 impl SinkBase {
     pub fn new(class: Class) -> Self {
         let (items_sender, items_receiver) = mpsc::unbounded::<TimeValue>();
-        let items_receiver = AtomicCell::new(items_receiver);
+        let items_receiver = AtomicRefCell::new(items_receiver);
 
         Self {
             class,
@@ -57,7 +57,7 @@ impl SinkBase {
         Some(typed_ref)
     }
 
-    pub fn items_receiver_lease(&self) -> AtomicCellLease<mpsc::UnboundedReceiver<TimeValue>> {
-        self.items_receiver.lease()
+    pub fn items_receiver_borrow_mut(&self) -> AtomicRefMut<mpsc::UnboundedReceiver<TimeValue>> {
+        self.items_receiver.borrow_mut()
     }
 }

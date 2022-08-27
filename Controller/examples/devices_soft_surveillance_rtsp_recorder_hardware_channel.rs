@@ -45,8 +45,8 @@ async fn main() -> Result<(), Error> {
     let channel_runner = channel.run(exit_flag_sender.receiver());
 
     // delete recorded clips
-    let mut channel_segment_receiver_lease = channel.channel_segment_receiver_lease();
-    let segment_deleter_runner = channel_segment_receiver_lease
+    let mut channel_segment_receiver = channel.channel_segment_receiver_borrow_mut();
+    let segment_deleter_runner = channel_segment_receiver
         .by_ref()
         .stream_take_until_exhausted(exit_flag_sender.receiver())
         .for_each(async move |channel_segment| {
