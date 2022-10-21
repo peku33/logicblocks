@@ -52,8 +52,8 @@ WITH
             `sink_id`,
             `timestamp_group_start`,
 
-            LAST_VALUE(`timestamp_start`) OVER(PARTITION BY `sink_id`, `timestamp_group_start` ORDER BY `timestamp_start` DESC) AS `value_last_timestamp`,
-            LAST_VALUE(`value`) OVER(PARTITION BY `sink_id`, `timestamp_group_start` ORDER BY `timestamp_start` DESC) AS `value_last_value`,
+            LAST_VALUE(`timestamp_start`) OVER(PARTITION BY `sink_id`, `timestamp_group_start` ORDER BY `timestamp_start`) AS `value_last_timestamp`,
+            LAST_VALUE(`value`) OVER(PARTITION BY `sink_id`, `timestamp_group_start` ORDER BY `timestamp_start`) AS `value_last_value`,
 
             SUM(IIF(`value` IS NOT NULL, `timestamp_end` - `timestamp_start`, 0)) AS `weight`,
             SUM(IIF(`value` IS NOT NULL, (`timestamp_end` - `timestamp_start`) * `value`, 0)) AS `sum`
