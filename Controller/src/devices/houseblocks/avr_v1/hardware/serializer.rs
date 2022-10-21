@@ -29,7 +29,7 @@ impl Serializer {
         value: u8,
     ) {
         let mut buffer_hex = [0u8; 2];
-        hex::encode_to_slice(&value.to_be_bytes(), &mut buffer_hex).unwrap();
+        hex::encode_to_slice(value.to_be_bytes(), &mut buffer_hex).unwrap();
         for item_hex in buffer_hex.iter_mut() {
             *item_hex = item_hex.to_ascii_uppercase();
         }
@@ -40,7 +40,7 @@ impl Serializer {
         value: u16,
     ) {
         let mut buffer_hex = [0u8; 4];
-        hex::encode_to_slice(&value.to_be_bytes(), &mut buffer_hex).unwrap();
+        hex::encode_to_slice(value.to_be_bytes(), &mut buffer_hex).unwrap();
         for item_hex in buffer_hex.iter_mut() {
             *item_hex = item_hex.to_ascii_uppercase();
         }

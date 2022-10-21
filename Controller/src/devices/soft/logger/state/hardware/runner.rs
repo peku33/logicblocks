@@ -179,8 +179,8 @@ impl<'r> RunnerSinksRunner<'r> {
 
     async fn finalize(self) {
         self.inner
-            .into_iter()
-            .map(move |(_sink_id, runner_sink_runner)| runner_sink_runner.finalize())
+            .into_values()
+            .map(move |runner_sink_runner| runner_sink_runner.finalize())
             .collect::<JoinAll<_>>()
             .await;
     }

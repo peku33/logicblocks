@@ -202,8 +202,8 @@ impl<'a> Responder<'a> {
     ) -> Exited {
         let waker_to_sender_runner = self
             .topic_paths
-            .iter()
-            .map(async move |(_topic_path, value)| {
+            .values()
+            .map(async move |value| {
                 let receiver = value.waker.receiver();
                 let sender = &value.sender;
 

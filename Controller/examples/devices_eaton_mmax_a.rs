@@ -2,7 +2,7 @@
 #![allow(clippy::unused_unit)]
 
 use anyhow::{bail, Context, Error};
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use futures::{future::TryFutureExt, join, stream::StreamExt};
 use logicblocks_controller::{
     datatypes::ratio::Ratio,
@@ -17,7 +17,7 @@ use logicblocks_controller::{
 use std::str::FromStr;
 use tokio::signal::ctrl_c;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ArgumentsParity(serial::Parity);
 impl FromStr for ArgumentsParity {
     type Err = Error;
@@ -34,7 +34,7 @@ impl FromStr for ArgumentsParity {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ArgumentsSpeedSetpoint(Ratio);
 impl FromStr for ArgumentsSpeedSetpoint {
     type Err = Error;
@@ -67,7 +67,7 @@ enum ArgumentsSubcommand {
 struct ArgumentsSet {
     speed_setpoint: ArgumentsSpeedSetpoint,
 
-    #[clap(parse(try_from_str))]
+    #[clap(action = ArgAction::Set)]
     reverse: bool,
 }
 

@@ -421,14 +421,14 @@ impl MotionDetection {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum SmartMotionDetectionSensitivity {
     Low,
     Medium,
     High,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct SmartMotionDetection {
     pub human: bool,
     pub vehicle: bool,

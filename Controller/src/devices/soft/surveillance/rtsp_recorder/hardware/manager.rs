@@ -348,7 +348,7 @@ impl<'f> Manager<'f> {
         for (recording_id, path_storage_relative) in recordings_to_remove.iter() {
             let result: Result<(), Error> = try {
                 // remove file
-                let path_storage = storage_directory_root_path.join(&path_storage_relative);
+                let path_storage = storage_directory_root_path.join(path_storage_relative);
                 fs::remove_file(&path_storage)
                     .await
                     .context("remove_file")?;

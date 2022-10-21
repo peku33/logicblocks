@@ -37,7 +37,7 @@ impl<'a> Parser<'a> {
             self.expect_byte().context("expect_byte 2")?,
         ];
         let mut value = [0u8; 1];
-        hex::decode_to_slice(&value_hex, &mut value).context("decode_to_slice")?;
+        hex::decode_to_slice(value_hex, &mut value).context("decode_to_slice")?;
         Ok(u8::from_be_bytes(value))
     }
     pub fn expect_u16(&mut self) -> Result<u16, Error> {
@@ -48,7 +48,7 @@ impl<'a> Parser<'a> {
             self.expect_byte().context("expect_byte 4")?,
         ];
         let mut value = [0u8; 2];
-        hex::decode_to_slice(&value_hex, &mut value).context("decode_to_slice")?;
+        hex::decode_to_slice(value_hex, &mut value).context("decode_to_slice")?;
         Ok(u16::from_be_bytes(value))
     }
     pub fn expect_bool_array_8(&mut self) -> Result<[bool; 8], Error> {

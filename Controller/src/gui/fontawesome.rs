@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Copy, Clone, Serialize, Debug)]
+#[derive(Clone, Copy, Serialize, Debug)]
 #[serde(into = "IconPrefixString")]
 pub enum IconPrefix {
     Solid,

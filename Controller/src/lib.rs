@@ -7,7 +7,6 @@
 #![feature(drain_filter)]
 #![feature(duration_consts_float)]
 #![feature(exact_size_is_empty)]
-#![feature(generic_associated_types)]
 #![feature(hash_drain_filter)]
 #![feature(inherent_associated_types)]
 #![feature(int_roundings)]
@@ -18,7 +17,6 @@
 #![feature(try_blocks)]
 #![allow(dead_code)]
 #![allow(incomplete_features)]
-#![warn(clippy::all)]
 #![allow(clippy::bool_assert_comparison)]
 #![allow(clippy::from_over_into)] // https://github.com/rust-lang/rust-clippy/issues/6607
 #![allow(clippy::large_enum_variant)]

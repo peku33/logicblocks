@@ -61,7 +61,7 @@ pub struct SinkItem {
     pub time_value: TimeValue,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum DbClass {
     Boolean,
     Real,
@@ -78,7 +78,7 @@ impl DbClass {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 enum DbValue {
     Boolean(Option<bool>),
     Real(Option<f64>),

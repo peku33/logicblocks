@@ -2,7 +2,7 @@
 #![allow(clippy::unused_unit)]
 
 use anyhow::{Context, Error};
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use http::uri::Authority;
 use logicblocks_controller::{
@@ -39,7 +39,7 @@ struct CommandConfigure {
     device_name: String,
     device_id: u8,
     shared_user_password: String,
-    #[clap(parse(try_from_str))]
+    #[clap(action = ArgAction::Set)]
     video_upside_down: bool,
     overlay_text: Option<String>,
 }

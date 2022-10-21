@@ -916,7 +916,7 @@ pub mod spa {
     }
 
     const A42_L0_ENTRIES_COUNT: usize = 64;
-    const A42_L0_ENTRIES: [A42Entry; A42_L0_ENTRIES_COUNT] = [
+    static A42_L0_ENTRIES: [A42Entry; A42_L0_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 175347046,
             b_cap: 0.0,
@@ -1240,7 +1240,7 @@ pub mod spa {
     ];
 
     const A42_L1_ENTRIES_COUNT: usize = 34;
-    const A42_L1_ENTRIES: [A42Entry; A42_L1_ENTRIES_COUNT] = [
+    static A42_L1_ENTRIES: [A42Entry; A42_L1_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 628331966747,
             b_cap: 0.0,
@@ -1414,7 +1414,7 @@ pub mod spa {
     ];
 
     const A42_L2_ENTRIES_COUNT: usize = 20;
-    const A42_L2_ENTRIES: [A42Entry; A42_L2_ENTRIES_COUNT] = [
+    static A42_L2_ENTRIES: [A42Entry; A42_L2_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 52919,
             b_cap: 0.0,
@@ -1518,7 +1518,7 @@ pub mod spa {
     ];
 
     const A42_L3_ENTRIES_COUNT: usize = 7;
-    const A42_L3_ENTRIES: [A42Entry; A42_L3_ENTRIES_COUNT] = [
+    static A42_L3_ENTRIES: [A42Entry; A42_L3_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 289,
             b_cap: 5.844,
@@ -1557,7 +1557,7 @@ pub mod spa {
     ];
 
     const A42_L4_ENTRIES_COUNT: usize = 3;
-    const A42_L4_ENTRIES: [A42Entry; A42_L4_ENTRIES_COUNT] = [
+    static A42_L4_ENTRIES: [A42Entry; A42_L4_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 114,
             b_cap: 3.142,
@@ -1576,14 +1576,14 @@ pub mod spa {
     ];
 
     const A42_L5_ENTRIES_COUNT: usize = 1;
-    const A42_L5_ENTRIES: [A42Entry; A42_L5_ENTRIES_COUNT] = [A42Entry {
+    static A42_L5_ENTRIES: [A42Entry; A42_L5_ENTRIES_COUNT] = [A42Entry {
         a_cap: 1,
         b_cap: 3.14,
         c_cap: 0.0,
     }];
 
     const A42_B0_ENTRIES_COUNT: usize = 5;
-    const A42_B0_ENTRIES: [A42Entry; A42_B0_ENTRIES_COUNT] = [
+    static A42_B0_ENTRIES: [A42Entry; A42_B0_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 280,
             b_cap: 3.199,
@@ -1612,7 +1612,7 @@ pub mod spa {
     ];
 
     const A42_B1_ENTRIES_COUNT: usize = 2;
-    const A42_B1_ENTRIES: [A42Entry; A42_B1_ENTRIES_COUNT] = [
+    static A42_B1_ENTRIES: [A42Entry; A42_B1_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 9,
             b_cap: 3.9,
@@ -1626,7 +1626,7 @@ pub mod spa {
     ];
 
     const A42_R0_ENTRIES_COUNT: usize = 40;
-    const A42_R0_ENTRIES: [A42Entry; A42_R0_ENTRIES_COUNT] = [
+    static A42_R0_ENTRIES: [A42Entry; A42_R0_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 100013989,
             b_cap: 0.0,
@@ -1830,7 +1830,7 @@ pub mod spa {
     ];
 
     const A42_R1_ENTRIES_COUNT: usize = 10;
-    const A42_R1_ENTRIES: [A42Entry; A42_R1_ENTRIES_COUNT] = [
+    static A42_R1_ENTRIES: [A42Entry; A42_R1_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 103019,
             b_cap: 1.10749,
@@ -1884,7 +1884,7 @@ pub mod spa {
     ];
 
     const A42_R2_ENTRIES_COUNT: usize = 6;
-    const A42_R2_ENTRIES: [A42Entry; A42_R2_ENTRIES_COUNT] = [
+    static A42_R2_ENTRIES: [A42Entry; A42_R2_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 4359,
             b_cap: 5.7846,
@@ -1918,7 +1918,7 @@ pub mod spa {
     ];
 
     const A42_R3_ENTRIES_COUNT: usize = 2;
-    const A42_R3_ENTRIES: [A42Entry; A42_R3_ENTRIES_COUNT] = [
+    static A42_R3_ENTRIES: [A42Entry; A42_R3_ENTRIES_COUNT] = [
         A42Entry {
             a_cap: 145,
             b_cap: 4.273,
@@ -1932,7 +1932,7 @@ pub mod spa {
     ];
 
     const A42_R4_ENTRIES_COUNT: usize = 1;
-    const A42_R4_ENTRIES: [A42Entry; A42_R4_ENTRIES_COUNT] = [A42Entry {
+    static A42_R4_ENTRIES: [A42Entry; A42_R4_ENTRIES_COUNT] = [A42Entry {
         a_cap: 4,
         b_cap: 2.56,
         c_cap: 6283.08,
@@ -1946,7 +1946,7 @@ pub mod spa {
         div_pow3: i32,
     }
     const XI_ENTRIES_COUNT: usize = 5;
-    const XI_ENTRIES: [XIEntry; XI_ENTRIES_COUNT] = [
+    static XI_ENTRIES: [XIEntry; XI_ENTRIES_COUNT] = [
         XIEntry {
             constant: 297.85036,
             mul_pow1: 445267.111480,
@@ -1992,7 +1992,7 @@ pub mod spa {
         d: f64,
     }
     const A43_ENTRIES_COUNT: usize = 63;
-    const A43_ENTRIES: [A43Entry; A43_ENTRIES_COUNT] = [
+    static A43_ENTRIES: [A43Entry; A43_ENTRIES_COUNT] = [
         A43Entry {
             y_vec: [0, 0, 0, 0, 1],
             a: -171996,

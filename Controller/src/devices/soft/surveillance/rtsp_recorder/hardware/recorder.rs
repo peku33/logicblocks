@@ -141,33 +141,33 @@ impl Recorder {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             // global options
-            .args(&["-loglevel", "error"])
+            .args(["-loglevel", "error"])
             .arg("-hide_banner")
             .arg("-nostats")
             .arg("-nostdin")
-            .args(&["-strict", "experimental"])
-            .args(&["-sn", "-dn"])
-            .args(&["-threads", "1"])
+            .args(["-strict", "experimental"])
+            .args(["-sn", "-dn"])
+            .args(["-threads", "1"])
             // input options
-            .args(&["-f", "rtsp"])
-            .args(&["-rtsp_transport", "tcp"])
-            .args(&["-use_wallclock_as_timestamps", "1"])
-            .args(&["-stimeout", "1000000"])
-            .args(&["-i", rtsp_url.to_string().as_str()])
+            .args(["-f", "rtsp"])
+            .args(["-rtsp_transport", "tcp"])
+            .args(["-use_wallclock_as_timestamps", "1"])
+            .args(["-stimeout", "1000000"])
+            .args(["-i", rtsp_url.to_string().as_str()])
             // i/o options
-            .args(&["-codec", "copy"])
+            .args(["-codec", "copy"])
             // output options
-            .args(&["-f", "segment"])
-            .args(&["-segment_format", "matroska"])
-            .args(&[
+            .args(["-f", "segment"])
+            .args(["-segment_format", "matroska"])
+            .args([
                 "-segment_time",
                 self.segment_time.as_secs().to_string().as_str(),
             ])
-            .args(&["-segment_atclocktime", "1"])
-            .args(&["-strftime", "1"])
-            .args(&["-break_non_keyframes", "1"])
-            .args(&["-reset_timestamps", "1"])
-            .args(&["-avoid_negative_ts", "1"])
+            .args(["-segment_atclocktime", "1"])
+            .args(["-strftime", "1"])
+            .args(["-break_non_keyframes", "1"])
+            .args(["-reset_timestamps", "1"])
+            .args(["-avoid_negative_ts", "1"])
             .arg(self.temporary_storage_directory.join("%s.mkv").as_os_str());
         command
     }

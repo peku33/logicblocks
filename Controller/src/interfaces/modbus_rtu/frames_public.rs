@@ -68,25 +68,21 @@ impl ReadBitsGenericResponse {
         }
         let bit_bytes_count_received = data[0] as usize;
 
-        let bit_bytes_count_expected = request.number_of_bits.div_ceil(8) as usize;
+        let bit_bytes_count_expected = request.number_of_bits.div_ceil(8);
         ensure!(
             bit_bytes_count_received == bit_bytes_count_expected,
             "bit bytes count mismatch"
         );
 
         let bits_values_bytes = &data[1..];
-        match bits_values_bytes
-            .len()
-            .cmp(&(bit_bytes_count_expected as usize))
-        {
+        match bits_values_bytes.len().cmp(&bit_bytes_count_expected) {
             Ordering::Less => return Ok(None),
             Ordering::Equal => {}
             Ordering::Greater => return Err(anyhow!("bit bytes count overflow")),
         }
 
-        let bits_values =
-            bits_bytes_to_slice_checked(bits_values_bytes, request.number_of_bits as usize)
-                .context("bits_bytes_to_slice_checked")?;
+        let bits_values = bits_bytes_to_slice_checked(bits_values_bytes, request.number_of_bits)
+            .context("bits_bytes_to_slice_checked")?;
 
         Ok(Some(Self { bits_values }))
     }
@@ -302,17 +298,14 @@ impl ReadWordsGenericResponse {
         }
         let words_bytes_count_received = data[0] as usize;
 
-        let words_bytes_count_expected = (request.number_of_words as usize) * 2;
+        let words_bytes_count_expected = request.number_of_words * 2;
         ensure!(
             words_bytes_count_received == words_bytes_count_expected,
             "words bytes count mismatch"
         );
 
         let words_values_bytes = &data[1..];
-        match words_values_bytes
-            .len()
-            .cmp(&(words_bytes_count_expected as usize))
-        {
+        match words_values_bytes.len().cmp(&words_bytes_count_expected) {
             Ordering::Less => return Ok(None),
             Ordering::Equal => {}
             Ordering::Greater => return Err(anyhow!("word bytes count overflow")),

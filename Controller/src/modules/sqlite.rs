@@ -57,19 +57,19 @@ impl<'f> SQLite<'f> {
         // initialization
         let mut connection = Connection::open(sqlite_file).context("open")?;
         connection
-            .pragma_update(None, "auto_vacuum", &"INCREMENTAL")
+            .pragma_update(None, "auto_vacuum", "INCREMENTAL")
             .context("auto_vacuum")?;
         connection
-            .pragma_update(None, "foreign_keys", &true)
+            .pragma_update(None, "foreign_keys", true)
             .context("foreign_keys")?;
         connection
-            .pragma_update(None, "temp_store", &"MEMORY")
+            .pragma_update(None, "temp_store", "MEMORY")
             .context("temp_store")?;
         connection
-            .pragma_update(None, "journal_mode", &"WAL")
+            .pragma_update(None, "journal_mode", "WAL")
             .context("journal_mode")?;
         connection
-            .pragma_update(None, "synchronous", &"NORMAL")
+            .pragma_update(None, "synchronous", "NORMAL")
             .context("synchronous")?;
         // TODO: set locking_mode to EXCLUSIVE, as we are using single connection?
         // this won't allow to view the database while it's opened though

@@ -168,7 +168,7 @@ impl<'m> signals::Device for Device<'m> {
     }
 }
 
-#[derive(Copy, Clone, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize)]
 #[serde(tag = "state")]
 pub enum GuiSummary {
     Initializing,

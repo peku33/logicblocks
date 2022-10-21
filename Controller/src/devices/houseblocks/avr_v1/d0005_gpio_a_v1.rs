@@ -803,7 +803,7 @@ pub mod hardware {
     }
 
     // device
-    #[derive(Copy, Clone, Debug)]
+    #[derive(Clone, Copy, Debug)]
     pub struct Configuration {
         pub block_functions: BlockFunctions,
     }
