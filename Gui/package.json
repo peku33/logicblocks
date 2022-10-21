@@ -9,7 +9,7 @@
     "@fortawesome/react-fontawesome": "^0.2",
     "@types/deep-equal": "^1",
     "@types/glob-base": "^0.3",
-    "@types/jest": "^28",
+    "@types/jest": "^29",
     "@types/node": "^18",
     "@types/react": "^18",
     "@types/react-dom": "^18",
