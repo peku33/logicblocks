@@ -152,7 +152,7 @@ impl Recorder {
             .args(["-f", "rtsp"])
             .args(["-rtsp_transport", "tcp"])
             .args(["-use_wallclock_as_timestamps", "1"])
-            .args(["-stimeout", "1000000"])
+            .args(["-timeout", "1000000"])
             .args(["-i", rtsp_url.to_string().as_str()])
             // i/o options
             .args(["-codec", "copy"])
