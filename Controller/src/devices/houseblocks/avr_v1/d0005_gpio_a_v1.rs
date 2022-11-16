@@ -939,6 +939,7 @@ pub mod hardware {
             driver: &ApplicationDriver<'_>,
         ) -> Result<(), Error> {
             // stage 1 - poll + read fast values
+            // stage 1 request is always used, to check device uptime
             let mut stage_1_properties_ins_changed = false;
 
             let status_led_request = self.properties.status_led.device_pending();
@@ -968,7 +969,6 @@ pub mod hardware {
                 }),
                 ds18x20s_request: false,
             };
-            // stage 1 request is always used, to check device uptime
             let stage_1_request_payload = stage_1_request.to_payload();
             let stage_1_response_payload = driver
                 .transaction_out_in(stage_1_request_payload, None)

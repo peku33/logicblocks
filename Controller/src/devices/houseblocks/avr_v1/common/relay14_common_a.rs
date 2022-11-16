@@ -142,10 +142,10 @@ pub mod logic {
             self.signal_outputs
                 .iter()
                 .enumerate()
-                .map(|(output_index, output_signal)| {
+                .map(|(output_index, signal_output)| {
                     (
                         SignalIdentifier::Output(output_index),
-                        output_signal as &dyn signal::Base,
+                        signal_output as &dyn signal::Base,
                     )
                 })
                 .collect()

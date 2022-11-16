@@ -134,10 +134,10 @@ where
                 self.signal_inputs
                     .iter()
                     .enumerate()
-                    .map(|(input_index, input_signal)| {
+                    .map(|(input_index, signal_input)| {
                         (
                             SignalIdentifier::Input(input_index),
-                            input_signal as &dyn signal::Base,
+                            signal_input as &dyn signal::Base,
                         )
                     }),
             )
