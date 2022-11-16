@@ -9,6 +9,7 @@ use crate::datatypes::{
     multiplier::Multiplier,
     ratio::Ratio,
     real::Real,
+    resistance::Resistance,
     temperature::Temperature,
     voltage::Voltage,
 };
@@ -27,5 +28,6 @@ impl Value for IpcRtspUrl {}
 impl Value for Multiplier {}
 impl Value for Ratio {}
 impl Value for Real {}
+impl Value for Resistance {}
 impl Value for Temperature {}
 impl Value for Voltage {}

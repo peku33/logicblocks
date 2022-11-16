@@ -6,5 +6,6 @@ pub mod multiplier;
 pub mod pressure;
 pub mod ratio;
 pub mod real;
+pub mod resistance;
 pub mod temperature;
 pub mod voltage;
