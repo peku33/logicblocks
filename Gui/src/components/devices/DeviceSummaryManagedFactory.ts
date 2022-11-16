@@ -3,6 +3,7 @@ import { DeviceSummaryManaged } from "./DeviceSummaryManaged";
 import dahuaIpcA from "./dahua/ipc_a/SummaryManaged";
 import eatonMmaxA from "./eaton/mmax_a/SummaryManaged";
 import hikvisionDs2cd2x32xX from "./hikvision/ds2cd2x32x_x/SummaryManaged";
+import houseblocksAvrV1D0002ReedSwitchV1 from "./houseblocks/avr_v1/d0002_reed_switch_v1/SummaryManaged";
 import houseblocksAvrV1D0003JunctionBoxMinimalV1 from "./houseblocks/avr_v1/d0003_junction_box_minimal_v1/SummaryManaged";
 import houseblocksAvrV1D0005GpioAV1 from "./houseblocks/avr_v1/d0005_gpio_a_v1/SummaryManaged";
 import houseblocksAvrV1D0006Relay14OptoAV1 from "./houseblocks/avr_v1/d0006_relay14_opto_a_v1/SummaryManaged";
@@ -25,6 +26,8 @@ export function getByClass(class_: string): DeviceSummaryManaged {
       return eatonMmaxA;
     case "hikvision/ds2cd2x32x_x":
       return hikvisionDs2cd2x32xX;
+    case "houseblocks/avr_v1/reed_switch_v1":
+      return houseblocksAvrV1D0002ReedSwitchV1;
     case "houseblocks/avr_v1/junction_box_minimal_v1":
       return houseblocksAvrV1D0003JunctionBoxMinimalV1;
     case "houseblocks/avr_v1/gpio_a_v1":
