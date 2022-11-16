@@ -1,8 +1,11 @@
-import { kelvinToCelsius, kelvinToFahrenheit } from "datatypes/Temperature";
+import Temperature, {
+  formatTemperatureCelsiusOrUnknown,
+  formatTemperatureFahrenheitOrUnknown,
+} from "datatypes/Temperature";
 import styled from "styled-components";
 
 export interface Data {
-  temperature: number;
+  temperature: Temperature | null;
 }
 
 const Component: React.FC<{
@@ -14,11 +17,9 @@ const Component: React.FC<{
     <Wrapper>
       <TemperatureWrapper>
         <TemperatureLabel>Temperature:</TemperatureLabel>
-        <TemperatureValuePrimary>
-          {data !== undefined ? kelvinToCelsius(data.temperature).toFixed(2) : "?"}&deg;C
-        </TemperatureValuePrimary>
+        <TemperatureValuePrimary>{formatTemperatureCelsiusOrUnknown(data?.temperature, 2)}</TemperatureValuePrimary>
         <TemperatureValueSecondary>
-          {data !== undefined ? kelvinToFahrenheit(data.temperature).toFixed(2) : "?"}&deg;F
+          {formatTemperatureFahrenheitOrUnknown(data?.temperature, 2)}
         </TemperatureValueSecondary>
       </TemperatureWrapper>
     </Wrapper>

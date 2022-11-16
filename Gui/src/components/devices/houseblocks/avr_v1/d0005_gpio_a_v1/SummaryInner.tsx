@@ -1,8 +1,8 @@
 import { Property } from "csstype";
 import ColorRgbBoolean from "datatypes/ColorRgbBoolean";
 import Ds18x20State from "datatypes/Ds18x20";
-import { kelvinToCelsius, kelvinToFahrenheit } from "datatypes/Temperature";
-import Voltage from "datatypes/Voltage";
+import { formatTemperatureCelsiusOrUnknown, formatTemperatureFahrenheitOrUnknown } from "datatypes/Temperature";
+import Voltage, { formatVoltageOrUnknown } from "datatypes/Voltage";
 import styled from "styled-components";
 
 export interface Data {
@@ -306,7 +306,7 @@ const LayoutItemAnalogIn: React.FC<{
     <LayoutItemInner backgroundColor="#FDCEB9">
       <LayoutItemInnerBlockPinLabel block={block} pin={pin} />
       <LayoutItemInnerLabel>Analog Input</LayoutItemInnerLabel>
-      <LayoutItemInnerValue>{voltage !== null ? `${voltage.toFixed(4)}V` : "Unknown"}</LayoutItemInnerValue>
+      <LayoutItemInnerValue>{formatVoltageOrUnknown(voltage, 4)}</LayoutItemInnerValue>
     </LayoutItemInner>
   );
 };
@@ -353,12 +353,9 @@ const LayoutItemDs18x20: React.FC<{
       <LayoutItemInnerLabel>DS18x20</LayoutItemInnerLabel>
       {state !== null ? (
         <>
-          {state.temperature != null ? (
-            <>
-              <LayoutItemInnerValue>{kelvinToCelsius(state.temperature).toFixed(2)}&deg;C</LayoutItemInnerValue>
-              <LayoutItemInnerValue>{kelvinToFahrenheit(state.temperature).toFixed(2)}&deg;F</LayoutItemInnerValue>
-            </>
-          ) : null}
+          <LayoutItemInnerValue>{formatTemperatureCelsiusOrUnknown(state?.temperature, 2)}</LayoutItemInnerValue>
+          <LayoutItemInnerValue>{formatTemperatureFahrenheitOrUnknown(state?.temperature, 2)}</LayoutItemInnerValue>
+
           <LayoutItemInnerValue>
             {state.sensor_type} ({state.reset_count})
           </LayoutItemInnerValue>

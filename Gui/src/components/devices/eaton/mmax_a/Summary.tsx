@@ -1,7 +1,9 @@
 import { Chip, ChipsGroup, ChipType } from "components/common/Chips";
 import GaugeLinear from "components/common/GaugeLinear";
 import GaugeLinearRatio from "components/datatypes/ratio/GaugeLinear";
+import { formatVoltage } from "datatypes/Voltage";
 import styled from "styled-components";
+import { formatSI } from "util/Number";
 
 const DC_LINK_VOLTAGE_MAX = 400;
 
@@ -181,14 +183,14 @@ const SectionContent = styled.div`
 `;
 
 function voltageSerializer(voltage: number): string {
-  return `${voltage.toFixed(2)}V`;
+  return formatVoltage(voltage, 2);
 }
-function currentSerializer(voltage: number): string {
-  return `${voltage.toFixed(2)}A`;
+function currentSerializer(current: number): string {
+  return formatSI(current, 2, "A");
 }
-function frequencySerializer(voltage: number): string {
-  return `${voltage.toFixed(2)}Hz`;
+function frequencySerializer(frequency: number): string {
+  return formatSI(frequency, 1, "Hz");
 }
-function rpmSerializer(voltage: number): string {
-  return `${voltage.toFixed(0)}rpm`;
+function rpmSerializer(rpm: number): string {
+  return formatSI(rpm, 0, "rpm");
 }

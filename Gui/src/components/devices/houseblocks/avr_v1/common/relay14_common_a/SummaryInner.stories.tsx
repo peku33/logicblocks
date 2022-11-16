@@ -9,7 +9,7 @@ export const Basic: Story<{}> = () => (
   <>
     <Component
       data={{
-        values: [...Array(OUTPUT_COUNT)].map((_, index) => index % 2 === 0),
+        values: Array.from(Array(OUTPUT_COUNT).keys()).map((index) => index % 2 === 0),
       }}
     />
   </>

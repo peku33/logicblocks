@@ -1,6 +1,6 @@
 import Colors from "components/common/Colors";
-import { formatDegreesOrUndefined } from "datatypes/Angle";
-import { formatRealOrUndefined } from "datatypes/Real";
+import { formatDegreesOrUnknown } from "datatypes/Angle";
+import { formatRealOrUnknown } from "datatypes/Real";
 import styled from "styled-components";
 
 export interface DataInner {
@@ -27,9 +27,9 @@ const Component: React.FC<{
         </TableHeader>
         <TableBody>
           <TableRow>
-            <TableCell>{formatRealOrUndefined(data?.julian_day, 2)}</TableCell>
-            <TableCell>{formatDegreesOrUndefined(data?.elevation, 2)}</TableCell>
-            <TableCell>{formatDegreesOrUndefined(data?.asimuth, 2)}</TableCell>
+            <TableCell>{formatRealOrUnknown(data?.julian_day, 2)}</TableCell>
+            <TableCell>{formatDegreesOrUnknown(data?.elevation, 2)}</TableCell>
+            <TableCell>{formatDegreesOrUnknown(data?.asimuth, 2)}</TableCell>
           </TableRow>
         </TableBody>
       </Table>
