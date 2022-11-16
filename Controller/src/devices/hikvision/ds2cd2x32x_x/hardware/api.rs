@@ -145,7 +145,7 @@ impl Api {
     ) -> Result<Bytes, Error> {
         let request = self
             .reqwest_client
-            .request(method, &self.url_build(path_and_query).to_string())
+            .request(method, self.url_build(path_and_query).to_string())
             .timeout(Self::REQUEST_TIMEOUT)
             .basic_auth("admin", Some(&self.admin_password))
             .header(http::header::ACCEPT, "application/octet-stream");
@@ -170,7 +170,7 @@ impl Api {
     ) -> Result<Element, Error> {
         let mut request = self
             .reqwest_client
-            .request(method, &self.url_build(path_and_query).to_string())
+            .request(method, self.url_build(path_and_query).to_string())
             .timeout(Self::REQUEST_TIMEOUT)
             .basic_auth("admin", Some(&self.admin_password))
             .header(http::header::ACCEPT, "application/xml");
@@ -201,7 +201,7 @@ impl Api {
     ) -> Result<BoundaryStreamExtractor, Error> {
         let request = self
             .reqwest_client
-            .request(Method::GET, &self.url_build(path_and_query).to_string())
+            .request(Method::GET, self.url_build(path_and_query).to_string())
             .basic_auth("admin", Some(&self.admin_password))
             .header(http::header::ACCEPT, "multipart/mixed");
 

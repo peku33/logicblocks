@@ -713,6 +713,7 @@ pub mod spa {
             pressure::Pressure,
             temperature::{Temperature, Unit},
         };
+        use approx::assert_relative_eq;
         use chrono::{FixedOffset, NaiveDate, NaiveTime, TimeZone, Timelike, Utc};
         use std::time::Duration;
 
@@ -731,18 +732,26 @@ pub mod spa {
             assert_eq!(datetime.hour(), 19);
 
             let spa1 = SPA1::calculate(spa0, datetime, delta_t);
-            assert!((spa1.jd - 2452930.312847).abs() < 1e-5);
-            assert!((spa1.l_cap - 24.0182616917_f64.to_radians()).abs() < 1e-5);
-            assert!((spa1.b_cap - -0.0001011219_f64.to_radians()).abs() < 1e-5);
-            assert!((spa1.r_cap - 0.9965422974).abs() < 1e-5);
-            assert!((spa1.theta_cap - 204.0182616917_f64.to_radians()).abs() < 1e-5);
-            assert!((spa1.beta - 0.0001011219_f64.to_radians()).abs() < 1e-5);
-            assert!((spa1.delta_psi - -0.00399840_f64.to_radians()).abs() < 1e-5);
-            assert!((spa1.delta_epsilon - 0.00166657_f64.to_radians()).abs() < 1e-5);
-            assert!((spa1.epsilon - 23.440465_f64.to_radians()).abs() < 1e-5);
-            assert!((spa1.lambda - 204.0085519281_f64.to_radians()).abs() < 1e-5);
-            assert!((spa1.alpha - 202.22741_f64.to_radians()).abs() < 1e-5);
-            assert!((spa1.delta - -9.31434_f64.to_radians()).abs() < 1e-5);
+            assert_relative_eq!(spa1.jd, 2452930.312847, epsilon = 1e-5);
+            assert_relative_eq!(spa1.l_cap, 24.0182616917_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa1.b_cap, -0.0001011219_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa1.r_cap, 0.9965422974, epsilon = 1e-5);
+            assert_relative_eq!(
+                spa1.theta_cap,
+                204.0182616917_f64.to_radians(),
+                epsilon = 1e-5
+            );
+            assert_relative_eq!(spa1.beta, 0.0001011219_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa1.delta_psi, -0.00399840_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(
+                spa1.delta_epsilon,
+                0.00166657_f64.to_radians(),
+                epsilon = 1e-5
+            );
+            assert_relative_eq!(spa1.epsilon, 23.440465_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa1.lambda, 204.0085519281_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa1.alpha, 202.22741_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa1.delta, -9.31434_f64.to_radians(), epsilon = 1e-5);
 
             let longitude = Longitude::from_degrees(-105.1786).unwrap();
             let latitude = Latitude::from_degrees(39.742476).unwrap();
@@ -758,23 +767,23 @@ pub mod spa {
 
             let spa2 = SPA2::calculate(spa1, coordinates_3d);
 
-            assert!((spa2.h_cap - 11.105900_f64.to_radians()).abs() < 1e-5);
-            assert!((spa2.h_cap_prim - 11.10629_f64.to_radians()).abs() < 1e-5);
-            assert!((spa2.alpha_prim - 202.22704_f64.to_radians()).abs() < 1e-5);
-            assert!((spa2.delta_prim - -9.316179_f64.to_radians()).abs() < 1e-5);
-            assert!((spa2.phi_cap - 194.34024_f64.to_radians()).abs() < 1e-5);
+            assert_relative_eq!(spa2.h_cap, 11.105900_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa2.h_cap_prim, 11.10629_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa2.alpha_prim, 202.22704_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa2.delta_prim, -9.316179_f64.to_radians(), epsilon = 1e-5);
+            assert_relative_eq!(spa2.phi_cap, 194.34024_f64.to_radians(), epsilon = 1e-5);
 
             let pressure = Pressure::from_millibars_hectopascals(820.0).unwrap();
             let temperature = Temperature::new(Unit::Celsius, 11.0).unwrap();
 
             let spa3 = SPA3::calculate(spa2, pressure, temperature);
-            assert!((spa3.theta - 50.11162_f64.to_radians()).abs() < 1e-5);
+            assert_relative_eq!(spa3.theta, 50.11162_f64.to_radians(), epsilon = 1e-5);
 
             let slope = 30.0_f64.to_radians();
             let azimuth = -10.0_f64.to_radians();
 
             let spa4 = SPA4::calculate(spa3, slope, azimuth);
-            assert!((spa4.i_cap - 25.18700_f64.to_radians()).abs() < 1e-5);
+            assert_relative_eq!(spa4.i_cap, 25.18700_f64.to_radians(), epsilon = 1e-5);
         }
     }
 
