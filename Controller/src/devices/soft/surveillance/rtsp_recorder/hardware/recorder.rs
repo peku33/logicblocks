@@ -109,7 +109,8 @@ impl Recorder {
             .context("file_stem_int")?
             .parse()
             .context("file_stem_int")?;
-        let time_start_utc = NaiveDateTime::from_timestamp(file_stem_int, 0);
+        let time_start_utc =
+            NaiveDateTime::from_timestamp_opt(file_stem_int, 0).context("from_timestamp_opt")?;
 
         let metadata = fs::metadata(&path).await.context("metadata")?;
         let time_end_utc = DateTime::<Utc>::from(metadata.modified().context("modified")?)

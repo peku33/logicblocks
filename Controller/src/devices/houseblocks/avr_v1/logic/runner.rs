@@ -1,3 +1,5 @@
+#![allow(clippy::extra_unused_type_parameters)]
+
 use super::super::{
     super::houseblocks_v1::{common::AddressSerial, master::Master},
     hardware::runner,

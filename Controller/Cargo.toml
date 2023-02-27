@@ -7,56 +7,56 @@ publish = false
 default-run = "logicblocks-controller"
 
 [dependencies]
-anyhow = "1.0.66"
-array-init = "2.0.1"
+anyhow = "1.0.69"
+array-init = "2.1.0"
 arrayvec = "0.7.2"
-async-trait = "0.1.58"
-atomic_refcell = "0.1.8"
+async-trait = "0.1.64"
+atomic_refcell = "0.1.9"
 by_address = "1.1.0"
-bytes = "1.2.1"
-chrono = { version = "0.4.22", features = ["serde"] }
-clap = { version = "4.0.19", features = ["derive"] }
-crc = "3.0.0"
+bytes = "1.4.0"
+chrono = { version = "0.4.23", features = ["serde"] }
+clap = { version = "4.1.6", features = ["derive"] }
+crc = "3.0.1"
 crossbeam = "0.8.2"
 derive_more = "0.99.17"
-dialoguer = "0.10.2"
+dialoguer = "0.10.3"
 digest_auth = "0.3.0"
-env_logger = "0.9.1"
-erased-serde = "0.3.23"
+env_logger = "0.10.0"
+erased-serde = "0.3.24"
 form_urlencoded = "1.1.0"
-futures = "0.3.25"
+futures = "0.3.26"
 hex = "0.4.3"
-http = "0.2.8"
-hyper = { version = "0.14.22", features = ["full"] }
-image = { version = "0.24.4", default-features = false, features = ["jpeg"] } 
-indoc = "1.0.7"
+http = "0.2.9"
+hyper = { version = "0.14.24", features = ["full"] }
+image = { version = "0.24.5", default-features = false, features = ["jpeg"] } 
+indoc = "2.0.0"
 itertools = "0.10.5"
 lazy_static = "1.4.0"
 log = { version = "0.4.17", features = ["release_max_level_debug"] }
 maplit = "1.0.2"
 md-5 = "0.10.5"
-ouroboros = "0.15.5"
+ouroboros = "0.15.6"
 parking_lot = "0.12.1"
 percent-encoding = "2.2.0"
 rand = "0.8.5"
-regex = "1.7.0"
-reqwest = { version = "0.11.12", features = ["json", "stream"] }
+regex = "1.7.1"
+reqwest = { version = "0.11.14", features = ["json", "stream"] }
 rusqlite = { version = "0.28.0", features = ["bundled", "array"] }
 scopeguard = "1.1.0"
-semver = "1.0.14"
-serde = { version = "1.0.147", features = ["derive"] }
-serde-big-array = "0.4.1"
-serde_json = "1.0.87"
+semver = "1.0.16"
+serde = { version = "1.0.152", features = ["derive"] }
+serde-big-array = "0.5.0"
+serde_json = "1.0.93"
 stable_deref_trait = "1.2.0"
-tokio = { version = "1.21.2", features = ["full"] }
-tokio-stream = { version = "0.1.11", features = ["fs", "time", "io-util", "sync"] }
-tokio-util = "0.7.4"
+tokio = { version = "1.25.0", features = ["full"] }
+tokio-stream = { version = "0.1.12", features = ["fs", "time", "io-util", "sync"] }
+tokio-util = "0.7.7"
 web-static-pack = "0.4.3"
 xmltree = "0.10.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.10.0"
-libc = "0.2.137"
+libc = "0.2.139"
 libftdi1-sys = "1.1.2"
 libusb-sys = "0.2.3"
 

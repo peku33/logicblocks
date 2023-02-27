@@ -721,11 +721,12 @@ pub mod spa {
         fn test_table_1() {
             let spa0 = SPA0::calculate();
 
-            let date = NaiveDate::from_ymd(2003, 10, 17);
-            let time = NaiveTime::from_hms(12, 30, 30);
+            let date = NaiveDate::from_ymd_opt(2003, 10, 17).unwrap();
+            let time = NaiveTime::from_hms_opt(12, 30, 30).unwrap();
             let timezone = -7;
             let delta_t = Duration::from_secs_f64(67.0);
-            let datetime = FixedOffset::east(3600 * timezone)
+            let datetime = FixedOffset::east_opt(3600 * timezone)
+                .unwrap()
                 .from_local_datetime(&date.and_time(time))
                 .unwrap()
                 .with_timezone(&Utc);
@@ -820,67 +821,112 @@ pub mod spa {
 
         #[test]
         fn test_jd_table_1() {
-            assert_eq!(jd(Utc.ymd(2000, 1, 1).and_hms(12, 0, 0)), 2451545.0);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(2000, 1, 1, 12, 0, 0).unwrap()),
+                2451545.0
+            );
         }
         #[test]
         fn test_jd_table_2() {
-            assert_eq!(jd(Utc.ymd(1999, 1, 1).and_hms(0, 0, 0)), 2451179.5);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(1999, 1, 1, 0, 0, 0).unwrap()),
+                2451179.5
+            );
         }
         #[test]
         fn test_jd_table_3() {
-            assert_eq!(jd(Utc.ymd(1987, 1, 27).and_hms(0, 0, 0)), 2446822.5);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(1987, 1, 27, 0, 0, 0).unwrap()),
+                2446822.5
+            );
         }
         #[test]
         fn test_jd_table_4() {
-            assert_eq!(jd(Utc.ymd(1987, 6, 19).and_hms(12, 0, 0)), 2446966.0);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(1987, 6, 19, 12, 0, 0).unwrap()),
+                2446966.0
+            );
         }
         #[test]
         fn test_jd_table_5() {
-            assert_eq!(jd(Utc.ymd(1988, 1, 27).and_hms(0, 0, 0)), 2447187.5);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(1988, 1, 27, 0, 0, 0).unwrap()),
+                2447187.5
+            );
         }
         #[test]
         fn test_jd_table_6() {
-            assert_eq!(jd(Utc.ymd(1988, 6, 19).and_hms(12, 0, 0)), 2447332.0);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(1988, 6, 19, 12, 0, 0).unwrap()),
+                2447332.0
+            );
         }
         #[test]
         fn test_jd_table_7() {
-            assert_eq!(jd(Utc.ymd(1900, 1, 1).and_hms(0, 0, 0)), 2415020.5);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap()),
+                2415020.5
+            );
         }
         #[test]
         fn test_jd_table_8() {
-            assert_eq!(jd(Utc.ymd(1600, 1, 1).and_hms(0, 0, 0)), 2305447.5);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(1600, 1, 1, 0, 0, 0).unwrap()),
+                2305447.5
+            );
         }
         #[test]
         fn test_jd_table_9() {
-            assert_eq!(jd(Utc.ymd(1600, 12, 31).and_hms(0, 0, 0)), 2305812.5);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(1600, 12, 31, 0, 0, 0).unwrap()),
+                2305812.5
+            );
         }
         #[test]
         fn test_jd_table_10() {
-            assert_eq!(jd(Utc.ymd(837, 4, 10).and_hms(7, 12, 0)), 2026871.8);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(837, 4, 10, 7, 12, 0).unwrap()),
+                2026871.8
+            );
         }
         #[test]
         fn test_jd_table_11() {
-            assert_eq!(jd(Utc.ymd(-123, 12, 31).and_hms(0, 0, 0)), 1676496.5);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(-123, 12, 31, 0, 0, 0).unwrap()),
+                1676496.5
+            );
         }
         #[test]
         fn test_jd_table_12() {
-            assert_eq!(jd(Utc.ymd(-122, 1, 1).and_hms(0, 0, 0)), 1676497.5);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(-122, 1, 1, 0, 0, 0).unwrap()),
+                1676497.5
+            );
         }
         #[test]
         fn test_jd_table_13() {
-            assert_eq!(jd(Utc.ymd(-1000, 7, 12).and_hms(12, 0, 0)), 1356001.0);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(-1000, 7, 12, 12, 0, 0).unwrap()),
+                1356001.0
+            );
         }
         // #[test]
         // fn test_jd_table_14() {
-        //     assert_eq!(jd(Utc.ymd(-1000, 2, 29).and_hms(0, 0, 0)), 1355866.5);
+        //     assert_eq!(jd(Utc.with_ymd_and_hms(-1000, 2, 29, 0, 0, 0)), 1355866.5);
         // }
         #[test]
         fn test_jd_table_15() {
-            assert_eq!(jd(Utc.ymd(-1001, 8, 17).and_hms(21, 36, 0)), 1355671.4);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(-1001, 8, 17, 21, 36, 0).unwrap()),
+                1355671.4
+            );
         }
         #[test]
         fn test_jd_table_16() {
-            assert_eq!(jd(Utc.ymd(-4712, 1, 1).and_hms(12, 0, 0)), 0.0);
+            assert_eq!(
+                jd(Utc.with_ymd_and_hms(-4712, 1, 1, 12, 0, 0).unwrap()),
+                0.0
+            );
         }
     }
 
