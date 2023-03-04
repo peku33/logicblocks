@@ -13,6 +13,7 @@ use std::{
 const STATE_SHIFT_SIGNALED: u8 = 0;
 const STATE_SHIFT_TERMINATED: u8 = 1;
 
+#[derive(Debug)]
 struct Common {
     receiver_inners: RwLock<HashSet<*const ReceiverInner>>,
 }
@@ -26,6 +27,7 @@ impl Common {
 unsafe impl Send for Common {}
 unsafe impl Sync for Common {}
 
+#[derive(Debug)]
 pub struct Sender {
     common: Arc<Common>,
 }
@@ -80,10 +82,12 @@ impl Drop for Sender {
     }
 }
 
+#[derive(Debug)]
 struct ReceiverInner {
     waker: AtomicWaker,
     state: AtomicU8,
 }
+#[derive(Debug)]
 pub struct Receiver {
     common: Arc<Common>,
     inner: Pin<Box<ReceiverInner>>,

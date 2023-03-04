@@ -39,7 +39,7 @@ pub trait Device: Send + Sync + fmt::Debug {
     }
 }
 
-#[derive(Constructor, Debug)]
+#[derive(Debug)]
 pub struct DeviceWrapper<'d> {
     name: String,
     device: Box<dyn Device + 'd>,
@@ -81,7 +81,7 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
         match uri_cursor {
             uri_cursor::UriCursor::Terminal => match *request.method() {
                 http::Method::GET => {
-                    #[derive(Serialize)]
+                    #[derive(Debug, Serialize)]
                     struct DeviceData {
                         name: String,
                         class: Cow<'static, str>,

@@ -5,6 +5,8 @@ use std::{ffi::OsString, io::Error, path::Path};
 pub struct EventOwned {
     pub name: Option<OsString>,
 }
+
+#[derive(Debug)]
 pub struct Inotify {}
 impl Inotify {
     pub fn init() -> Result<Self, Error> {
@@ -24,6 +26,8 @@ impl Inotify {
         unimplemented!();
     }
 }
+
+#[derive(Debug)]
 pub struct WatchMask {}
 impl WatchMask {
     pub const CLOSE_WRITE: usize = 0;

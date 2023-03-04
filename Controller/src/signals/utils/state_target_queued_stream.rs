@@ -10,6 +10,7 @@ use std::{
     task::{Context, Poll},
 };
 
+#[derive(Debug)]
 pub struct StateTargetQueuedStream<'w, 's, T>
 where
     T: Value + Clone,

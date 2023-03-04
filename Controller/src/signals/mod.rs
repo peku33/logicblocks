@@ -13,7 +13,7 @@ use std::{
 // Identifier
 pub trait Identifier: Clone + Eq + hash::Hash + fmt::Debug + Send + Sync + 'static {}
 
-trait IdentifierBase: Send + Sync + 'static {
+trait IdentifierBase: Send + Sync + fmt::Debug + 'static {
     fn type_id(&self) -> TypeId;
     fn type_name(&self) -> &str;
 
@@ -75,6 +75,7 @@ impl<I: Identifier> IdentifierBase for I {
     }
 }
 
+// #[derive(Debug)] // implemented manually
 pub struct IdentifierBaseWrapper {
     inner: Box<dyn IdentifierBase>,
 }
@@ -133,7 +134,7 @@ pub trait Device: fmt::Debug + Send + Sync {
     fn by_identifier(&self) -> ByIdentifier<Self::Identifier>;
 }
 
-pub trait DeviceBase: Send + Sync {
+pub trait DeviceBase: Send + Sync + fmt::Debug {
     fn targets_changed_waker(&self) -> Option<&waker::TargetsChangedWaker>;
     fn sources_changed_waker(&self) -> Option<&waker::SourcesChangedWaker>;
     fn by_identifier(&self) -> ByIdentifierBaseWrapper;
@@ -168,7 +169,7 @@ impl<D: Device> DeviceBase for D {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy)] // Debug implemented manually
 pub struct DeviceBaseRef<'d> {
     inner: &'d dyn DeviceBase,
 }

@@ -4,6 +4,7 @@ use super::{
 };
 use futures::future::{BoxFuture, FutureExt};
 
+// #[derive(Debug)] // Debug not possible
 pub struct RootService<'a> {
     api_handler: &'a (dyn UriCursorHandler + Sync),
     gui_responder: gui_responder::GuiResponder,
@@ -52,6 +53,7 @@ mod gui_responder {
     };
 
     #[self_referencing]
+    #[derive(Debug)]
     struct GuiResponderInner {
         loader: Loader,
 
@@ -60,6 +62,7 @@ mod gui_responder {
         responder: Responder<'this>,
     }
 
+    #[derive(Debug)]
     pub struct GuiResponder {
         inner: GuiResponderInner,
     }
@@ -114,6 +117,7 @@ mod gui_responder {
     use super::super::Response;
     use http::{HeaderMap, Method, Uri};
 
+    #[derive(Debug)]
     pub struct GuiResponder {}
     impl GuiResponder {
         pub fn new() -> Self {

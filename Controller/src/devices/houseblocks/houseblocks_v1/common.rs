@@ -269,6 +269,7 @@ mod tests_payload {
     }
 }
 
+#[derive(Debug)]
 pub struct Frame {}
 impl Frame {
     pub const CHAR_BEGIN: u8 = b'\n';

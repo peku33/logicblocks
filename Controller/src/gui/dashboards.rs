@@ -12,7 +12,7 @@ use futures::future::{BoxFuture, FutureExt};
 use serde::Serialize;
 
 // TODO: Make device handles deduplicable
-
+#[derive(Debug)]
 pub struct Dashboard<'d> {
     name: String,
     icon: Icon,
@@ -57,7 +57,7 @@ impl<'d> uri_cursor::Handler for Dashboard<'d> {
             uri_cursor::UriCursor::Next("summary", uri_cursor) => match uri_cursor.as_ref() {
                 uri_cursor::UriCursor::Terminal => match *request.method() {
                     http::Method::GET => {
-                        #[derive(Serialize)]
+                        #[derive(Debug, Serialize)]
                         struct DashboardSummary {
                             name: String,
                             icon: Icon,
@@ -90,6 +90,7 @@ impl<'d> uri_cursor::Handler for Dashboard<'d> {
     }
 }
 
+#[derive(Debug)]
 pub struct Dashboards<'d> {
     dashboards: Vec<Dashboard<'d>>,
 }
@@ -116,7 +117,7 @@ impl<'d> uri_cursor::Handler for Dashboards<'d> {
             uri_cursor::UriCursor::Next("summary", uri_cursor) => match uri_cursor.as_ref() {
                 uri_cursor::UriCursor::Terminal => match *request.method() {
                     http::Method::GET => {
-                        #[derive(Serialize)]
+                        #[derive(Debug, Serialize)]
                         struct DashboardSummary {
                             id: usize,
                             name: String,
@@ -140,7 +141,7 @@ impl<'d> uri_cursor::Handler for Dashboards<'d> {
                             })
                             .collect::<Vec<_>>();
 
-                        #[derive(Serialize)]
+                        #[derive(Debug, Serialize)]
                         #[serde(transparent)]
                         struct DashboardsSummary {
                             inner: Vec<DashboardSummary>,

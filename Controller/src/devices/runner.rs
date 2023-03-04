@@ -19,6 +19,7 @@ use std::{
 };
 
 #[self_referencing]
+#[derive(Debug)]
 struct RunnerInner<'d> {
     runtime: Runtime,
     device_wrappers_by_id: HashMap<DeviceId, DeviceWrapper<'d>>,
@@ -51,6 +52,7 @@ struct RunnerInner<'d> {
         ManuallyDrop<RuntimeScopeRunnable<'this, 'this, sse_topic::Responder<'this>>>,
 }
 
+#[derive(Debug)]
 pub struct Runner<'d> {
     inner: RunnerInner<'d>,
     finalize_guard: FinalizeGuard,

@@ -51,6 +51,6 @@ impl Into<RatioSerde> for Ratio {
         RatioSerde(self.to_f64())
     }
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct RatioSerde(f64);

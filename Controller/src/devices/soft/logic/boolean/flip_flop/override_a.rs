@@ -238,13 +238,13 @@ impl signals::Device for Device {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(tag = "mode")]
 enum GuiSummaryMode {
     PassThrough,
     Override { value: bool },
 }
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct GuiSummary {
     input_value: Option<bool>,
     mode: GuiSummaryMode,

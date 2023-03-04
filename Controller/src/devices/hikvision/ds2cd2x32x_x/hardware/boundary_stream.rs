@@ -4,6 +4,7 @@ use regex::Regex;
 use std::{collections::VecDeque, str};
 use xmltree::Element;
 
+#[derive(Debug)]
 pub struct Extractor {
     buffer: VecDeque<u8>,
 }

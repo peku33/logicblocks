@@ -37,6 +37,6 @@ impl Into<RealSerde> for Real {
         RealSerde(self.to_f64())
     }
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct RealSerde(f64);

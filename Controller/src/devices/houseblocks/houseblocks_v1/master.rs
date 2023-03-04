@@ -31,6 +31,7 @@ enum Transaction {
     },
 }
 
+#[derive(Debug)]
 struct Driver {
     ftdi_device: FtdiDeviceFailSafe,
 }

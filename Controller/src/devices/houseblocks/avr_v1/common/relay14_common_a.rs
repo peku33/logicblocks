@@ -162,7 +162,7 @@ pub mod logic {
         }
     }
 
-    #[derive(Serialize)]
+    #[derive(Debug, Serialize)]
     pub struct GuiSummary {
         values: [bool; hardware::OUTPUT_COUNT],
     }

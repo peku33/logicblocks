@@ -72,10 +72,12 @@ impl Sender {
     }
 }
 
+#[derive(Debug)]
 struct ReceiverInner {
     inner: Arc<Inner>,
     waker: AtomicWaker,
 }
+#[derive(Debug)]
 pub struct Receiver {
     completed: bool,
     receiver_inner: Pin<Box<ReceiverInner>>,
@@ -144,6 +146,7 @@ pub fn pair() -> (Sender, Receiver) {
     (sender, receiver)
 }
 
+#[derive(Debug)]
 pub struct LocalSender {
     signaled: AtomicBool,
     receivers: Mutex<HashSet<*const LocalReceiverInner>>,
@@ -185,6 +188,7 @@ impl LocalSender {
 unsafe impl Send for LocalSender {}
 unsafe impl Sync for LocalSender {}
 
+#[derive(Debug)]
 struct LocalReceiverInner {
     waker: AtomicWaker,
 }
@@ -198,6 +202,7 @@ impl LocalReceiverInner {
 unsafe impl Send for LocalReceiverInner {}
 unsafe impl Sync for LocalReceiverInner {}
 
+#[derive(Debug)]
 pub struct LocalReceiver<'s> {
     sender: &'s LocalSender,
     receiver_inner: Pin<Box<LocalReceiverInner>>,

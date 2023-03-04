@@ -312,6 +312,7 @@ where
 
 /// This object allows to first freeze the value and then mark it (or not) as "last seen" or "last processed". This
 /// is useful if processing of the value may fail and we may want to retry later, keeping pending state.
+#[derive(Debug)]
 pub struct ObserverCommitter<'r, 'v, T>
 where
     T: Clone + Eq + Send + Sync,
@@ -442,6 +443,7 @@ where
 /// Stream yielding () when value is changed. Remembers value from previous yield and yields only if value differs. If
 /// value went A -> B -> A quickly, it is possible it won't yield. Use this when you don't need value returned from
 /// stream, as this is a bit faster then [`ValueStream`].
+#[derive(Debug)]
 pub struct ChangedStream<'v, T>
 where
     T: Clone + Eq + Send + Sync,
@@ -536,6 +538,7 @@ where
 /// Stream yielding value when it is changed. Remembers value from previous yield and yields only if value differs. If
 /// value went A -> B -> A quickly, it is possible it won't yield. A bit slower then [`ChangedStream`], because of
 /// additional clone, so use it only when you actually need value from stream, not just information it was changed.
+#[derive(Debug)]
 pub struct ValueStream<'v, T>
 where
     T: Clone + Eq + Send + Sync,

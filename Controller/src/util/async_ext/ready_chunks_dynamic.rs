@@ -5,6 +5,7 @@ use std::{
     task::{Context, Poll},
 };
 
+#[derive(Debug)]
 pub struct ReadyChunksDynamic<S>
 where
     S: Stream,
@@ -79,9 +80,16 @@ where
 pub trait ReadyChunksDynamicExt: Stream {
     fn ready_chunks_dynamic(self) -> ReadyChunksDynamic<Self>
     where
+        Self: Sized;
+}
+impl<S: Sized> ReadyChunksDynamicExt for S
+where
+    S: Stream,
+{
+    fn ready_chunks_dynamic(self) -> ReadyChunksDynamic<Self>
+    where
         Self: Sized,
     {
         ReadyChunksDynamic::new(self)
     }
 }
-impl<S: Sized> ReadyChunksDynamicExt for S where S: Stream {}

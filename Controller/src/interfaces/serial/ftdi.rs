@@ -68,10 +68,12 @@ impl Descriptors {
     }
 }
 
+#[derive(Debug)]
 pub struct DeviceConfiguration {
     pub latency_timer_ms: u8,
 }
 
+#[derive(Debug)]
 pub struct DeviceFailSafe {
     descriptor: Descriptor,
     configuration: Configuration,

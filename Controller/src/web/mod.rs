@@ -6,7 +6,6 @@ pub mod uri_cursor;
 
 use anyhow::{ensure, Context, Error};
 use bytes::Bytes;
-use derive_more::Constructor;
 use futures::{
     future::BoxFuture,
     stream::{Stream, StreamExt},
@@ -16,13 +15,25 @@ use hyper::{Body, Response as HyperResponse};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
-#[derive(Constructor, Debug)]
+#[derive(Debug)]
 pub struct Request {
     remote_address: SocketAddr,
     http_parts: Parts,
     body: Bytes,
 }
 impl Request {
+    pub fn new(
+        remote_address: SocketAddr,
+        http_parts: Parts,
+        body: Bytes,
+    ) -> Self {
+        Self {
+            remote_address,
+            http_parts,
+            body,
+        }
+    }
+
     pub fn method(&self) -> &Method {
         &self.http_parts.method
     }
@@ -52,6 +63,7 @@ impl Request {
     }
 }
 
+#[derive(Debug)]
 pub struct Response {
     hyper_response: HyperResponse<Body>,
 }

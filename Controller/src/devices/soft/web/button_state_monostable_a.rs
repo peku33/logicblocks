@@ -153,7 +153,7 @@ impl signals::Device for Device {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(transparent)]
 pub struct GuiSummary {
     value: bool,

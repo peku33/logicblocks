@@ -3,6 +3,7 @@ use anyhow::{bail, ensure, Context, Error};
 use arrayvec::ArrayVec;
 use std::slice;
 
+#[derive(Debug)]
 pub struct Parser<'a> {
     iterator: slice::Iter<'a, u8>,
 }

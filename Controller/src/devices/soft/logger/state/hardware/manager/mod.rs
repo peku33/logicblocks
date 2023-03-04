@@ -56,6 +56,7 @@ fn sink_data_compatible(
     true
 }
 
+#[derive(Debug)]
 pub struct SinkItem {
     pub sink_id: SinkId,
     pub time_value: TimeValue,

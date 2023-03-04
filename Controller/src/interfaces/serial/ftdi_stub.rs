@@ -4,6 +4,7 @@ use super::{
 };
 use anyhow::Error;
 
+#[derive(Debug)]
 pub struct Global {}
 impl Global {
     pub fn new() -> Result<Self, Error> {
@@ -14,6 +15,7 @@ impl Global {
     }
 }
 
+#[derive(Debug)]
 pub struct Device {}
 impl Device {
     pub fn new(

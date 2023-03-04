@@ -7,6 +7,7 @@ use std::{
     task::{Context, Poll},
 };
 
+#[derive(Debug)]
 pub struct StreamTakeUntilExhausted<S, F>
 where
     S: Stream,
@@ -100,9 +101,20 @@ pub trait StreamTakeUntilExhaustedExt: Stream {
     ) -> StreamTakeUntilExhausted<Self, F>
     where
         Self: Sized,
+        F: Future<Output = ()>;
+}
+impl<S: Sized> StreamTakeUntilExhaustedExt for S
+where
+    S: Stream,
+{
+    fn stream_take_until_exhausted<F>(
+        self,
+        take_until: F,
+    ) -> StreamTakeUntilExhausted<Self, F>
+    where
+        Self: Sized,
         F: Future<Output = ()>,
     {
         StreamTakeUntilExhausted::new(self, take_until)
     }
 }
-impl<S: Sized> StreamTakeUntilExhaustedExt for S where S: Stream {}

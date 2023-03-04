@@ -37,6 +37,7 @@ pub struct EventStateUpdate {
     active: bool,
 }
 
+#[derive(Debug)]
 pub struct Manager<'a> {
     api: &'a Api,
 

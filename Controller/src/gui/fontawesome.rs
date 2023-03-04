@@ -6,7 +6,7 @@ pub enum IconPrefix {
     Solid,
     Regular,
 }
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(transparent)]
 struct IconPrefixString {
     inner: &'static str,

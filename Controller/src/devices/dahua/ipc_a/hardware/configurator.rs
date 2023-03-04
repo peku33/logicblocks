@@ -460,6 +460,7 @@ pub struct Configuration {
     pub audio_mutation_detection: Option<AudioMutationDetection>,
 }
 
+#[derive(Debug)]
 pub struct Configurator<'a> {
     api: &'a Api,
     basic_device_info: BasicDeviceInfo,

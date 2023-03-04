@@ -100,6 +100,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct Pending<'p, T: Clone + Send + Sync + 'static> {
     property: &'p Property<T>,
     value: T,

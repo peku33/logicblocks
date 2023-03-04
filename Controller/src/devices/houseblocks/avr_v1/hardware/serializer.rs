@@ -1,13 +1,14 @@
 use super::super::super::houseblocks_v1::common::Payload;
 
+#[derive(Debug)]
 pub struct Serializer {
     container: Vec<u8>,
 }
 impl Serializer {
     pub fn new() -> Self {
-        Self {
-            container: Vec::<u8>::new(),
-        }
+        let container = Vec::<u8>::new();
+
+        Self { container }
     }
     pub fn into_payload(self) -> Payload {
         Payload::new(self.container.into_boxed_slice()).unwrap()

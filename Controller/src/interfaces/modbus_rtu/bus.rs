@@ -6,6 +6,7 @@ use crossbeam::channel;
 use futures::channel::oneshot;
 use std::{any::Any, fmt::Debug, mem::ManuallyDrop, slice, thread, time::Duration};
 
+#[derive(Debug)]
 pub struct Bus {
     ftdi_device: ftdi::DeviceFailSafe,
 }
@@ -398,6 +399,7 @@ impl Drop for AsyncBus {
     }
 }
 
+#[derive(Debug)]
 struct AsyncBusTransaction {
     address: u8,
     request: RequestErasedWrapper,

@@ -158,13 +158,13 @@ impl signals::Device for Device {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct GuiSummaryInner {
     julian_day: Real,
     elevation: AngleNormalizedHalfZeroCentered,
     asimuth: AngleNormalized,
 }
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(transparent)]
 pub struct GuiSummary {
     inner: Option<GuiSummaryInner>,
@@ -964,6 +964,7 @@ pub mod spa {
     }
 
     // table A4.2
+    #[derive(Debug)]
     struct A42Entry {
         a_cap: u64,
         b_cap: f64,
@@ -1994,6 +1995,7 @@ pub mod spa {
     }];
 
     // Xn entries, for eq. 15 - 19
+    #[derive(Debug)]
     struct XIEntry {
         constant: f64,
         mul_pow1: f64,
@@ -2035,6 +2037,7 @@ pub mod spa {
     ];
 
     // table A4.3, page 35, A-13
+    #[derive(Debug)]
     struct A43Entry {
         y_vec: [i8; 5],
 

@@ -23,7 +23,7 @@ pub struct Version {
     application: u16,
 }
 
-#[derive(Constructor, Debug)]
+#[derive(Debug)]
 pub struct Driver<'m> {
     master: &'m Master,
     address: Address,
@@ -202,7 +202,7 @@ impl<'m> Driver<'m> {
     }
 }
 
-#[derive(Constructor)]
+#[derive(Debug)]
 pub struct ApplicationDriver<'d> {
     driver: &'d Driver<'d>,
 }

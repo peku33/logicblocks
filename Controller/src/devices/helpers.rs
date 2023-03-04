@@ -5,6 +5,7 @@ use crate::signals::{
 };
 use std::{collections::HashMap, marker::PhantomData};
 
+#[derive(Debug)]
 pub struct Devices<'d> {
     device_wrappers: Vec<DeviceWrapper<'d>>,
 }
@@ -40,6 +41,7 @@ impl<'d> Devices<'d> {
     }
 }
 
+#[derive(Debug)]
 pub struct Signals {
     connections_requested: Vec<ConnectionRequested>,
 }

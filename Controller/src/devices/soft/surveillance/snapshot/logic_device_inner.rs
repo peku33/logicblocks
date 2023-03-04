@@ -140,6 +140,7 @@ impl uri_cursor::Handler for Manager {
     }
 }
 
+#[derive(Debug)]
 pub struct Runner<'s, G, F, U>
 where
     G: Fn() -> F,

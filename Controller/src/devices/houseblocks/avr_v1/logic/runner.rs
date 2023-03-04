@@ -219,7 +219,7 @@ where
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize)] // Debug not possible
 pub struct GuiSummary {
     device: Option<Box<dyn erased_serde::Serialize + Send + Sync + 'static>>,
     hardware_runner: runner::GuiSummary,

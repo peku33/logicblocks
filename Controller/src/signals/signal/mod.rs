@@ -36,6 +36,7 @@ pub trait EventTargetRemoteBase: RemoteBase {
     ) -> bool;
 }
 
+#[derive(Debug)]
 pub enum RemoteBaseVariant<'a> {
     StateSource(&'a dyn StateSourceRemoteBase),
     StateTarget(&'a dyn StateTargetRemoteBase),

@@ -114,6 +114,7 @@ pub fn topic_paths_from_body_filter(value: serde_json::Value) -> Option<HashSet<
     Some(topic_paths)
 }
 
+#[derive(Debug)]
 pub struct Node<'a> {
     self_: Option<&'a mpsc::Signal>,
     children: HashMap<Topic, Node<'a>>,
@@ -127,11 +128,13 @@ impl<'a> Node<'a> {
     }
 }
 
+#[derive(Debug)]
 struct ResponderTopicPathValue<'a> {
     waker: &'a mpsc::Signal,
     sender: mpmc_static::Sender,
     sse_event: sse::Event,
 }
+#[derive(Debug)]
 pub struct Responder<'a> {
     root: &'a Node<'a>,
     topic_paths: HashMap<TopicPath, ResponderTopicPathValue<'a>>,

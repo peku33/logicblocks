@@ -93,6 +93,6 @@ impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> fmt::Display
         write!(f, "{:.5}°", self.radians.to_degrees())
     }
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct AngleNormalizedBaseSerde(f64);

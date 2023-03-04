@@ -115,6 +115,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct Pending<'p, T>
 where
     T: Eq + Clone + Send + Sync + 'static,

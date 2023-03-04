@@ -232,7 +232,7 @@ impl<'m, D: Device> Runnable for Runner<'m, D> {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct GuiSummary {
     device_state: DeviceState,
 }

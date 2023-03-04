@@ -269,7 +269,7 @@ pub mod logic {
         }
     }
 
-    #[derive(Serialize)]
+    #[derive(Debug, Serialize)]
     pub struct GuiSummary {
         temperature: Option<Temperature>,
     }

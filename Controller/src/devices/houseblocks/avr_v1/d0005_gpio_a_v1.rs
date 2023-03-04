@@ -436,7 +436,7 @@ pub mod logic {
         Unused,
         DigitalOut(hardware::DigitalOutValue),
     }
-    #[derive(Serialize)]
+    #[derive(Debug, Serialize)]
     pub struct GuiSummary {
         status_led: hardware::StatusLedValue,
         block_1_values: [GuiSummaryBlock1Value; hardware::BLOCK_1_SIZE],

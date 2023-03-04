@@ -4,6 +4,7 @@ use std::{cmp::Ordering, fmt};
 
 // TODO: maybe don't use Unit, use from_ and to_ methods
 
+#[derive(Debug)]
 pub enum Unit {
     Kelvin,
     Celsius,

@@ -82,7 +82,7 @@ impl fmt::Display for Latitude {
         )
     }
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct LatitudeSerde(f64);
 
@@ -167,7 +167,7 @@ impl fmt::Display for Longitude {
         )
     }
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct LongitudeSerde(f64);
 
@@ -217,7 +217,7 @@ impl fmt::Display for Elevation {
         write!(f, "{:.2} m", self.meters)
     }
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct ElevationSerde(f64);
 

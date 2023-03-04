@@ -1137,7 +1137,7 @@ impl signals::Device for Device {
 }
 
 // TODO: use newtype inestead of f64
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct GuiSummaryChannelConfiguration {
     name: String,
 
@@ -1148,27 +1148,27 @@ struct GuiSummaryChannelConfiguration {
     round_max_seconds: f64,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct GuiSummaryConfiguration {
     channels: Vec<GuiSummaryChannelConfiguration>,
     power_max: f64,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(tag = "state")]
 enum GuiSummaryDeviceStateDisabledChannelState {
     Disabled,
     Paused,
     Enabled,
 }
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(tag = "state")]
 enum GuiSummaryDeviceStatePausedChannelState {
     Disabled,
     Paused { queue_seconds: f64 },
     Enabled { queue_seconds: f64 },
 }
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(tag = "state")]
 enum GuiSummaryDeviceStateEnabledChannelState {
     Disabled,
@@ -1184,7 +1184,7 @@ enum GuiSummaryDeviceStateEnabledChannelState {
         round_seconds: f64,
     },
 }
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(tag = "state")]
 enum GuiSummaryState {
     Disabled {
@@ -1198,7 +1198,7 @@ enum GuiSummaryState {
         power: f64,
     },
 }
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct GuiSummary {
     configuration: GuiSummaryConfiguration,
     state: GuiSummaryState,

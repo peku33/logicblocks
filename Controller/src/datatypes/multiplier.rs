@@ -60,6 +60,6 @@ impl Into<MultiplierSerde> for Multiplier {
         MultiplierSerde(self.to_f64())
     }
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct MultiplierSerde(f64);

@@ -9,6 +9,7 @@ use libftdi1_sys::*;
 use scopeguard::defer;
 use std::{cell::RefCell, ffi, mem::MaybeUninit, ptr};
 
+#[derive(Debug)]
 pub struct Global {
     context: *mut ftdi_context,
 }
@@ -170,6 +171,7 @@ impl Drop for Global {
     }
 }
 
+#[derive(Debug)]
 pub struct Device {
     context: *mut ftdi_context,
 }

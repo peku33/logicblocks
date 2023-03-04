@@ -154,14 +154,13 @@ pub mod logic {
         }
     }
 
-    #[derive(Serialize)]
+    #[derive(Debug, Serialize)]
     #[serde(transparent)]
     pub struct GuiSummaryInputs {
         #[serde(with = "BigArray")]
         inner: [Resistance; hardware::INPUTS_COUNT],
     }
-
-    #[derive(Serialize)]
+    #[derive(Debug, Serialize)]
     pub struct GuiSummary {
         inputs: Option<GuiSummaryInputs>,
     }

@@ -62,6 +62,6 @@ impl Into<PressureSerde> for Pressure {
         PressureSerde(self.to_pascals())
     }
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct PressureSerde(f64);
