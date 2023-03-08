@@ -5,7 +5,6 @@ use crate::util::{
 };
 use anyhow::Context;
 use async_trait::async_trait;
-use derive_more::Constructor;
 use futures::{future::FutureExt, pin_mut, select};
 use hyper::{
     server::conn::AddrStream,
@@ -19,12 +18,19 @@ use std::{
     net::SocketAddr,
 };
 
-#[derive(Constructor)]
+// #[derive(Debug)] // Debug not possible
 pub struct Server<'h> {
     bind: SocketAddr,
     handler: &'h (dyn Handler + Sync),
 }
 impl<'h> Server<'h> {
+    pub fn new(
+        bind: SocketAddr,
+        handler: &'h (dyn Handler + Sync),
+    ) -> Self {
+        Self { bind, handler }
+    }
+
     async fn respond(
         &self,
         remote_address: SocketAddr,
@@ -97,6 +103,7 @@ impl<'h> Runnable for Server<'h> {
 }
 
 #[self_referencing]
+// #[derive(Debug)] // Debug not possible
 struct ServerRunnerInner<'h> {
     server: Server<'h>,
     runtime: Runtime,
@@ -105,6 +112,7 @@ struct ServerRunnerInner<'h> {
     #[not_covariant]
     server_runtime_scope_runnable: ManuallyDrop<RuntimeScopeRunnable<'this, 'this, Server<'h>>>,
 }
+// #[derive(Debug)] // Debug not possible
 pub struct ServerRunner<'h> {
     inner: ServerRunnerInner<'h>,
     finalize_guard: FinalizeGuard,

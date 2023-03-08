@@ -1,20 +1,10 @@
 pub mod map_router;
 
 use super::{Request, Response};
-use async_trait::async_trait;
 use futures::future::BoxFuture;
 
 pub trait Handler {
     fn handle(
-        &self,
-        request: Request,
-        uri_cursor: &UriCursor,
-    ) -> BoxFuture<'static, Response>;
-}
-
-#[async_trait]
-pub trait HandlerAsync {
-    async fn handle(
         &self,
         request: Request,
         uri_cursor: &UriCursor,

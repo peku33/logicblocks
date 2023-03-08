@@ -1,10 +1,14 @@
 use anyhow::Error as AnyhowError;
-use derive_more::Constructor;
 use std::{error::Error as StdError, fmt};
 
-#[derive(Constructor)]
+// #[derive(Debug)] implemented manually
 pub struct AnyhowMultipleError {
     inner: Box<[AnyhowError]>,
+}
+impl AnyhowMultipleError {
+    pub fn new(inner: Box<[AnyhowError]>) -> Self {
+        Self { inner }
+    }
 }
 impl FromIterator<AnyhowError> for AnyhowMultipleError {
     fn from_iter<T: IntoIterator<Item = AnyhowError>>(iter: T) -> Self {

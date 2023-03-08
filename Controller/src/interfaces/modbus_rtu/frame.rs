@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Error};
-use derive_more::{Constructor, Error as ErrorFactory};
+use derive_more::Error as ErrorFactory;
 use std::fmt::{self, Debug};
 
 pub trait Request: Debug + Sized + Send + 'static {
@@ -18,11 +18,14 @@ pub trait Response: Debug + Sized + Send + 'static {
     ) -> Result<Option<Self>, Error>;
 }
 
-#[derive(Constructor, ErrorFactory, Debug)]
+#[derive(ErrorFactory, Debug)]
 pub struct Exception {
     code: u8,
 }
 impl Exception {
+    pub fn new(code: u8) -> Self {
+        Self { code }
+    }
     pub fn from_data(data: &[u8]) -> Result<Option<Self>, Error> {
         match data {
             [] => Ok(None),

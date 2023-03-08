@@ -3,10 +3,9 @@ use super::{
         common::{Address, Payload},
         master::Master,
     },
-    parser::{Parser},
+    parser::Parser,
 };
 use anyhow::{ensure, Context, Error};
-use derive_more::Constructor;
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -30,6 +29,13 @@ pub struct Driver<'m> {
 }
 impl<'m> Driver<'m> {
     const TIMEOUT_DEFAULT: Duration = Duration::from_millis(250);
+
+    pub fn new(
+        master: &'m Master,
+        address: Address,
+    ) -> Self {
+        Self { master, address }
+    }
 
     pub fn address(&self) -> &Address {
         &self.address
@@ -207,6 +213,9 @@ pub struct ApplicationDriver<'d> {
     driver: &'d Driver<'d>,
 }
 impl<'d> ApplicationDriver<'d> {
+    pub fn new(driver: &'d Driver<'d>) -> Self {
+        Self { driver }
+    }
     pub async fn transaction_out(
         &self,
         payload: Payload,
