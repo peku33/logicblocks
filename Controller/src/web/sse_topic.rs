@@ -1,5 +1,6 @@
 use super::{sse, uri_cursor, Request, Response};
 use crate::util::{
+    async_ext::select_all_or_pending::{FutureSelectAllOrPending, StreamSelectAllOrPending},
     async_flag,
     runtime::{Exited, Runnable},
     waker_stream::{mpmc_static, mpsc},
@@ -7,9 +8,9 @@ use crate::util::{
 use anyhow::anyhow;
 use async_trait::async_trait;
 use futures::{
-    future::{BoxFuture, FutureExt, JoinAll},
+    future::{BoxFuture, FutureExt},
     pin_mut, select,
-    stream::{pending, select, SelectAll, StreamExt},
+    stream::StreamExt,
     Stream,
 };
 use std::collections::{HashMap, HashSet};
@@ -53,7 +54,7 @@ pub struct TopicPath {
     inner: Vec<Topic>,
 }
 impl TopicPath {
-    pub fn from_inner(inner: Vec<Topic>) -> Self {
+    pub fn new(inner: Vec<Topic>) -> Self {
         Self { inner }
     }
 
@@ -153,7 +154,7 @@ impl<'a> Responder<'a> {
         node: &'a Node<'a>,
     ) {
         if let Some(self_) = node.self_.as_ref() {
-            let topic_path = TopicPath::from_inner(path.clone());
+            let topic_path = TopicPath::new(path.clone());
 
             let waker = self_;
             let sender = mpmc_static::Sender::new();
@@ -181,7 +182,7 @@ impl<'a> Responder<'a> {
         &self,
         topic_paths: &HashSet<TopicPath>,
     ) -> impl Stream<Item = sse::Event> + 'static {
-        let stream = topic_paths
+        topic_paths
             .iter()
             .filter_map(|topic_path| {
                 self.topic_paths
@@ -190,13 +191,9 @@ impl<'a> Responder<'a> {
             })
             .map(|(_topic_path, value)| {
                 let sse_event = value.sse_event.clone();
-                let stream = value.sender.receiver().map(move |()| sse_event.clone());
-                stream
+                value.sender.receiver().map(move |()| sse_event.clone())
             })
-            .collect::<SelectAll<_>>();
-
-        // make the stream infinite
-        select(stream, pending())
+            .collect::<StreamSelectAllOrPending<_>>()
     }
 
     async fn run(
@@ -206,13 +203,13 @@ impl<'a> Responder<'a> {
         let waker_to_sender_runner = self
             .topic_paths
             .values()
-            .map(async move |value| {
+            .map(move |value| {
                 let receiver = value.waker.receiver();
                 let sender = &value.sender;
 
-                receiver.for_each(async move |()| sender.wake()).await;
+                receiver.for_each(async move |()| sender.wake()).boxed()
             })
-            .collect::<JoinAll<_>>();
+            .collect::<FutureSelectAllOrPending<_>>();
         pin_mut!(waker_to_sender_runner);
         let mut waker_to_sender_runner = waker_to_sender_runner.fuse();
 

@@ -12,6 +12,7 @@ use crate::{
     util::{
         async_ext::{
             ready_chunks_dynamic::ReadyChunksDynamicExt,
+            select_all_or_pending::StreamSelectAllOrPending,
             stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         },
         async_flag,
@@ -21,15 +22,26 @@ use crate::{
 use anyhow::{anyhow, bail, ensure, Context, Error};
 use async_trait::async_trait;
 use by_address::ByAddress;
-use derive_more::Constructor;
-use futures::stream::{SelectAll, StreamExt};
+use futures::stream::StreamExt;
 use ouroboros::self_referencing;
 use std::collections::{HashMap, HashSet};
 
-#[derive(Constructor, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct DeviceIdSignalIdentifierBaseWrapper {
     device_id: DeviceId,
     signal_identifier_base_wrapper: IdentifierBaseWrapper,
+}
+
+impl DeviceIdSignalIdentifierBaseWrapper {
+    pub fn new(
+        device_id: DeviceId,
+        signal_identifier_base_wrapper: IdentifierBaseWrapper,
+    ) -> Self {
+        Self {
+            device_id,
+            signal_identifier_base_wrapper,
+        }
+    }
 }
 
 pub type ConnectionRequested = (
@@ -191,7 +203,7 @@ impl<'d> Exchanger<'d> {
                         .boxed() // FIXME: boxed is required because of some problems with unpin
                 },
             )
-            .collect::<SelectAll<_>>()
+            .collect::<StreamSelectAllOrPending<_>>()
             .stream_take_until_exhausted(exit_flag)
             .ready_chunks_dynamic()
             .map(move |sources_changed_waker_remotes| {
