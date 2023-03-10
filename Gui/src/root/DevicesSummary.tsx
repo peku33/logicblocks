@@ -1,5 +1,6 @@
+import Loader from "components/common/Loader";
 import { DeviceId, endpointBuild } from "components/devices/Device";
-import DeviceSummaryManagedWrapperList from "components/devices/DeviceSummaryManagedWrapperList";
+import DeviceSummaryManagedWrapperManagedList from "components/devices/DeviceSummaryManagedWrapperManagedList";
 import { getJson } from "lib/Api";
 import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
@@ -20,10 +21,10 @@ const DevicesSummaryListRoute: React.FC<{}> = () => {
   const deviceIds = useDeviceIds();
 
   if (deviceIds === undefined) {
-    return null; // TODO
+    return <Loader sizeRem={4} />;
   }
 
-  return <DeviceSummaryManagedWrapperList deviceIds={deviceIds} />;
+  return <DeviceSummaryManagedWrapperManagedList deviceIds={deviceIds} />;
 };
 
 function useDeviceIds(): DeviceId[] | undefined {

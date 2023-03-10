@@ -43,11 +43,7 @@ const Layout = styled.div`
 const TopBar = styled.div`
   border-bottom: solid 1px ${Colors.GREY_LIGHTEST};
 `;
-const Menu = styled.div`
-  & > a {
-    color: inherit;
-  }
-`;
+const Menu = styled.div``;
 const MenuItem: React.FC<{
   to: To;
   children?: React.ReactNode;

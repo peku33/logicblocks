@@ -13,5 +13,10 @@ const GlobalStyles = createGlobalStyle`
     font-family: "Open Sans", sans-serif;
     font-size: 12pt;
   }
+
+  a {
+    text-decoration: None;
+    color: inherit;
+  }
 `;
 export default GlobalStyles;

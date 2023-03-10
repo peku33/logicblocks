@@ -68,8 +68,6 @@ const ButtonLinkInner = styled.a`
   font-weight: bold;
   cursor: pointer;
 
-  text-decoration: none;
-
   :hover {
     background-color: ${Colors.GREY_DARK};
   }
