@@ -1,11 +1,11 @@
-import { useDeviceSummary } from "components/devices/DeviceSummary";
 import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
+import { useDeviceSummary } from "components/devices/DeviceSummaryService";
 import Component, { Data } from "./Summary";
 
 const ManagedComponent: DeviceSummaryManaged = (props) => {
-  const { deviceSummaryContext } = props;
+  const { deviceId } = props;
 
-  const data = useDeviceSummary<Data>(deviceSummaryContext);
+  const data = useDeviceSummary<Data>(deviceId);
 
   return <Component data={data} />;
 };

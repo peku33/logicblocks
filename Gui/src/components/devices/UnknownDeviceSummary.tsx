@@ -1,10 +1,9 @@
 import styled from "styled-components";
-import { useDeviceData } from "./Device";
+import { useDeviceData } from "./DeviceDataService";
 import { DeviceSummaryManaged } from "./DeviceSummaryManaged";
 
 const Summary: DeviceSummaryManaged = (props) => {
-  const { deviceSummaryContext } = props;
-  const { deviceId } = deviceSummaryContext;
+  const { deviceId } = props;
 
   const deviceData = useDeviceData(deviceId);
 

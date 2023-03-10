@@ -1,5 +1,5 @@
-import { DeviceSummaryContext } from "./DeviceSummary";
+import { DeviceId } from "./Device";
 
 export type DeviceSummaryManaged = React.FC<{
-  deviceSummaryContext: DeviceSummaryContext;
+  deviceId: DeviceId;
 }>;

@@ -4,8 +4,7 @@ import { useCallback } from "react";
 import Component from "./Summary";
 
 const ManagedComponent: DeviceSummaryManaged = (props) => {
-  const { deviceSummaryContext } = props;
-  const { deviceId } = deviceSummaryContext;
+  const { deviceId } = props;
 
   const onSignal = useCallback((): void => {
     deviceClassPostEmpty(deviceId, "");

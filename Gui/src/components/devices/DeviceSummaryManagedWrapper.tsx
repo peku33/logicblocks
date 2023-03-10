@@ -1,19 +1,14 @@
 import { Line } from "components/common/Line";
 import styled from "styled-components";
-import { useDeviceData } from "./Device";
-import { DeviceSummaryContext } from "./DeviceSummary";
+import { DeviceId } from "./Device";
+import { DeviceData } from "./DeviceData";
 import { getByClass } from "./DeviceSummaryManagedFactory";
 
 const DeviceSummaryManagedWrapper: React.FC<{
-  deviceSummaryContext: DeviceSummaryContext;
+  deviceId: DeviceId;
+  deviceData: DeviceData;
 }> = (props) => {
-  const { deviceSummaryContext } = props;
-  const { deviceId } = deviceSummaryContext;
-
-  const deviceData = useDeviceData(deviceId);
-  if (deviceData === undefined) {
-    return null;
-  }
+  const { deviceId, deviceData } = props;
 
   const Component = getByClass(deviceData.class);
 
@@ -27,7 +22,7 @@ const DeviceSummaryManagedWrapper: React.FC<{
       </Details>
       <Line />
       <ComponentWrapper>
-        <Component deviceSummaryContext={deviceSummaryContext} />
+        <Component deviceId={deviceId} />
       </ComponentWrapper>
     </Wrapper>
   );

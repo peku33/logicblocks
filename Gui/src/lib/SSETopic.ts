@@ -1,137 +1,144 @@
+import assert from "assert";
 import deepEqual from "deep-equal";
-import { useEffect, useMemo, useReducer } from "react";
-import { useMemoCompare } from "util/MemoCompare";
 import { urlBuild } from "./Api";
 
 export type Topic = number | string;
-export type TopicPath = Topic[];
+export class TopicPath {
+  public constructor(private readonly topicPath: Topic[]) {
+    // TODO: check for forbidden chars in topic
+  }
 
-function topicPathCompare(a: TopicPath, b: TopicPath): boolean {
-  return deepEqual(a, b);
+  public equals(other: this): boolean {
+    return deepEqual(this.topicPath, other.topicPath);
+  }
+  public hash(): string {
+    return this.topicPath.join("/");
+  }
+
+  public size(): number {
+    return this.topicPath.length;
+  }
+
+  public iter(): Iterable<Topic> {
+    return this.topicPath.values();
+  }
 }
+export class TopicPaths {
+  private topicPathsMap = new Map<string, TopicPath>();
 
-export function useVersions(endpoint: string, topicPaths_: TopicPath[]): number[] {
-  const topicPaths = useMemoCompare(topicPaths_, deepEqual);
+  public constructor(topicPaths: TopicPath[]) {
+    for (const topicPath of topicPaths) {
+      this.add(topicPath);
+    }
+  }
 
-  const topicPathsLut = useMemo(() => {
-    return topicPathsLutBuild(topicPaths);
-  }, [topicPaths]);
-
-  const [versions, updateTopicPaths] = useReducer(
-    (versions: number[], topicPaths: TopicPath[]): number[] => {
-      const indexes = topicPathsLutQuery(topicPathsLut, topicPaths);
-      // bump version for each changed index
-      return versions.map((version, index) => version + (indexes.has(index) ? 1 : 0));
-    },
-    undefined,
-    () => {
-      return Array(topicPaths.length).fill(0);
-    },
-  );
-
-  useEffect(() => {
-    const topicPathsUnique = topicPathsLutUniquePaths(topicPathsLut);
-    if (!topicPathsUnique) {
-      return;
+  public equals(other: this): boolean {
+    if (this.topicPathsMap.keys() !== other.topicPathsMap.keys()) {
+      return false;
     }
 
-    const url = urlBuild(endpoint);
+    for (const [hash, topicPath] of this.topicPathsMap) {
+      // we checked for key equality, so both should have same keys
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      if (!other.topicPathsMap.get(hash)!.equals(topicPath)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  public empty(): boolean {
+    return this.topicPathsMap.size === 0;
+  }
+  public add(topicPath: TopicPath) {
+    const hash = topicPath.hash();
+    this.topicPathsMap.set(hash, topicPath);
+  }
+  public iter(): Iterable<TopicPath> {
+    return this.topicPathsMap.values();
+  }
+}
+
+export interface ClientSubscription {
+  opened: () => void;
+  message: (topicPath: TopicPath) => void;
+}
+export class ClientSubscriptionToken {
+  public constructor(public readonly client: Client) {}
+}
+export class Client {
+  public constructor(public readonly endpoint: string, public readonly topicPaths: TopicPaths) {
+    assert(!this.topicPaths.empty());
+
+    this.eventSourceCreate();
+  }
+  public close() {
+    assert(this.subscriptions.size === 0);
+
+    this.eventSourceDestroy();
+  }
+
+  // subscriptions
+  private subscriptions = new Map<ClientSubscriptionToken, ClientSubscription>();
+  public subscriptionAdd(subscription: ClientSubscription): ClientSubscriptionToken {
+    const token = new ClientSubscriptionToken(this);
+    this.subscriptions.set(token, subscription);
+    return token;
+  }
+  public subscriptionRemove(token: ClientSubscriptionToken) {
+    assert(token.client === this);
+    this.subscriptions.delete(token);
+  }
+
+  // eventSource
+  private eventSource: EventSource | undefined = undefined;
+  private eventSourceCreate() {
+    if (this.eventSource !== undefined) return;
+
+    const url = urlBuild(this.endpoint);
     const searchParams = new URLSearchParams({
-      filter: topicPathsUnique.map((topicPath) => topicPath.join("-")).join(","),
+      filter: [...this.topicPaths.iter()].map((topicPath) => [...topicPath.iter()].join("-")).join(","),
     });
 
-    const eventSource = new EventSource(`${url}?${searchParams.toString()}`);
-    eventSource.addEventListener("error", (event) => {
-      console.error("SSETopic", "useVersions", endpoint, event);
+    this.eventSource = new EventSource(`${url}?${searchParams.toString()}`);
+    this.eventSource.addEventListener("error", (event) => {
+      this.eventSourceOnError(event);
     });
-    // eventSource.addEventListener('open', (event) => {});
-    eventSource.addEventListener("message", (event) => {
-      const topicPath: TopicPath = JSON.parse(event.data);
-      updateTopicPaths([topicPath]);
+    this.eventSource.addEventListener("open", (event) => {
+      this.eventSourceOnOpen(event);
     });
+    this.eventSource.addEventListener("message", (event) => {
+      this.eventSourceOnMessage(event);
+    });
+  }
+  private eventSourceDestroy() {
+    if (this.eventSource === undefined) return;
+    this.eventSource.close();
+  }
+  private eventSourceOnError(event: Event) {
+    console.error("SSETopic", "Client", this.endpoint, this.topicPaths, event);
+  }
+  private eventSourceOnOpen(event: Event) {
+    this.handleOpen();
+  }
+  private eventSourceOnMessage(event: MessageEvent) {
+    const topicPath = JSON.parse(event.data);
 
-    return () => {
-      eventSource.close();
-    };
-  }, [endpoint, topicPathsLut]);
+    assert(Array.isArray(topicPath));
 
-  return versions;
-}
-
-type TopicPathsLutHash = string;
-type TopicPathsLut = Map<TopicPathsLutHash, Array<[TopicPath, Set<number>]>>;
-function topicPathsLutHash(topicPath: TopicPath): string {
-  return topicPath.join("/");
-}
-function topicPathsLutBuild(topicPaths: TopicPath[]): TopicPathsLut {
-  const lut = new Map<string, Array<[TopicPath, Set<number>]>>();
-  topicPaths.forEach((topicPath, index) => {
-    const key = topicPathsLutHash(topicPath);
-
-    // all keys with same hash
-    let entries = lut.get(key);
-    if (entries === undefined) {
-      entries = [];
-      lut.set(key, entries);
+    for (const topic of topicPath) {
+      assert(typeof topic === "string" || typeof topic === "number");
     }
 
-    // add to set, using deep compare
-    let inserted = false;
-    entries.forEach(([topicPath_, indexes]) => {
-      if (!topicPathCompare(topicPath_, topicPath)) {
-        return;
-      }
+    this.handleMessage(new TopicPath(topicPath));
+  }
 
-      indexes.add(index);
-      inserted = true;
-    });
-    if (!inserted) {
-      entries.push([topicPath, new Set([index])]);
-    }
-  });
-  return lut;
-}
-function topicPathsLutQuery(lut: TopicPathsLut, topicPaths: TopicPath[]): Set<number> {
-  const indexes = new Set<number>();
-
-  topicPaths.forEach((topicPath) => {
-    const key = topicPathsLutHash(topicPath);
-
-    const entries = lut.get(key);
-    if (entries === undefined) {
-      return;
-    }
-
-    entries.forEach(([topicPath_, indexes_]) => {
-      if (!topicPathCompare(topicPath_, topicPath)) {
-        return;
-      }
-
-      indexes_.forEach((index) => {
-        indexes.add(index);
-      });
-    });
-  });
-
-  return indexes;
-}
-function topicPathsLutUniquePaths(lut: TopicPathsLut): TopicPath[] {
-  const topicPaths: TopicPath[] = [];
-  lut.forEach((entry) => {
-    const entryTopicPaths: TopicPath[] = [];
-
-    entry.forEach(([topicPath, _indexes]) => {
-      const contains = entryTopicPaths.some((topicPath_) => topicPathCompare(topicPath, topicPath_));
-      if (contains) {
-        return;
-      }
-
-      entryTopicPaths.push(topicPath);
-    });
-
-    entryTopicPaths.forEach((entryTopicPath) => {
-      topicPaths.push(entryTopicPath);
-    });
-  });
-  return topicPaths;
+  // common
+  private handleOpen() {
+    this.subscriptions.forEach((subscription) => subscription.opened());
+  }
+  private handleMessage(topicPath: TopicPath) {
+    this.subscriptions.forEach((subscription) => subscription.message(topicPath));
+  }
 }

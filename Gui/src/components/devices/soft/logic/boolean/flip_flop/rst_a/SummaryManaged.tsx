@@ -1,14 +1,13 @@
 import { deviceClassPostEmpty } from "components/devices/Device";
-import { useDeviceSummary } from "components/devices/DeviceSummary";
 import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
+import { useDeviceSummary } from "components/devices/DeviceSummaryService";
 import { useCallback } from "react";
 import Component, { Data } from "./Summary";
 
 const ManagedComponent: DeviceSummaryManaged = (props) => {
-  const { deviceSummaryContext } = props;
-  const { deviceId } = deviceSummaryContext;
+  const { deviceId } = props;
 
-  const data = useDeviceSummary<Data>(deviceSummaryContext);
+  const data = useDeviceSummary<Data>(deviceId);
 
   const onR = useCallback((): void => {
     deviceClassPostEmpty(deviceId, "/r");

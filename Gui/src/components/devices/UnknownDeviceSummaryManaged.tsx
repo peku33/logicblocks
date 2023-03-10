@@ -2,8 +2,8 @@ import { DeviceSummaryManaged } from "./DeviceSummaryManaged";
 import UnknownDeviceSummary from "./UnknownDeviceSummary";
 
 const ManagedComponent: DeviceSummaryManaged = (props) => {
-  const { deviceSummaryContext } = props;
+  const { deviceId } = props;
 
-  return <UnknownDeviceSummary deviceSummaryContext={deviceSummaryContext} />;
+  return <UnknownDeviceSummary deviceId={deviceId} />;
 };
 export default ManagedComponent;
