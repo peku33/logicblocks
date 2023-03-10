@@ -1,183 +1,343 @@
 use super::fontawesome::Icon;
 use crate::{
-    devices::{
-        self,
-        helpers::{DeviceHandle, DeviceHandleErased},
-    },
-    signals,
+    devices::Id as DeviceId,
     web::{self, uri_cursor},
 };
-use anyhow::Context;
 use futures::future::{BoxFuture, FutureExt};
 use serde::Serialize;
 
-// TODO: Make device handles deduplicable
 #[derive(Debug)]
-pub struct Dashboard<'d> {
+pub struct Dashboard {
     name: String,
     icon: Icon,
 
-    device_handles_erased: Vec<DeviceHandleErased<'d>>,
+    sections: Vec<Section>,
 }
-impl<'d> Dashboard<'d> {
-    pub fn new(
-        name: String,
-        icon: Icon,
-    ) -> Self {
-        let device_handles_erased = Vec::<DeviceHandleErased<'d>>::new();
-
-        Self {
-            name,
-            icon,
-
-            device_handles_erased,
-        }
-    }
-
-    pub fn insert<D: devices::Device + signals::Device + 'd>(
-        &mut self,
-        device_handle: DeviceHandle<'d, D>,
-    ) {
-        self.insert_erased(device_handle.into_erased())
-    }
-    pub fn insert_erased(
-        &mut self,
-        device_handle_erased: DeviceHandleErased<'d>,
-    ) {
-        self.device_handles_erased.push(device_handle_erased);
-    }
-}
-impl<'d> uri_cursor::Handler for Dashboard<'d> {
+impl uri_cursor::Handler for Dashboard {
     fn handle(
         &self,
         request: web::Request,
         uri_cursor: &uri_cursor::UriCursor,
     ) -> BoxFuture<'static, web::Response> {
+        #[derive(Serialize)]
+        struct DashboardSummarySerialize {
+            name: String,
+            icon: Icon,
+        }
+        impl DashboardSummarySerialize {
+            fn new(dashboard: &Dashboard) -> Self {
+                Self {
+                    name: dashboard.name.clone(),
+                    icon: dashboard.icon.clone(),
+                }
+            }
+        }
+
         match uri_cursor {
             uri_cursor::UriCursor::Next("summary", uri_cursor) => match uri_cursor.as_ref() {
                 uri_cursor::UriCursor::Terminal => match *request.method() {
                     http::Method::GET => {
-                        #[derive(Debug, Serialize)]
-                        struct DashboardSummary {
-                            name: String,
-                            icon: Icon,
-                            device_ids: Vec<devices::Id>,
-                        }
+                        let dashboard_summary_serialize = DashboardSummarySerialize::new(self);
 
-                        let name = self.name.clone();
-
-                        let icon = self.icon.clone();
-
-                        let device_ids = self
-                            .device_handles_erased
-                            .iter()
-                            .map(|device_handle_erased| device_handle_erased.device_id())
-                            .collect::<Vec<_>>();
-
-                        let dashboard_summary = DashboardSummary {
-                            name,
-                            icon,
-                            device_ids,
-                        };
-                        async move { web::Response::ok_json(dashboard_summary) }.boxed()
+                        async move { web::Response::ok_json(dashboard_summary_serialize) }.boxed()
                     }
                     _ => async move { web::Response::error_405() }.boxed(),
                 },
                 _ => async move { web::Response::error_404() }.boxed(),
             },
+            uri_cursor::UriCursor::Next("content", uri_cursor) => match uri_cursor.as_ref() {
+                uri_cursor::UriCursor::Terminal => match *request.method() {
+                    http::Method::GET => {
+                        #[derive(Serialize)]
+                        #[serde(tag = "type")]
+                        enum SectionContentSerialize {
+                            Dashboards {
+                                dashboards: Vec<DashboardSummarySerialize>,
+                            },
+                            Devices {
+                                device_ids: Vec<DeviceId>,
+                            },
+                        }
+                        impl SectionContentSerialize {
+                            fn new(section_content: &SectionContent) -> Self {
+                                match section_content {
+                                    SectionContent::Dashboards(section_content_dashboards) => {
+                                        Self::Dashboards {
+                                            dashboards: section_content_dashboards
+                                                .dashboards
+                                                .iter()
+                                                .map(DashboardSummarySerialize::new)
+                                                .collect::<Vec<_>>(),
+                                        }
+                                    }
+                                    SectionContent::Devices(section_content_devices) => {
+                                        Self::Devices {
+                                            device_ids: section_content_devices.device_ids.clone(),
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        #[derive(Serialize)]
+                        struct SectionSerialize {
+                            name: Option<String>,
+
+                            content: SectionContentSerialize,
+                        }
+                        impl SectionSerialize {
+                            fn new(section: &Section) -> Self {
+                                Self {
+                                    name: section.name.clone(),
+
+                                    content: SectionContentSerialize::new(&section.content),
+                                }
+                            }
+                        }
+
+                        #[derive(Serialize)]
+                        struct DashboardContentSerialize {
+                            sections: Vec<SectionSerialize>,
+                        }
+                        impl DashboardContentSerialize {
+                            fn new(dashboard: &Dashboard) -> Self {
+                                Self {
+                                    sections: dashboard
+                                        .sections
+                                        .iter()
+                                        .map(SectionSerialize::new)
+                                        .collect::<Vec<_>>(),
+                                }
+                            }
+                        }
+
+                        let dashboard_content_serialize = DashboardContentSerialize::new(self);
+
+                        async move { web::Response::ok_json(dashboard_content_serialize) }.boxed()
+                    }
+                    _ => async move { web::Response::error_405() }.boxed(),
+                },
+                _ => async move { web::Response::error_404() }.boxed(),
+            },
+            uri_cursor::UriCursor::Next(section_index_str, uri_cursor) => {
+                let section_index = match section_index_str.parse::<usize>() {
+                    Ok(section_index) => section_index,
+                    Err(_) => return async move { web::Response::error_404() }.boxed(),
+                };
+
+                let section = match self.sections.get(section_index) {
+                    Some(section) => section,
+                    None => return async move { web::Response::error_404() }.boxed(),
+                };
+
+                section.handle(request, uri_cursor)
+            }
             _ => async move { web::Response::error_404() }.boxed(),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Dashboards<'d> {
-    dashboards: Vec<Dashboard<'d>>,
-}
-impl<'d> Dashboards<'d> {
-    pub fn new() -> Self {
-        let dashboards = Vec::<Dashboard<'d>>::new();
+pub struct Section {
+    name: Option<String>,
 
-        Self { dashboards }
-    }
-    pub fn insert(
-        &mut self,
-        dashboard: Dashboard<'d>,
-    ) {
-        self.dashboards.push(dashboard);
+    content: SectionContent,
+}
+impl uri_cursor::Handler for Section {
+    fn handle(
+        &self,
+        request: web::Request,
+        uri_cursor: &uri_cursor::UriCursor,
+    ) -> BoxFuture<'static, web::Response> {
+        self.content.handle(request, uri_cursor)
     }
 }
-impl<'d> uri_cursor::Handler for Dashboards<'d> {
+
+#[derive(Debug)]
+pub enum SectionContent {
+    Dashboards(SectionContentDashboards),
+    Devices(SectionContentDevices),
+}
+impl uri_cursor::Handler for SectionContent {
+    fn handle(
+        &self,
+        request: web::Request,
+        uri_cursor: &uri_cursor::UriCursor,
+    ) -> BoxFuture<'static, web::Response> {
+        match &self {
+            SectionContent::Dashboards(section_content_dashboards) => {
+                section_content_dashboards.handle(request, uri_cursor)
+            }
+            SectionContent::Devices(section_content_devices) => {
+                section_content_devices.handle(request, uri_cursor)
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SectionContentDashboards {
+    dashboards: Vec<Dashboard>,
+}
+impl uri_cursor::Handler for SectionContentDashboards {
     fn handle(
         &self,
         request: web::Request,
         uri_cursor: &uri_cursor::UriCursor,
     ) -> BoxFuture<'static, web::Response> {
         match uri_cursor {
-            uri_cursor::UriCursor::Next("summary", uri_cursor) => match uri_cursor.as_ref() {
-                uri_cursor::UriCursor::Terminal => match *request.method() {
-                    http::Method::GET => {
-                        #[derive(Debug, Serialize)]
-                        struct DashboardSummary {
-                            id: usize,
-                            name: String,
-                            icon: Icon,
-                        }
-
-                        let dashboards_summary = self
-                            .dashboards
-                            .iter()
-                            .enumerate()
-                            .map(|(index, dashboard_item)| {
-                                let id = index + 1; // to start from 1
-
-                                let name = dashboard_item.name.clone();
-
-                                let icon = dashboard_item.icon.clone();
-
-                                let response_item = DashboardSummary { id, name, icon };
-
-                                response_item
-                            })
-                            .collect::<Vec<_>>();
-
-                        #[derive(Debug, Serialize)]
-                        #[serde(transparent)]
-                        struct DashboardsSummary {
-                            inner: Vec<DashboardSummary>,
-                        }
-
-                        let dashboards_summary = DashboardsSummary {
-                            inner: dashboards_summary,
-                        };
-
-                        async move { web::Response::ok_json(dashboards_summary) }.boxed()
-                    }
-                    _ => async move { web::Response::error_405() }.boxed(),
-                },
-                _ => async move { web::Response::error_404() }.boxed(),
-            },
-            uri_cursor::UriCursor::Next(dashboard_id, uri_cursor) => {
-                let dashboard_id: usize = match dashboard_id.parse().context("dashboard_id") {
-                    Ok(dashboard_id) => dashboard_id,
-                    Err(error) => {
-                        return async move { web::Response::error_400_from_error(error) }.boxed()
-                    }
+            uri_cursor::UriCursor::Next(dashboard_index_str, uri_cursor) => {
+                let dashboard_index = match dashboard_index_str.parse::<usize>() {
+                    Ok(dashboard_index) => dashboard_index,
+                    Err(_) => return async move { web::Response::error_404() }.boxed(),
                 };
-
-                #[allow(clippy::absurd_extreme_comparisons)]
-                if dashboard_id <= 0 {
-                    return async move { web::Response::error_404() }.boxed();
-                }
-                let dashboard_index = dashboard_id - 1;
 
                 let dashboard = match self.dashboards.get(dashboard_index) {
                     Some(dashboard) => dashboard,
                     None => return async move { web::Response::error_404() }.boxed(),
                 };
-                dashboard.handle(request, uri_cursor.as_ref())
+
+                dashboard.handle(request, uri_cursor)
             }
             _ => async move { web::Response::error_404() }.boxed(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SectionContentDevices {
+    device_ids: Vec<DeviceId>,
+}
+impl uri_cursor::Handler for SectionContentDevices {
+    fn handle(
+        &self,
+        _request: web::Request,
+        _uri_cursor: &uri_cursor::UriCursor,
+    ) -> BoxFuture<'static, web::Response> {
+        async move { web::Response::error_404() }.boxed()
+    }
+}
+
+pub mod builder {
+    use super::{super::fontawesome::Icon, *};
+    use crate::devices::helpers::DeviceHandleErased;
+
+    #[derive(Debug)]
+    pub struct DashboardBuilder {
+        name: String,
+        icon: Icon,
+
+        sections: Vec<Section>,
+    }
+    impl DashboardBuilder {
+        pub fn new(
+            name: String,
+            icon: Icon,
+        ) -> Self {
+            let sections = Vec::<Section>::new();
+
+            Self {
+                name,
+                icon,
+                sections,
+            }
+        }
+
+        pub fn section_add(
+            &mut self,
+            section: Section,
+        ) {
+            self.sections.push(section);
+        }
+        pub fn section_add_with(
+            mut self,
+            section: Section,
+        ) -> Self {
+            self.section_add(section);
+            self
+        }
+
+        pub fn build(self) -> Dashboard {
+            Dashboard {
+                name: self.name,
+                icon: self.icon,
+
+                sections: self.sections,
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct SectionDashboardsBuilder {
+        name: Option<String>,
+
+        dashboards: Vec<Dashboard>,
+    }
+    impl SectionDashboardsBuilder {
+        pub fn new(name: Option<String>) -> Self {
+            let dashboards = Vec::<Dashboard>::new();
+
+            Self { name, dashboards }
+        }
+
+        pub fn dashboard_add(
+            &mut self,
+            dashboard: Dashboard,
+        ) {
+            self.dashboards.push(dashboard);
+        }
+        pub fn dashboard_add_with(
+            mut self,
+            dashboard: Dashboard,
+        ) -> Self {
+            self.dashboard_add(dashboard);
+            self
+        }
+
+        pub fn build(self) -> Section {
+            Section {
+                name: self.name,
+                content: SectionContent::Dashboards(SectionContentDashboards {
+                    dashboards: self.dashboards,
+                }),
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct SectionDevicesBuilder {
+        name: Option<String>,
+
+        device_ids: Vec<DeviceId>,
+    }
+    impl SectionDevicesBuilder {
+        pub fn new(name: Option<String>) -> Self {
+            let device_ids = Vec::<DeviceId>::new();
+
+            Self { name, device_ids }
+        }
+
+        pub fn device_add(
+            &mut self,
+            device: DeviceHandleErased<'_>,
+        ) {
+            self.device_ids.push(device.device_id());
+        }
+        pub fn device_add_with(
+            mut self,
+            device: DeviceHandleErased<'_>,
+        ) -> Self {
+            self.device_add(device);
+            self
+        }
+
+        pub fn build(self) -> Section {
+            Section {
+                name: self.name,
+                content: SectionContent::Devices(SectionContentDevices {
+                    device_ids: self.device_ids,
+                }),
+            }
         }
     }
 }

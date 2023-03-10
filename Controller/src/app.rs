@@ -9,7 +9,7 @@ use super::{
         uri_cursor::{map_router::MapRouter, Handler},
     },
 };
-use crate::gui::dashboards::Dashboards;
+use crate::gui::dashboards;
 use anyhow::{Context, Error};
 use maplit::hashmap;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
@@ -18,7 +18,7 @@ use tokio::signal::ctrl_c;
 pub async fn run(
     devices: Devices<'_>,
     signals: Signals,
-    dashboards: Dashboards<'_>,
+    dashboards: dashboards::Dashboard,
     bind_custom: Option<SocketAddrV4>,
 ) -> Result<(), Error> {
     let device_wrappers_by_id = devices.into_device_wrappers_by_id();
