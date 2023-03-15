@@ -21,7 +21,7 @@ const Content: React.FC<{ contentPath: Data.ContentPath }> = (props) => {
   const navigationLinkComponentResolver: NavigationLinkComponentResolver = useCallback((backDepth: number) => {
     const NavigationLinkComponent: NavigationLinkComponent = (props) => {
       const { children } = props;
-      return <Link to={`.${"/../..".repeat(backDepth)}`}>{children}</Link>;
+      return <Link to={`.${"/..".repeat(backDepth)}`}>{children}</Link>;
     };
 
     return NavigationLinkComponent;
@@ -31,7 +31,7 @@ const Content: React.FC<{ contentPath: Data.ContentPath }> = (props) => {
     (contentPathItem: Data.ContentPathItem) => {
       const DashboardLinkComponentResolver: DashboardLinkComponent = (props) => {
         const { children } = props;
-        return <Link to={`./${contentPathItem.section_index}/${contentPathItem.dashboard_index}`}>{children}</Link>;
+        return <Link to={`./${contentPathItemSerialize(contentPathItem)}`}>{children}</Link>;
       };
 
       return DashboardLinkComponentResolver;
@@ -51,7 +51,7 @@ const Content: React.FC<{ contentPath: Data.ContentPath }> = (props) => {
           />
         }
       />
-      <Route path="/:sectionId/:dashboardId/*" element={<ContentChild contentPath={contentPath} />} />
+      <Route path="/:contentPathItemSerialized/*" element={<ContentChild contentPath={contentPath} />} />
       <Route path="*" element={<Error404 />} />
     </Routes>
   );
@@ -60,11 +60,31 @@ const ContentChild: React.FC<{ contentPath: Data.ContentPath }> = (props) => {
   const { contentPath } = props;
   const params = useParams();
 
-  const contentPathItem: Data.ContentPathItem = {
-    section_index: parseInt(params.sectionId as string),
-    dashboard_index: parseInt(params.dashboardId as string),
-  };
+  const contentPathItem = contentPathItemDeserialize(params.contentPathItemSerialized as string);
   const contentPathChild = contentPath.concat([contentPathItem]);
 
   return <Content contentPath={contentPathChild} />;
 };
+
+function contentPathItemSerialize(contentPathItem: Data.ContentPathItem): string {
+  if (contentPathItem instanceof Data.ContentPathItemDashboard) {
+    return `${contentPathItem.dashboardIndex}`;
+  } else if (contentPathItem instanceof Data.ContentPathItemSectionDashboard) {
+    return `${contentPathItem.sectionIndex}:${contentPathItem.dashboardIndex}`;
+  } else {
+    throw new Error("unknown contentPathItem type");
+  }
+}
+function contentPathItemDeserialize(contentPathItemSerialized: string): Data.ContentPathItem {
+  const contentPathItemSerializedItems = contentPathItemSerialized.split(":");
+  if (contentPathItemSerializedItems.length === 1) {
+    const dashboardIndex = parseInt(contentPathItemSerializedItems[0]);
+    return new Data.ContentPathItemDashboard(dashboardIndex);
+  } else if (contentPathItemSerializedItems.length === 2) {
+    const sectionIndex = parseInt(contentPathItemSerializedItems[0]);
+    const dashboardIndex = parseInt(contentPathItemSerializedItems[1]);
+    return new Data.ContentPathItemSectionDashboard(sectionIndex, dashboardIndex);
+  } else {
+    throw new Error("unknown contentPathItemSerialized format");
+  }
+}

@@ -136,37 +136,83 @@ export const DashboardContent: React.FC<{
   }
 
   return (
-    <DashboardContentInner
-      dashboardContent={dashboardContent}
+    <Content
+      content={dashboardContent.content}
       dashboardLinkComponentResolver={dashboardLinkComponentResolver}
       deviceListComponent={deviceListComponent}
     />
   );
 };
-const DashboardContentInner: React.FC<{
-  dashboardContent: Data.DashboardContent;
+
+const Content: React.FC<{
+  content: Data.Content;
   dashboardLinkComponentResolver: DashboardLinkComponentResolver;
   deviceListComponent: DeviceListComponent;
 }> = (props) => {
-  const { dashboardContent, dashboardLinkComponentResolver, deviceListComponent } = props;
+  const { content, dashboardLinkComponentResolver, deviceListComponent } = props;
+
+  if (Data.contentIsSectionContent(content)) {
+    return (
+      <ContentSectionContent
+        contentSectionContent={content}
+        dashboardLinkComponentResolver={dashboardLinkComponentResolver}
+        deviceListComponent={deviceListComponent}
+      />
+    );
+  } else if (Data.contentIsSections(content)) {
+    return (
+      <ContentSections
+        contentSections={content}
+        dashboardLinkComponentResolver={dashboardLinkComponentResolver}
+        deviceListComponent={deviceListComponent}
+      />
+    );
+  } else {
+    throw new Error("unknown content type");
+  }
+};
+
+const ContentSectionContent: React.FC<{
+  contentSectionContent: Data.ContentSectionContent;
+  dashboardLinkComponentResolver: DashboardLinkComponentResolver;
+  deviceListComponent: DeviceListComponent;
+}> = (props) => {
+  const { contentSectionContent, dashboardLinkComponentResolver, deviceListComponent } = props;
 
   return (
-    <DashboardContentInnerWrapper>
-      {dashboardContent.sections.map((section, sectionIndex) => (
-        <DashboardContentInnerItemWrapper key={sectionIndex}>
+    <SectionContent
+      sectionContent={contentSectionContent.section_content}
+      sectionIndex={undefined}
+      dashboardLinkComponentResolver={dashboardLinkComponentResolver}
+      deviceListComponent={deviceListComponent}
+    />
+  );
+};
+
+const ContentSections: React.FC<{
+  contentSections: Data.ContentSections;
+  dashboardLinkComponentResolver: DashboardLinkComponentResolver;
+  deviceListComponent: DeviceListComponent;
+}> = (props) => {
+  const { contentSections, dashboardLinkComponentResolver, deviceListComponent } = props;
+
+  return (
+    <ContentSectionsWrapper>
+      {contentSections.sections.map((section, sectionIndex) => (
+        <ContentSectionsItemWrapper key={sectionIndex}>
           <Section
             section={section}
             sectionIndex={sectionIndex}
             dashboardLinkComponentResolver={dashboardLinkComponentResolver}
             deviceListComponent={deviceListComponent}
           />
-        </DashboardContentInnerItemWrapper>
+        </ContentSectionsItemWrapper>
       ))}
-    </DashboardContentInnerWrapper>
+    </ContentSectionsWrapper>
   );
 };
-const DashboardContentInnerWrapper = styled.div``;
-const DashboardContentInnerItemWrapper = styled.div``;
+const ContentSectionsWrapper = styled.div``;
+const ContentSectionsItemWrapper = styled.div``;
 
 const Section: React.FC<{
   section: Data.Section;
@@ -204,7 +250,7 @@ const SectionContentWrapper = styled.div`
 
 const SectionContent: React.FC<{
   sectionContent: Data.SectionContent;
-  sectionIndex: number;
+  sectionIndex: number | undefined;
   dashboardLinkComponentResolver: DashboardLinkComponentResolver;
   deviceListComponent: DeviceListComponent;
 }> = (props) => {
@@ -221,25 +267,25 @@ const SectionContent: React.FC<{
   } else if (Data.sectionContentIsDevices(sectionContent)) {
     return <SectionContentDevices sectionContentDevices={sectionContent} deviceListComponent={deviceListComponent} />;
   } else {
-    throw new Error("Unknown sectionContent type");
+    throw new Error("unknown sectionContent type");
   }
 };
 
 const SectionContentDashboards: React.FC<{
   sectionContentDashboards: Data.SectionContentDashboards;
-  sectionIndex: number;
+  sectionIndex: number | undefined;
   dashboardLinkComponentResolver: DashboardLinkComponentResolver;
 }> = (props) => {
   const { sectionContentDashboards, sectionIndex, dashboardLinkComponentResolver } = props;
 
   return (
     <SectionContentDashboardsList>
-      {sectionContentDashboards.dashboards.map((sectionContentDashboard, sectionContentDashboardIndex) => (
-        <SectionContentDashboardsListItem key={sectionContentDashboardIndex}>
+      {sectionContentDashboards.dashboards.map((sectionContentDashboard, dashboardIndex) => (
+        <SectionContentDashboardsListItem key={dashboardIndex}>
           <SectionContentDashboard
             sectionContentDashboard={sectionContentDashboard}
             sectionIndex={sectionIndex}
-            sectionContentDashboardIndex={sectionContentDashboardIndex}
+            dashboardIndex={dashboardIndex}
             dashboardLinkComponentResolver={dashboardLinkComponentResolver}
           />
         </SectionContentDashboardsListItem>
@@ -261,15 +307,16 @@ const SectionContentDashboardsListItem = styled.div``;
 
 const SectionContentDashboard: React.FC<{
   sectionContentDashboard: Data.DashboardSummary;
-  sectionIndex: number;
-  sectionContentDashboardIndex: number;
+  sectionIndex: number | undefined;
+  dashboardIndex: number;
   dashboardLinkComponentResolver: DashboardLinkComponentResolver;
 }> = (props) => {
-  const { sectionContentDashboard, sectionIndex, sectionContentDashboardIndex, dashboardLinkComponentResolver } = props;
-  const childContentPathItem: Data.ContentPathItem = {
-    section_index: sectionIndex,
-    dashboard_index: sectionContentDashboardIndex,
-  };
+  const { sectionContentDashboard, sectionIndex, dashboardIndex, dashboardLinkComponentResolver } = props;
+
+  const childContentPathItem: Data.ContentPathItem =
+    sectionIndex !== undefined
+      ? new Data.ContentPathItemSectionDashboard(sectionIndex, dashboardIndex)
+      : new Data.ContentPathItemDashboard(dashboardIndex);
   const DashboardLinkComponent = dashboardLinkComponentResolver(childContentPathItem);
 
   return (

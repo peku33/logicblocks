@@ -29,7 +29,7 @@ export async function postEmpty(endpoint: string): Promise<void> {
   }
   const text = await response.text();
   if (text !== "") {
-    throw new Error("Expected empty string");
+    throw new Error("expected empty string");
   }
 }
 
@@ -47,6 +47,6 @@ export async function postJsonEmpty<D>(endpoint: string, data: D): Promise<void>
   }
   const text = await response.text();
   if (text !== "") {
-    throw new Error("Expected empty string");
+    throw new Error("expected empty string");
   }
 }
