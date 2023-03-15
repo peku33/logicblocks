@@ -41,7 +41,7 @@ impl SensorState {
                     temperature |= 0b1111_0000_0000_0000;
                 }
                 let temperature = unsafe { transmute::<u16, i16>(temperature) } as f64 / 16.0;
-                let temperature = Temperature::new(Unit::Celsius, temperature).unwrap();
+                let temperature = Temperature::from_unit(Unit::Celsius, temperature).unwrap();
                 Some(temperature)
             }
             _ => None,
@@ -94,7 +94,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 0,
-            temperature: Some(Temperature::new(Unit::Celsius, 125.0).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, 125.0).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
@@ -106,7 +106,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 0,
-            temperature: Some(Temperature::new(Unit::Celsius, 85.0).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, 85.0).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
@@ -118,7 +118,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 1,
-            temperature: Some(Temperature::new(Unit::Celsius, 25.0625).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, 25.0625).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
@@ -130,7 +130,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 1,
-            temperature: Some(Temperature::new(Unit::Celsius, 10.125).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, 10.125).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
@@ -142,7 +142,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 2,
-            temperature: Some(Temperature::new(Unit::Celsius, 0.5).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, 0.5).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
@@ -154,7 +154,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 2,
-            temperature: Some(Temperature::new(Unit::Celsius, 0.0).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, 0.0).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
@@ -166,7 +166,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 3,
-            temperature: Some(Temperature::new(Unit::Celsius, -0.5).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, -0.5).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
@@ -178,7 +178,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 3,
-            temperature: Some(Temperature::new(Unit::Celsius, -10.125).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, -10.125).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
@@ -190,7 +190,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::S,
             reset_count: 0,
-            temperature: Some(Temperature::new(Unit::Celsius, -25.0625).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, -25.0625).unwrap()),
         };
         assert_eq!(state, state_expected);
     }
@@ -202,7 +202,7 @@ mod tests_state {
         let state_expected = State {
             sensor_type: SensorType::B,
             reset_count: 0,
-            temperature: Some(Temperature::new(Unit::Celsius, -55.0).unwrap()),
+            temperature: Some(Temperature::from_unit(Unit::Celsius, -55.0).unwrap()),
         };
         assert_eq!(state, state_expected);
     }

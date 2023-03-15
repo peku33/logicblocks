@@ -2,8 +2,6 @@ use anyhow::{ensure, Error};
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
 
-// TODO: maybe don't use Unit, use from_ and to_ methods
-
 #[derive(Debug)]
 pub enum Unit {
     Kelvin,
@@ -11,14 +9,14 @@ pub enum Unit {
     Fahrenheit,
 }
 
-// FIXME: ensure struct field `kelvin` is deserialized in as finite
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
-#[serde(transparent)]
+#[serde(try_from = "TemperatureSerde")]
+#[serde(into = "TemperatureSerde")]
 pub struct Temperature {
     kelvin: f64,
 }
 impl Temperature {
-    pub fn new(
+    pub fn from_unit(
         unit: Unit,
         value: f64,
     ) -> Result<Self, Error> {
@@ -39,6 +37,18 @@ impl Temperature {
             Unit::Celsius => self.kelvin - 273.15,
             Unit::Fahrenheit => self.kelvin * 9.0 / 5.0 - 459.67,
         }
+    }
+}
+impl TryFrom<TemperatureSerde> for Temperature {
+    type Error = Error;
+
+    fn try_from(value: TemperatureSerde) -> Result<Self, Self::Error> {
+        Self::from_unit(Unit::Kelvin, value.0)
+    }
+}
+impl Into<TemperatureSerde> for Temperature {
+    fn into(self) -> TemperatureSerde {
+        TemperatureSerde(self.to_unit(Unit::Kelvin))
     }
 }
 impl Eq for Temperature {}
@@ -65,3 +75,7 @@ impl fmt::Display for Temperature {
         )
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+struct TemperatureSerde(f64);

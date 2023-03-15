@@ -775,7 +775,7 @@ pub mod spa {
             assert_relative_eq!(spa2.phi_cap, 194.34024_f64.to_radians(), epsilon = 1e-5);
 
             let pressure = Pressure::from_millibars_hectopascals(820.0).unwrap();
-            let temperature = Temperature::new(Unit::Celsius, 11.0).unwrap();
+            let temperature = Temperature::from_unit(Unit::Celsius, 11.0).unwrap();
 
             let spa3 = SPA3::calculate(spa2, pressure, temperature);
             assert_relative_eq!(spa3.theta, 50.11162_f64.to_radians(), epsilon = 1e-5);

@@ -900,7 +900,7 @@ pub mod hardware {
                         sensor_type: Ds18x20SensorType::B,
                         reset_count: 0,
                         temperature: Some(
-                            Temperature::new(TemperatureUnit::Celsius, 125.00).unwrap(),
+                            Temperature::from_unit(TemperatureUnit::Celsius, 125.00).unwrap(),
                         ),
                     },
                 }),

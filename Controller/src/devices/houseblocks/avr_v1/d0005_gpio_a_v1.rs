@@ -1576,21 +1576,21 @@ pub mod hardware {
                             sensor_type: Ds18x20SensorType::S,
                             reset_count: 0,
                             temperature: Some(
-                                Temperature::new(TemperatureUnit::Celsius, 125.0).unwrap(),
+                                Temperature::from_unit(TemperatureUnit::Celsius, 125.0).unwrap(),
                             ),
                         },
                         Ds18x20State {
                             sensor_type: Ds18x20SensorType::S,
                             reset_count: 1,
                             temperature: Some(
-                                Temperature::new(TemperatureUnit::Celsius, 25.0625).unwrap(),
+                                Temperature::from_unit(TemperatureUnit::Celsius, 25.0625).unwrap(),
                             ),
                         },
                         Ds18x20State {
                             sensor_type: Ds18x20SensorType::B,
                             reset_count: 0,
                             temperature: Some(
-                                Temperature::new(TemperatureUnit::Celsius, -55.0).unwrap(),
+                                Temperature::from_unit(TemperatureUnit::Celsius, -55.0).unwrap(),
                             ),
                         },
                     ],
