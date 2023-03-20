@@ -8,7 +8,7 @@ use anyhow::{ensure, Context, Error};
 use bytes::Bytes;
 use futures::{
     future::BoxFuture,
-    stream::{Stream, StreamExt},
+    stream::{once, Stream, StreamExt},
 };
 use http::{header, request::Parts, HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use hyper::{Body, Response as HyperResponse};
@@ -108,8 +108,12 @@ impl Response {
         Response { hyper_response }
     }
     pub fn ok_sse_stream<S: Stream<Item = sse::Event> + Send + 'static>(sse_stream: S) -> Self {
-        let hyper_body =
-            Body::wrap_stream(sse_stream.map(|event| Ok::<_, Error>(event.to_payload())));
+        // FIXME: webkit based browsers (firefox, safari) won't see the stream opened until something is written
+        let ping_event = ":\r\n".to_owned();
+        let hyper_body = Body::wrap_stream(
+            once(async move { Ok(ping_event) })
+                .chain(sse_stream.map(|event| Ok::<_, Error>(event.to_payload()))),
+        );
         let hyper_response = HyperResponse::builder()
             .header(header::CONTENT_TYPE, "text/event-stream")
             .body(hyper_body)
