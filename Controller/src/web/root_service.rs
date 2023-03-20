@@ -53,7 +53,7 @@ mod gui_responder {
     };
 
     #[self_referencing]
-    #[derive(Debug)]
+    // #[derive(Debug)] // Loader & Responder does not implement Debug
     struct GuiResponderInner {
         loader: Loader,
 
@@ -62,7 +62,7 @@ mod gui_responder {
         responder: Responder<'this>,
     }
 
-    #[derive(Debug)]
+    // #[derive(Debug)] // GuiResponderInner does not implement Debug
     pub struct GuiResponder {
         inner: GuiResponderInner,
     }
