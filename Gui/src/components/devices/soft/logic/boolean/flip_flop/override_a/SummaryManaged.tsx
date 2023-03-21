@@ -15,10 +15,20 @@ const ManagedComponent: DeviceSummaryManaged = (props) => {
     },
     [deviceId],
   );
-  const onModeCycle = useCallback((): void => {
-    deviceClassPostEmpty(deviceId, "/mode/cycle");
+  const onModeCyclePassThrough = useCallback((): void => {
+    deviceClassPostEmpty(deviceId, "/mode/cycle/pass-through");
+  }, [deviceId]);
+  const onModeCycleNoPassThrough = useCallback((): void => {
+    deviceClassPostEmpty(deviceId, "/mode/cycle/no-pass-through");
   }, [deviceId]);
 
-  return <Component data={data} onModeSet={onModeSet} onModeCycle={onModeCycle} />;
+  return (
+    <Component
+      data={data}
+      onModeSet={onModeSet}
+      onModeCyclePassThrough={onModeCyclePassThrough}
+      onModeCycleNoPassThrough={onModeCycleNoPassThrough}
+    />
+  );
 };
 export default ManagedComponent;

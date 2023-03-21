@@ -24,7 +24,8 @@ export const PassThrough: Story<{ inputValue: boolean }> = (props) => (
       },
     }}
     onModeSet={() => ({})}
-    onModeCycle={() => ({})}
+    onModeCyclePassThrough={() => ({})}
+    onModeCycleNoPassThrough={() => ({})}
   />
 );
 
@@ -38,10 +39,16 @@ export const Override: Story<{ inputValue: boolean; overrideValue: boolean }> = 
       },
     }}
     onModeSet={() => ({})}
-    onModeCycle={() => ({})}
+    onModeCyclePassThrough={() => ({})}
+    onModeCycleNoPassThrough={() => ({})}
   />
 );
 
 export const Empty: Story<{}> = (props) => (
-  <Component data={undefined} onModeSet={() => ({})} onModeCycle={() => ({})} />
+  <Component
+    data={undefined}
+    onModeSet={() => ({})}
+    onModeCyclePassThrough={() => ({})}
+    onModeCycleNoPassThrough={() => ({})}
+  />
 );

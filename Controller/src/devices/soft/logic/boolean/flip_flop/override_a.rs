@@ -33,7 +33,8 @@ pub struct Configuration {
 enum RecalculateOperation {
     None,
     ModeSet(Mode),
-    ModeCycle,
+    ModeCyclePassThrough,
+    ModeCycleNoPassThrough,
 }
 
 #[derive(Debug)]
@@ -46,7 +47,8 @@ pub struct Device {
     signal_input: signal::state_target_last::Signal<bool>,
     signal_mode_set_pass_through: signal::event_target_last::Signal<()>,
     signal_mode_set_override: signal::event_target_last::Signal<bool>,
-    signal_mode_cycle: signal::event_target_last::Signal<()>,
+    signal_mode_cycle_pass_through: signal::event_target_last::Signal<()>,
+    signal_mode_cycle_no_pass_through: signal::event_target_last::Signal<()>,
     signal_output: signal::state_source::Signal<bool>,
 
     gui_summary_waker: devices::gui_summary::Waker,
@@ -69,14 +71,15 @@ impl Device {
             signal_input: signal::state_target_last::Signal::<bool>::new(),
             signal_mode_set_pass_through: signal::event_target_last::Signal::<()>::new(),
             signal_mode_set_override: signal::event_target_last::Signal::<bool>::new(),
-            signal_mode_cycle: signal::event_target_last::Signal::<()>::new(),
+            signal_mode_cycle_pass_through: signal::event_target_last::Signal::<()>::new(),
+            signal_mode_cycle_no_pass_through: signal::event_target_last::Signal::<()>::new(),
             signal_output: signal::state_source::Signal::<bool>::new(initial_value),
 
             gui_summary_waker: devices::gui_summary::Waker::new(),
         }
     }
 
-    fn mode_cycle_next(
+    fn mode_cycle_pass_through_next(
         mode: Mode,
         input_value: Option<bool>,
     ) -> Mode {
@@ -93,18 +96,30 @@ impl Device {
             (Mode::Override(override_value), None) => Mode::Override(!override_value),
         }
     }
+    fn mode_cycle_no_pass_through_next(
+        mode: Mode,
+        input_value: Option<bool>,
+    ) -> Mode {
+        match (mode, input_value) {
+            (Mode::PassThrough, Some(input_value)) => Mode::Override(!input_value),
+            (Mode::PassThrough, None) => Mode::Override(false),
+            (Mode::Override(override_value), _) => Mode::Override(!override_value),
+        }
+    }
 
     fn signals_targets_changed(&self) {
         let recalculate_operation = match (
             self.signal_mode_set_pass_through.take_pending(),
             self.signal_mode_set_override.take_pending(),
-            self.signal_mode_cycle.take_pending(),
+            self.signal_mode_cycle_pass_through.take_pending(),
+            self.signal_mode_cycle_no_pass_through.take_pending(),
         ) {
-            (Some(()), None, None) => RecalculateOperation::ModeSet(Mode::PassThrough),
-            (None, Some(override_value), None) => {
+            (Some(()), None, None, None) => RecalculateOperation::ModeSet(Mode::PassThrough),
+            (None, Some(override_value), None, None) => {
                 RecalculateOperation::ModeSet(Mode::Override(override_value))
             }
-            (None, None, Some(())) => RecalculateOperation::ModeCycle,
+            (None, None, Some(()), None) => RecalculateOperation::ModeCyclePassThrough,
+            (None, None, None, Some(())) => RecalculateOperation::ModeCycleNoPassThrough,
             _ => RecalculateOperation::None, // input could have been changed
         };
 
@@ -128,21 +143,20 @@ impl Device {
             gui_summary_changed = true;
         }
 
-        match operation {
-            RecalculateOperation::None => {}
-            RecalculateOperation::ModeSet(mode) => {
-                if *mode_lock != mode {
-                    *mode_lock = mode;
-                    gui_summary_changed = true;
-                }
+        let mode = match operation {
+            RecalculateOperation::None => None,
+            RecalculateOperation::ModeSet(mode) => Some(mode),
+            RecalculateOperation::ModeCyclePassThrough => {
+                Some(Self::mode_cycle_pass_through_next(*mode_lock, input_value))
             }
-            RecalculateOperation::ModeCycle => {
-                let mode = Self::mode_cycle_next(*mode_lock, input_value);
-                if *mode_lock != mode {
-                    *mode_lock = mode;
-                    gui_summary_changed = true;
-                }
-            }
+            RecalculateOperation::ModeCycleNoPassThrough => Some(
+                Self::mode_cycle_no_pass_through_next(*mode_lock, input_value),
+            ),
+        };
+
+        if let Some(mode) = mode && *mode_lock != mode {
+            *mode_lock = mode;
+            gui_summary_changed = true;
         }
 
         let mode = *mode_lock;
@@ -214,7 +228,8 @@ pub enum SignalIdentifier {
     Input,
     ModeSetPassThrough,
     ModeSetOverride,
-    ModeCycle,
+    ModeCyclePassThrough,
+    ModeCycleNoPassThrough,
     Output,
 }
 impl signals::Identifier for SignalIdentifier {}
@@ -232,7 +247,8 @@ impl signals::Device for Device {
             SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
             SignalIdentifier::ModeSetPassThrough => &self.signal_mode_set_pass_through as &dyn signal::Base,
             SignalIdentifier::ModeSetOverride => &self.signal_mode_set_override as &dyn signal::Base,
-            SignalIdentifier::ModeCycle => &self.signal_mode_cycle as &dyn signal::Base,
+            SignalIdentifier::ModeCyclePassThrough => &self.signal_mode_cycle_pass_through as &dyn signal::Base,
+            SignalIdentifier::ModeCycleNoPassThrough => &self.signal_mode_cycle_no_pass_through as &dyn signal::Base,
             SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
         }
     }
@@ -303,14 +319,32 @@ impl uri_cursor::Handler for Device {
                     _ => async move { web::Response::error_404() }.boxed(),
                 },
                 uri_cursor::UriCursor::Next("cycle", uri_cursor) => match uri_cursor.as_ref() {
-                    uri_cursor::UriCursor::Terminal => match *request.method() {
-                        http::Method::POST => {
-                            self.recalculate(RecalculateOperation::ModeCycle);
+                    uri_cursor::UriCursor::Next("pass-through", uri_cursor) => {
+                        match uri_cursor.as_ref() {
+                            uri_cursor::UriCursor::Terminal => match *request.method() {
+                                http::Method::POST => {
+                                    self.recalculate(RecalculateOperation::ModeCyclePassThrough);
 
-                            async move { web::Response::ok_empty() }.boxed()
+                                    async move { web::Response::ok_empty() }.boxed()
+                                }
+                                _ => async move { web::Response::error_405() }.boxed(),
+                            },
+                            _ => async move { web::Response::error_404() }.boxed(),
                         }
-                        _ => async move { web::Response::error_405() }.boxed(),
-                    },
+                    }
+                    uri_cursor::UriCursor::Next("no-pass-through", uri_cursor) => {
+                        match uri_cursor.as_ref() {
+                            uri_cursor::UriCursor::Terminal => match *request.method() {
+                                http::Method::POST => {
+                                    self.recalculate(RecalculateOperation::ModeCycleNoPassThrough);
+
+                                    async move { web::Response::ok_empty() }.boxed()
+                                }
+                                _ => async move { web::Response::error_405() }.boxed(),
+                            },
+                            _ => async move { web::Response::error_404() }.boxed(),
+                        }
+                    }
                     _ => async move { web::Response::error_404() }.boxed(),
                 },
                 _ => async move { web::Response::error_404() }.boxed(),

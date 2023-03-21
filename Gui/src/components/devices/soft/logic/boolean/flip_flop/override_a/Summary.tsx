@@ -2,7 +2,7 @@ import { Button, ButtonGroup } from "components/common/Button";
 import styled from "styled-components";
 
 export interface Data {
-  input_value: boolean;
+  input_value: boolean | null;
   mode: DataMode;
 }
 
@@ -24,9 +24,10 @@ export function dataModeIsOverride(dataMode: DataMode): dataMode is DataModeOver
 const Component: React.FC<{
   data: Data | undefined;
   onModeSet: (mode: boolean | null) => void; // true/false = Override, null = PassThrough
-  onModeCycle: () => void;
+  onModeCyclePassThrough: () => void;
+  onModeCycleNoPassThrough: () => void;
 }> = (props) => {
-  const { data, onModeSet, onModeCycle } = props;
+  const { data, onModeSet, onModeCyclePassThrough, onModeCycleNoPassThrough } = props;
 
   return (
     <Wrapper>
@@ -45,9 +46,11 @@ const Component: React.FC<{
         >
           <ButtonContent>
             <ButtonContentPrimary>Auto</ButtonContentPrimary>
-            <ButtonContentSeconday>
-              {data !== undefined ? <>({data.input_value ? "On" : "Off"})</> : null}
-            </ButtonContentSeconday>
+            <ButtonContentSecondary>
+              {data !== undefined ? (
+                <>({data.input_value === null ? "Unknown" : data.input_value ? "On" : "Off"})</>
+              ) : null}
+            </ButtonContentSecondary>
           </ButtonContent>
         </Button>
         <Button
@@ -59,7 +62,20 @@ const Component: React.FC<{
           </ButtonContent>
         </Button>
       </ButtonGroup>
-      <Button onClick={() => onModeCycle()}>Cycle</Button>
+      <ButtonGroup>
+        <Button onClick={() => onModeCyclePassThrough()}>
+          <ButtonContent>
+            <ButtonContentPrimary>Cycle</ButtonContentPrimary>
+            <ButtonContentSecondary>(With Auto)</ButtonContentSecondary>
+          </ButtonContent>
+        </Button>
+        <Button onClick={() => onModeCycleNoPassThrough()}>
+          <ButtonContent>
+            <ButtonContentPrimary>Cycle</ButtonContentPrimary>
+            <ButtonContentSecondary>(Skip Auto)</ButtonContentSecondary>
+          </ButtonContent>
+        </Button>
+      </ButtonGroup>
     </Wrapper>
   );
 };
@@ -81,6 +97,6 @@ const ButtonContent = styled.div`
   justify-content: center;
 `;
 const ButtonContentPrimary = styled.div``;
-const ButtonContentSeconday = styled.div`
+const ButtonContentSecondary = styled.div`
   font-size: small;
 `;
