@@ -29,7 +29,7 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct ChannelConfiguration {
+pub struct ConfigurationChannel {
     pub name: String,
 
     pub base_time: Duration,
@@ -42,25 +42,25 @@ pub struct ChannelConfiguration {
 #[derive(Debug)]
 pub struct Configuration {
     pub power_max: Multiplier,
-    pub channels: Vec<ChannelConfiguration>,
+    pub channels: Vec<ConfigurationChannel>,
 }
 
 #[derive(Clone, Copy, Debug)]
-enum DeviceStateDisabledChannelState {
+enum StateDeviceDisabledChannel {
     Disabled,
     Paused,
     Enabled,
 }
 
 #[derive(Clone, Copy, Debug)]
-enum DeviceStatePausedChannelState {
+enum StateDevicePausedChannel {
     Disabled,
     Paused { queue: Duration },
     Enabled { queue: Duration },
 }
 
 #[derive(Clone, Copy, Debug)]
-enum DeviceStateEnabledChannelState {
+enum StateDeviceEnabledChannel {
     Disabled,
     Paused {
         queue: Duration,
@@ -77,22 +77,22 @@ enum DeviceStateEnabledChannelState {
 }
 
 #[derive(Debug)]
-enum DeviceState {
+enum StateDevice {
     Disabled {
-        channels: Vec<DeviceStateDisabledChannelState>,
+        channels: Vec<StateDeviceDisabledChannel>,
     },
     Paused {
-        channels: Vec<DeviceStatePausedChannelState>,
+        channels: Vec<StateDevicePausedChannel>,
     },
     Enabled {
-        channels: Vec<DeviceStateEnabledChannelState>,
+        channels: Vec<StateDeviceEnabledChannel>,
         order_index_last: u64,
     },
 }
 
 #[derive(Debug)]
 struct State {
-    device_state: DeviceState,
+    device: StateDevice,
 }
 
 #[derive(Debug)]
@@ -118,9 +118,9 @@ impl Device {
 
         let channels_count = configuration.channels.len();
 
-        let device_state = DeviceState::Enabled {
+        let state_device = StateDevice::Enabled {
             channels: vec![
-                DeviceStateEnabledChannelState::EnabledQueued {
+                StateDeviceEnabledChannel::EnabledQueued {
                     queue: Duration::ZERO,
                     order_index: 0,
                 };
@@ -128,7 +128,9 @@ impl Device {
             ],
             order_index_last: 0,
         };
-        let state = State { device_state };
+        let state = State {
+            device: state_device,
+        };
 
         Self {
             configuration,
@@ -152,49 +154,45 @@ impl Device {
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { .. } => {}
-            DeviceState::Paused { ref channels } => {
+        match state.device {
+            StateDevice::Disabled { .. } => {}
+            StateDevice::Paused { ref channels } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
-                        DeviceStatePausedChannelState::Disabled => {
-                            DeviceStateDisabledChannelState::Disabled
+                        StateDevicePausedChannel::Disabled => StateDeviceDisabledChannel::Disabled,
+                        StateDevicePausedChannel::Paused { .. } => {
+                            StateDeviceDisabledChannel::Paused
                         }
-                        DeviceStatePausedChannelState::Paused { .. } => {
-                            DeviceStateDisabledChannelState::Paused
-                        }
-                        DeviceStatePausedChannelState::Enabled { .. } => {
-                            DeviceStateDisabledChannelState::Enabled
+                        StateDevicePausedChannel::Enabled { .. } => {
+                            StateDeviceDisabledChannel::Enabled
                         }
                     })
                     .collect::<Vec<_>>();
 
-                state.device_state = DeviceState::Disabled { channels };
+                state.device = StateDevice::Disabled { channels };
 
                 gui_summary_changed = true;
             }
-            DeviceState::Enabled { ref channels, .. } => {
+            StateDevice::Enabled { ref channels, .. } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
-                        DeviceStateEnabledChannelState::Disabled => {
-                            DeviceStateDisabledChannelState::Disabled
+                        StateDeviceEnabledChannel::Disabled => StateDeviceDisabledChannel::Disabled,
+                        StateDeviceEnabledChannel::Paused { .. } => {
+                            StateDeviceDisabledChannel::Paused
                         }
-                        DeviceStateEnabledChannelState::Paused { .. } => {
-                            DeviceStateDisabledChannelState::Paused
+                        StateDeviceEnabledChannel::EnabledQueued { .. } => {
+                            StateDeviceDisabledChannel::Enabled
                         }
-                        DeviceStateEnabledChannelState::EnabledQueued { .. } => {
-                            DeviceStateDisabledChannelState::Enabled
-                        }
-                        DeviceStateEnabledChannelState::EnabledActive { .. } => {
+                        StateDeviceEnabledChannel::EnabledActive { .. } => {
                             // outputs and power will be zeroed at the end
-                            DeviceStateDisabledChannelState::Enabled
+                            StateDeviceDisabledChannel::Enabled
                         }
                     })
                     .collect::<Vec<_>>();
 
-                state.device_state = DeviceState::Disabled { channels };
+                state.device = StateDevice::Disabled { channels };
 
                 gui_summary_changed = true;
             }
@@ -223,55 +221,47 @@ impl Device {
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { ref channels } => {
+        match state.device {
+            StateDevice::Disabled { ref channels } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
-                        DeviceStateDisabledChannelState::Disabled => {
-                            DeviceStatePausedChannelState::Disabled
-                        }
-                        DeviceStateDisabledChannelState::Paused => {
-                            DeviceStatePausedChannelState::Paused {
-                                queue: Duration::ZERO,
-                            }
-                        }
-                        DeviceStateDisabledChannelState::Enabled => {
-                            DeviceStatePausedChannelState::Enabled {
-                                queue: Duration::ZERO,
-                            }
-                        }
+                        StateDeviceDisabledChannel::Disabled => StateDevicePausedChannel::Disabled,
+                        StateDeviceDisabledChannel::Paused => StateDevicePausedChannel::Paused {
+                            queue: Duration::ZERO,
+                        },
+                        StateDeviceDisabledChannel::Enabled => StateDevicePausedChannel::Enabled {
+                            queue: Duration::ZERO,
+                        },
                     })
                     .collect::<Vec<_>>();
 
-                state.device_state = DeviceState::Paused { channels };
+                state.device = StateDevice::Paused { channels };
 
                 gui_summary_changed = true;
             }
-            DeviceState::Paused { .. } => {}
-            DeviceState::Enabled { ref channels, .. } => {
+            StateDevice::Paused { .. } => {}
+            StateDevice::Enabled { ref channels, .. } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
-                        DeviceStateEnabledChannelState::Disabled => {
-                            DeviceStatePausedChannelState::Disabled
+                        StateDeviceEnabledChannel::Disabled => StateDevicePausedChannel::Disabled,
+                        StateDeviceEnabledChannel::Paused { queue } => {
+                            StateDevicePausedChannel::Paused { queue: *queue }
                         }
-                        DeviceStateEnabledChannelState::Paused { queue } => {
-                            DeviceStatePausedChannelState::Paused { queue: *queue }
+                        StateDeviceEnabledChannel::EnabledQueued { queue, .. } => {
+                            StateDevicePausedChannel::Enabled { queue: *queue }
                         }
-                        DeviceStateEnabledChannelState::EnabledQueued { queue, .. } => {
-                            DeviceStatePausedChannelState::Enabled { queue: *queue }
-                        }
-                        DeviceStateEnabledChannelState::EnabledActive { queue, round } => {
+                        StateDeviceEnabledChannel::EnabledActive { queue, round } => {
                             // outputs and power will be zeroed at the end
-                            DeviceStatePausedChannelState::Enabled {
+                            StateDevicePausedChannel::Enabled {
                                 queue: *queue + *round,
                             }
                         }
                     })
                     .collect::<Vec<_>>();
 
-                state.device_state = DeviceState::Paused { channels };
+                state.device = StateDevice::Paused { channels };
 
                 gui_summary_changed = true;
             }
@@ -300,60 +290,54 @@ impl Device {
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { ref channels } => {
+        match state.device {
+            StateDevice::Disabled { ref channels } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
-                        DeviceStateDisabledChannelState::Disabled => {
-                            DeviceStateEnabledChannelState::Disabled
-                        }
-                        DeviceStateDisabledChannelState::Paused => {
-                            DeviceStateEnabledChannelState::Paused {
-                                queue: Duration::ZERO,
-                            }
-                        }
-                        DeviceStateDisabledChannelState::Enabled => {
-                            DeviceStateEnabledChannelState::EnabledQueued {
+                        StateDeviceDisabledChannel::Disabled => StateDeviceEnabledChannel::Disabled,
+                        StateDeviceDisabledChannel::Paused => StateDeviceEnabledChannel::Paused {
+                            queue: Duration::ZERO,
+                        },
+                        StateDeviceDisabledChannel::Enabled => {
+                            StateDeviceEnabledChannel::EnabledQueued {
                                 queue: Duration::ZERO,
                                 order_index: 0,
                             }
                         }
                     })
                     .collect::<Vec<_>>();
-                state.device_state = DeviceState::Enabled {
+                state.device = StateDevice::Enabled {
                     channels,
                     order_index_last: 0,
                 };
 
                 gui_summary_changed = true;
             }
-            DeviceState::Paused { ref channels } => {
+            StateDevice::Paused { ref channels } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
-                        DeviceStatePausedChannelState::Disabled => {
-                            DeviceStateEnabledChannelState::Disabled
+                        StateDevicePausedChannel::Disabled => StateDeviceEnabledChannel::Disabled,
+                        StateDevicePausedChannel::Paused { queue } => {
+                            StateDeviceEnabledChannel::Paused { queue: *queue }
                         }
-                        DeviceStatePausedChannelState::Paused { queue } => {
-                            DeviceStateEnabledChannelState::Paused { queue: *queue }
-                        }
-                        DeviceStatePausedChannelState::Enabled { queue } => {
-                            DeviceStateEnabledChannelState::EnabledQueued {
+                        StateDevicePausedChannel::Enabled { queue } => {
+                            StateDeviceEnabledChannel::EnabledQueued {
                                 queue: *queue,
                                 order_index: 0,
                             }
                         }
                     })
                     .collect::<Vec<_>>();
-                state.device_state = DeviceState::Enabled {
+                state.device = StateDevice::Enabled {
                     channels,
                     order_index_last: 0,
                 };
 
                 gui_summary_changed = true;
             }
-            DeviceState::Enabled { .. } => {}
+            StateDevice::Enabled { .. } => {}
         }
 
         // if signal_sources_changed {
@@ -373,45 +357,44 @@ impl Device {
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { ref mut channels } => {
+        match state.device {
+            StateDevice::Disabled { ref mut channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateDisabledChannelState::Disabled => {}
-                    DeviceStateDisabledChannelState::Paused
-                    | DeviceStateDisabledChannelState::Enabled => {
-                        *channel_state = DeviceStateDisabledChannelState::Disabled;
+                    StateDeviceDisabledChannel::Disabled => {}
+                    StateDeviceDisabledChannel::Paused | StateDeviceDisabledChannel::Enabled => {
+                        *channel_state = StateDeviceDisabledChannel::Disabled;
 
                         gui_summary_changed = true;
                     }
                 }
             }
-            DeviceState::Paused { ref mut channels } => {
+            StateDevice::Paused { ref mut channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStatePausedChannelState::Disabled => {}
-                    DeviceStatePausedChannelState::Paused { .. }
-                    | DeviceStatePausedChannelState::Enabled { .. } => {
-                        *channel_state = DeviceStatePausedChannelState::Disabled;
+                    StateDevicePausedChannel::Disabled => {}
+                    StateDevicePausedChannel::Paused { .. }
+                    | StateDevicePausedChannel::Enabled { .. } => {
+                        *channel_state = StateDevicePausedChannel::Disabled;
 
                         gui_summary_changed = true;
                     }
                 }
             }
-            DeviceState::Enabled {
+            StateDevice::Enabled {
                 ref mut channels, ..
             } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateEnabledChannelState::Disabled => {}
-                    DeviceStateEnabledChannelState::Paused { .. }
-                    | DeviceStateEnabledChannelState::EnabledQueued { .. } => {
-                        *channel_state = DeviceStateEnabledChannelState::Disabled;
+                    StateDeviceEnabledChannel::Disabled => {}
+                    StateDeviceEnabledChannel::Paused { .. }
+                    | StateDeviceEnabledChannel::EnabledQueued { .. } => {
+                        *channel_state = StateDeviceEnabledChannel::Disabled;
 
                         gui_summary_changed = true;
                     }
-                    DeviceStateEnabledChannelState::EnabledActive { .. } => {
-                        *channel_state = DeviceStateEnabledChannelState::Disabled;
+                    StateDeviceEnabledChannel::EnabledActive { .. } => {
+                        *channel_state = StateDeviceEnabledChannel::Disabled;
 
                         if self.signal_outputs[channel_id].set_one(Some(false)) {
                             signal_sources_changed = true;
@@ -445,52 +428,51 @@ impl Device {
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { ref mut channels } => {
+        match state.device {
+            StateDevice::Disabled { ref mut channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateDisabledChannelState::Disabled
-                    | DeviceStateDisabledChannelState::Enabled => {
-                        *channel_state = DeviceStateDisabledChannelState::Paused;
+                    StateDeviceDisabledChannel::Disabled | StateDeviceDisabledChannel::Enabled => {
+                        *channel_state = StateDeviceDisabledChannel::Paused;
                         gui_summary_changed = true;
                     }
-                    DeviceStateDisabledChannelState::Paused => {}
+                    StateDeviceDisabledChannel::Paused => {}
                 }
             }
-            DeviceState::Paused { ref mut channels } => {
+            StateDevice::Paused { ref mut channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStatePausedChannelState::Disabled => {
-                        *channel_state = DeviceStatePausedChannelState::Paused {
+                    StateDevicePausedChannel::Disabled => {
+                        *channel_state = StateDevicePausedChannel::Paused {
                             queue: Duration::ZERO,
                         };
                         gui_summary_changed = true;
                     }
-                    DeviceStatePausedChannelState::Enabled { queue } => {
-                        *channel_state = DeviceStatePausedChannelState::Paused { queue: *queue };
+                    StateDevicePausedChannel::Enabled { queue } => {
+                        *channel_state = StateDevicePausedChannel::Paused { queue: *queue };
                         gui_summary_changed = true;
                     }
-                    DeviceStatePausedChannelState::Paused { .. } => {}
+                    StateDevicePausedChannel::Paused { .. } => {}
                 }
             }
-            DeviceState::Enabled {
+            StateDevice::Enabled {
                 ref mut channels, ..
             } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateEnabledChannelState::Disabled => {
-                        *channel_state = DeviceStateEnabledChannelState::Paused {
+                    StateDeviceEnabledChannel::Disabled => {
+                        *channel_state = StateDeviceEnabledChannel::Paused {
                             queue: Duration::ZERO,
                         };
                         gui_summary_changed = true;
                     }
-                    DeviceStateEnabledChannelState::Paused { .. } => {}
-                    DeviceStateEnabledChannelState::EnabledQueued { queue, .. } => {
-                        *channel_state = DeviceStateEnabledChannelState::Paused { queue: *queue };
+                    StateDeviceEnabledChannel::Paused { .. } => {}
+                    StateDeviceEnabledChannel::EnabledQueued { queue, .. } => {
+                        *channel_state = StateDeviceEnabledChannel::Paused { queue: *queue };
                         gui_summary_changed = true;
                     }
-                    DeviceStateEnabledChannelState::EnabledActive { queue, round, .. } => {
-                        *channel_state = DeviceStateEnabledChannelState::Paused {
+                    StateDeviceEnabledChannel::EnabledActive { queue, round, .. } => {
+                        *channel_state = StateDeviceEnabledChannel::Paused {
                             queue: *queue + *round,
                         };
 
@@ -526,60 +508,59 @@ impl Device {
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { ref mut channels } => {
+        match state.device {
+            StateDevice::Disabled { ref mut channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateDisabledChannelState::Disabled
-                    | DeviceStateDisabledChannelState::Paused => {
-                        *channel_state = DeviceStateDisabledChannelState::Enabled;
+                    StateDeviceDisabledChannel::Disabled | StateDeviceDisabledChannel::Paused => {
+                        *channel_state = StateDeviceDisabledChannel::Enabled;
                         gui_summary_changed = true;
                     }
-                    DeviceStateDisabledChannelState::Enabled => {}
+                    StateDeviceDisabledChannel::Enabled => {}
                 }
             }
-            DeviceState::Paused { ref mut channels } => {
+            StateDevice::Paused { ref mut channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStatePausedChannelState::Disabled => {
-                        *channel_state = DeviceStatePausedChannelState::Enabled {
+                    StateDevicePausedChannel::Disabled => {
+                        *channel_state = StateDevicePausedChannel::Enabled {
                             queue: Duration::ZERO,
                         };
                         gui_summary_changed = true;
                     }
-                    DeviceStatePausedChannelState::Paused { queue } => {
-                        *channel_state = DeviceStatePausedChannelState::Enabled { queue: *queue };
+                    StateDevicePausedChannel::Paused { queue } => {
+                        *channel_state = StateDevicePausedChannel::Enabled { queue: *queue };
                         gui_summary_changed = true;
                     }
-                    DeviceStatePausedChannelState::Enabled { .. } => {}
+                    StateDevicePausedChannel::Enabled { .. } => {}
                 }
             }
-            DeviceState::Enabled {
+            StateDevice::Enabled {
                 ref mut channels,
                 ref mut order_index_last,
             } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateEnabledChannelState::Disabled => {
+                    StateDeviceEnabledChannel::Disabled => {
                         *order_index_last += 1;
 
-                        *channel_state = DeviceStateEnabledChannelState::EnabledQueued {
+                        *channel_state = StateDeviceEnabledChannel::EnabledQueued {
                             queue: Duration::ZERO,
                             order_index: *order_index_last as i64,
                         };
                         gui_summary_changed = true;
                     }
-                    DeviceStateEnabledChannelState::Paused { queue } => {
+                    StateDeviceEnabledChannel::Paused { queue } => {
                         *order_index_last += 1;
 
-                        *channel_state = DeviceStateEnabledChannelState::EnabledQueued {
+                        *channel_state = StateDeviceEnabledChannel::EnabledQueued {
                             queue: *queue,
                             order_index: *order_index_last as i64,
                         };
                         gui_summary_changed = true;
                     }
-                    DeviceStateEnabledChannelState::EnabledQueued { .. }
-                    | DeviceStateEnabledChannelState::EnabledActive { .. } => {}
+                    StateDeviceEnabledChannel::EnabledQueued { .. }
+                    | StateDeviceEnabledChannel::EnabledActive { .. } => {}
                 }
             }
         }
@@ -600,28 +581,28 @@ impl Device {
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { .. } => {}
-            DeviceState::Paused { ref mut channels } => {
+        match state.device {
+            StateDevice::Disabled { .. } => {}
+            StateDevice::Paused { ref mut channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStatePausedChannelState::Disabled => {}
-                    DeviceStatePausedChannelState::Paused { ref mut queue }
-                    | DeviceStatePausedChannelState::Enabled { ref mut queue } => {
+                    StateDevicePausedChannel::Disabled => {}
+                    StateDevicePausedChannel::Paused { ref mut queue }
+                    | StateDevicePausedChannel::Enabled { ref mut queue } => {
                         *queue = Duration::ZERO;
                         gui_summary_changed = true;
                     }
                 }
             }
-            DeviceState::Enabled {
+            StateDevice::Enabled {
                 ref mut channels, ..
             } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateEnabledChannelState::Disabled => {}
-                    DeviceStateEnabledChannelState::Paused { ref mut queue }
-                    | DeviceStateEnabledChannelState::EnabledQueued { ref mut queue, .. }
-                    | DeviceStateEnabledChannelState::EnabledActive { ref mut queue, .. } => {
+                    StateDeviceEnabledChannel::Disabled => {}
+                    StateDeviceEnabledChannel::Paused { ref mut queue }
+                    | StateDeviceEnabledChannel::EnabledQueued { ref mut queue, .. }
+                    | StateDeviceEnabledChannel::EnabledActive { ref mut queue, .. } => {
                         *queue = Duration::ZERO;
                         gui_summary_changed = true;
                     }
@@ -646,30 +627,30 @@ impl Device {
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { .. } => {}
-            DeviceState::Paused { ref mut channels } => {
+        match state.device {
+            StateDevice::Disabled { .. } => {}
+            StateDevice::Paused { ref mut channels } => {
                 let channel_configuration = &self.configuration.channels[channel_id];
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStatePausedChannelState::Disabled => {}
-                    DeviceStatePausedChannelState::Paused { ref mut queue }
-                    | DeviceStatePausedChannelState::Enabled { ref mut queue } => {
+                    StateDevicePausedChannel::Disabled => {}
+                    StateDevicePausedChannel::Paused { ref mut queue }
+                    | StateDevicePausedChannel::Enabled { ref mut queue } => {
                         *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                         gui_summary_changed = true;
                     }
                 }
             }
-            DeviceState::Enabled {
+            StateDevice::Enabled {
                 ref mut channels, ..
             } => {
                 let channel_configuration = &self.configuration.channels[channel_id];
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateEnabledChannelState::Disabled => {}
-                    DeviceStateEnabledChannelState::Paused { ref mut queue }
-                    | DeviceStateEnabledChannelState::EnabledQueued { ref mut queue, .. }
-                    | DeviceStateEnabledChannelState::EnabledActive { ref mut queue, .. } => {
+                    StateDeviceEnabledChannel::Disabled => {}
+                    StateDeviceEnabledChannel::Paused { ref mut queue }
+                    | StateDeviceEnabledChannel::EnabledQueued { ref mut queue, .. }
+                    | StateDeviceEnabledChannel::EnabledActive { ref mut queue, .. } => {
                         *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                         gui_summary_changed = true;
                     }
@@ -693,19 +674,19 @@ impl Device {
         // let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { .. } => {}
-            DeviceState::Paused { .. } => {}
-            DeviceState::Enabled {
+        match state.device {
+            StateDevice::Disabled { .. } => {}
+            StateDevice::Paused { .. } => {}
+            StateDevice::Enabled {
                 ref mut channels,
                 ref mut order_index_last,
             } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateEnabledChannelState::Disabled
-                    | DeviceStateEnabledChannelState::Paused { .. }
-                    | DeviceStateEnabledChannelState::EnabledActive { .. } => {}
-                    DeviceStateEnabledChannelState::EnabledQueued {
+                    StateDeviceEnabledChannel::Disabled
+                    | StateDeviceEnabledChannel::Paused { .. }
+                    | StateDeviceEnabledChannel::EnabledActive { .. } => {}
+                    StateDeviceEnabledChannel::EnabledQueued {
                         ref mut order_index,
                         ..
                     } => {
@@ -734,18 +715,18 @@ impl Device {
         let mut signal_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { .. } => {}
-            DeviceState::Paused { .. } => {}
-            DeviceState::Enabled {
+        match state.device {
+            StateDevice::Disabled { .. } => {}
+            StateDevice::Paused { .. } => {}
+            StateDevice::Enabled {
                 ref mut channels,
                 ref mut order_index_last,
             } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
-                    DeviceStateEnabledChannelState::Disabled
-                    | DeviceStateEnabledChannelState::Paused { .. } => {}
-                    DeviceStateEnabledChannelState::EnabledQueued {
+                    StateDeviceEnabledChannel::Disabled
+                    | StateDeviceEnabledChannel::Paused { .. } => {}
+                    StateDeviceEnabledChannel::EnabledQueued {
                         ref mut order_index,
                         ..
                     } => {
@@ -754,10 +735,10 @@ impl Device {
 
                         gui_summary_changed = true;
                     }
-                    DeviceStateEnabledChannelState::EnabledActive { queue, round } => {
+                    StateDeviceEnabledChannel::EnabledActive { queue, round } => {
                         *order_index_last += 1;
 
-                        *channel_state = DeviceStateEnabledChannelState::EnabledQueued {
+                        *channel_state = StateDeviceEnabledChannel::EnabledQueued {
                             order_index: *order_index_last as i64,
                             queue: *queue + *round,
                         };
@@ -791,31 +772,31 @@ impl Device {
 
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { .. } => {}
-            DeviceState::Paused {
+        match state.device {
+            StateDevice::Disabled { .. } => {}
+            StateDevice::Paused {
                 ref mut channels, ..
             } => {
                 for channel_state in channels {
                     match channel_state {
-                        DeviceStatePausedChannelState::Disabled => {}
-                        DeviceStatePausedChannelState::Paused { ref mut queue }
-                        | DeviceStatePausedChannelState::Enabled { ref mut queue, .. } => {
+                        StateDevicePausedChannel::Disabled => {}
+                        StateDevicePausedChannel::Paused { ref mut queue }
+                        | StateDevicePausedChannel::Enabled { ref mut queue, .. } => {
                             *queue = Duration::ZERO;
                             gui_summary_changed = true;
                         }
                     }
                 }
             }
-            DeviceState::Enabled {
+            StateDevice::Enabled {
                 ref mut channels, ..
             } => {
                 for channel_state in channels {
                     match channel_state {
-                        DeviceStateEnabledChannelState::Disabled => {}
-                        DeviceStateEnabledChannelState::Paused { ref mut queue, .. }
-                        | DeviceStateEnabledChannelState::EnabledQueued { ref mut queue, .. }
-                        | DeviceStateEnabledChannelState::EnabledActive { ref mut queue, .. } => {
+                        StateDeviceEnabledChannel::Disabled => {}
+                        StateDeviceEnabledChannel::Paused { ref mut queue, .. }
+                        | StateDeviceEnabledChannel::EnabledQueued { ref mut queue, .. }
+                        | StateDeviceEnabledChannel::EnabledActive { ref mut queue, .. } => {
                             *queue = Duration::ZERO;
                             gui_summary_changed = true;
                         }
@@ -836,35 +817,35 @@ impl Device {
 
         let mut gui_summary_changed = false;
 
-        match state.device_state {
-            DeviceState::Disabled { .. } => {}
-            DeviceState::Paused {
+        match state.device {
+            StateDevice::Disabled { .. } => {}
+            StateDevice::Paused {
                 ref mut channels, ..
             } => {
                 for (channel_configuration, channel_state) in
                     zip_eq(&self.configuration.channels, channels)
                 {
                     match channel_state {
-                        DeviceStatePausedChannelState::Disabled => {}
-                        DeviceStatePausedChannelState::Paused { ref mut queue }
-                        | DeviceStatePausedChannelState::Enabled { ref mut queue, .. } => {
+                        StateDevicePausedChannel::Disabled => {}
+                        StateDevicePausedChannel::Paused { ref mut queue }
+                        | StateDevicePausedChannel::Enabled { ref mut queue, .. } => {
                             *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
                     }
                 }
             }
-            DeviceState::Enabled {
+            StateDevice::Enabled {
                 ref mut channels, ..
             } => {
                 for (channel_configuration, channel_state) in
                     zip_eq(&self.configuration.channels, channels)
                 {
                     match channel_state {
-                        DeviceStateEnabledChannelState::Disabled => {}
-                        DeviceStateEnabledChannelState::Paused { ref mut queue, .. }
-                        | DeviceStateEnabledChannelState::EnabledQueued { ref mut queue, .. }
-                        | DeviceStateEnabledChannelState::EnabledActive { ref mut queue, .. } => {
+                        StateDeviceEnabledChannel::Disabled => {}
+                        StateDeviceEnabledChannel::Paused { ref mut queue, .. }
+                        | StateDeviceEnabledChannel::EnabledQueued { ref mut queue, .. }
+                        | StateDeviceEnabledChannel::EnabledActive { ref mut queue, .. } => {
                             *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
@@ -883,8 +864,8 @@ impl Device {
         let mut state = self.state.write();
 
         // we do ticks only when device is in running state
-        let (channels, order_index_last) = match state.device_state {
-            DeviceState::Enabled {
+        let (channels, order_index_last) = match state.device {
+            StateDevice::Enabled {
                 ref mut channels,
                 ref mut order_index_last,
             } => (channels, order_index_last),
@@ -903,10 +884,10 @@ impl Device {
             self.signal_outputs.iter()
         ) {
             match channel_state {
-                DeviceStateEnabledChannelState::Disabled
-                | DeviceStateEnabledChannelState::Paused { .. }
-                | DeviceStateEnabledChannelState::EnabledQueued { .. } => {}
-                DeviceStateEnabledChannelState::EnabledActive {
+                StateDeviceEnabledChannel::Disabled
+                | StateDeviceEnabledChannel::Paused { .. }
+                | StateDeviceEnabledChannel::EnabledQueued { .. } => {}
+                StateDeviceEnabledChannel::EnabledActive {
                     queue,
                     ref mut round,
                     ..
@@ -920,7 +901,7 @@ impl Device {
                         // channel time has ended, move it to the end of the queue
                         *order_index_last += 1;
 
-                        *channel_state = DeviceStateEnabledChannelState::EnabledQueued {
+                        *channel_state = StateDeviceEnabledChannel::EnabledQueued {
                             queue: *queue,
                             order_index: *order_index_last as i64,
                         };
@@ -942,7 +923,7 @@ impl Device {
             .filter_map(
                 |(channel_id, (channel_configuration, channel_state))| match channel_state {
                     // precondition: channel is in queued state and has enough time to start
-                    DeviceStateEnabledChannelState::EnabledQueued { queue, order_index } => {
+                    StateDeviceEnabledChannel::EnabledQueued { queue, order_index } => {
                         if *queue >= channel_configuration.round_min {
                             Some((channel_id, order_index))
                         } else {
@@ -963,11 +944,11 @@ impl Device {
 
             match channel_state {
                 // channel_ids should contain EnabledQueued only
-                DeviceStateEnabledChannelState::Disabled
-                | DeviceStateEnabledChannelState::Paused { .. }
-                | DeviceStateEnabledChannelState::EnabledActive { .. } => panic!(),
+                StateDeviceEnabledChannel::Disabled
+                | StateDeviceEnabledChannel::Paused { .. }
+                | StateDeviceEnabledChannel::EnabledActive { .. } => panic!(),
 
-                DeviceStateEnabledChannelState::EnabledQueued { queue, .. } => {
+                StateDeviceEnabledChannel::EnabledQueued { queue, .. } => {
                     // total >= channel_configuration.round_min
                     // this precondition was checked during index preparing
 
@@ -975,8 +956,7 @@ impl Device {
                         let round = min(*queue, channel_configuration.round_max);
                         let queue = *queue - round;
 
-                        *channel_state =
-                            DeviceStateEnabledChannelState::EnabledActive { queue, round };
+                        *channel_state = StateDeviceEnabledChannel::EnabledActive { queue, round };
 
                         // enough power and time to start!
                         power_left -= channel_configuration.power_required;
@@ -1009,13 +989,11 @@ impl Device {
 
     fn power_calculate(
         &self,
-        channels: &[DeviceStateEnabledChannelState],
+        channels: &[StateDeviceEnabledChannel],
     ) -> Multiplier {
         zip_eq(&self.configuration.channels, channels)
             .map(|(configuration, state)| match state {
-                DeviceStateEnabledChannelState::EnabledActive { .. } => {
-                    configuration.power_required
-                }
+                StateDeviceEnabledChannel::EnabledActive { .. } => configuration.power_required,
                 _ => Multiplier::zero(),
             })
             .sum::<Multiplier>()
@@ -1138,7 +1116,7 @@ impl signals::Device for Device {
 
 // TODO: use newtype inestead of f64
 #[derive(Debug, Serialize)]
-struct GuiSummaryChannelConfiguration {
+struct GuiSummaryConfigurationChannel {
     name: String,
 
     base_time_seconds: f64,
@@ -1150,27 +1128,27 @@ struct GuiSummaryChannelConfiguration {
 
 #[derive(Debug, Serialize)]
 struct GuiSummaryConfiguration {
-    channels: Vec<GuiSummaryChannelConfiguration>,
+    channels: Vec<GuiSummaryConfigurationChannel>,
     power_max: f64,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "state")]
-enum GuiSummaryDeviceStateDisabledChannelState {
+enum GuiSummaryStateDisabledChannelState {
     Disabled,
     Paused,
     Enabled,
 }
 #[derive(Debug, Serialize)]
 #[serde(tag = "state")]
-enum GuiSummaryDeviceStatePausedChannelState {
+enum GuiSummaryStatePausedChannelState {
     Disabled,
     Paused { queue_seconds: f64 },
     Enabled { queue_seconds: f64 },
 }
 #[derive(Debug, Serialize)]
 #[serde(tag = "state")]
-enum GuiSummaryDeviceStateEnabledChannelState {
+enum GuiSummaryStateEnabledChannelState {
     Disabled,
     Paused {
         queue_seconds: f64,
@@ -1188,13 +1166,13 @@ enum GuiSummaryDeviceStateEnabledChannelState {
 #[serde(tag = "state")]
 enum GuiSummaryState {
     Disabled {
-        channels: Vec<GuiSummaryDeviceStateDisabledChannelState>,
+        channels: Vec<GuiSummaryStateDisabledChannelState>,
     },
     Paused {
-        channels: Vec<GuiSummaryDeviceStatePausedChannelState>,
+        channels: Vec<GuiSummaryStatePausedChannelState>,
     },
     Enabled {
-        channels: Vec<GuiSummaryDeviceStateEnabledChannelState>,
+        channels: Vec<GuiSummaryStateEnabledChannelState>,
         power: f64,
     },
 }
@@ -1216,7 +1194,7 @@ impl devices::gui_summary::Device for Device {
             .configuration
             .channels
             .iter()
-            .map(|channel_configuration| GuiSummaryChannelConfiguration {
+            .map(|channel_configuration| GuiSummaryConfigurationChannel {
                 name: channel_configuration.name.clone(),
                 base_time_seconds: channel_configuration.base_time.as_secs_f64(),
                 power_required: channel_configuration.power_required.to_f64(),
@@ -1230,19 +1208,19 @@ impl devices::gui_summary::Device for Device {
             power_max: self.configuration.power_max.to_f64(),
         };
 
-        let gui_summary_state = match state.device_state {
-            DeviceState::Disabled { ref channels } => {
+        let gui_summary_state = match state.device {
+            StateDevice::Disabled { ref channels } => {
                 let gui_channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
-                        DeviceStateDisabledChannelState::Disabled => {
-                            GuiSummaryDeviceStateDisabledChannelState::Disabled
+                        StateDeviceDisabledChannel::Disabled => {
+                            GuiSummaryStateDisabledChannelState::Disabled
                         }
-                        DeviceStateDisabledChannelState::Paused => {
-                            GuiSummaryDeviceStateDisabledChannelState::Paused
+                        StateDeviceDisabledChannel::Paused => {
+                            GuiSummaryStateDisabledChannelState::Paused
                         }
-                        DeviceStateDisabledChannelState::Enabled => {
-                            GuiSummaryDeviceStateDisabledChannelState::Enabled
+                        StateDeviceDisabledChannel::Enabled => {
+                            GuiSummaryStateDisabledChannelState::Enabled
                         }
                     })
                     .collect::<Vec<_>>();
@@ -1251,20 +1229,20 @@ impl devices::gui_summary::Device for Device {
                     channels: gui_channels,
                 }
             }
-            DeviceState::Paused { ref channels, .. } => {
+            StateDevice::Paused { ref channels, .. } => {
                 let gui_channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
-                        DeviceStatePausedChannelState::Disabled => {
-                            GuiSummaryDeviceStatePausedChannelState::Disabled
+                        StateDevicePausedChannel::Disabled => {
+                            GuiSummaryStatePausedChannelState::Disabled
                         }
-                        DeviceStatePausedChannelState::Paused { queue } => {
-                            GuiSummaryDeviceStatePausedChannelState::Paused {
+                        StateDevicePausedChannel::Paused { queue } => {
+                            GuiSummaryStatePausedChannelState::Paused {
                                 queue_seconds: queue.as_secs_f64(),
                             }
                         }
-                        DeviceStatePausedChannelState::Enabled { queue } => {
-                            GuiSummaryDeviceStatePausedChannelState::Enabled {
+                        StateDevicePausedChannel::Enabled { queue } => {
+                            GuiSummaryStatePausedChannelState::Enabled {
                                 queue_seconds: queue.as_secs_f64(),
                             }
                         }
@@ -1275,16 +1253,13 @@ impl devices::gui_summary::Device for Device {
                     channels: gui_channels,
                 }
             }
-            DeviceState::Enabled { ref channels, .. } => {
+            StateDevice::Enabled { ref channels, .. } => {
                 // channel_id -> 0-based queue position (ascending)
                 let queued_positions = zip_eq(&self.configuration.channels, channels.iter())
                     .enumerate()
                     .filter_map(|(channel_id, (channel_configuration, channel_state))| {
                         match channel_state {
-                            DeviceStateEnabledChannelState::EnabledQueued {
-                                queue,
-                                order_index,
-                            } => {
+                            StateDeviceEnabledChannel::EnabledQueued { queue, order_index } => {
                                 if *queue >= channel_configuration.round_min {
                                     Some((channel_id, order_index))
                                 } else {
@@ -1304,7 +1279,7 @@ impl devices::gui_summary::Device for Device {
                 let power = zip_eq(&self.configuration.channels, channels)
                     .map(
                         |(channel_configuration, channel_state)| match channel_state {
-                            DeviceStateEnabledChannelState::EnabledActive { .. } => {
+                            StateDeviceEnabledChannel::EnabledActive { .. } => {
                                 channel_configuration.power_required
                             }
                             _ => Multiplier::zero(),
@@ -1316,22 +1291,22 @@ impl devices::gui_summary::Device for Device {
                     .iter()
                     .enumerate()
                     .map(|(channel_id, channel_state)| match channel_state {
-                        DeviceStateEnabledChannelState::Disabled => {
-                            GuiSummaryDeviceStateEnabledChannelState::Disabled
+                        StateDeviceEnabledChannel::Disabled => {
+                            GuiSummaryStateEnabledChannelState::Disabled
                         }
-                        DeviceStateEnabledChannelState::Paused { queue, .. } => {
-                            GuiSummaryDeviceStateEnabledChannelState::Paused {
+                        StateDeviceEnabledChannel::Paused { queue, .. } => {
+                            GuiSummaryStateEnabledChannelState::Paused {
                                 queue_seconds: queue.as_secs_f64(),
                             }
                         }
-                        DeviceStateEnabledChannelState::EnabledQueued { queue, .. } => {
-                            GuiSummaryDeviceStateEnabledChannelState::EnabledQueued {
+                        StateDeviceEnabledChannel::EnabledQueued { queue, .. } => {
+                            GuiSummaryStateEnabledChannelState::EnabledQueued {
                                 queue_seconds: queue.as_secs_f64(),
                                 queue_position: queued_positions.get(&channel_id).copied(),
                             }
                         }
-                        DeviceStateEnabledChannelState::EnabledActive { queue, round, .. } => {
-                            GuiSummaryDeviceStateEnabledChannelState::EnabledActive {
+                        StateDeviceEnabledChannel::EnabledActive { queue, round, .. } => {
+                            GuiSummaryStateEnabledChannelState::EnabledActive {
                                 queue_seconds: queue.as_secs_f64(),
                                 round_seconds: round.as_secs_f64(),
                             }

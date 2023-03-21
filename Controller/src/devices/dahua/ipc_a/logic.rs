@@ -29,7 +29,7 @@ use serde::Serialize;
 use std::{borrow::Cow, time::Duration};
 
 #[derive(Debug)]
-pub enum HardwareConfiguration {
+pub enum ConfigurationHardware {
     Full {
         hardware_configuration: configurator::Configuration,
     },
@@ -42,7 +42,7 @@ pub enum HardwareConfiguration {
 pub struct Configuration {
     pub host: Authority,
     pub admin_password: String,
-    pub hardware_configuration: HardwareConfiguration,
+    pub hardware: ConfigurationHardware,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -235,36 +235,35 @@ impl Device {
         );
 
         // configuration & watcher credentials
-        let (shared_user_login, shared_user_password) =
-            match &self.configuration.hardware_configuration {
-                HardwareConfiguration::Full {
-                    hardware_configuration,
-                } => {
-                    let mut configurator = configurator::Configurator::connect(&api)
-                        .await
-                        .context("connect")?;
-                    configurator
-                        .configure(hardware_configuration.clone())
-                        .await
-                        .context("configure")?;
+        let (shared_user_login, shared_user_password) = match &self.configuration.hardware {
+            ConfigurationHardware::Full {
+                hardware_configuration,
+            } => {
+                let mut configurator = configurator::Configurator::connect(&api)
+                    .await
+                    .context("connect")?;
+                configurator
+                    .configure(hardware_configuration.clone())
+                    .await
+                    .context("configure")?;
 
-                    (
-                        configurator::Configurator::SHARED_USER_LOGIN,
-                        &hardware_configuration.shared_user_password,
-                    )
-                }
-                HardwareConfiguration::Skip {
-                    shared_user_login,
-                    shared_user_password,
-                } => {
-                    // check if device is online and supported
-                    let _basic_device_info = api
-                        .validate_basic_device_info()
-                        .await
-                        .context("validate_basic_device_info")?;
-                    (shared_user_login.as_str(), shared_user_password)
-                }
-            };
+                (
+                    configurator::Configurator::SHARED_USER_LOGIN,
+                    &hardware_configuration.shared_user_password,
+                )
+            }
+            ConfigurationHardware::Skip {
+                shared_user_login,
+                shared_user_password,
+            } => {
+                // check if device is online and supported
+                let _basic_device_info = api
+                    .validate_basic_device_info()
+                    .await
+                    .context("validate_basic_device_info")?;
+                (shared_user_login.as_str(), shared_user_password)
+            }
+        };
 
         let rtsp_urls = RtspUrls {
             main: IpcRtspUrl(api.rtsp_url_build(
