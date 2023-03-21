@@ -16,8 +16,8 @@ const Body: React.FC<{}> = () => {
       </TopBar>
       <Content>
         <Routes>
-          <Route path="dashboards/*" element={<DashboardsRoute />} />
-          <Route path="devices_summary/*" element={<DevicesSummaryRoute />} />
+          <Route path="dashboards/*" element={<Dashboards />} />
+          <Route path="devices_summary/*" element={<DevicesSummary />} />
           <Route path="" element={<Navigate to="/dashboards" />} />
           <Route path="*" element={<Error404 />} />
         </Routes>
@@ -26,13 +26,6 @@ const Body: React.FC<{}> = () => {
   );
 };
 export default Body;
-
-const DashboardsRoute: React.FC<{}> = () => {
-  return <Dashboards />;
-};
-const DevicesSummaryRoute: React.FC<{}> = () => {
-  return <DevicesSummary />;
-};
 
 const Layout = styled.div`
   height: 100%;
