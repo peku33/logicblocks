@@ -15,6 +15,7 @@ import softTimeSequenceParallelA from "./soft/time/sequence_parallel_a/SummaryMa
 import softWebButtonEventA from "./soft/web/button_event_a/SummaryManaged";
 import softWebButtonEventBooleanA from "./soft/web/button_event_boolean_a/SummaryManaged";
 import softWebButtonStateMonostableA from "./soft/web/button_state_monostable_a/SummaryManaged";
+import softWebDisplayBooleanA from "./soft/web/display_boolean_a/SummaryManaged";
 import softWebRatioSliderA from "./soft/web/ratio_slider_a/SummaryManaged";
 import UnknownDevice from "./UnknownDeviceSummaryManaged";
 
@@ -50,6 +51,8 @@ export function getByClass(class_: string): DeviceSummaryManaged {
       return softWebButtonEventBooleanA;
     case "soft/web/button_state_monostable_a":
       return softWebButtonStateMonostableA;
+    case "soft/web/display_boolean_a":
+      return softWebDisplayBooleanA;
     case "soft/web/ratio_slider_a":
       return softWebRatioSliderA;
   }
