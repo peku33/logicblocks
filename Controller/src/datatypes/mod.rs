@@ -4,6 +4,7 @@ pub mod geography;
 pub mod ipc_rtsp_url;
 pub mod multiplier;
 pub mod pressure;
+pub mod range;
 pub mod ratio;
 pub mod real;
 pub mod resistance;

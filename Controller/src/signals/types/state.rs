@@ -7,6 +7,7 @@ use crate::datatypes::{
     color_rgb_boolean::ColorRgbBoolean,
     ipc_rtsp_url::IpcRtspUrl,
     multiplier::Multiplier,
+    range::Range,
     ratio::Ratio,
     real::Real,
     resistance::Resistance,
@@ -18,6 +19,8 @@ use std::fmt;
 pub trait Value: Base + Eq + fmt::Debug + 'static {}
 
 impl Value for bool {}
+
+impl<T> Value for Range<T> where T: Value {}
 
 impl Value for AngleNormalized {}
 impl Value for AngleNormalizedHalf {}

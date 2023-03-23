@@ -1,4 +1,5 @@
 use crate::{
+    datatypes::range::Range,
     devices,
     signals::{self, signal, types::state::Value},
     util::{
@@ -19,9 +20,8 @@ where
 {
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signal_lower: signal::state_target_last::Signal<V>,
     signal_input: signal::state_target_last::Signal<V>,
-    signal_upper: signal::state_target_last::Signal<V>,
+    signal_range: signal::state_target_last::Signal<Range<V>>,
     signal_output: signal::state_source::Signal<bool>,
 }
 impl<V> Device<V>
@@ -32,44 +32,43 @@ where
         Self {
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-            signal_lower: signal::state_target_last::Signal::<V>::new(),
             signal_input: signal::state_target_last::Signal::<V>::new(),
-            signal_upper: signal::state_target_last::Signal::<V>::new(),
+            signal_range: signal::state_target_last::Signal::<Range<V>>::new(),
             signal_output: signal::state_source::Signal::<bool>::new(None),
         }
     }
 
-    fn calculate_outer(
-        lower: Option<V>,
-        input: Option<V>,
-        upper: Option<V>,
+    fn calculate_optional(
+        input: &Option<V>,
+        range: &Option<Range<V>>,
     ) -> Option<bool> {
-        match (lower, input, upper) {
-            (Some(lower), Some(input), Some(upper)) => {
-                Some(Self::calculate_inner(lower, input, upper))
-            }
-            _ => None,
-        }
+        let input = match input {
+            Some(input) => input,
+            None => return None,
+        };
+
+        let range = match range {
+            Some(range) => range,
+            None => return None,
+        };
+
+        let value = Self::calculate(input, range);
+
+        Some(value)
     }
-    fn calculate_inner(
-        lower: V,
-        input: V,
-        upper: V,
+    fn calculate(
+        input: &V,
+        range: &Range<V>,
     ) -> bool {
-        if lower <= upper {
-            lower <= input && input <= upper
-        } else {
-            !(upper <= input && input <= lower)
-        }
+        range.contains(input)
     }
 
     fn signals_targets_changed(&self) {
         let mut signal_sources_changed = false;
 
-        let value = Self::calculate_outer(
-            self.signal_lower.take_last().value,
-            self.signal_input.take_last().value,
-            self.signal_upper.take_last().value,
+        let value = Self::calculate_optional(
+            &self.signal_input.take_last().value,
+            &self.signal_range.take_last().value,
         );
 
         if self.signal_output.set_one(value) {
@@ -131,9 +130,8 @@ where
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum SignalIdentifier {
-    Lower,
     Input,
-    Upper,
+    Range,
     Output,
 }
 impl signals::Identifier for SignalIdentifier {}
@@ -151,9 +149,8 @@ where
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         hashmap! {
-            SignalIdentifier::Lower => &self.signal_lower as &dyn signal::Base,
             SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
-            SignalIdentifier::Upper => &self.signal_upper as &dyn signal::Base,
+            SignalIdentifier::Range => &self.signal_range as &dyn signal::Base,
             SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
         }
     }

@@ -28,7 +28,7 @@ impl Operation {
         b: V,
     ) -> bool
     where
-        V: Eq + Ord,
+        V: PartialOrd,
     {
         match self {
             Operation::Greater => a > b,
@@ -49,7 +49,7 @@ pub struct Configuration {
 #[derive(Debug)]
 pub struct Device<V>
 where
-    V: Value + Eq + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     configuration: Configuration,
 
@@ -61,7 +61,7 @@ where
 }
 impl<V> Device<V>
 where
-    V: Value + Eq + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     pub fn new(configuration: Configuration) -> Self {
         Self {
@@ -113,7 +113,7 @@ where
 
 impl<V> devices::Device for Device<V>
 where
-    V: Value + Eq + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     fn class(&self) -> Cow<'static, str> {
         Cow::from(format!(
@@ -133,7 +133,7 @@ where
 #[async_trait]
 impl<V> Runnable for Device<V>
 where
-    V: Value + Eq + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     async fn run(
         &self,
@@ -152,7 +152,7 @@ pub enum SignalIdentifier {
 impl signals::Identifier for SignalIdentifier {}
 impl<V> signals::Device for Device<V>
 where
-    V: Value + Eq + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
         Some(&self.signals_targets_changed_waker)
