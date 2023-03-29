@@ -148,7 +148,7 @@ impl<'d, D: Device + SignalsDevice + 'd> DeviceHandle<'d, D> {
 }
 impl<'d, D: Device + SignalsDevice + 'd> Clone for DeviceHandle<'d, D> {
     fn clone(&self) -> Self {
-        Self { ..*self }
+        *self
     }
 }
 impl<'d, D: Device + SignalsDevice + 'd> Copy for DeviceHandle<'d, D> {}
@@ -197,7 +197,7 @@ impl<'d> DeviceHandleErased<'d> {
 }
 impl<'d> Clone for DeviceHandleErased<'d> {
     fn clone(&self) -> Self {
-        Self { ..*self }
+        *self
     }
 }
 impl<'d> Copy for DeviceHandleErased<'d> {}
