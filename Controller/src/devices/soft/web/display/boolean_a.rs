@@ -61,7 +61,7 @@ impl Device {
 
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/web/display_boolean_a")
+        Cow::from("soft/web/display/boolean_a")
     }
 
     fn as_runnable(&self) -> &dyn Runnable {

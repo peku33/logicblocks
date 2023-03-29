@@ -2,7 +2,7 @@ import { Meta, Story } from "@storybook/react";
 import Component, { Data } from "./Summary";
 
 export default {
-  title: "components/devices/soft/web/display_boolean_a/Summary",
+  title: "components/devices/soft/web/display/boolean_a/Summary",
   argTypes: {
     value: {
       type: "boolean",
