@@ -4,6 +4,7 @@ use crate::datatypes::{
         AngleNormalized, AngleNormalizedHalf, AngleNormalizedHalfZeroCentered,
         AngleNormalizedZeroCentered,
     },
+    building::window::{WindowOpenStateOpenClosed, WindowOpenStateOpenTiltedClosed},
     color_rgb_boolean::ColorRgbBoolean,
     ipc_rtsp_url::IpcRtspUrl,
     multiplier::Multiplier,
@@ -18,10 +19,10 @@ use std::fmt;
 
 pub trait Value: Base + Eq + fmt::Debug + 'static {}
 
+//
 impl Value for bool {}
 
-impl<T> Value for Range<T> where T: Value {}
-
+// datatypes
 impl Value for AngleNormalized {}
 impl Value for AngleNormalizedHalf {}
 impl Value for AngleNormalizedHalfZeroCentered {}
@@ -34,3 +35,10 @@ impl Value for Real {}
 impl Value for Resistance {}
 impl Value for Temperature {}
 impl Value for Voltage {}
+
+// datatypes parent
+impl<T> Value for Range<T> where T: Value {}
+
+// datatypes::building
+impl Value for WindowOpenStateOpenClosed {}
+impl Value for WindowOpenStateOpenTiltedClosed {}

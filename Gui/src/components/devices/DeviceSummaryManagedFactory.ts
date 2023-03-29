@@ -15,46 +15,36 @@ import softTimeSequenceParallelA from "./soft/time/sequence_parallel_a/SummaryMa
 import softWebButtonEventA from "./soft/web/button_event_a/SummaryManaged";
 import softWebButtonEventBooleanA from "./soft/web/button_event_boolean_a/SummaryManaged";
 import softWebButtonStateMonostableA from "./soft/web/button_state_monostable_a/SummaryManaged";
-import softWebDisplayBooleanA from "./soft/web/display_boolean_a/SummaryManaged";
+import softWebDisplayBooleanA from "./soft/web/display/boolean_a/SummaryManaged";
+import softWebDisplayBuildingWindowOpenStateOpenClosedA from "./soft/web/display/building/window_open_state_open_closed_a/SummaryManaged";
+import softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA from "./soft/web/display/building/window_open_state_open_tilted_closed_a/SummaryManaged";
 import softWebRatioSliderA from "./soft/web/ratio_slider_a/SummaryManaged";
 import UnknownDevice from "./UnknownDeviceSummaryManaged";
 
+const BY_CLASS: { [class_: string]: DeviceSummaryManaged } = {
+  "dahua/ipc_a": dahuaIpcA,
+  "eaton/mmax_a": eatonMmaxA,
+  "hikvision/ds2cd2x32x_x": hikvisionDs2cd2x32xX,
+  "houseblocks/avr_v1/reed_switch_v1": houseblocksAvrV1D0002ReedSwitchV1,
+  "houseblocks/avr_v1/junction_box_minimal_v1": houseblocksAvrV1D0003JunctionBoxMinimalV1,
+  "houseblocks/avr_v1/gpio_a_v1": houseblocksAvrV1D0005GpioAV1,
+  "houseblocks/avr_v1/relay14_opto_a_v1": houseblocksAvrV1D0006Relay14OptoAV1,
+  "houseblocks/avr_v1/relay14_ssr_a_v2": houseblocksAvrV1D0007Relay14SSRAV2,
+  "soft/calendar/solar_position_a": softCalendarSolarPositionA,
+  "soft/logic/boolean/flip_flop/override_a": softLogicBooleanFlipFlopOverrideA,
+  "soft/logic/boolean/flip_flop/rst_a": softLogicBooleanFlipFlopRSTA,
+  "soft/time/sequence_parallel_a": softTimeSequenceParallelA,
+  "soft/web/button_event_a": softWebButtonEventA,
+  "soft/web/button_event_boolean_a": softWebButtonEventBooleanA,
+  "soft/web/button_state_monostable_a": softWebButtonStateMonostableA,
+  "soft/web/display/boolean_a": softWebDisplayBooleanA,
+  "soft/web/display/building/window_open_state_open_closed_a": softWebDisplayBuildingWindowOpenStateOpenClosedA,
+  "soft/web/display/building/window_open_state_open_tilted_closed_a":
+    softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA,
+  "soft/web/ratio_slider_a": softWebRatioSliderA,
+};
+
 export function getByClass(class_: string): DeviceSummaryManaged {
-  switch (class_) {
-    case "dahua/ipc_a":
-      return dahuaIpcA;
-    case "eaton/mmax_a":
-      return eatonMmaxA;
-    case "hikvision/ds2cd2x32x_x":
-      return hikvisionDs2cd2x32xX;
-    case "houseblocks/avr_v1/reed_switch_v1":
-      return houseblocksAvrV1D0002ReedSwitchV1;
-    case "houseblocks/avr_v1/junction_box_minimal_v1":
-      return houseblocksAvrV1D0003JunctionBoxMinimalV1;
-    case "houseblocks/avr_v1/gpio_a_v1":
-      return houseblocksAvrV1D0005GpioAV1;
-    case "houseblocks/avr_v1/relay14_opto_a_v1":
-      return houseblocksAvrV1D0006Relay14OptoAV1;
-    case "houseblocks/avr_v1/relay14_ssr_a_v2":
-      return houseblocksAvrV1D0007Relay14SSRAV2;
-    case "soft/calendar/solar_position_a":
-      return softCalendarSolarPositionA;
-    case "soft/logic/boolean/flip_flop/override_a":
-      return softLogicBooleanFlipFlopOverrideA;
-    case "soft/logic/boolean/flip_flop/rst_a":
-      return softLogicBooleanFlipFlopRSTA;
-    case "soft/time/sequence_parallel_a":
-      return softTimeSequenceParallelA;
-    case "soft/web/button_event_a":
-      return softWebButtonEventA;
-    case "soft/web/button_event_boolean_a":
-      return softWebButtonEventBooleanA;
-    case "soft/web/button_state_monostable_a":
-      return softWebButtonStateMonostableA;
-    case "soft/web/display_boolean_a":
-      return softWebDisplayBooleanA;
-    case "soft/web/ratio_slider_a":
-      return softWebRatioSliderA;
-  }
-  return UnknownDevice;
+  const byClass = BY_CLASS[class_];
+  return byClass !== undefined ? byClass : UnknownDevice;
 }

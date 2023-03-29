@@ -1,3 +1,4 @@
+pub mod building;
 pub mod calendar;
 pub mod converter;
 pub mod debug;

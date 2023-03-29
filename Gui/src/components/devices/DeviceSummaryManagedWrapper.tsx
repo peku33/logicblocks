@@ -41,7 +41,12 @@ const DetailsName = styled.div`
 `;
 const DetailsDetails = styled.div`
   font-size: x-small;
-  font-size: normal;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  word-break: keep-all;
+  white-space: nowrap;
 `;
 
 const ComponentWrapper = styled.div``;
