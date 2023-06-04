@@ -486,7 +486,7 @@ impl Api {
         let code = error.get("code").and_then(|code| code.as_u64());
         let message = error.get("message").and_then(|message| message.as_str());
 
-        code.contains(&287637505) && message.contains(&"Invalid session in request data!")
+        code == Some(287637505) && message == Some("Invalid session in request data!")
     }
 
     pub async fn rpc2_call(

@@ -52,7 +52,7 @@ impl Request {
             .and_then(|header| header.to_str().ok());
 
         ensure!(
-            content_type.contains(&"application/json"),
+            content_type == Some("application/json"),
             "expected content type application/json, got: {:?}",
             content_type,
         );

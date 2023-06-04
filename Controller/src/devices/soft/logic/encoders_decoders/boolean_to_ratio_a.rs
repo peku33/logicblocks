@@ -60,7 +60,7 @@ impl Device {
             .count();
         let counts_one = inputs_values
             .iter()
-            .filter(|last| last.value.contains(&true))
+            .filter(|last| last.value == Some(true))
             .count();
 
         let ratio = (counts_one as f64) / (counts_known as f64);

@@ -1196,9 +1196,8 @@ impl<'a> Configurator<'a> {
             .await
             .context("rpc2_call_params")?;
 
-        if !encode_capabilities
-            .pointer("/caps/VideoEncodeDevices/0/SupportAICoding/0/AICoding")
-            .contains(&&json!(true))
+        if encode_capabilities.pointer("/caps/VideoEncodeDevices/0/SupportAICoding/0/AICoding")
+            != Some(&json!(true))
         {
             return Ok(());
         }

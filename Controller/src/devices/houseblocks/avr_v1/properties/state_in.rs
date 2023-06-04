@@ -60,7 +60,7 @@ where
     ) -> bool {
         let mut state = self.state.lock();
 
-        if state.value.contains(&value) {
+        if state.value.as_ref() == Some(&value) {
             return false;
         }
 

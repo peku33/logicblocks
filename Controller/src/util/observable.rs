@@ -263,7 +263,7 @@ where
     pub fn get_update(&mut self) -> &T {
         let parent_inner = self.parent.inner.read();
 
-        if !self.last_seen_value.contains(&parent_inner.value) {
+        if self.last_seen_value.as_ref() != Some(&parent_inner.value) {
             self.last_seen_value.replace(parent_inner.value.clone());
         }
 
@@ -277,7 +277,7 @@ where
     pub fn get_changed_update(&mut self) -> Option<&T> {
         let parent_inner = self.parent.inner.read();
 
-        let changed = if !self.last_seen_value.contains(&parent_inner.value) {
+        let changed = if self.last_seen_value.as_ref() != Some(&parent_inner.value) {
             self.last_seen_value.replace(parent_inner.value.clone());
             Some(self.last_seen_value.as_ref().unwrap())
         } else {
@@ -293,7 +293,7 @@ where
     pub fn get_changed_committer(&mut self) -> Option<ObserverCommitter<'_, 'v, T>> {
         let parent_inner = self.parent.inner.read();
 
-        let observer_committer = if !self.last_seen_value.contains(&parent_inner.value) {
+        let observer_committer = if self.last_seen_value.as_ref() != Some(&parent_inner.value) {
             Some(ObserverCommitter::new(self, parent_inner.value.clone()))
         } else {
             None
@@ -398,10 +398,7 @@ where
 
         let self_parent_parent_inner = self_.parent.parent.inner.read();
 
-        let poll = if !self_
-            .parent
-            .last_seen_value
-            .contains(&self_parent_parent_inner.value)
+        let poll = if self_.parent.last_seen_value.as_ref() != Some(&self_parent_parent_inner.value)
         {
             self_.competed = true;
             Poll::Ready(())
@@ -499,7 +496,7 @@ where
         self_.inner_remote.waker.register(cx.waker());
 
         let parent_inner = self_.parent.inner.read();
-        let poll = if !self_.last_seen_value.contains(&parent_inner.value) {
+        let poll = if self_.last_seen_value.as_ref() != Some(&parent_inner.value) {
             self_.last_seen_value.replace(parent_inner.value.clone());
             Poll::Ready(Some(()))
         } else {
@@ -595,7 +592,7 @@ where
 
         let parent_inner = self_.parent.inner.read();
 
-        let poll = if !self_.last_seen_value.contains(&parent_inner.value) {
+        let poll = if self_.last_seen_value.as_ref() != Some(&parent_inner.value) {
             self_.last_seen_value.replace(parent_inner.value.clone());
             Poll::Ready(Some(parent_inner.value.clone()))
         } else {

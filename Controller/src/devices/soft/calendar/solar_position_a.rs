@@ -208,7 +208,7 @@ pub mod spa {
     use itertools::{zip_eq, Itertools};
     use std::time::Duration;
 
-    pub const DELTA_T_DEFAULT: Duration = Duration::from_secs_f64(32.184);
+    pub const DELTA_T_DEFAULT: Duration = Duration::from_millis(32_184);
 
     #[derive(Clone, Copy, Debug)]
     pub struct SPA0;
