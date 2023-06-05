@@ -263,19 +263,19 @@ impl<'m> Device<'m> {
             .context("motor_current_rated_a")?;
 
         // 2101 - Fieldbus status word
-        let ready = status_word & (1 << 0) > 0;
-        let running = status_word & (1 << 1) > 0;
-        let reverse = status_word & (1 << 2) > 0;
-        let fault = status_word & (1 << 3) > 0;
-        let warning = status_word & (1 << 4) > 0;
-        let speed_control_active = status_word & (1 << 7) > 0;
+        let ready = status_word & (1 << 0) != 0;
+        let running = status_word & (1 << 1) != 0;
+        let reverse = status_word & (1 << 2) != 0;
+        let fault = status_word & (1 << 3) != 0;
+        let warning = status_word & (1 << 4) != 0;
+        let speed_control_active = status_word & (1 << 7) != 0;
 
         // 2102 - Fieldbus general status word
-        let remote_input = general_status_word & (1 << 11) > 0; // p3.28
-        let manual_mode = general_status_word & (1 << 12) > 0; // p3.37
-        let control_level_from_io = general_status_word & (1 << 13) > 0;
-        let control_level_from_keypad = general_status_word & (1 << 14) > 0;
-        let control_level_from_fieldbus = general_status_word & (1 << 15) > 0;
+        let remote_input = general_status_word & (1 << 11) != 0; // p3.28
+        let manual_mode = general_status_word & (1 << 12) != 0; // p3.37
+        let control_level_from_io = general_status_word & (1 << 13) != 0;
+        let control_level_from_keypad = general_status_word & (1 << 14) != 0;
+        let control_level_from_fieldbus = general_status_word & (1 << 15) != 0;
 
         // 2103 - Fieldbus actual speed
         let speed_actual =
