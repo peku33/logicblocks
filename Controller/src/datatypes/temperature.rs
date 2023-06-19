@@ -13,9 +13,17 @@ pub enum Unit {
 #[serde(try_from = "TemperatureSerde")]
 #[serde(into = "TemperatureSerde")]
 pub struct Temperature {
-    kelvin: f64,
+    kelvins: f64,
 }
 impl Temperature {
+    pub fn from_kelvins(kelvins: f64) -> Result<Self, Error> {
+        ensure!(kelvins.is_finite(), "value must be finite");
+        Ok(Self { kelvins })
+    }
+    pub fn to_kelvins(&self) -> f64 {
+        self.kelvins
+    }
+
     pub fn from_unit(
         unit: Unit,
         value: f64,
@@ -26,16 +34,16 @@ impl Temperature {
             Unit::Fahrenheit => (value + 459.67) * 5.0 / 9.0,
             Unit::Celsius => value + 273.15,
         };
-        Ok(Self { kelvin })
+        Ok(Self { kelvins: kelvin })
     }
     pub fn to_unit(
         self,
         unit: Unit,
     ) -> f64 {
         match unit {
-            Unit::Kelvin => self.kelvin,
-            Unit::Celsius => self.kelvin - 273.15,
-            Unit::Fahrenheit => self.kelvin * 9.0 / 5.0 - 459.67,
+            Unit::Kelvin => self.kelvins,
+            Unit::Celsius => self.kelvins - 273.15,
+            Unit::Fahrenheit => self.kelvins * 9.0 / 5.0 - 459.67,
         }
     }
 }
@@ -43,12 +51,12 @@ impl TryFrom<TemperatureSerde> for Temperature {
     type Error = Error;
 
     fn try_from(value: TemperatureSerde) -> Result<Self, Self::Error> {
-        Self::from_unit(Unit::Kelvin, value.0)
+        Self::from_kelvins(value.0)
     }
 }
 impl Into<TemperatureSerde> for Temperature {
     fn into(self) -> TemperatureSerde {
-        TemperatureSerde(self.to_unit(Unit::Kelvin))
+        TemperatureSerde(self.to_kelvins())
     }
 }
 impl Eq for Temperature {}
