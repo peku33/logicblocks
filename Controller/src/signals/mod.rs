@@ -47,7 +47,7 @@ impl<I: Identifier> IdentifierBase for I {
 
     fn clone(&self) -> Box<dyn IdentifierBase> {
         let cloned = self.clone();
-        let cloned = Box::new(cloned) as Box<dyn IdentifierBase>;
+        let cloned = Box::new(cloned);
         cloned
     }
     fn eq(
@@ -81,7 +81,7 @@ pub struct IdentifierBaseWrapper {
 }
 impl IdentifierBaseWrapper {
     pub fn new<I: Identifier>(identifier: I) -> Self {
-        let inner = Box::new(identifier) as Box<dyn IdentifierBase>;
+        let inner = Box::new(identifier);
         Self { inner }
     }
 }
