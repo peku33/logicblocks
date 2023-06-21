@@ -1,5 +1,6 @@
 #![feature(adt_const_params)]
 #![feature(array_chunks)]
+#![feature(array_windows)]
 #![feature(associated_type_defaults)]
 #![feature(async_closure)]
 #![feature(const_fn_floating_point_arithmetic)]
