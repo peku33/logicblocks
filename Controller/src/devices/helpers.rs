@@ -37,7 +37,7 @@ impl<'d> Devices<'d> {
             .into_iter()
             .enumerate()
             .map(|(device_id, device)| ((device_id + 1) as u32, device))
-            .collect::<HashMap<_, _>>()
+            .collect()
     }
 }
 
@@ -115,8 +115,8 @@ impl Signals {
     pub fn as_connections_requested(&self) -> &[ConnectionRequested] {
         self.connections_requested.as_slice()
     }
-    pub fn into_connections_requested(self) -> Vec<ConnectionRequested> {
-        self.connections_requested
+    pub fn into_connections_requested(self) -> Box<[ConnectionRequested]> {
+        self.connections_requested.into_boxed_slice()
     }
 }
 

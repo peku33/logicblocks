@@ -136,7 +136,7 @@ impl<'f> fmt::Display for SQLite<'f> {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "SQlite({})", self.name)
+        write!(f, "SQLite({})", self.name)
     }
 }
 impl<'f> Drop for SQLite<'f> {

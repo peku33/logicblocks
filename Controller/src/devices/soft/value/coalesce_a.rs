@@ -25,7 +25,7 @@ where
 
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signal_inputs: Vec<signal::state_target_last::Signal<V>>,
+    signal_inputs: Box<[signal::state_target_last::Signal<V>]>,
     signal_output: signal::state_source::Signal<V>,
 }
 impl<V> Device<V>
@@ -42,7 +42,7 @@ where
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_inputs: (0..inputs_count)
                 .map(|_input_id| signal::state_target_last::Signal::<V>::new())
-                .collect::<Vec<_>>(),
+                .collect(),
             signal_output: signal::state_source::Signal::<V>::new(None),
         }
     }
@@ -52,7 +52,7 @@ where
             .signal_inputs
             .iter()
             .map(|signal_input| signal_input.take_last())
-            .collect::<Vec<_>>();
+            .collect::<Box<[_]>>();
 
         // get first non-None value
         let value = inputs_values

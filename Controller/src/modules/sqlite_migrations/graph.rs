@@ -51,8 +51,7 @@ pub fn resolve(
         path.array_windows::<2>() // pairwise
             .rev() // the path is target -> source, we need source -> target
             .filter_map(|[target, source]| *graph.get(target).unwrap().get(source).unwrap()) // resolve sql, only if defined
-            .collect::<Vec<_>>()
-            .into_boxed_slice()
+            .collect()
     });
 
     (target, migrations)

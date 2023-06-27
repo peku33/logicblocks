@@ -22,7 +22,7 @@ pub struct Device {
 
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signal_inputs: Vec<signal::state_target_last::Signal<bool>>,
+    signal_inputs: Box<[signal::state_target_last::Signal<bool>]>,
     signal_output: signal::state_source::Signal<bool>,
 }
 impl Device {
@@ -34,7 +34,7 @@ impl Device {
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_inputs: (0..configuration.inputs_count)
                 .map(|_| signal::state_target_last::Signal::<bool>::new())
-                .collect::<Vec<_>>(),
+                .collect(),
             signal_output: signal::state_source::Signal::<bool>::new(None),
         }
     }

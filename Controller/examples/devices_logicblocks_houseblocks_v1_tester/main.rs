@@ -122,7 +122,7 @@ fn submenu_select_master(global: &mut Global) -> Result<Option<Master>, Error> {
             descriptors
                 .iter()
                 .map(|descriptor| descriptor.serial_number.clone().into_string().unwrap())
-                .collect::<Vec<_>>()
+                .collect::<Box<[_]>>()
                 .as_ref(),
         )
         .interact_opt()?

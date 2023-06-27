@@ -81,7 +81,7 @@ impl uri_cursor::Handler for Dashboard {
 
         #[derive(Serialize)]
         struct ContentSectionsSerialize {
-            sections: Vec<SectionSerialize>,
+            sections: Box<[SectionSerialize]>,
         }
         impl ContentSectionsSerialize {
             fn new(content_sections: &ContentSections) -> Self {
@@ -90,7 +90,7 @@ impl uri_cursor::Handler for Dashboard {
                         .sections
                         .iter()
                         .map(SectionSerialize::new)
-                        .collect::<Vec<_>>(),
+                        .collect(),
                 }
             }
         }
@@ -132,7 +132,7 @@ impl uri_cursor::Handler for Dashboard {
 
         #[derive(Serialize)]
         struct SectionContentDashboardsSerialize {
-            dashboards: Vec<DashboardSummarySerialize>,
+            dashboards: Box<[DashboardSummarySerialize]>,
         }
         impl SectionContentDashboardsSerialize {
             fn new(section_content_dashboards: &SectionContentDashboards) -> Self {
@@ -141,14 +141,14 @@ impl uri_cursor::Handler for Dashboard {
                         .dashboards
                         .iter()
                         .map(DashboardSummarySerialize::new)
-                        .collect::<Vec<_>>(),
+                        .collect(),
                 }
             }
         }
 
         #[derive(Serialize)]
         struct SectionContentDevicesSerialize {
-            device_ids: Vec<DeviceId>,
+            device_ids: Box<[DeviceId]>,
         }
         impl SectionContentDevicesSerialize {
             fn new(section_content_devices: &SectionContentDevices) -> Self {
@@ -260,7 +260,7 @@ pub struct ContentSectionContent {
 
 #[derive(Debug)]
 pub struct ContentSections {
-    sections: Vec<Section>,
+    sections: Box<[Section]>,
 }
 
 #[derive(Debug)]
@@ -278,12 +278,12 @@ pub enum SectionContent {
 
 #[derive(Debug)]
 pub struct SectionContentDashboards {
-    dashboards: Vec<Dashboard>,
+    dashboards: Box<[Dashboard]>,
 }
 
 #[derive(Debug)]
 pub struct SectionContentDevices {
-    device_ids: Vec<DeviceId>,
+    device_ids: Box<[DeviceId]>,
 }
 
 pub mod builder {
@@ -359,7 +359,7 @@ pub mod builder {
         }
         pub fn into_content_sections(self) -> ContentSections {
             ContentSections {
-                sections: self.sections,
+                sections: self.sections.into_boxed_slice(),
             }
         }
     }
@@ -395,7 +395,7 @@ pub mod builder {
 
         pub fn into_section_content_dashboards(self) -> SectionContentDashboards {
             SectionContentDashboards {
-                dashboards: self.dashboards,
+                dashboards: self.dashboards.into_boxed_slice(),
             }
         }
     }
@@ -434,7 +434,7 @@ pub mod builder {
         }
         pub fn into_section_content_devices(self) -> SectionContentDevices {
             SectionContentDevices {
-                device_ids: self.device_ids,
+                device_ids: self.device_ids.into_boxed_slice(),
             }
         }
     }

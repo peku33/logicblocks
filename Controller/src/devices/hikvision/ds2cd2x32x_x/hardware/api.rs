@@ -74,7 +74,7 @@ impl Api {
     fn serialize_xml(input: Element) -> Result<Bytes, Error> {
         let mut output = Vec::<u8>::new();
         input.write(&mut output).context("write")?;
-        let output: Bytes = output.into();
+        let output = Bytes::from(output);
         Ok(output)
     }
 

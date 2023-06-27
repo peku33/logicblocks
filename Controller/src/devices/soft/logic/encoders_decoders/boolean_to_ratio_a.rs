@@ -23,7 +23,7 @@ pub struct Device {
 
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signal_inputs: Vec<signal::state_target_last::Signal<bool>>,
+    signal_inputs: Box<[signal::state_target_last::Signal<bool>]>,
     signal_output: signal::state_source::Signal<Ratio>,
 }
 impl Device {
@@ -37,7 +37,7 @@ impl Device {
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_inputs: (0..inputs_count)
                 .map(|_input_id| signal::state_target_last::Signal::<bool>::new())
-                .collect::<Vec<_>>(),
+                .collect(),
             signal_output: signal::state_source::Signal::<Ratio>::new(None),
         }
     }
@@ -47,7 +47,7 @@ impl Device {
             .signal_inputs
             .iter()
             .map(|signal_input| signal_input.take_last())
-            .collect::<Vec<_>>();
+            .collect::<Box<[_]>>();
 
         // if no signal is pending, don't recalculate
         if !inputs_values.iter().any(|value| value.pending) {

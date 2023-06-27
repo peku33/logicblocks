@@ -13,7 +13,10 @@ use futures::{
     stream::StreamExt,
     Stream,
 };
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Topic {
@@ -51,10 +54,10 @@ impl Topic {
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TopicPath {
-    inner: Vec<Topic>,
+    inner: Box<[Topic]>,
 }
 impl TopicPath {
-    pub fn new(inner: Vec<Topic>) -> Self {
+    pub fn new(inner: Box<[Topic]>) -> Self {
         Self { inner }
     }
 
@@ -62,7 +65,7 @@ impl TopicPath {
         let inner = value
             .split('-')
             .map(Topic::from_url_filter)
-            .collect::<Option<Vec<_>>>()?;
+            .collect::<Option<_>>()?;
         let self_ = Self { inner };
         Some(self_)
     }
@@ -75,7 +78,7 @@ impl TopicPath {
         let inner = value
             .into_iter()
             .map(Topic::from_body_filter)
-            .collect::<Option<Vec<_>>>()?;
+            .collect::<Option<_>>()?;
         let self_ = Self { inner };
         Some(self_)
     }
@@ -90,7 +93,7 @@ impl TopicPath {
     pub fn to_sse_event(&self) -> sse::Event {
         sse::Event {
             id: None,
-            data: self.to_sse_data().to_string().into(),
+            data: Cow::from(self.to_sse_data().to_string()),
         }
     }
 }
@@ -99,7 +102,7 @@ pub fn topic_paths_from_url_filter(value: &str) -> Option<HashSet<TopicPath>> {
     let topic_paths = value
         .split(',')
         .map(TopicPath::from_url_filter)
-        .collect::<Option<HashSet<_>>>()?;
+        .collect::<Option<_>>()?;
     Some(topic_paths)
 }
 pub fn topic_paths_from_body_filter(value: serde_json::Value) -> Option<HashSet<TopicPath>> {
@@ -111,7 +114,7 @@ pub fn topic_paths_from_body_filter(value: serde_json::Value) -> Option<HashSet<
     let topic_paths = value
         .into_iter()
         .map(TopicPath::from_body_filter)
-        .collect::<Option<HashSet<_>>>()?;
+        .collect::<Option<_>>()?;
     Some(topic_paths)
 }
 
@@ -154,7 +157,7 @@ impl<'a> Responder<'a> {
         node: &'a Node<'a>,
     ) {
         if let Some(self_) = node.self_.as_ref() {
-            let topic_path = TopicPath::new(path.clone());
+            let topic_path = TopicPath::new(path.clone().into_boxed_slice());
 
             let waker = self_;
             let sender = mpmc_static::Sender::new();
@@ -170,7 +173,7 @@ impl<'a> Responder<'a> {
             debug_assert!(inserted);
         }
 
-        for (topic, child) in &node.children {
+        for (topic, child) in node.children.iter() {
             let mut path = path.clone();
             path.push(topic.clone());
 

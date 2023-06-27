@@ -42,7 +42,7 @@ pub struct ConfigurationChannel {
 #[derive(Debug)]
 pub struct Configuration {
     pub power_max: Multiplier,
-    pub channels: Vec<ConfigurationChannel>,
+    pub channels: Box<[ConfigurationChannel]>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -79,13 +79,13 @@ enum StateDeviceEnabledChannel {
 #[derive(Debug)]
 enum StateDevice {
     Disabled {
-        channels: Vec<StateDeviceDisabledChannel>,
+        channels: Box<[StateDeviceDisabledChannel]>,
     },
     Paused {
-        channels: Vec<StateDevicePausedChannel>,
+        channels: Box<[StateDevicePausedChannel]>,
     },
     Enabled {
-        channels: Vec<StateDeviceEnabledChannel>,
+        channels: Box<[StateDeviceEnabledChannel]>,
         order_index_last: u64,
     },
 }
@@ -104,7 +104,7 @@ pub struct Device {
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_add_all: signal::event_target_queued::Signal<Multiplier>,
     signal_power: signal::state_source::Signal<Multiplier>,
-    signal_outputs: Vec<signal::state_source::Signal<bool>>,
+    signal_outputs: Box<[signal::state_source::Signal<bool>]>,
 
     gui_summary_waker: devices::gui_summary::Waker,
 }
@@ -119,13 +119,12 @@ impl Device {
         let channels_count = configuration.channels.len();
 
         let state_device = StateDevice::Enabled {
-            channels: vec![
-                StateDeviceEnabledChannel::EnabledQueued {
-                    queue: Duration::ZERO,
-                    order_index: 0,
-                };
-                channels_count
-            ],
+            channels: iter::repeat(StateDeviceEnabledChannel::EnabledQueued {
+                queue: Duration::ZERO,
+                order_index: 0,
+            })
+            .take(channels_count)
+            .collect(),
             order_index_last: 0,
         };
         let state = State {
@@ -142,7 +141,7 @@ impl Device {
             signal_power: signal::state_source::Signal::<Multiplier>::new(Some(Multiplier::zero())),
             signal_outputs: repeat_with(|| signal::state_source::Signal::<bool>::new(Some(false)))
                 .take(channels_count)
-                .collect::<Vec<_>>(),
+                .collect(),
 
             gui_summary_waker: devices::gui_summary::Waker::new(),
         }
@@ -168,7 +167,7 @@ impl Device {
                             StateDeviceDisabledChannel::Enabled
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 state.device = StateDevice::Disabled { channels };
 
@@ -190,7 +189,7 @@ impl Device {
                             StateDeviceDisabledChannel::Enabled
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 state.device = StateDevice::Disabled { channels };
 
@@ -202,7 +201,7 @@ impl Device {
         if self.signal_power.set_one(Some(Multiplier::zero())) {
             signal_sources_changed = true;
         }
-        for signal_output in &self.signal_outputs {
+        for signal_output in self.signal_outputs.iter() {
             if signal_output.set_one(Some(false)) {
                 signal_sources_changed = true;
             }
@@ -234,7 +233,7 @@ impl Device {
                             queue: Duration::ZERO,
                         },
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 state.device = StateDevice::Paused { channels };
 
@@ -259,7 +258,7 @@ impl Device {
                             }
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 state.device = StateDevice::Paused { channels };
 
@@ -271,7 +270,7 @@ impl Device {
         if self.signal_power.set_one(Some(Multiplier::zero())) {
             signal_sources_changed = true;
         }
-        for signal_output in &self.signal_outputs {
+        for signal_output in self.signal_outputs.iter() {
             if signal_output.set_one(Some(false)) {
                 signal_sources_changed = true;
             }
@@ -306,7 +305,7 @@ impl Device {
                             }
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
                 state.device = StateDevice::Enabled {
                     channels,
                     order_index_last: 0,
@@ -329,7 +328,7 @@ impl Device {
                             }
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
                 state.device = StateDevice::Enabled {
                     channels,
                     order_index_last: 0,
@@ -777,7 +776,7 @@ impl Device {
             StateDevice::Paused {
                 ref mut channels, ..
             } => {
-                for channel_state in channels {
+                for channel_state in channels.iter_mut() {
                     match channel_state {
                         StateDevicePausedChannel::Disabled => {}
                         StateDevicePausedChannel::Paused { ref mut queue }
@@ -791,7 +790,7 @@ impl Device {
             StateDevice::Enabled {
                 ref mut channels, ..
             } => {
-                for channel_state in channels {
+                for channel_state in channels.iter_mut() {
                     match channel_state {
                         StateDeviceEnabledChannel::Disabled => {}
                         StateDeviceEnabledChannel::Paused { ref mut queue, .. }
@@ -823,7 +822,7 @@ impl Device {
                 ref mut channels, ..
             } => {
                 for (channel_configuration, channel_state) in
-                    zip_eq(&self.configuration.channels, channels)
+                    zip_eq(self.configuration.channels.iter(), channels.iter_mut())
                 {
                     match channel_state {
                         StateDevicePausedChannel::Disabled => {}
@@ -839,7 +838,7 @@ impl Device {
                 ref mut channels, ..
             } => {
                 for (channel_configuration, channel_state) in
-                    zip_eq(&self.configuration.channels, channels)
+                    zip_eq(self.configuration.channels.iter(), channels.iter_mut())
                 {
                     match channel_state {
                         StateDeviceEnabledChannel::Disabled => {}
@@ -918,7 +917,7 @@ impl Device {
 
         // in the second iteration we add new channels if they are ready to be run
         // we process and try to enable them processed by order, until first failure, to prevent starvation
-        let channel_ids = zip_eq(&self.configuration.channels, channels.iter())
+        let channel_ids = zip_eq(self.configuration.channels.iter(), channels.iter())
             .enumerate()
             .filter_map(
                 |(channel_id, (channel_configuration, channel_state))| match channel_state {
@@ -935,9 +934,11 @@ impl Device {
             )
             .sorted_by_key(|(_channel_id, order_index)| *order_index)
             .map(|(channel_id, _order_index)| channel_id)
-            .collect::<Vec<_>>();
+            .collect::<Box<[_]>>();
 
-        for channel_id in channel_ids {
+        for channel_id in channel_ids.iter() {
+            let channel_id = *channel_id;
+
             let channel_configuration = &self.configuration.channels[channel_id];
             let channel_state = &mut channels[channel_id];
             let signal_output = &self.signal_outputs[channel_id];
@@ -991,7 +992,7 @@ impl Device {
         &self,
         channels: &[StateDeviceEnabledChannel],
     ) -> Multiplier {
-        zip_eq(&self.configuration.channels, channels)
+        zip_eq(self.configuration.channels.iter(), channels.iter())
             .map(|(configuration, state)| match state {
                 StateDeviceEnabledChannel::EnabledActive { .. } => configuration.power_required,
                 _ => Multiplier::zero(),
@@ -1128,7 +1129,7 @@ struct GuiSummaryConfigurationChannel {
 
 #[derive(Debug, Serialize)]
 struct GuiSummaryConfiguration {
-    channels: Vec<GuiSummaryConfigurationChannel>,
+    channels: Box<[GuiSummaryConfigurationChannel]>,
     power_max: f64,
 }
 
@@ -1166,13 +1167,13 @@ enum GuiSummaryStateEnabledChannelState {
 #[serde(tag = "state")]
 enum GuiSummaryState {
     Disabled {
-        channels: Vec<GuiSummaryStateDisabledChannelState>,
+        channels: Box<[GuiSummaryStateDisabledChannelState]>,
     },
     Paused {
-        channels: Vec<GuiSummaryStatePausedChannelState>,
+        channels: Box<[GuiSummaryStatePausedChannelState]>,
     },
     Enabled {
-        channels: Vec<GuiSummaryStateEnabledChannelState>,
+        channels: Box<[GuiSummaryStateEnabledChannelState]>,
         power: f64,
     },
 }
@@ -1201,7 +1202,7 @@ impl devices::gui_summary::Device for Device {
                 round_min_seconds: channel_configuration.round_min.as_secs_f64(),
                 round_max_seconds: channel_configuration.round_max.as_secs_f64(),
             })
-            .collect::<Vec<_>>();
+            .collect();
 
         let gui_summary_configuration = GuiSummaryConfiguration {
             channels: gui_summary_configuration_channels,
@@ -1223,7 +1224,7 @@ impl devices::gui_summary::Device for Device {
                             GuiSummaryStateDisabledChannelState::Enabled
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 GuiSummaryState::Disabled {
                     channels: gui_channels,
@@ -1247,7 +1248,7 @@ impl devices::gui_summary::Device for Device {
                             }
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 GuiSummaryState::Paused {
                     channels: gui_channels,
@@ -1255,7 +1256,7 @@ impl devices::gui_summary::Device for Device {
             }
             StateDevice::Enabled { ref channels, .. } => {
                 // channel_id -> 0-based queue position (ascending)
-                let queued_positions = zip_eq(&self.configuration.channels, channels.iter())
+                let queued_positions = zip_eq(self.configuration.channels.iter(), channels.iter())
                     .enumerate()
                     .filter_map(|(channel_id, (channel_configuration, channel_state))| {
                         match channel_state {
@@ -1276,7 +1277,7 @@ impl devices::gui_summary::Device for Device {
                     .collect::<HashMap<_, _>>();
 
                 // total power of active channels
-                let power = zip_eq(&self.configuration.channels, channels)
+                let power = zip_eq(self.configuration.channels.iter(), channels.iter())
                     .map(
                         |(channel_configuration, channel_state)| match channel_state {
                             StateDeviceEnabledChannel::EnabledActive { .. } => {
@@ -1312,7 +1313,7 @@ impl devices::gui_summary::Device for Device {
                             }
                         }
                     })
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 GuiSummaryState::Enabled {
                     channels: gui_channels,

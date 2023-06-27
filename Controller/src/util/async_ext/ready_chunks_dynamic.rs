@@ -28,7 +28,7 @@ impl<S> Stream for ReadyChunksDynamic<S>
 where
     S: Stream,
 {
-    type Item = Vec<S::Item>;
+    type Item = Box<[S::Item]>;
 
     fn poll_next(
         self: Pin<&mut Self>,
@@ -45,10 +45,8 @@ where
                     if self_.buffer.is_empty() {
                         return Poll::Pending;
                     } else {
-                        return Poll::Ready(Some(replace(
-                            &mut self_.buffer,
-                            Vec::<S::Item>::new(),
-                        )));
+                        let buffer = replace(&mut self_.buffer, Vec::<S::Item>::new());
+                        return Poll::Ready(Some(buffer.into_boxed_slice()));
                     }
                 }
                 Poll::Ready(Some(item)) => {
@@ -58,10 +56,8 @@ where
                     if self_.buffer.is_empty() {
                         return Poll::Ready(None);
                     } else {
-                        return Poll::Ready(Some(replace(
-                            &mut self_.buffer,
-                            Vec::<S::Item>::new(),
-                        )));
+                        let buffer = replace(&mut self_.buffer, Vec::<S::Item>::new());
+                        return Poll::Ready(Some(buffer.into_boxed_slice()));
                     }
                 }
             }

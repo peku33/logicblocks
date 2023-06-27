@@ -66,11 +66,14 @@ async fn main() -> Result<(), Error> {
                 overlay_text: command_configure.overlay_text,
                 privacy_mask: None,
                 motion_detection: Some(
-                    MotionDetection::new(vec![MotionDetectionRegion {
-                        region: RegionSquare::full(),
-                        sensitivity: Percentage::new(50).unwrap(),
-                        object_size: Percentage::new(0).unwrap(),
-                    }])
+                    MotionDetection::new(
+                        vec![MotionDetectionRegion {
+                            region: RegionSquare::full(),
+                            sensitivity: Percentage::new(50).unwrap(),
+                            object_size: Percentage::new(0).unwrap(),
+                        }]
+                        .into_boxed_slice(),
+                    )
                     .unwrap(),
                 ),
                 field_detection: None,

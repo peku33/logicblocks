@@ -84,11 +84,9 @@ mod tests {
         transaction.commit().unwrap();
 
         let version = connection
-            .query_row_and_then(
-                "SELECT * FROM pragma_user_version",
-                rusqlite::params![],
-                |row| row.get::<_, u32>(0),
-            )
+            .query_row_and_then("SELECT * FROM pragma_user_version", (), |row| {
+                row.get::<_, u32>(0)
+            })
             .unwrap();
         assert_eq!(version, 100);
     }
@@ -113,18 +111,16 @@ mod tests {
         transaction.commit().unwrap();
 
         let version = connection
-            .query_row_and_then(
-                "SELECT * FROM pragma_user_version",
-                rusqlite::params![],
-                |row| row.get::<_, u32>(0),
-            )
+            .query_row_and_then("SELECT * FROM pragma_user_version", (), |row| {
+                row.get::<_, u32>(0)
+            })
             .unwrap();
         assert_eq!(version, 3);
 
         let table_names = connection
             .prepare("SELECT name FROM sqlite_master")
             .unwrap()
-            .query_map(rusqlite::params![], |row| row.get::<_, String>(0))
+            .query_map((), |row| row.get::<_, String>(0))
             .unwrap()
             .collect::<Result<HashSet<_>, _>>()
             .unwrap();

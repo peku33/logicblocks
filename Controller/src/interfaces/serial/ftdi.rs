@@ -33,15 +33,15 @@ impl Display for Descriptor {
 
 #[derive(Debug)]
 pub struct Descriptors {
-    inner: Vec<Descriptor>,
+    inner: Box<[Descriptor]>,
 }
 impl Descriptors {
-    pub fn new(inner: Vec<Descriptor>) -> Self {
+    pub fn new(inner: Box<[Descriptor]>) -> Self {
         Self { inner }
     }
 
     pub fn all(&self) -> &[Descriptor] {
-        self.inner.as_slice()
+        &self.inner
     }
 
     pub fn descriptor_by_serial(

@@ -71,7 +71,7 @@ impl<'d> Runner<'d> {
                 let devices_wrapper_runtime_scope_runnable = device_wrappers_by_id
                     .values()
                     .map(|device_wrapper| RuntimeScopeRunnable::new(runtime, device_wrapper))
-                    .collect::<Box<[_]>>();
+                    .collect();
                 let devices_wrapper_runtime_scope_runnable =
                     ManuallyDrop::new(devices_wrapper_runtime_scope_runnable);
                 Ok(devices_wrapper_runtime_scope_runnable)
@@ -88,7 +88,7 @@ impl<'d> Runner<'d> {
 
                         (device_id, signals_device_base)
                     })
-                    .collect::<HashMap<_, _>>();
+                    .collect();
                 let exchanger =
                     Exchanger::new(&exchanger_devices, connections_requested).context("new")?;
                 Ok(exchanger)
@@ -246,7 +246,7 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
                                 .borrow_device_wrappers_by_id()
                                 .keys()
                                 .copied()
-                                .collect::<Vec<_>>();
+                                .collect::<Box<[_]>>();
                             async move { web::Response::ok_json(device_ids) }.boxed()
                         }
                         _ => async move { web::Response::error_405() }.boxed(),

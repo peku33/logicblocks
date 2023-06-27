@@ -27,7 +27,7 @@ impl Barrier {
         self.released.store(true, Ordering::Relaxed);
 
         let children = self.children.lock();
-        for child in &*children {
+        for child in children.iter() {
             let child = unsafe { &**child };
             child.waker.wake();
         }

@@ -32,18 +32,15 @@ pub fn bits_slice_to_bytes(bits: &[bool]) -> Box<[u8]> {
         .map(|bits_array_iterator| {
             bits_array_to_byte(
                 bits_array_iterator
-                    .collect::<ArrayVec<bool, 8>>()
+                    .collect::<ArrayVec<_, 8>>()
                     .into_inner()
                     .unwrap(),
             )
         })
-        .collect::<Box<[_]>>()
+        .collect()
 }
 pub fn bits_bytes_to_slice(bits: &[u8]) -> Box<[bool]> {
-    bits.iter()
-        .copied()
-        .flat_map(bits_byte_to_array)
-        .collect::<Box<[_]>>()
+    bits.iter().copied().flat_map(bits_byte_to_array).collect()
 }
 pub fn bits_bytes_to_slice_checked(
     bits: &[u8],

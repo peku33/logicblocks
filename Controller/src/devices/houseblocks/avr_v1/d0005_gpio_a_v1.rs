@@ -1190,7 +1190,7 @@ pub mod hardware {
                 .chain(self.values.iter().copied())
                 .chain(iter::repeat(false))
                 .take(16)
-                .collect::<ArrayVec<bool, 16>>()
+                .collect::<ArrayVec<_, 16>>()
                 .into_inner()
                 .unwrap();
             serializer.push_bool_array_16(values);
@@ -1414,7 +1414,7 @@ pub mod hardware {
                     let value = Self::transform_block(value, index).context("transform_block")?;
                     Ok(value)
                 })
-                .collect::<Result<ArrayVec<Voltage, ANALOG_IN_COUNT>, Error>>()
+                .collect::<Result<ArrayVec<_, ANALOG_IN_COUNT>, Error>>()
                 .context("collect")?
                 .into_inner()
                 .unwrap();

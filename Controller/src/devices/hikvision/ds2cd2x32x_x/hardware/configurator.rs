@@ -123,7 +123,7 @@ impl<CS: CoordinateSystem> Coordinate<CS> {
 pub trait CoordinateList<CS: CoordinateSystem>: Copy + Clone + fmt::Debug {
     fn list_name() -> &'static str;
     fn element_name() -> &'static str;
-    fn coordinates_list(&self) -> Vec<Coordinate<CS>>;
+    fn coordinates_list(&self) -> Box<[Coordinate<CS>]>;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -166,13 +166,14 @@ impl<CS: CoordinateSystem> CoordinateList<CS> for RegionSquare<CS> {
     fn element_name() -> &'static str {
         "RegionCoordinates"
     }
-    fn coordinates_list(&self) -> Vec<Coordinate<CS>> {
+    fn coordinates_list(&self) -> Box<[Coordinate<CS>]> {
         vec![
             Coordinate::new(self.bottom_left.x, self.bottom_left.y).unwrap(),
             Coordinate::new(self.top_right.x, self.bottom_left.y).unwrap(),
             Coordinate::new(self.top_right.x, self.top_right.y).unwrap(),
             Coordinate::new(self.bottom_left.x, self.top_right.y).unwrap(),
         ]
+        .into_boxed_slice()
     }
 }
 
@@ -210,8 +211,8 @@ impl<CS: CoordinateSystem> CoordinateList<CS> for RegionField4<CS> {
     fn element_name() -> &'static str {
         "RegionCoordinates"
     }
-    fn coordinates_list(&self) -> Vec<Coordinate<CS>> {
-        self.corners.to_vec()
+    fn coordinates_list(&self) -> Box<[Coordinate<CS>]> {
+        self.corners.to_vec().into_boxed_slice()
     }
 }
 
@@ -227,19 +228,19 @@ impl<CS: CoordinateSystem> CoordinateList<CS> for Line<CS> {
     fn element_name() -> &'static str {
         "Coordinates"
     }
-    fn coordinates_list(&self) -> Vec<Coordinate<CS>> {
-        vec![self.from, self.to]
+    fn coordinates_list(&self) -> Box<[Coordinate<CS>]> {
+        vec![self.from, self.to].into_boxed_slice()
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct PrivacyMask {
-    regions: Vec<RegionSquare<CoordinateSystem704x576>>,
+    regions: Box<[RegionSquare<CoordinateSystem704x576>]>,
 }
 impl PrivacyMask {
     pub const REGIONS_MAX: usize = 4;
 
-    pub fn new(regions: Vec<RegionSquare<CoordinateSystem704x576>>) -> Result<Self, Error> {
+    pub fn new(regions: Box<[RegionSquare<CoordinateSystem704x576>]>) -> Result<Self, Error> {
         ensure!(
             regions.len() <= Self::REGIONS_MAX,
             "at most {} regions allowed",
@@ -257,12 +258,12 @@ pub struct MotionDetectionRegion {
 }
 #[derive(Clone, Debug)]
 pub struct MotionDetection {
-    regions: Vec<MotionDetectionRegion>,
+    regions: Box<[MotionDetectionRegion]>,
 }
 impl MotionDetection {
     pub const REGIONS_MAX: usize = 8;
 
-    pub fn new(regions: Vec<MotionDetectionRegion>) -> Result<Self, Error> {
+    pub fn new(regions: Box<[MotionDetectionRegion]>) -> Result<Self, Error> {
         ensure!(
             regions.len() <= Self::REGIONS_MAX,
             "number of regions could be at most {}",
@@ -439,7 +440,8 @@ impl<'a> Configurator<'a> {
                     vec![
                         element_build_text("deviceName", device_name),
                         element_build_text("telecontrolID", device_id.to_string()),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -459,7 +461,8 @@ impl<'a> Configurator<'a> {
                     vec![
                         element_build_text("timeMode", "NTP"),
                         element_build_text("timeZone", "CST+0:00:00"),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -482,7 +485,8 @@ impl<'a> Configurator<'a> {
                         element_build_text("hostName", "pool.ntp.org"),
                         element_build_text("portNo", "123"),
                         element_build_text("synchronizeInterval", "1440"),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -520,10 +524,10 @@ impl<'a> Configurator<'a> {
                     None
                 }
             })
-            .collect::<Vec<_>>();
+            .collect::<Box<[_]>>();
 
         // If so - delete
-        for user_id in user_ids {
+        for user_id in user_ids.iter() {
             let reboot_required = self
                 .api
                 .delete_xml(
@@ -547,7 +551,8 @@ impl<'a> Configurator<'a> {
                     vec![
                         element_build_text("userName", Self::SHARED_USER_LOGIN),
                         element_build_text("password", password),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -568,9 +573,10 @@ impl<'a> Configurator<'a> {
                         element_build_text("userType", "viewer"),
                         element_build_children(
                             "remotePermission",
-                            vec![element_build_bool("preview", true)],
+                            vec![element_build_bool("preview", true)].into_boxed_slice(),
                         ),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -594,7 +600,8 @@ impl<'a> Configurator<'a> {
                     vec![
                         element_build_bool("enabled", true),
                         element_build_text("name", device_name),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -614,8 +621,9 @@ impl<'a> Configurator<'a> {
                     vec![
                         element_build_bool("enabled", false),
                         element_build_text("mapmode", "auto"),
-                        element_build_children("portList", vec![]),
-                    ],
+                        element_build_children("portList", vec![].into_boxed_slice()),
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -632,7 +640,7 @@ impl<'a> Configurator<'a> {
                 "/ISAPI/System/Network/EZVIZ".parse().unwrap(),
                 Some(element_build_children(
                     "EZVIZ",
-                    vec![element_build_bool("enabled", false)],
+                    vec![element_build_bool("enabled", false)].into_boxed_slice(),
                 )),
             )
             .await
@@ -661,13 +669,16 @@ impl<'a> Configurator<'a> {
                                 element_build_text("fixedQuality", "100"),
                                 element_build_text("vbrUpperCap", "8192"),
                                 element_build_text("maxFrameRate", "2000"),
-                            ],
+                            ]
+                            .into_boxed_slice(),
                         ),
                         element_build_children(
                             "Audio",
-                            vec![element_build_bool("enabled", self.capabilities.audio)],
+                            vec![element_build_bool("enabled", self.capabilities.audio)]
+                                .into_boxed_slice(),
                         ),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -695,13 +706,16 @@ impl<'a> Configurator<'a> {
                                 element_build_text("fixedQuality", "60"),
                                 element_build_text("vbrUpperCap", "256"),
                                 element_build_text("maxFrameRate", "2000"),
-                            ],
+                            ]
+                            .into_boxed_slice(),
                         ),
                         element_build_children(
                             "Audio",
-                            vec![element_build_bool("enabled", self.capabilities.audio)],
+                            vec![element_build_bool("enabled", self.capabilities.audio)]
+                                .into_boxed_slice(),
                         ),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -724,7 +738,8 @@ impl<'a> Configurator<'a> {
                     vec![
                         element_build_bool("enabled", upside_down),
                         element_build_text("ImageFlipStyle", "UPDOWN"),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -752,7 +767,8 @@ impl<'a> Configurator<'a> {
                         element_build_text("audioInputType", "MicIn"),
                         element_build_text("speakerVolume", "100"),
                         element_build_bool("noisereduce", true),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -781,8 +797,10 @@ impl<'a> Configurator<'a> {
                             element_build_bool("enabled", name.is_some()),
                             element_build_text("positionX", "512"),
                             element_build_text("positionY", "64"),
-                        ],
-                    )],
+                        ]
+                        .into_boxed_slice(),
+                    )]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -800,7 +818,8 @@ impl<'a> Configurator<'a> {
                         element_build_text("id", "1"),
                         element_build_text("inputPort", "1"),
                         element_build_text("name", name.as_deref().unwrap_or("")),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -828,8 +847,10 @@ impl<'a> Configurator<'a> {
                             element_build_text("dateStyle", "YYYY-MM-DD"),
                             element_build_text("timeStyle", "24hour"),
                             element_build_bool("displayWeek", false),
-                        ],
-                    )],
+                        ]
+                        .into_boxed_slice(),
+                    )]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -859,7 +880,7 @@ impl<'a> Configurator<'a> {
                             "PrivacyMaskRegionList",
                             privacy_mask
                                 .regions
-                                .into_iter()
+                                .iter()
                                 .enumerate()
                                 .map(|(id, region)| {
                                     element_build_children(
@@ -868,12 +889,14 @@ impl<'a> Configurator<'a> {
                                             element_build_text("id", (id + 1).to_string()),
                                             element_build_bool("enabled", true),
                                             serialize_coordinates_list(region),
-                                        ],
+                                        ]
+                                        .into_boxed_slice(),
                                     )
                                 })
                                 .collect(),
                         ),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -896,7 +919,8 @@ impl<'a> Configurator<'a> {
                         element_build_text("Channel", "101"),
                         element_build_bool("Enable", false),
                         element_build_bool("LoopEnable", true),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -928,7 +952,7 @@ impl<'a> Configurator<'a> {
                             "MotionDetectionRegionList",
                             motion_detection
                                 .regions
-                                .into_iter()
+                                .iter()
                                 .enumerate()
                                 .map(|(id, region)| {
                                     element_build_children(
@@ -944,13 +968,15 @@ impl<'a> Configurator<'a> {
                                                 "objectSize",
                                                 region.object_size.value().to_string(),
                                             ),
-                                            serialize_coordinates_list(region.region),
-                                        ],
+                                            serialize_coordinates_list(&region.region),
+                                        ]
+                                        .into_boxed_slice(),
                                     )
                                 })
                                 .collect(),
                         ),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -981,14 +1007,17 @@ impl<'a> Configurator<'a> {
                                     element_build_text("id", "1"),
                                     element_build_bool("enabled", true),
                                     element_build_text("sensitivityLevel", "100"),
-                                    serialize_coordinates_list(RegionSquare::<
+                                    serialize_coordinates_list(&RegionSquare::<
                                         CoordinateSystem704x576,
                                     >::full(
                                     )),
-                                ],
-                            )],
+                                ]
+                                .into_boxed_slice(),
+                            )]
+                            .into_boxed_slice(),
                         ),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -1018,7 +1047,8 @@ impl<'a> Configurator<'a> {
                             vec![
                                 element_build_text("normalizedScreenWidth", "1000"),
                                 element_build_text("normalizedScreenHeight", "1000"),
-                            ],
+                            ]
+                            .into_boxed_slice(),
                         ),
                         element_build_children(
                             "FieldDetectionRegionList",
@@ -1039,11 +1069,14 @@ impl<'a> Configurator<'a> {
                                         "timeThreshold",
                                         field_detection.time_threshold_s.to_string(),
                                     ),
-                                    serialize_coordinates_list(field_detection.region),
-                                ],
-                            )],
+                                    serialize_coordinates_list(&field_detection.region),
+                                ]
+                                .into_boxed_slice(),
+                            )]
+                            .into_boxed_slice(),
                         ),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -1073,7 +1106,8 @@ impl<'a> Configurator<'a> {
                             vec![
                                 element_build_text("normalizedScreenWidth", "1000"),
                                 element_build_text("normalizedScreenHeight", "1000"),
-                            ],
+                            ]
+                            .into_boxed_slice(),
                         ),
                         element_build_children(
                             "LineItemList",
@@ -1094,11 +1128,14 @@ impl<'a> Configurator<'a> {
                                             LineDetectionDirection::RightToLeft => "right-left",
                                         },
                                     ),
-                                    serialize_coordinates_list(line_detection.line),
-                                ],
-                            )],
+                                    serialize_coordinates_list(&line_detection.line),
+                                ]
+                                .into_boxed_slice(),
+                            )]
+                            .into_boxed_slice(),
                         ),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )),
             )
             .await
@@ -1223,28 +1260,33 @@ fn element_build_bool(
 }
 fn element_build_children(
     name: &str,
-    children: Vec<Element>,
+    children: Box<[Element]>,
 ) -> Element {
     let mut element = Element::new(name);
-    element.children = children.into_iter().map(XMLNode::Element).collect();
+    element.children = children
+        .into_vec()
+        .into_iter()
+        .map(XMLNode::Element)
+        .collect();
     element
 }
 
 fn serialize_coordinates_list<CS: CoordinateSystem, C: CoordinateList<CS>>(
-    coordinates_list: C
+    coordinates_list: &C
 ) -> Element {
     element_build_children(
         C::list_name(),
         coordinates_list
             .coordinates_list()
-            .into_iter()
+            .iter()
             .map(|coordinate| {
                 element_build_children(
                     C::element_name(),
                     vec![
                         element_build_text("positionX", coordinate.x.to_string()),
                         element_build_text("positionY", coordinate.y.to_string()),
-                    ],
+                    ]
+                    .into_boxed_slice(),
                 )
             })
             .collect(),

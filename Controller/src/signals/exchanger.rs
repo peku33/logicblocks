@@ -190,7 +190,7 @@ impl<'d> Exchanger<'d> {
                     sources_changed_waker_remote_stream,
                 )
             })
-            .collect::<Vec<_>>();
+            .collect::<Box<[_]>>();
 
         sources_changed_waker_remote_streams
             .iter_mut()
@@ -208,6 +208,7 @@ impl<'d> Exchanger<'d> {
             .ready_chunks_dynamic()
             .map(move |sources_changed_waker_remotes| {
                 sources_changed_waker_remotes
+                    .into_vec()
                     .into_iter()
                     .collect::<HashSet<_>>()
             })
@@ -345,7 +346,7 @@ fn new_inner_parent<'d>(
                 .map(move |(signal_identifier, signal)| {
                     (signal_identifier, signal.as_remote_base())
                 })
-                .collect::<HashMap<_, _>>();
+                .collect();
 
             (
                 *device_id,
@@ -357,7 +358,7 @@ fn new_inner_parent<'d>(
                 ),
             )
         })
-        .collect::<HashMap<_, _>>();
+        .collect();
 
     Ok(ExchangerInnerParent { device_contexts })
 }

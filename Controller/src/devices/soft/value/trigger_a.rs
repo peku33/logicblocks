@@ -57,7 +57,7 @@ where
             .into_vec()
             .into_iter()
             .map(|()| self.configuration.value.clone())
-            .collect::<Box<[_]>>();
+            .collect();
 
         if self.signal_output.push_many(values) {
             self.signals_sources_changed_waker.wake();

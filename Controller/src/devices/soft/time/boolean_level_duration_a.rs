@@ -17,7 +17,7 @@ pub struct Breakpoint {
 
 #[derive(Debug)]
 pub struct Configuration {
-    pub breakpoints: Vec<Breakpoint>,
+    pub breakpoints: Box<[Breakpoint]>,
 }
 
 #[derive(Debug)]
@@ -28,10 +28,12 @@ pub struct Device {
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input: signal::state_target_queued::Signal<bool>,
     signal_started: signal::event_source::Signal<()>,
-    signal_breakpoints: Vec<(
-        signal::event_source::Signal<()>, // released
-        signal::event_source::Signal<()>, // expired
-    )>,
+    signal_breakpoints: Box<
+        [(
+            signal::event_source::Signal<()>, // released
+            signal::event_source::Signal<()>, // expired
+        )],
+    >,
     signal_finished: signal::event_source::Signal<()>,
 }
 impl Device {

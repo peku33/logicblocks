@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
         let bits = self.expect_u8().context("expect_u8")?;
         let value = (0..8)
             .map(|index| (bits & (1 << index)) != 0)
-            .collect::<ArrayVec<bool, 8>>()
+            .collect::<ArrayVec<_, 8>>()
             .into_inner()
             .unwrap();
         Ok(value)
@@ -65,7 +65,7 @@ impl<'a> Parser<'a> {
         let bits = self.expect_u16().context("expect_u16")?;
         let value = (0..16)
             .map(|index| (bits & (1 << index)) != 0)
-            .collect::<ArrayVec<bool, 16>>()
+            .collect::<ArrayVec<_, 16>>()
             .into_inner()
             .unwrap();
         Ok(value)

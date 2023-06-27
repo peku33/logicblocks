@@ -121,7 +121,7 @@ pub mod logic {
                                         key_values[key_index] ^ (key_change_index % 2 != 0);
                                     Some(key_value)
                                 })
-                                .collect::<Box<[_]>>();
+                                .collect();
                             if signal_key.set_many(key_values) {
                                 signals_sources_changed = true;
                             }
@@ -606,7 +606,7 @@ pub mod hardware {
                 .chain(self.values.iter().copied())
                 .chain(iter::repeat(false))
                 .take(8)
-                .collect::<ArrayVec<bool, 8>>()
+                .collect::<ArrayVec<_, 8>>()
                 .into_inner()
                 .unwrap();
             serializer.push_bool_array_8(values);
