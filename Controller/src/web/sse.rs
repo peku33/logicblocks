@@ -9,7 +9,7 @@ impl Event {
     pub fn to_payload(&self) -> String {
         let mut buffer = String::new();
 
-        if let Some(id) = self.id.as_ref() {
+        if let Some(id) = &self.id {
             if id.is_empty() {
                 buffer.push_str("id: \r\n");
             } else {

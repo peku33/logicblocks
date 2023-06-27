@@ -1486,7 +1486,7 @@ impl<'a> Configurator<'a> {
         &mut self,
         channel_title: Option<String>,
     ) -> Result<(), Error> {
-        if let Some(channel_title) = channel_title.as_ref() {
+        if let Some(channel_title) = &channel_title {
             self.config_patch_array_object(
                 "ChannelTitle",
                 hashmap! {

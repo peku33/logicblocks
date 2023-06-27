@@ -53,7 +53,7 @@ impl ReadBitsGenericResponse {
     }
 
     pub fn bits_values(&self) -> &[bool] {
-        self.bits_values.as_ref()
+        &self.bits_values
     }
     pub fn into_bits_values(self) -> Box<[bool]> {
         self.bits_values
@@ -767,7 +767,7 @@ impl Request for WriteMultipleCoilsRequest {
         0x0f
     }
     fn data(&self) -> Box<[u8]> {
-        let values_bytes = bits_slice_to_bytes(self.values.as_ref());
+        let values_bytes = bits_slice_to_bytes(&self.values);
 
         iter::empty()
             .chain(((self.starting_address - 1) as u16).to_be_bytes())

@@ -156,7 +156,7 @@ impl<'a> Responder<'a> {
         path: Vec<Topic>,
         node: &'a Node<'a>,
     ) {
-        if let Some(self_) = node.self_.as_ref() {
+        if let Some(self_) = &node.self_ {
             let topic_path = TopicPath::new(path.clone().into_boxed_slice());
 
             let waker = self_;

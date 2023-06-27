@@ -267,12 +267,12 @@ pub mod spa {
             // 3.2.1 - 3.2.6
             let l_cap = l_b_r(
                 &[
-                    A42_L0_ENTRIES.as_slice(),
-                    A42_L1_ENTRIES.as_slice(),
-                    A42_L2_ENTRIES.as_slice(),
-                    A42_L3_ENTRIES.as_slice(),
-                    A42_L4_ENTRIES.as_slice(),
-                    A42_L5_ENTRIES.as_slice(),
+                    &A42_L0_ENTRIES,
+                    &A42_L1_ENTRIES,
+                    &A42_L2_ENTRIES,
+                    &A42_L3_ENTRIES,
+                    &A42_L4_ENTRIES,
+                    &A42_L5_ENTRIES,
                 ],
                 jme,
             );
@@ -281,8 +281,8 @@ pub mod spa {
             // 3.2.7
             let b_cap = l_b_r(
                 &[
-                    A42_B0_ENTRIES.as_slice(), // break
-                    A42_B1_ENTRIES.as_slice(),
+                    &A42_B0_ENTRIES, // break
+                    &A42_B1_ENTRIES,
                 ],
                 jme,
             );
@@ -290,11 +290,11 @@ pub mod spa {
             // 3.2.8
             let r_cap = l_b_r(
                 &[
-                    A42_R0_ENTRIES.as_slice(),
-                    A42_R1_ENTRIES.as_slice(),
-                    A42_R2_ENTRIES.as_slice(),
-                    A42_R3_ENTRIES.as_slice(),
-                    A42_R4_ENTRIES.as_slice(),
+                    &A42_R0_ENTRIES,
+                    &A42_R1_ENTRIES,
+                    &A42_R2_ENTRIES,
+                    &A42_R3_ENTRIES,
+                    &A42_R4_ENTRIES,
                 ],
                 jme,
             );

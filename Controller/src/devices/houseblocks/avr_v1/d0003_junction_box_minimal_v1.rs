@@ -673,11 +673,11 @@ pub mod hardware {
             if self.keys_request {
                 serializer.push_byte(b'K');
             }
-            if let Some(leds) = self.leds.as_ref() {
+            if let Some(leds) = &self.leds {
                 serializer.push_byte(b'L');
                 leds.serialize(serializer);
             }
-            if let Some(buzzer) = self.buzzer.as_ref() {
+            if let Some(buzzer) = &self.buzzer {
                 serializer.push_byte(b'B');
                 buzzer.serialize(serializer);
             }

@@ -405,7 +405,7 @@ pub mod hardware {
             &self,
             serializer: &mut Serializer,
         ) {
-            if let Some(outputs) = self.outputs.as_ref() {
+            if let Some(outputs) = &self.outputs {
                 serializer.push_byte(b'H');
                 outputs.serialize(serializer);
             }

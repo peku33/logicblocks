@@ -1231,11 +1231,11 @@ pub mod hardware {
             &self,
             serializer: &mut Serializer,
         ) {
-            if let Some(configuration) = self.configuration.as_ref() {
+            if let Some(configuration) = &self.configuration {
                 serializer.push_byte(b'C');
                 configuration.serialize(serializer);
             }
-            if let Some(status_led) = self.status_led.as_ref() {
+            if let Some(status_led) = &self.status_led {
                 serializer.push_byte(b'L');
                 status_led.serialize(serializer);
             }
@@ -1248,7 +1248,7 @@ pub mod hardware {
             if self.digital_ins_request {
                 serializer.push_byte(b'I');
             }
-            if let Some(digital_outs) = self.digital_outs.as_ref() {
+            if let Some(digital_outs) = &self.digital_outs {
                 serializer.push_byte(b'O');
                 digital_outs.serialize(serializer);
             }

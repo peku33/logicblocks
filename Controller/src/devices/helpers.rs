@@ -113,7 +113,7 @@ impl Signals {
     }
 
     pub fn as_connections_requested(&self) -> &[ConnectionRequested] {
-        self.connections_requested.as_slice()
+        &self.connections_requested
     }
     pub fn into_connections_requested(self) -> Box<[ConnectionRequested]> {
         self.connections_requested.into_boxed_slice()

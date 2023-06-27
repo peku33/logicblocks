@@ -250,7 +250,7 @@ impl fmt::Display for Payload {
         &self,
         f: &mut fmt::Formatter,
     ) -> fmt::Result {
-        write!(f, "{:X?}", self.0.as_ref())
+        write!(f, "{:X?}", &self.0)
     }
 }
 #[cfg(test)]

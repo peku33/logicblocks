@@ -54,7 +54,7 @@ where
             return None;
         }
 
-        let value = match state.value_last.as_ref() {
+        let value = match &state.value_last {
             Some(value) => value.clone(),
             None => return None,
         };
