@@ -106,12 +106,12 @@ impl PrivacyMask {
 
     pub fn single(region: PrivacyMaskRegion) -> Self {
         Self {
-            regions: iter::once(region).collect(),
+            regions: iter::once(region).collect::<ArrayVec<_, { Self::REGIONS_MAX }>>(),
         }
     }
     pub fn none() -> Self {
         Self {
-            regions: iter::empty().collect(),
+            regions: iter::empty().collect::<ArrayVec<_, { Self::REGIONS_MAX }>>(),
         }
     }
 }
@@ -411,12 +411,12 @@ impl MotionDetection {
 
     pub fn single(region: MotionDetectionRegion) -> Self {
         Self {
-            regions: iter::once(region).collect(),
+            regions: iter::once(region).collect::<ArrayVec<_, { Self::REGIONS_MAX }>>(),
         }
     }
     pub fn none() -> Self {
         Self {
-            regions: iter::empty().collect(),
+            regions: iter::empty().collect::<ArrayVec<_, { Self::REGIONS_MAX }>>(),
         }
     }
 }

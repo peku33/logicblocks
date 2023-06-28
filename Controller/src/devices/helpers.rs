@@ -36,8 +36,8 @@ impl<'d> Devices<'d> {
         self.device_wrappers
             .into_iter()
             .enumerate()
-            .map(|(device_id, device)| ((device_id + 1) as u32, device))
-            .collect()
+            .map(|(device_id, device)| ((device_id + 1) as DeviceId, device))
+            .collect::<HashMap<_, _>>()
     }
 }
 

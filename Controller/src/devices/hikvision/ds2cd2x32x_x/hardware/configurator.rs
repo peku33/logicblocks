@@ -893,7 +893,7 @@ impl<'a> Configurator<'a> {
                                         .into_boxed_slice(),
                                     )
                                 })
-                                .collect(),
+                                .collect::<Box<[_]>>(),
                         ),
                     ]
                     .into_boxed_slice(),
@@ -973,7 +973,7 @@ impl<'a> Configurator<'a> {
                                         .into_boxed_slice(),
                                     )
                                 })
-                                .collect(),
+                                .collect::<Box<[_]>>(),
                         ),
                     ]
                     .into_boxed_slice(),
@@ -1267,7 +1267,7 @@ fn element_build_children(
         .into_vec()
         .into_iter()
         .map(XMLNode::Element)
-        .collect();
+        .collect::<Vec<_>>();
     element
 }
 
@@ -1289,6 +1289,6 @@ fn serialize_coordinates_list<CS: CoordinateSystem, C: CoordinateList<CS>>(
                     .into_boxed_slice(),
                 )
             })
-            .collect(),
+            .collect::<Box<[_]>>(),
     )
 }

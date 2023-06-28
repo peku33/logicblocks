@@ -394,7 +394,7 @@ pub mod logic {
                         })
                     },
                 ))
-                .collect()
+                .collect::<signals::ByIdentifier<_>>()
         }
     }
 

@@ -157,7 +157,7 @@ impl<D: Device> DeviceBase for D {
                 let identifier = IdentifierBaseWrapper::new(identifier);
                 (identifier, signal)
             })
-            .collect()
+            .collect::<ByIdentifierBaseWrapper>()
     }
 
     fn type_name(&self) -> &str {

@@ -42,7 +42,7 @@ where
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_inputs: (0..inputs_count)
                 .map(|_input_id| signal::state_target_last::Signal::<V>::new())
-                .collect(),
+                .collect::<Box<[_]>>(),
             signal_output: signal::state_source::Signal::<V>::new(None),
         }
     }
@@ -145,6 +145,6 @@ where
                 SignalIdentifier::Output,
                 &self.signal_output as &dyn signal::Base,
             )])
-            .collect()
+            .collect::<signals::ByIdentifier<_>>()
     }
 }

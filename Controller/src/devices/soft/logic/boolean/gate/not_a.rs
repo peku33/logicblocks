@@ -36,7 +36,7 @@ impl Device {
             .into_vec()
             .into_iter()
             .map(|value| value.map(|value| !value))
-            .collect();
+            .collect::<Box<[_]>>();
 
         if self.signal_output.set_many(values) {
             self.signals_sources_changed_waker.wake();

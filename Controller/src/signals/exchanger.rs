@@ -346,7 +346,7 @@ fn new_inner_parent<'d>(
                 .map(move |(signal_identifier, signal)| {
                     (signal_identifier, signal.as_remote_base())
                 })
-                .collect();
+                .collect::<HashMap<_, _>>();
 
             (
                 *device_id,
@@ -358,7 +358,7 @@ fn new_inner_parent<'d>(
                 ),
             )
         })
-        .collect();
+        .collect::<HashMap<_, _>>();
 
     Ok(ExchangerInnerParent { device_contexts })
 }

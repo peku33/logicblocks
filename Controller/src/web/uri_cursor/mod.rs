@@ -32,7 +32,7 @@ impl<'p> UriCursor<'p> {
             Self::Terminal => return None,
             Self::Next(url, next) => (url, next),
         };
-        if let Self::Next(_, _) = &**next {
+        if let Self::Next(_, _) = next.as_ref() {
             return None;
         }
         Some(url)

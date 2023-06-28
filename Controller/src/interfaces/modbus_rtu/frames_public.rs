@@ -39,7 +39,7 @@ impl ReadBitsGenericRequest {
         iter::empty()
             .chain(((self.starting_address - 1) as u16).to_be_bytes())
             .chain((self.number_of_bits as u16).to_be_bytes())
-            .collect()
+            .collect::<Box<[_]>>()
     }
 }
 
@@ -269,7 +269,7 @@ impl ReadWordsGenericRequest {
         iter::empty()
             .chain(((self.starting_address - 1) as u16).to_be_bytes())
             .chain((self.number_of_words as u16).to_be_bytes())
-            .collect()
+            .collect::<Box<[_]>>()
     }
 }
 
@@ -283,7 +283,7 @@ impl ReadWordsGenericResponse {
     }
 
     pub fn words_values(&self) -> &[u16] {
-        self.words_values.as_ref()
+        &self.words_values
     }
     pub fn into_words_values(self) -> Box<[u16]> {
         self.words_values
@@ -314,7 +314,7 @@ impl ReadWordsGenericResponse {
         let words_values = words_values_bytes
             .array_chunks::<2>()
             .map(|words| u16::from_be_bytes(*words))
-            .collect();
+            .collect::<Box<[_]>>();
 
         Ok(Some(Self { words_values }))
     }
@@ -493,7 +493,7 @@ impl Request for WriteSingleCoilRequest {
         iter::empty()
             .chain(((self.address - 1) as u16).to_be_bytes())
             .chain(((if self.value { 0xFF00 } else { 0x0000 }) as u16).to_be_bytes())
-            .collect()
+            .collect::<Box<[_]>>()
     }
 }
 
@@ -586,7 +586,7 @@ impl Request for WriteSingleRegisterRequest {
         iter::empty()
             .chain(((self.address - 1) as u16).to_be_bytes())
             .chain(self.value.to_be_bytes())
-            .collect()
+            .collect::<Box<[_]>>()
     }
 }
 
@@ -774,7 +774,7 @@ impl Request for WriteMultipleCoilsRequest {
             .chain((self.values.len() as u16).to_be_bytes())
             .chain((values_bytes.len() as u8).to_be_bytes())
             .chain(values_bytes.iter().copied())
-            .collect()
+            .collect::<Box<[_]>>()
     }
 }
 
@@ -888,7 +888,7 @@ impl Request for WriteMultipleRegistersRequest {
             .chain((self.values.len() as u16).to_be_bytes())
             .chain(((self.values.len() * 2) as u8).to_be_bytes())
             .chain(self.values.iter().flat_map(|value| value.to_be_bytes()))
-            .collect()
+            .collect::<Box<[_]>>()
     }
 }
 

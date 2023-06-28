@@ -121,7 +121,7 @@ pub mod logic {
                                         key_values[key_index] ^ (key_change_index % 2 != 0);
                                     Some(key_value)
                                 })
-                                .collect();
+                                .collect::<Box<[_]>>();
                             if signal_key.set_many(key_values) {
                                 signals_sources_changed = true;
                             }
@@ -255,7 +255,7 @@ pub mod logic {
                         &self.signal_temperature as &dyn signal::Base,
                     ),
                 ])
-                .collect()
+                .collect::<signals::ByIdentifier<_>>()
         }
     }
 

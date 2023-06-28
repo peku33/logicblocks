@@ -70,7 +70,7 @@ impl<V: Value + Clone> EventSourceRemoteBase for Signal<V> {
         let pending = pending
             .into_iter()
             .map(|value| Box::new(value) as Box<dyn ValueBase>)
-            .collect();
+            .collect::<Box<[_]>>();
 
         drop(lock);
 

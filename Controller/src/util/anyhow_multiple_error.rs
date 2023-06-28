@@ -13,7 +13,7 @@ impl AnyhowMultipleError {
 impl FromIterator<AnyhowError> for AnyhowMultipleError {
     fn from_iter<T: IntoIterator<Item = AnyhowError>>(iter: T) -> Self {
         Self {
-            inner: iter.into_iter().collect(),
+            inner: iter.into_iter().collect::<Box<[_]>>(),
         }
     }
 }

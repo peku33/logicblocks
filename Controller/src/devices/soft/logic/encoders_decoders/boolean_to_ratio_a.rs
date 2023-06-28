@@ -37,7 +37,7 @@ impl Device {
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_inputs: (0..inputs_count)
                 .map(|_input_id| signal::state_target_last::Signal::<bool>::new())
-                .collect(),
+                .collect::<Box<[_]>>(),
             signal_output: signal::state_source::Signal::<Ratio>::new(None),
         }
     }
@@ -147,6 +147,6 @@ impl signals::Device for Device {
                 SignalIdentifier::Output,
                 &self.signal_output as &dyn signal::Base,
             )])
-            .collect()
+            .collect::<signals::ByIdentifier<_>>()
     }
 }

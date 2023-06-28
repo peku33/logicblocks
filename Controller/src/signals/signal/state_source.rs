@@ -93,7 +93,7 @@ impl<V: Value + Clone> StateSourceRemoteBase for Signal<V> {
         let pending = pending
             .into_iter()
             .map(|value| value.map(|value| Box::new(value) as Box<dyn ValueBase>))
-            .collect();
+            .collect::<Box<[_]>>();
 
         drop(lock);
 

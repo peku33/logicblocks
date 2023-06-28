@@ -148,7 +148,7 @@ pub mod logic {
                         signal_output as &dyn signal::Base,
                     )
                 })
-                .collect()
+                .collect::<signals::ByIdentifier<_>>()
         }
     }
 

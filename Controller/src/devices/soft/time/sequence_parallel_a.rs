@@ -124,7 +124,7 @@ impl Device {
                 order_index: 0,
             })
             .take(channels_count)
-            .collect(),
+            .collect::<Box<[_]>>(),
             order_index_last: 0,
         };
         let state = State {
@@ -141,7 +141,7 @@ impl Device {
             signal_power: signal::state_source::Signal::<Multiplier>::new(Some(Multiplier::zero())),
             signal_outputs: repeat_with(|| signal::state_source::Signal::<bool>::new(Some(false)))
                 .take(channels_count)
-                .collect(),
+                .collect::<Box<[_]>>(),
 
             gui_summary_waker: devices::gui_summary::Waker::new(),
         }
@@ -167,7 +167,7 @@ impl Device {
                             StateDeviceDisabledChannel::Enabled
                         }
                     })
-                    .collect();
+                    .collect::<Box<[_]>>();
 
                 state.device = StateDevice::Disabled { channels };
 
@@ -189,7 +189,7 @@ impl Device {
                             StateDeviceDisabledChannel::Enabled
                         }
                     })
-                    .collect();
+                    .collect::<Box<[_]>>();
 
                 state.device = StateDevice::Disabled { channels };
 
@@ -233,7 +233,7 @@ impl Device {
                             queue: Duration::ZERO,
                         },
                     })
-                    .collect();
+                    .collect::<Box<[_]>>();
 
                 state.device = StateDevice::Paused { channels };
 
@@ -258,7 +258,7 @@ impl Device {
                             }
                         }
                     })
-                    .collect();
+                    .collect::<Box<[_]>>();
 
                 state.device = StateDevice::Paused { channels };
 
@@ -305,7 +305,7 @@ impl Device {
                             }
                         }
                     })
-                    .collect();
+                    .collect::<Box<[_]>>();
                 state.device = StateDevice::Enabled {
                     channels,
                     order_index_last: 0,
@@ -328,7 +328,7 @@ impl Device {
                             }
                         }
                     })
-                    .collect();
+                    .collect::<Box<[_]>>();
                 state.device = StateDevice::Enabled {
                     channels,
                     order_index_last: 0,
@@ -1111,7 +1111,7 @@ impl signals::Device for Device {
                         )
                     }),
             )
-            .collect()
+            .collect::<signals::ByIdentifier<_>>()
     }
 }
 
@@ -1202,7 +1202,7 @@ impl devices::gui_summary::Device for Device {
                 round_min_seconds: channel_configuration.round_min.as_secs_f64(),
                 round_max_seconds: channel_configuration.round_max.as_secs_f64(),
             })
-            .collect();
+            .collect::<Box<[_]>>();
 
         let gui_summary_configuration = GuiSummaryConfiguration {
             channels: gui_summary_configuration_channels,
@@ -1224,7 +1224,7 @@ impl devices::gui_summary::Device for Device {
                             GuiSummaryStateDisabledChannelState::Enabled
                         }
                     })
-                    .collect();
+                    .collect::<Box<[_]>>();
 
                 GuiSummaryState::Disabled {
                     channels: gui_channels,
@@ -1248,7 +1248,7 @@ impl devices::gui_summary::Device for Device {
                             }
                         }
                     })
-                    .collect();
+                    .collect::<Box<[_]>>();
 
                 GuiSummaryState::Paused {
                     channels: gui_channels,
@@ -1313,7 +1313,7 @@ impl devices::gui_summary::Device for Device {
                             }
                         }
                     })
-                    .collect();
+                    .collect::<Box<[_]>>();
 
                 GuiSummaryState::Enabled {
                     channels: gui_channels,

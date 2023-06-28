@@ -54,7 +54,7 @@ impl Device {
                         signal::event_source::Signal::<()>::new(),
                     )
                 })
-                .collect(),
+                .collect::<Box<[_]>>(),
             signal_finished: signal::event_source::Signal::<()>::new(),
         }
     }
@@ -219,6 +219,6 @@ impl signals::Device for Device {
                 SignalIdentifier::Finished,
                 &self.signal_finished as &dyn signal::Base,
             )])
-            .collect()
+            .collect::<signals::ByIdentifier<_>>()
     }
 }

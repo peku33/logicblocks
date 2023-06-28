@@ -37,10 +37,13 @@ pub fn bits_slice_to_bytes(bits: &[bool]) -> Box<[u8]> {
                     .unwrap(),
             )
         })
-        .collect()
+        .collect::<Box<[_]>>()
 }
 pub fn bits_bytes_to_slice(bits: &[u8]) -> Box<[bool]> {
-    bits.iter().copied().flat_map(bits_byte_to_array).collect()
+    bits.iter()
+        .copied()
+        .flat_map(bits_byte_to_array)
+        .collect::<Box<[_]>>()
 }
 pub fn bits_bytes_to_slice_checked(
     bits: &[u8],

@@ -90,7 +90,7 @@ impl uri_cursor::Handler for Dashboard {
                         .sections
                         .iter()
                         .map(SectionSerialize::new)
-                        .collect(),
+                        .collect::<Box<[_]>>(),
                 }
             }
         }
@@ -141,7 +141,7 @@ impl uri_cursor::Handler for Dashboard {
                         .dashboards
                         .iter()
                         .map(DashboardSummarySerialize::new)
-                        .collect(),
+                        .collect::<Box<[_]>>(),
                 }
             }
         }

@@ -71,7 +71,7 @@ impl<'d> Runner<'d> {
                 let devices_wrapper_runtime_scope_runnable = device_wrappers_by_id
                     .values()
                     .map(|device_wrapper| RuntimeScopeRunnable::new(runtime, device_wrapper))
-                    .collect();
+                    .collect::<Box<[_]>>();
                 let devices_wrapper_runtime_scope_runnable =
                     ManuallyDrop::new(devices_wrapper_runtime_scope_runnable);
                 Ok(devices_wrapper_runtime_scope_runnable)
@@ -88,7 +88,7 @@ impl<'d> Runner<'d> {
 
                         (device_id, signals_device_base)
                     })
-                    .collect();
+                    .collect::<HashMap<_, _>>();
                 let exchanger =
                     Exchanger::new(&exchanger_devices, connections_requested).context("new")?;
                 Ok(exchanger)
@@ -117,7 +117,7 @@ impl<'d> Runner<'d> {
 
                             (topic, node)
                         })
-                        .collect(),
+                        .collect::<HashMap<_, _>>(),
                 );
                 Ok(devices_gui_summary_sse_root_node)
             },
