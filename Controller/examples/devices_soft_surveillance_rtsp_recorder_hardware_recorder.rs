@@ -12,7 +12,7 @@ use logicblocks_controller::{
         async_flag,
         fs::move_file,
         logging,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use std::{path::PathBuf, time::Duration};

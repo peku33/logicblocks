@@ -1,5 +1,8 @@
-use super::async_flag;
-use async_trait::async_trait;
+use super::{
+    async_flag,
+    drop_guard::DropGuard,
+    runnable::{Exited, Runnable},
+};
 use futures::{
     channel::oneshot,
     future::{BoxFuture, Future, FutureExt, JoinAll},
@@ -55,40 +58,6 @@ impl Drop for Runtime {
 // =============================================================================
 
 #[derive(Debug)]
-struct FinalizeGuardInner {
-    finalized: bool,
-}
-impl FinalizeGuardInner {
-    pub fn new() -> Self {
-        Self { finalized: false }
-    }
-    pub fn set_finalized(&mut self) {
-        assert_eq!(self.finalized, false, "finalized twice");
-        self.finalized = true;
-    }
-}
-impl Drop for FinalizeGuardInner {
-    fn drop(&mut self) {
-        assert_eq!(self.finalized, true, "never finalized");
-    }
-}
-
-#[derive(Debug)]
-pub struct FinalizeGuard {
-    inner: FinalizeGuardInner,
-}
-impl FinalizeGuard {
-    pub fn new() -> Self {
-        let inner = FinalizeGuardInner::new();
-        Self { inner }
-    }
-    pub fn finalized(mut self) {
-        self.inner.set_finalized();
-    }
-}
-
-// =============================================================================
-#[derive(Debug)]
 struct RuntimeScopeContext {
     task_id_next: AtomicUsize,
     tasks: Mutex<HashMap<usize, TokioJoinHandle<()>>>,
@@ -116,7 +85,7 @@ pub struct RuntimeScope<'r, 'o, O> {
     runtime: &'r Runtime,
     owner: &'o O,
     context: Box<RuntimeScopeContext>, // StableDeref
-    finalize_guard: FinalizeGuard,
+    drop_guard: DropGuard,
 }
 impl<'r, 'o, O> RuntimeScope<'r, 'o, O> {
     pub fn new(
@@ -126,13 +95,13 @@ impl<'r, 'o, O> RuntimeScope<'r, 'o, O> {
         let context = RuntimeScopeContext::new();
         let context = Box::new(context);
 
-        let finalize_guard = FinalizeGuard::new();
+        let drop_guard = DropGuard::new();
 
         Self {
             runtime,
             owner,
             context,
-            finalize_guard,
+            drop_guard,
         }
     }
 
@@ -189,22 +158,11 @@ impl<'r, 'o, O> RuntimeScope<'r, 'o, O> {
             .into_iter()
             .for_each(|result| result.unwrap());
 
-        self.finalize_guard.finalized();
+        self.drop_guard.set();
     }
 }
 
 // =============================================================================
-#[derive(Debug)]
-pub struct Exited;
-
-#[async_trait]
-pub trait Runnable: Send + Sync {
-    async fn run(
-        &self,
-        exit_flag: async_flag::Receiver,
-    ) -> Exited;
-}
-
 #[derive(Debug)]
 pub struct RuntimeScopeRunnable<'r, 'o, O>
 where
@@ -215,7 +173,7 @@ where
     runnable_exit_flag_sender: async_flag::Sender,
     runnable_join_handle: TokioJoinHandle<Exited>,
 
-    finalize_guard: FinalizeGuard,
+    drop_guard: DropGuard,
 }
 impl<'r, 'o, O> RuntimeScopeRunnable<'r, 'o, O>
 where
@@ -236,13 +194,13 @@ where
         };
         let runnable_join_handle = runtime.spawn(runnable_runner);
 
-        let finalize_guard = FinalizeGuard::new();
+        let drop_guard = DropGuard::new();
 
         Self {
             runtime_scope,
             runnable_exit_flag_sender,
             runnable_join_handle,
-            finalize_guard,
+            drop_guard,
         }
     }
     pub async fn finalize(self) {
@@ -250,6 +208,6 @@ where
         let ((), result) = join!(self.runtime_scope.finalize(), self.runnable_join_handle);
         result.unwrap();
 
-        self.finalize_guard.finalized();
+        self.drop_guard.set();
     }
 }

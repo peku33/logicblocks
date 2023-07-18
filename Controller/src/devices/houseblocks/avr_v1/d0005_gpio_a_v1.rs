@@ -7,7 +7,7 @@ pub mod logic {
         util::{
             async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
             async_flag,
-            runtime::{Exited, Runnable},
+            runnable::{Exited, Runnable},
         },
     };
     use arrayvec::ArrayVec;
@@ -555,7 +555,7 @@ pub mod hardware {
         util::{
             async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
             async_flag,
-            runtime::{Exited, Runnable},
+            runnable::{Exited, Runnable},
             waker_stream,
         },
     };

@@ -2,7 +2,7 @@ use super::{sse, uri_cursor, Request, Response};
 use crate::util::{
     async_ext::select_all_or_pending::{FutureSelectAllOrPending, StreamSelectAllOrPending},
     async_flag,
-    runtime::{Exited, Runnable},
+    runnable::{Exited, Runnable},
     waker_stream::{mpmc_static, mpsc},
 };
 use anyhow::anyhow;

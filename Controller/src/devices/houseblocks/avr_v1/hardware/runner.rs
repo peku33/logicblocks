@@ -10,7 +10,7 @@ use crate::{
     util::{
         async_ext::optional::StreamOrPending,
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
         waker_stream,
     },
 };

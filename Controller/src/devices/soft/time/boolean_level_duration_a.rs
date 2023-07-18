@@ -3,7 +3,7 @@ use crate::{
     signals::{self, signal, utils::state_target_queued_stream::StateTargetQueuedStream},
     util::{
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use async_trait::async_trait;

@@ -7,7 +7,10 @@ use crate::{
         exchanger::{ConnectionRequested, Exchanger},
         DeviceBaseRef as SignalsDeviceBaseRef,
     },
-    util::runtime::{FinalizeGuard, Runtime, RuntimeScopeRunnable},
+    util::{
+        drop_guard::DropGuard,
+        runtime::{Runtime, RuntimeScopeRunnable},
+    },
     web::{self, sse_topic, uri_cursor},
 };
 use anyhow::{Context, Error};
@@ -55,7 +58,7 @@ struct RunnerInner<'d> {
 #[derive(Debug)]
 pub struct Runner<'d> {
     inner: RunnerInner<'d>,
-    finalize_guard: FinalizeGuard,
+    drop_guard: DropGuard,
 }
 impl<'d> Runner<'d> {
     pub fn new(
@@ -136,12 +139,9 @@ impl<'d> Runner<'d> {
         )
         .context("try_new")?;
 
-        let finalize_guard = FinalizeGuard::new();
+        let drop_guard = DropGuard::new();
 
-        Ok(Self {
-            inner,
-            finalize_guard,
-        })
+        Ok(Self { inner, drop_guard })
     }
     pub async fn finalize(mut self) -> HashMap<DeviceId, DeviceWrapper<'d>> {
         let devices_gui_summary_sse_responder_runtime_scope_runnable = self
@@ -224,7 +224,7 @@ impl<'d> Runner<'d> {
             .collect::<JoinAll<_>>()
             .await;
 
-        self.finalize_guard.finalized();
+        self.drop_guard.set();
 
         let inner_heads = self.inner.into_heads();
         inner_heads.device_wrappers_by_id

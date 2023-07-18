@@ -10,7 +10,7 @@ use logicblocks_controller::{
     util::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag, logging,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use rand::Rng;

@@ -16,7 +16,7 @@ use crate::{
             stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         },
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use anyhow::{anyhow, bail, ensure, Context, Error};

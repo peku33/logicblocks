@@ -3,7 +3,7 @@ use crate::{
     signals::{self, signal},
     util::{
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use async_trait::async_trait;

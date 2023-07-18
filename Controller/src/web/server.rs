@@ -1,7 +1,9 @@
 use super::{Handler, Request, Response};
 use crate::util::{
     async_flag,
-    runtime::{Exited, FinalizeGuard, Runnable, Runtime, RuntimeScopeRunnable},
+    drop_guard::DropGuard,
+    runnable::{Exited, Runnable},
+    runtime::{Runtime, RuntimeScopeRunnable},
 };
 use anyhow::Context;
 use async_trait::async_trait;
@@ -115,7 +117,7 @@ struct ServerRunnerInner<'h> {
 // #[derive(Debug)] // Debug not possible
 pub struct ServerRunner<'h> {
     inner: ServerRunnerInner<'h>,
-    finalize_guard: FinalizeGuard,
+    drop_guard: DropGuard,
 }
 impl<'h> ServerRunner<'h> {
     pub fn new(
@@ -139,12 +141,9 @@ impl<'h> ServerRunner<'h> {
         }
         .build();
 
-        let finalize_guard = FinalizeGuard::new();
+        let drop_guard = DropGuard::new();
 
-        Self {
-            inner,
-            finalize_guard,
-        }
+        Self { inner, drop_guard }
     }
 
     pub async fn finalize(mut self) {
@@ -165,7 +164,7 @@ impl<'h> ServerRunner<'h> {
                 });
         server_runtime_scope_runnable.finalize().await;
 
-        self.finalize_guard.finalized();
+        self.drop_guard.set();
 
         let inner_heads = self.inner.into_heads();
         drop(inner_heads);

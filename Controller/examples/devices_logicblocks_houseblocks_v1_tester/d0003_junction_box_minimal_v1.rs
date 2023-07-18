@@ -13,7 +13,7 @@ use logicblocks_controller::{
         },
         houseblocks_v1::{common::AddressSerial, master::Master},
     },
-    util::{async_flag::Sender, runtime::Runnable},
+    util::{async_flag::Sender, runnable::Runnable},
 };
 use std::time::Duration;
 use tokio::signal::ctrl_c;

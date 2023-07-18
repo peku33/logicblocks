@@ -11,7 +11,7 @@ use crate::{
             optional::StreamOrPending, stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         },
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use async_trait::async_trait;

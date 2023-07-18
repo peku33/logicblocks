@@ -6,7 +6,7 @@ use crate::{
     },
     util::{
         async_flag, observable,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use anyhow::{bail, ensure, Context, Error};

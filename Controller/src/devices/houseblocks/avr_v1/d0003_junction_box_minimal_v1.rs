@@ -7,7 +7,7 @@ pub mod logic {
         util::{
             async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
             async_flag,
-            runtime::{Exited, Runnable},
+            runnable::{Exited, Runnable},
         },
     };
     use array_init::array_init;
@@ -304,7 +304,7 @@ pub mod hardware {
     use crate::util::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
         waker_stream,
     };
     use anyhow::{bail, ensure, Context, Error};
