@@ -303,9 +303,8 @@ pub mod hardware {
     };
     use crate::util::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
-        async_flag,
+        async_flag, async_waker,
         runnable::{Exited, Runnable},
-        waker_stream,
     };
     use anyhow::{bail, ensure, Context, Error};
     use arrayvec::ArrayVec;
@@ -383,14 +382,14 @@ pub mod hardware {
     pub struct Device {
         properties: Properties,
 
-        poll_waker: waker_stream::mpsc::Signal,
+        poll_waker: async_waker::mpsc::Signal,
     }
     impl Device {
         pub fn new() -> Self {
             Self {
                 properties: Properties::new(),
 
-                poll_waker: waker_stream::mpsc::Signal::new(),
+                poll_waker: async_waker::mpsc::Signal::new(),
             }
         }
 
@@ -427,7 +426,7 @@ pub mod hardware {
             AddressDeviceType::new_from_ordinal(3).unwrap()
         }
 
-        fn poll_waker(&self) -> Option<&waker_stream::mpsc::Signal> {
+        fn poll_waker(&self) -> Option<&async_waker::mpsc::Signal> {
             Some(&self.poll_waker)
         }
 

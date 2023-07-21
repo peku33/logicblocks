@@ -51,8 +51,7 @@ where
         let self_ = unsafe { self.get_unchecked_mut() };
 
         // poll the inner waker
-        let waker_stream_pin = unsafe { Pin::new_unchecked(&mut self_.waker_stream) };
-        match waker_stream_pin.poll_next(cx) {
+        match unsafe { Pin::new_unchecked(&mut self_.waker_stream) }.poll_next(cx) {
             Poll::Ready(Some(())) => {
                 // something was possibly added to the buffer
                 // move all items from signal to internal buffer

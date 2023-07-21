@@ -496,6 +496,7 @@ where
         self_.inner_remote.waker.register(cx.waker());
 
         let parent_inner = self_.parent.inner.read();
+
         let poll = if self_.last_seen_value.as_ref() != Some(&parent_inner.value) {
             self_.last_seen_value.replace(parent_inner.value.clone());
             Poll::Ready(Some(()))

@@ -173,7 +173,7 @@ impl<'a> Manager<'a> {
 
         self.events_active
             .borrow_mut()
-            .drain_filter(move |event, started| {
+            .extract_if(move |event, started| {
                 if *started < fix_before {
                     log::warn!("removing outdated events: {:?}", event);
                     true
@@ -259,13 +259,13 @@ mod tests_manager {
     #[test]
     fn unsupported() {
         let event = indoc!(
-            r##"
+            r#"
             Code=NTPAdjustTime;action=Pulse;index=0;data={
                 "Address" : "pool.ntp.org",
                 "Before" : "2021-05-18 20:33:00",
                 "result" : true
             }
-        "##
+        "#
         );
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
@@ -289,13 +289,13 @@ mod tests_manager {
     #[test]
     fn video_motion_by_id() {
         let event = indoc!(
-            r##"
+            r#"
                 Code=VideoMotion;action=Start;index=0;data={
                     "Id" : [ 1 ],
                     "RegionName" : [ "Region2" ],
                     "SmartMotionEnable" : true
                 }
-            "##
+            "#
         );
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
@@ -311,11 +311,11 @@ mod tests_manager {
     #[test]
     fn video_motion_by_name() {
         let event = indoc!(
-            r##"
+            r#"
                 Code=VideoMotion;action=Start;index=0;data={
                     "RegionName" : [ "MD1" ]
                 }
-            "##
+            "#
         );
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
@@ -331,7 +331,7 @@ mod tests_manager {
     #[test]
     fn smart_motion_human() {
         let event = indoc!(
-            r##"
+            r#"
                 Code=SmartMotionHuman;action=Start;index=0;data={
                     "RegionName" : [ "Region2" ],
                     "WindowId" : [ 1 ],
@@ -342,7 +342,7 @@ mod tests_manager {
                         }
                     ]
                 }
-            "##
+            "#
         );
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
@@ -358,7 +358,7 @@ mod tests_manager {
     #[test]
     fn smart_motion_vehicle() {
         let event = indoc!(
-            r##"
+            r#"
             Code=SmartMotionVehicle;action=Stop;index=0;data={
                 "RegionName" : [ "Motion Detection" ],
                 "WindowId" : [ 0 ],
@@ -369,7 +369,7 @@ mod tests_manager {
                    }
                 ]
             }
-            "##
+            "#
         );
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();
@@ -385,13 +385,13 @@ mod tests_manager {
     #[test]
     fn video_motion_multiple() {
         let event = indoc!(
-            r##"
+            r#"
             Code=VideoMotion;action=Stop;index=0;data={
                 "Id" : [ 0, 1 ],
                 "RegionName" : [ "Motion Detection", "Region2" ],
                 "SmartMotionEnable" : true
             }
-            "##
+            "#
         );
 
         let event_state_update = Manager::event_state_update_parse(event).unwrap();

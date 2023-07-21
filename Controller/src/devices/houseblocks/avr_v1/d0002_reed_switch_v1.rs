@@ -59,7 +59,7 @@ pub mod logic {
                 if let Some(inputs) = inputs {
                     self.signal_inputs
                         .iter()
-                        .zip_eq(inputs.into_iter())
+                        .zip_eq(inputs)
                         .for_each(|(signal_input, input)| {
                             if signal_input.set_one(Some(input)) {
                                 signals_sources_changed = true;
@@ -191,9 +191,8 @@ pub mod hardware {
     use crate::{
         datatypes::resistance::Resistance,
         util::{
-            async_flag,
+            async_flag, async_waker,
             runnable::{Exited, Runnable},
-            waker_stream,
         },
     };
     use anyhow::{bail, Context, Error};
@@ -265,7 +264,7 @@ pub mod hardware {
             AddressDeviceType::new_from_ordinal(2).unwrap()
         }
 
-        fn poll_waker(&self) -> Option<&waker_stream::mpsc::Signal> {
+        fn poll_waker(&self) -> Option<&async_waker::mpsc::Signal> {
             None
         }
 

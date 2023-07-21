@@ -41,20 +41,20 @@ where
                 .as_mut()
                 .poll_next(cx)
             {
-                Poll::Pending => {
-                    if self_.buffer.is_empty() {
-                        return Poll::Pending;
-                    } else {
-                        let buffer = replace(&mut self_.buffer, Vec::<S::Item>::new());
-                        return Poll::Ready(Some(buffer.into_boxed_slice()));
-                    }
-                }
                 Poll::Ready(Some(item)) => {
                     self_.buffer.push(item);
                 }
                 Poll::Ready(None) => {
                     if self_.buffer.is_empty() {
                         return Poll::Ready(None);
+                    } else {
+                        let buffer = replace(&mut self_.buffer, Vec::<S::Item>::new());
+                        return Poll::Ready(Some(buffer.into_boxed_slice()));
+                    }
+                }
+                Poll::Pending => {
+                    if self_.buffer.is_empty() {
+                        return Poll::Pending;
                     } else {
                         let buffer = replace(&mut self_.buffer, Vec::<S::Item>::new());
                         return Poll::Ready(Some(buffer.into_boxed_slice()));

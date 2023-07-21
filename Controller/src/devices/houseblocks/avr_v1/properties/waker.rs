@@ -1,4 +1,4 @@
-use crate::util::waker_stream::mpsc;
+use crate::util::async_waker::mpsc;
 use futures::stream::{FusedStream, Stream};
 use std::{
     pin::Pin,
@@ -52,8 +52,7 @@ impl<'a> Stream for InsChangedWakerRemoteStream<'a> {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        let inner = unsafe { Pin::new_unchecked(&mut self.get_unchecked_mut().inner) };
-        inner.poll_next(cx)
+        unsafe { Pin::new_unchecked(&mut self.get_unchecked_mut().inner) }.poll_next(cx)
     }
 }
 impl<'a> FusedStream for InsChangedWakerRemoteStream<'a> {
@@ -97,8 +96,7 @@ impl<'a> Stream for OutsChangedWakerStream<'a> {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        let inner = unsafe { Pin::new_unchecked(&mut self.get_unchecked_mut().inner) };
-        inner.poll_next(cx)
+        unsafe { Pin::new_unchecked(&mut self.get_unchecked_mut().inner) }.poll_next(cx)
     }
 }
 impl<'a> FusedStream for OutsChangedWakerStream<'a> {

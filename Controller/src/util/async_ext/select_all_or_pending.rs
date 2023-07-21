@@ -82,7 +82,6 @@ where
         self: Pin<&mut Self>,
         cx: &mut task::Context<'_>,
     ) -> task::Poll<Option<Self::Item>> {
-        let inner = unsafe { self.map_unchecked_mut(|self_| &mut self_.inner) };
-        inner.poll_next(cx)
+        unsafe { self.map_unchecked_mut(|self_| &mut self_.inner) }.poll_next(cx)
     }
 }

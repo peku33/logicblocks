@@ -9,9 +9,8 @@ use crate::{
     devices,
     util::{
         async_ext::optional::StreamOrPending,
-        async_flag,
+        async_flag, async_waker,
         runnable::{Exited, Runnable},
-        waker_stream,
     },
 };
 use anyhow::{Context, Error};
@@ -51,7 +50,7 @@ pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
     fn device_type_name() -> &'static str;
     fn address_device_type() -> AddressDeviceType;
 
-    fn poll_waker(&self) -> Option<&waker_stream::mpsc::Signal>;
+    fn poll_waker(&self) -> Option<&async_waker::mpsc::Signal>;
 
     fn as_runnable(&self) -> Option<&dyn Runnable>;
 }

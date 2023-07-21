@@ -1,4 +1,4 @@
-use crate::util::waker_stream::mpsc;
+use crate::util::async_waker::mpsc;
 
 #[derive(Debug)]
 pub struct Waker {

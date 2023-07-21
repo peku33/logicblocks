@@ -2,8 +2,8 @@ use super::{sse, uri_cursor, Request, Response};
 use crate::util::{
     async_ext::select_all_or_pending::{FutureSelectAllOrPending, StreamSelectAllOrPending},
     async_flag,
+    async_waker::{mpmc_static, mpsc},
     runnable::{Exited, Runnable},
-    waker_stream::{mpmc_static, mpsc},
 };
 use anyhow::anyhow;
 use async_trait::async_trait;

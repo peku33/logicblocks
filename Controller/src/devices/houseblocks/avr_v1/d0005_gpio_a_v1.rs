@@ -187,7 +187,7 @@ pub mod logic {
                 if let Some(analog_ins) = analog_ins {
                     self.signal_analog_ins
                         .iter()
-                        .zip_eq(analog_ins.into_iter())
+                        .zip_eq(analog_ins)
                         .filter_map(|(signal_analog_in, analog_in_value)| {
                             signal_analog_in
                                 .as_ref()
@@ -216,7 +216,7 @@ pub mod logic {
                 if let Some(digital_ins) = digital_ins {
                     self.signal_digital_ins
                         .iter()
-                        .zip_eq(digital_ins.into_iter())
+                        .zip_eq(digital_ins)
                         .filter_map(|(signal_digital_in, digital_in_value)| {
                             signal_digital_in
                                 .as_ref()
@@ -245,7 +245,7 @@ pub mod logic {
                 if let Some(ds18x20s) = ds18x20s {
                     self.signal_ds18x20s
                         .iter()
-                        .zip_eq(ds18x20s.into_iter())
+                        .zip_eq(ds18x20s)
                         .filter_map(|(signal_ds18x20, ds18x20_value)| {
                             signal_ds18x20
                                 .as_ref()
@@ -347,13 +347,10 @@ pub mod logic {
         type Identifier = SignalIdentifier;
         fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
             iter::empty()
-                .chain(
-                    [(
-                        SignalIdentifier::StatusLed,
-                        &self.signal_status_led as &dyn signal::Base,
-                    )]
-                    .into_iter(),
-                )
+                .chain([(
+                    SignalIdentifier::StatusLed,
+                    &self.signal_status_led as &dyn signal::Base,
+                )])
                 .chain(self.signal_analog_ins.iter().enumerate().filter_map(
                     |(analog_in_index, signal_analog_in)| {
                         signal_analog_in.as_ref().map(|signal_analog_in| {
@@ -554,9 +551,8 @@ pub mod hardware {
         datatypes::{color_rgb_boolean::ColorRgbBoolean, voltage::Voltage},
         util::{
             async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
-            async_flag,
+            async_flag, async_waker,
             runnable::{Exited, Runnable},
-            waker_stream,
         },
     };
     use anyhow::{bail, ensure, Context, Error};
@@ -815,7 +811,7 @@ pub mod hardware {
 
         properties: Properties,
 
-        poll_waker: waker_stream::mpsc::Signal,
+        poll_waker: async_waker::mpsc::Signal,
     }
     impl Device {
         pub fn new(configuration: Configuration) -> Self {
@@ -828,7 +824,7 @@ pub mod hardware {
 
                 properties: Properties::new(),
 
-                poll_waker: waker_stream::mpsc::Signal::new(),
+                poll_waker: async_waker::mpsc::Signal::new(),
             }
         }
 
@@ -871,7 +867,7 @@ pub mod hardware {
             AddressDeviceType::new_from_ordinal(5).unwrap()
         }
 
-        fn poll_waker(&self) -> Option<&waker_stream::mpsc::Signal> {
+        fn poll_waker(&self) -> Option<&async_waker::mpsc::Signal> {
             Some(&self.poll_waker)
         }
 

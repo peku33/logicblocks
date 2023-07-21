@@ -112,7 +112,7 @@ impl<'a> Manager<'a> {
     fn events_disabler_handle(&self) -> bool {
         self.events_active
             .borrow_mut()
-            .drain_filter(|_, ticks_left| {
+            .extract_if(|_, ticks_left| {
                 *ticks_left -= 1;
                 *ticks_left == 0
             })
