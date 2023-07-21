@@ -23,7 +23,7 @@ impl Extractor {
 
     pub fn try_extract(&mut self) -> Result<Option<String>, Error> {
         lazy_static! {
-            static ref PATTERN: Regex = RegexBuilder::new(r"--myboundary(\r\n)?Content-Type: text/plain(\r\n)Content-Length:(\d+)(\r\n){1,2}(.+?)(\r\n\r\n)")
+            static ref PATTERN: Regex = RegexBuilder::new(r"--myboundary(\r\n)?Content-Type: text/plain(\r\n)Content-Length:( )?(\d+)(\r\n){1,2}(.+?)(\r\n){1,2}")
             .dot_matches_new_line(true)
             .build()
             .unwrap();
@@ -55,13 +55,13 @@ impl Extractor {
 
     fn try_extract_capture(capture: regex::Captures) -> Result<String, Error> {
         let content_length = capture
-            .get(3)
+            .get(4)
             .unwrap()
             .as_str()
             .parse::<usize>()
             .context("content_length parse")?;
 
-        let element = capture.get(5).unwrap().as_str().to_owned();
+        let element = capture.get(6).unwrap().as_str().to_owned();
         ensure!(content_length == element.len());
 
         Ok(element)
@@ -132,13 +132,28 @@ mod tests_extractor {
     #[test]
     fn try_extract_5() {
         let mut buffer = Extractor::new();
-        buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
+        buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n");
         buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length:40\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n\r\n");
         assert_eq!(
             &buffer.try_extract().unwrap().unwrap(),
             "Code=AudioMutation;action=Start;index=0",
         );
         assert!(buffer.try_extract().is_err());
+        assert!(buffer.try_extract().unwrap().is_none());
+    }
+    #[test]
+    fn try_extract_6() {
+        let mut buffer = Extractor::new();
+        buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length: 39\r\n\r\nCode=AudioMutation;action=Start;index=0\r\n");
+        buffer.push("--myboundary\r\nContent-Type: text/plain\r\nContent-Length: 38\r\n\r\nCode=AudioMutation;action=Stop;index=0\r\n");
+        assert_eq!(
+            &buffer.try_extract().unwrap().unwrap(),
+            "Code=AudioMutation;action=Start;index=0",
+        );
+        assert_eq!(
+            &buffer.try_extract().unwrap().unwrap(),
+            "Code=AudioMutation;action=Stop;index=0",
+        );
         assert!(buffer.try_extract().unwrap().is_none());
     }
 }

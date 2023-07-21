@@ -628,6 +628,11 @@ impl Api {
                 minor: 2,
                 revision: 1,
                 build: 1053483,
+            } | WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 1400564,
             }
         )
     }
@@ -806,6 +811,7 @@ impl Stream for BoundaryStreamExtractor {
                 task::Poll::Ready(Some(item)) => match item.context("item") {
                     Ok(chunk) => match str::from_utf8(&chunk).context("from_utf8") {
                         Ok(chunk) => {
+                            cx.waker().wake_by_ref();
                             self_.extractor.push(chunk);
                         }
                         Err(error) => {
@@ -817,6 +823,7 @@ impl Stream for BoundaryStreamExtractor {
                     }
                 },
                 task::Poll::Ready(None) => {
+                    cx.waker().wake_by_ref();
                     self_.data_stream_terminated = true;
                 }
                 task::Poll::Pending => {}
