@@ -46,7 +46,7 @@ struct CommandConfigure {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Error> {
-    logging::configure(module_path!());
+    logging::configure(module_path!(), true);
 
     let arguments = Arguments::parse();
 

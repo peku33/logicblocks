@@ -19,7 +19,7 @@ use logicblocks_controller::{
 };
 
 pub fn main() {
-    logging::configure(module_path!());
+    logging::configure(module_path!(), true);
 
     main_error().unwrap();
 }
