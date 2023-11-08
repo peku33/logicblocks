@@ -499,7 +499,12 @@ impl<'a> Configurator<'a> {
     ) -> Result<serde_json::Value, Error> {
         let params = self
             .api
-            .rpc2_call_params("configManager.getConfig", json!({ "name": name }))
+            .rpc2_call_params(
+                "configManager.getConfig",
+                json!({
+                    "name": name,
+                }),
+            )
             .await
             .context("rpc2_call_params getConfig")?;
 
@@ -522,7 +527,7 @@ impl<'a> Configurator<'a> {
                 json!({
                     "name": name,
                     "table": table,
-                    "options": []
+                    "options": [],
                 }),
             )
             .await
@@ -694,7 +699,9 @@ impl<'a> Configurator<'a> {
                 .api
                 .rpc2_call(
                     "configManager.restoreExcept",
-                    json!({ "names": ["Network"] }),
+                    json!({
+                        "names": ["Network"],
+                    }),
                     None,
                 )
                 .await
@@ -1216,7 +1223,12 @@ impl<'a> Configurator<'a> {
     pub async fn video_quality_configure(&mut self) -> Result<(), Error> {
         let video_input_caps = self
             .api
-            .rpc2_call_params("devVideoInput.getCaps", json!({"channel": 0_usize}))
+            .rpc2_call_params(
+                "devVideoInput.getCaps",
+                json!({
+                    "channel": 0_usize,
+                }),
+            )
             .await
             .context("rpc2_call_params")?;
         let video_input_caps = video_input_caps
@@ -1783,7 +1795,9 @@ impl<'a> Configurator<'a> {
             .api
             .rpc2_call(
                 "devVideoDetect.factory.instance",
-                json!({"channel": 0_usize}),
+                json!({
+                    "channel": 0_usize,
+                }),
                 None,
             )
             .await
