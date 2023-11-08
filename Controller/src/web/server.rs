@@ -1,9 +1,12 @@
 use super::{Handler, Request, Response};
-use crate::util::{
-    async_flag,
-    drop_guard::DropGuard,
-    runnable::{Exited, Runnable},
-    runtime::{Runtime, RuntimeScopeRunnable},
+use crate::{
+    modules::module_path::ModulePath,
+    util::{
+        async_flag,
+        drop_guard::DropGuard,
+        runnable::{Exited, Runnable},
+        runtime::{Runtime, RuntimeScopeRunnable},
+    },
 };
 use anyhow::Context;
 use async_trait::async_trait;
@@ -13,6 +16,7 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Request as HyperRequest, Response as HyperResponse, Server as HyperServer,
 };
+use lazy_static::lazy_static;
 use ouroboros::self_referencing;
 use std::{
     convert::Infallible,
@@ -106,37 +110,33 @@ impl<'h> Runnable for Server<'h> {
 
 #[self_referencing]
 // #[derive(Debug)] // Debug not possible
-struct ServerRunnerInner<'h> {
+struct RunnerInner<'r, 'h: 'r> {
     server: Server<'h>,
-    runtime: Runtime,
 
-    #[borrows(server, runtime)]
+    #[borrows(server)]
     #[not_covariant]
-    server_runtime_scope_runnable: ManuallyDrop<RuntimeScopeRunnable<'this, 'this, Server<'h>>>,
+    runtime_scope_runnable: ManuallyDrop<RuntimeScopeRunnable<'r, 'this, Server<'h>>>,
 }
-// #[derive(Debug)] // Debug not possible
-pub struct ServerRunner<'h> {
-    inner: ServerRunnerInner<'h>,
+
+pub struct Runner<'r, 'h> {
+    inner: RunnerInner<'r, 'h>,
+
     drop_guard: DropGuard,
 }
-impl<'h> ServerRunner<'h> {
+impl<'r, 'h> Runner<'r, 'h> {
     pub fn new(
+        runtime: &'r Runtime,
         bind: SocketAddr,
         handler: &'h (dyn Handler + Sync),
     ) -> Self {
         let server = Server::new(bind, handler);
 
-        let runtime = Runtime::new("web", 2, 2);
-
-        let inner = ServerRunnerInnerBuilder {
+        let inner = RunnerInnerBuilder {
             server,
-            runtime,
-
-            server_runtime_scope_runnable_builder: move |server, runtime| {
-                let server_runtime_scope_runnable = RuntimeScopeRunnable::new(runtime, server);
-                let server_runtime_scope_runnable =
-                    ManuallyDrop::new(server_runtime_scope_runnable);
-                server_runtime_scope_runnable
+            runtime_scope_runnable_builder: move |server| {
+                let runtime_scope_runnable = RuntimeScopeRunnable::new(runtime, server);
+                let runtime_scope_runnable = ManuallyDrop::new(runtime_scope_runnable);
+                runtime_scope_runnable
             },
         }
         .build();
@@ -147,22 +147,68 @@ impl<'h> ServerRunner<'h> {
     }
 
     pub async fn finalize(mut self) {
-        let server_runtime_scope_runnable =
+        let runtime_scope_runnable =
             self.inner
-                .with_server_runtime_scope_runnable_mut(|server_runtime_scope_runnable| {
-                    let server_runtime_scope_runnable = unsafe {
-                        transmute::<
-                            &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, Server<'_>>>,
-                            &mut ManuallyDrop<
-                                RuntimeScopeRunnable<'static, 'static, Server<'static>>,
-                            >,
-                        >(server_runtime_scope_runnable)
-                    };
-                    let server_runtime_scope_runnable =
-                        unsafe { ManuallyDrop::take(server_runtime_scope_runnable) };
-                    server_runtime_scope_runnable
+                .with_runtime_scope_runnable_mut(move |runtime_scope_runnable| unsafe {
+                    ManuallyDrop::take(runtime_scope_runnable)
                 });
-        server_runtime_scope_runnable.finalize().await;
+        runtime_scope_runnable.finalize().await;
+
+        self.drop_guard.set();
+    }
+}
+
+#[self_referencing]
+// #[derive(Debug)] // Debug not possible
+struct RunnerOwnedInner<'h> {
+    runtime: Runtime,
+
+    #[borrows(runtime)]
+    #[not_covariant]
+    runner: ManuallyDrop<Runner<'this, 'h>>,
+}
+
+// #[derive(Debug)] // Debug not possible
+pub struct RunnerOwned<'h> {
+    inner: RunnerOwnedInner<'h>,
+
+    drop_guard: DropGuard,
+}
+impl<'h> RunnerOwned<'h> {
+    fn module_path() -> &'static ModulePath {
+        lazy_static! {
+            static ref MODULE_PATH: ModulePath = ModulePath::new(&["web", "server"]);
+        }
+        &MODULE_PATH
+    }
+
+    pub fn new(
+        bind: SocketAddr,
+        handler: &'h (dyn Handler + Sync),
+    ) -> Self {
+        let runtime = Runtime::new(Self::module_path(), 2, 2);
+
+        let inner = RunnerOwnedInnerBuilder {
+            runtime,
+
+            runner_builder: move |runtime| {
+                let runner = Runner::new(runtime, bind, handler);
+                let runner = ManuallyDrop::new(runner);
+                runner
+            },
+        }
+        .build();
+
+        let drop_guard = DropGuard::new();
+
+        Self { inner, drop_guard }
+    }
+
+    pub async fn finalize(mut self) {
+        let runner = self
+            .inner
+            .with_runner_mut(move |runner| unsafe { ManuallyDrop::take(runner) });
+        runner.finalize().await;
 
         self.drop_guard.set();
 

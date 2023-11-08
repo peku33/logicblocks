@@ -3,6 +3,7 @@ use super::{
     drop_guard::DropGuard,
     runnable::{Exited, Runnable},
 };
+use crate::modules::module_path::ModulePathTrait;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, Future, FutureExt, JoinAll},
@@ -25,13 +26,13 @@ pub struct Runtime {
 }
 impl Runtime {
     pub fn new(
-        name: &str,
+        module_path_trait: &dyn ModulePathTrait,
         worker_threads: usize,
         blocking_threads_max: usize,
     ) -> Self {
         let inner = TokioRuntimeBuilder::new_multi_thread()
             .enable_all()
-            .thread_name(format!("{}.runtime", name))
+            .thread_name(module_path_trait.thread_name())
             .worker_threads(worker_threads)
             .max_blocking_threads(blocking_threads_max)
             .build()
@@ -54,8 +55,6 @@ impl Drop for Runtime {
         self.inner.take().unwrap().shutdown_background();
     }
 }
-
-// =============================================================================
 
 #[derive(Debug)]
 struct RuntimeScopeContext {
@@ -162,7 +161,6 @@ impl<'r, 'o, O> RuntimeScope<'r, 'o, O> {
     }
 }
 
-// =============================================================================
 #[derive(Debug)]
 pub struct RuntimeScopeRunnable<'r, 'o, O>
 where

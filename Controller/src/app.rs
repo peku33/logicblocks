@@ -37,7 +37,7 @@ pub async fn run(
         "gui".to_owned() => &gui_router as &(dyn Handler + Sync),
     });
     let root_service = RootService::new(&root_router);
-    let server_runner = server::ServerRunner::new(
+    let server_runner = server::RunnerOwned::new(
         SocketAddr::V4(
             bind_custom.unwrap_or_else(|| SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 8080)),
         ),

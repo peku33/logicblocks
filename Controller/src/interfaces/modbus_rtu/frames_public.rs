@@ -4,7 +4,7 @@ use super::{
     frame::{Request, Response},
     helpers::{bits_byte_to_array, bits_bytes_to_slice_checked, bits_slice_to_bytes},
 };
-use anyhow::{anyhow, bail, ensure, Context, Error};
+use anyhow::{bail, ensure, Context, Error};
 use std::{cmp::Ordering, iter};
 
 // Generics for 0x01 and 0x02
@@ -78,7 +78,7 @@ impl ReadBitsGenericResponse {
         match bits_values_bytes.len().cmp(&bit_bytes_count_expected) {
             Ordering::Less => return Ok(None),
             Ordering::Equal => {}
-            Ordering::Greater => return Err(anyhow!("bit bytes count overflow")),
+            Ordering::Greater => bail!("bit bytes count overflow"),
         }
 
         let bits_values = bits_bytes_to_slice_checked(bits_values_bytes, request.number_of_bits)
@@ -308,7 +308,7 @@ impl ReadWordsGenericResponse {
         match words_values_bytes.len().cmp(&words_bytes_count_expected) {
             Ordering::Less => return Ok(None),
             Ordering::Equal => {}
-            Ordering::Greater => return Err(anyhow!("word bytes count overflow")),
+            Ordering::Greater => bail!("word bytes count overflow"),
         }
 
         let words_values = words_values_bytes

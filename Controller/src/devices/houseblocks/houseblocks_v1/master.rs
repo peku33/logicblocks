@@ -1,14 +1,18 @@
 use super::common::{Address, AddressDeviceType, AddressSerial, Frame, Payload};
-use crate::interfaces::serial::{
-    ftdi::{
-        Descriptor as FtdiDescriptor, DeviceConfiguration as FtdiDeviceConfiguration,
-        DeviceFailSafe as FtdiDeviceFailSafe,
+use crate::{
+    interfaces::serial::{
+        ftdi::{
+            Descriptor as FtdiDescriptor, DeviceConfiguration as FtdiDeviceConfiguration,
+            DeviceFailSafe as FtdiDeviceFailSafe,
+        },
+        Bits, Configuration as SerialConfiguration, Parity, StopBits,
     },
-    Bits, Configuration as SerialConfiguration, Parity, StopBits,
+    modules::module_path::{ModulePath, ModulePathName},
 };
 use anyhow::{bail, ensure, Context, Error};
 use crossbeam::channel;
 use futures::channel::oneshot;
+use lazy_static::lazy_static;
 use std::{fmt::Debug, mem::ManuallyDrop, thread, time::Duration};
 
 #[derive(Debug)]
@@ -232,15 +236,25 @@ pub struct Master {
     worker_thread: ManuallyDrop<thread::JoinHandle<()>>,
 }
 impl Master {
+    fn module_path() -> &'static ModulePath {
+        lazy_static! {
+            static ref MODULE_PATH: ModulePath =
+                ModulePath::new(&["devices", "houseblocks", "houseblocks_v1", "master"]);
+        }
+        &MODULE_PATH
+    }
+
     pub fn new(ftdi_descriptor: FtdiDescriptor) -> Self {
         let (transaction_sender, transaction_receiver) = channel::unbounded::<Transaction>();
 
+        let module_path_name = ModulePathName::new(
+            Self::module_path(),
+            ftdi_descriptor.serial_number.to_str().unwrap().to_owned(),
+        );
+
         let worker_ftdi_descriptor = ftdi_descriptor.clone();
         let worker_thread = thread::Builder::new()
-            .name(format!(
-                "{}.houseblocks_v1.master",
-                ftdi_descriptor.serial_number.to_str().unwrap()
-            ))
+            .name(module_path_name.thread_name())
             .spawn(move || {
                 Self::thread_main(worker_ftdi_descriptor, transaction_receiver);
             })
@@ -348,6 +362,8 @@ impl Master {
 }
 impl Drop for Master {
     fn drop(&mut self) {
+        // TODO: provide async dropper
+
         // This ends the iteration
         unsafe { ManuallyDrop::drop(&mut self.transaction_sender) };
 

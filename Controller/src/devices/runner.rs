@@ -3,6 +3,7 @@
 
 use super::{DeviceWrapper, Id as DeviceId};
 use crate::{
+    modules::module_path::ModulePath,
     signals::{
         exchanger::{ConnectionRequested, Exchanger},
         DeviceBaseRef as SignalsDeviceBaseRef,
@@ -15,11 +16,9 @@ use crate::{
 };
 use anyhow::{Context, Error};
 use futures::future::{BoxFuture, FutureExt, JoinAll};
+use lazy_static::lazy_static;
 use ouroboros::self_referencing;
-use std::{
-    collections::HashMap,
-    mem::{transmute, ManuallyDrop},
-};
+use std::{collections::HashMap, mem::ManuallyDrop};
 
 #[self_referencing]
 #[derive(Debug)]
@@ -58,14 +57,22 @@ struct RunnerInner<'d> {
 #[derive(Debug)]
 pub struct Runner<'d> {
     inner: RunnerInner<'d>,
+
     drop_guard: DropGuard,
 }
 impl<'d> Runner<'d> {
+    fn module_path() -> &'static ModulePath {
+        lazy_static! {
+            static ref MODULE_PATH: ModulePath = ModulePath::new(&["devices", "runner"]);
+        }
+        &MODULE_PATH
+    }
+
     pub fn new(
         device_wrappers_by_id: HashMap<DeviceId, DeviceWrapper<'d>>,
         connections_requested: &[ConnectionRequested],
     ) -> Result<Self, Error> {
-        let runtime = Runtime::new("devices", 4, 4);
+        let runtime = Runtime::new(Self::module_path(), 4, 4);
 
         let inner = RunnerInner::try_new(
             runtime,
@@ -147,27 +154,8 @@ impl<'d> Runner<'d> {
         let devices_gui_summary_sse_responder_runtime_scope_runnable = self
             .inner
             .with_devices_gui_summary_sse_responder_runtime_scope_runnable_mut(
-                |devices_gui_summary_sse_responder_runtime_scope_runnable| {
-                    let devices_gui_summary_sse_responder_runtime_scope_runnable = unsafe {
-                        transmute::<
-                            &mut ManuallyDrop<
-                                RuntimeScopeRunnable<'_, '_, sse_topic::Responder<'_>>,
-                            >,
-                            &mut ManuallyDrop<
-                                RuntimeScopeRunnable<
-                                    'static,
-                                    'static,
-                                    sse_topic::Responder<'static>,
-                                >,
-                            >,
-                        >(
-                            devices_gui_summary_sse_responder_runtime_scope_runnable
-                        )
-                    };
-                    let devices_gui_summary_sse_responder_runtime_scope_runnable = unsafe {
-                        ManuallyDrop::take(devices_gui_summary_sse_responder_runtime_scope_runnable)
-                    };
-                    devices_gui_summary_sse_responder_runtime_scope_runnable
+                |devices_gui_summary_sse_responder_runtime_scope_runnable| unsafe {
+                    ManuallyDrop::take(devices_gui_summary_sse_responder_runtime_scope_runnable)
                 },
             );
         devices_gui_summary_sse_responder_runtime_scope_runnable
@@ -176,43 +164,15 @@ impl<'d> Runner<'d> {
 
         let exchanger_runtime_scope_runnable = self
             .inner
-            .with_exchanger_runtime_scope_runnable_mut(|exchanger_runtime_scope_runnable| {
-                let exchanger_runtime_scope_runnable = unsafe {
-                    transmute::<
-                        &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, Exchanger<'_>>>,
-                        &mut ManuallyDrop<
-                            RuntimeScopeRunnable<'static, 'static, Exchanger<'static>>,
-                        >,
-                    >(exchanger_runtime_scope_runnable)
-                };
-                let exchanger_runtime_scope_runnable =
-                    unsafe { ManuallyDrop::take(exchanger_runtime_scope_runnable) };
-                exchanger_runtime_scope_runnable
+            .with_exchanger_runtime_scope_runnable_mut(|exchanger_runtime_scope_runnable| unsafe {
+                ManuallyDrop::take(exchanger_runtime_scope_runnable)
             });
         exchanger_runtime_scope_runnable.finalize().await;
 
         let devices_wrapper_runtime_scope_runnable =
             self.inner.with_devices_wrapper_runtime_scope_runnable_mut(
-                move |devices_wrapper_runtime_scope_runnable| {
-                    let devices_wrapper_runtime_scope_runnable = unsafe {
-                        transmute::<
-                            &mut ManuallyDrop<
-                                Box<[RuntimeScopeRunnable<'_, '_, DeviceWrapper<'_>>]>,
-                            >,
-                            &mut ManuallyDrop<
-                                Box<
-                                    [RuntimeScopeRunnable<
-                                        'static,
-                                        'static,
-                                        DeviceWrapper<'static>,
-                                    >],
-                                >,
-                            >,
-                        >(devices_wrapper_runtime_scope_runnable)
-                    };
-                    let devices_wrapper_runtime_scope_runnable =
-                        unsafe { ManuallyDrop::take(devices_wrapper_runtime_scope_runnable) };
-                    devices_wrapper_runtime_scope_runnable
+                move |devices_wrapper_runtime_scope_runnable| unsafe {
+                    ManuallyDrop::take(devices_wrapper_runtime_scope_runnable)
                 },
             );
         devices_wrapper_runtime_scope_runnable

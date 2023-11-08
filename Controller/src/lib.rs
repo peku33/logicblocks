@@ -5,7 +5,6 @@
 #![feature(async_closure)]
 #![feature(const_fn_floating_point_arithmetic)]
 #![feature(div_duration)]
-#![feature(extract_if)]
 #![feature(duration_consts_float)]
 #![feature(exact_size_is_empty)]
 #![feature(hash_extract_if)]
@@ -21,6 +20,7 @@
 #![allow(incomplete_features)]
 #![allow(clippy::bool_assert_comparison)]
 #![allow(clippy::from_over_into)] // https://github.com/rust-lang/rust-clippy/issues/6607
+#![allow(clippy::get_first)]
 #![allow(clippy::large_enum_variant)]
 #![allow(clippy::let_and_return)]
 #![allow(clippy::mem_replace_with_default)]

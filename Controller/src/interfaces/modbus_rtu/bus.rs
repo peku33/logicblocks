@@ -1,9 +1,13 @@
 use super::frame::{Exception, Request, Response};
-use crate::interfaces::serial::{self, ftdi};
+use crate::{
+    interfaces::serial::{self, ftdi},
+    modules::module_path::{ModulePath, ModulePathName},
+};
 use anyhow::{ensure, Context, Error};
 use crc::{Crc, CRC_16_MODBUS};
 use crossbeam::channel;
 use futures::channel::oneshot;
+use lazy_static::lazy_static;
 use std::{any::Any, fmt::Debug, mem::ManuallyDrop, slice, thread, time::Duration};
 
 #[derive(Debug)]
@@ -311,6 +315,14 @@ pub struct AsyncBus {
     worker_thread: ManuallyDrop<thread::JoinHandle<()>>,
 }
 impl AsyncBus {
+    fn module_path() -> &'static ModulePath {
+        lazy_static! {
+            static ref MODULE_PATH: ModulePath =
+                ModulePath::new(&["interfaces", "modbus_rtu", "bus", "async_bus"]);
+        }
+        &MODULE_PATH
+    }
+
     pub fn new(
         descriptor: ftdi::Descriptor,
         baud_rate: usize,
@@ -319,12 +331,14 @@ impl AsyncBus {
         let (transaction_sender, transaction_receiver) =
             channel::unbounded::<AsyncBusTransaction>();
 
+        let module_path_name = ModulePathName::new(
+            Self::module_path(),
+            descriptor.serial_number.to_str().unwrap().to_owned(),
+        );
+
         let worker_descriptor = descriptor.clone();
         let worker_thread = thread::Builder::new()
-            .name(format!(
-                "{}.modbus_rtu",
-                descriptor.serial_number.to_str().unwrap()
-            ))
+            .name(module_path_name.thread_name())
             .spawn(move || {
                 Self::thread_main(worker_descriptor, baud_rate, parity, transaction_receiver);
             })
@@ -389,6 +403,8 @@ impl AsyncBus {
 }
 impl Drop for AsyncBus {
     fn drop(&mut self) {
+        // TODO: provide async dropper
+
         // This ends the iteration
         unsafe { ManuallyDrop::drop(&mut self.transaction_sender) };
 

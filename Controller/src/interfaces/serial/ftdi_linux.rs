@@ -161,6 +161,7 @@ impl Global {
             };
             descriptors.push(descriptor);
         }
+        let descriptors = descriptors.into_boxed_slice();
         let descriptors = Descriptors::new(descriptors);
         Ok(descriptors)
     }
