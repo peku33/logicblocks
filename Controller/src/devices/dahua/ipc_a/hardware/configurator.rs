@@ -2082,6 +2082,7 @@ impl<'a> Configurator<'a> {
         &mut self,
         configuration: Configuration,
     ) -> Result<(), Error> {
+        log::trace!("system_factory_reset");
         self.system_factory_reset()
             .await
             .context("system_factory_reset")?;
@@ -2093,158 +2094,197 @@ impl<'a> Configurator<'a> {
         //     .await
         //     .context("system_firmware_upgrade")?;
 
+        log::trace!("system_shared_user");
         self.system_shared_user(configuration.shared_user_password)
             .await
             .context("system_shared_user")?;
 
+        log::trace!("system_arp_ip_setting_disable");
         self.system_arp_ip_setting_disable()
             .await
             .context("system_arp_ip_setting_disable")?;
 
+        log::trace!("system_device_discovery_disable");
         self.system_device_discovery_disable()
             .await
             .context("system_device_discovery_disable")?;
 
+        log::trace!("system_ipv6_disable");
         self.system_ipv6_disable()
             .await
             .context("system_ipv6_disable")?;
 
+        log::trace!("system_multicast_disable");
         self.system_multicast_disable()
             .await
             .context("system_multicast_disable")?;
 
+        log::trace!("system_time_ntp");
         self.system_time_ntp() // break
             .await
             .context("system_time_ntp")?;
 
+        log::trace!("system_snmp_disable");
         self.system_snmp_disable()
             .await
             .context("system_snmp_disable")?;
 
+        log::trace!("system_upnp_disable");
         self.system_upnp_disable()
             .await
             .context("system_upnp_disable")?;
 
+        log::trace!("system_easy4ip_disable");
         self.system_easy4ip_disable()
             .await
             .context("system_easy4ip_disable")?;
 
+        log::trace!("system_bonjour_disable");
         self.system_bonjour_disable()
             .await
             .context("system_bonjour_disable")?;
 
+        log::trace!("system_onvif_disable");
         self.system_onvif_disable()
             .await
             .context("system_onvif_disable")?;
 
+        log::trace!("system_genetec_disable");
         self.system_genetec_disable()
             .await
             .context("system_genetec_disable")?;
 
+        log::trace!("system_lechange_pro_disable");
         self.system_lechange_pro_disable()
             .await
             .context("system_lechange_pro_disable")?;
 
+        log::trace!("system_mobile_phone_platform_disable");
         self.system_mobile_phone_platform_disable()
             .await
             .context("system_mobile_phone_platform_disable")?;
 
+        log::trace!("system_email_disable");
         self.system_email_disable()
             .await
             .context("system_email_disable")?;
 
+        log::trace!("system_hostname_set");
         self.system_hostname_set(&configuration.device_name)
             .await
             .context("system_hostname_set")?;
 
+        log::trace!("system_device_id_name_set");
         self.system_device_id_name_set(configuration.device_id, &configuration.device_name)
             .await
             .context("system_device_id_name_set")?;
 
+        log::trace!("system_old_files_delete_enable");
         self.system_old_files_delete_enable()
             .await
             .context("system_old_files_delete_enable")?;
 
+        log::trace!("system_storage_disable");
         self.system_storage_disable()
             .await
             .context("system_storage_disable")?;
 
+        log::trace!("system_record_disable");
         self.system_record_disable()
             .await
             .context("system_record_disable")?;
 
+        log::trace!("system_ntsc_set");
         self.system_ntsc_set() // break
             .await
             .context("system_ntsc_set")?;
 
+        log::trace!("video_ai_codec_disable");
         self.video_ai_codec_disable()
             .await
             .context("video_ai_codec_disable")?;
 
+        log::trace!("video_quality_configure");
         self.video_quality_configure()
             .await
             .context("video_quality_configure")?;
 
+        log::trace!("video_watermark_disable");
         self.video_watermark_disable()
             .await
             .context("video_watermark_disable")?;
 
+        log::trace!("video_profile_normal_only");
         self.video_profile_normal_only()
             .await
             .context("video_profile_normal_only")?;
 
+        log::trace!("video_orientation_configure");
         self.video_orientation_configure(configuration.video_upside_down)
             .await
             .context("video_orientation_configure")?;
 
+        log::trace!("video_channel_title_configure");
         self.video_channel_title_configure(configuration.channel_title)
             .await
             .context("video_channel_title_configure")?;
 
+        log::trace!("video_privacy_mask_configure");
         self.video_privacy_mask_configure(configuration.privacy_mask)
             .await
             .context("video_privacy_mask_configure")?;
 
+        log::trace!("detection_external_alarm_disable");
         self.detection_external_alarm_disable()
             .await
             .context("detection_external_alarm_disable")?;
 
+        log::trace!("detection_login_failure_disable");
         self.detection_login_failure_disable()
             .await
             .context("detection_login_failure_disable")?;
 
+        log::trace!("detection_network_conflict_disable");
         self.detection_network_conflict_disable()
             .await
             .context("detection_network_conflict_disable")?;
 
+        log::trace!("detection_network_disconnected_disable");
         self.detection_network_disconnected_disable()
             .await
             .context("detection_network_disconnected_disable")?;
 
+        log::trace!("detection_power_fault_disable");
         self.detection_power_fault_disable()
             .await
             .context("detection_power_fault_disable")?;
 
+        log::trace!("detection_storage_health_alarm_disable");
         self.detection_storage_health_alarm_disable()
             .await
             .context("detection_storage_health_alarm_disable")?;
 
+        log::trace!("detection_motion_configure");
         self.detection_motion_configure(configuration.motion_detection)
             .await
             .context("detection_motion_configure")?;
 
+        log::trace!("detection_smart_motion_configure");
         self.detection_smart_motion_configure(configuration.smart_motion_detection)
             .await
             .context("detection_smart_motion_configure")?;
 
+        log::trace!("detection_video_blind_enable");
         self.detection_video_blind_enable()
             .await
             .context("detection_video_blind_enable")?;
 
+        log::trace!("detection_scene_moved_configure");
         self.detection_scene_moved_configure(configuration.scene_moved_detection)
             .await
             .context("detection_scene_moved_configure")?;
 
+        log::trace!("detection_audio_configure");
         self.detection_audio_configure(configuration.audio_mutation_detection)
             .await
             .context("detection_audio_configure")?;
