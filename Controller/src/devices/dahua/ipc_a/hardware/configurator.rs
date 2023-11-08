@@ -733,6 +733,86 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
+    pub async fn system_firmware_upgrade(&mut self) -> Result<(), Error> {
+        let result = self
+            .api
+            .rpc2_call_params(
+                "CloudUpgrader.check",
+                json!({
+                    "way": 0,
+                }),
+            )
+            .await
+            .context("rpc2_call_params check")?;
+
+        let info = result
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?
+            .get("info")
+            .ok_or_else(|| anyhow!("missing info"))?
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?;
+
+        let build = info
+            .get("NewVersion")
+            .ok_or_else(|| anyhow!("missing NewVersion"))?
+            .as_str()
+            .ok_or_else(|| anyhow!("expected string"))?;
+
+        if build.is_empty() {
+            // we are on latest available version
+            log::trace!("no firmware upgrade available");
+            return Ok(());
+        }
+
+        if !Api::update_build_supported(build) {
+            log::warn!("firmware upgrade available, but {build} is not supported");
+            // we continue with what we have
+            return Ok(());
+        }
+
+        log::trace!("performing system upgrade to version {build}");
+        self.api
+            .rpc2_call_result(
+                "CloudUpgrader.execute",
+                json!({
+                    "NewVersion": build,
+                    "way": 0,
+                }),
+            )
+            .await
+            .context("rpc2_call_result execute")?;
+
+        loop {
+            let result = self
+                .api
+                .rpc2_call_params("CloudUpgrader.getState", serde_json::Value::Null)
+                .await
+                .context("rpc2_call_params getState")?;
+
+            let state = result
+                .as_object()
+                .ok_or_else(|| anyhow!("expected object"))?
+                .get("State")
+                .ok_or_else(|| anyhow!("missing State"))?
+                .as_str()
+                .ok_or_else(|| anyhow!("expected string"))?;
+
+            match state {
+                "Preparing" | "Downloading" | "Upgrading" => {}
+                "Succeeded" => break,
+                _ => bail!("unknown update state: {state}"),
+            }
+
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+
+        self.wait_for_power_down_up()
+            .await
+            .context("wait_for_power_down_up")?;
+
+        Ok(())
+    }
 
     pub async fn system_shared_user(
         &mut self,
@@ -2005,6 +2085,13 @@ impl<'a> Configurator<'a> {
         self.system_factory_reset()
             .await
             .context("system_factory_reset")?;
+
+        // TODO: maybe allow upgrading with incompatible web version?
+        // TODO: check web and firmware version after upgrade
+        // log::trace!("system_firmware_upgrade");
+        // self.system_firmware_upgrade()
+        //     .await
+        //     .context("system_firmware_upgrade")?;
 
         self.system_shared_user(configuration.shared_user_password)
             .await

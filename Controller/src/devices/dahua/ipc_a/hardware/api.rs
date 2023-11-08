@@ -607,10 +607,11 @@ impl Api {
             build,
         })
     }
-    fn device_type_supported(device_type: &str) -> bool {
+
+    pub fn device_type_supported(device_type: &str) -> bool {
         matches!(device_type, "IPC-HDW4631C-A" | "IPC-HDW3841TMP-AS")
     }
-    fn web_version_supported(web_version: &WebVersion) -> bool {
+    pub fn web_version_supported(web_version: &WebVersion) -> bool {
         matches!(
             web_version,
             WebVersion {
@@ -636,6 +637,10 @@ impl Api {
             }
         )
     }
+    pub fn update_build_supported(build: &str) -> bool {
+        matches!(build, "V2.820.0000000.28.R.230314")
+    }
+
     pub async fn validate_basic_device_info(&self) -> Result<BasicDeviceInfo, Error> {
         let device_type = self
             .rpc2_call_params("magicBox.getDeviceType", serde_json::Value::Null)
@@ -652,7 +657,7 @@ impl Api {
         ensure!(
             Self::device_type_supported(&device_type),
             "this device type ({}) is not supported",
-            &device_type
+            &device_type,
         );
 
         let software_version = self
@@ -664,12 +669,15 @@ impl Api {
             .ok_or_else(|| anyhow!("expected object"))?
             .get("version")
             .ok_or_else(|| anyhow!("missing version"))?;
+
         let version = software_version
             .get("Version")
             .ok_or_else(|| anyhow!("missing version"))?
             .as_str()
             .ok_or_else(|| anyhow!("expected string"))?
             .to_owned();
+        // TODO: version is not the same as build
+
         let web_version = software_version
             .get("WebVersion")
             .ok_or_else(|| anyhow!("missing web version"))?
@@ -678,8 +686,8 @@ impl Api {
         let web_version = Self::parse_web_version_string(web_version)?;
         ensure!(
             Self::web_version_supported(&web_version),
-            "this version ({}) is not supported",
-            &web_version
+            "this web version ({}) is not supported",
+            &web_version,
         );
 
         let serial_number = self
