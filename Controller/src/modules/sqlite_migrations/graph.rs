@@ -23,7 +23,10 @@ pub fn resolve(
         sources.into_iter().for_each(|(source, _)| {
             // only forward migrations are supported for now
             // this also implies that target > 0 and that graph contains no cycles and is monotonic
-            assert!(target > source);
+            assert!(
+                target > source,
+                "unsupported negative migration found in graph"
+            );
         });
     });
 
