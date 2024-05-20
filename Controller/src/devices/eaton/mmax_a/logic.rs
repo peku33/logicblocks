@@ -92,7 +92,7 @@ impl<'m> Device<'m> {
         let input_runner = futures::stream::once(async {})
             .chain(self.signals_targets_changed_waker.stream())
             .stream_take_until_exhausted(exit_flag.clone())
-            .for_each(async move |()| {
+            .for_each(|()| async {
                 self.signals_to_device();
             })
             .boxed();
@@ -103,7 +103,7 @@ impl<'m> Device<'m> {
             .output_getter()
             .changed_stream(true)
             .stream_take_until_exhausted(exit_flag.clone())
-            .for_each(async move |_output| {
+            .for_each(|_output| async {
                 self.device_to_signals();
                 self.gui_summary_waker.wake();
             })

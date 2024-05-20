@@ -182,19 +182,18 @@ impl uri_cursor::Handler for Device {
                     let value = match request.body_parse_json::<bool>() {
                         Ok(value) => value,
                         Err(error) => {
-                            return async move { web::Response::error_400_from_error(error) }
-                                .boxed()
+                            return async { web::Response::error_400_from_error(error) }.boxed()
                         }
                     };
 
                     self.value_beat_sender.send(value).unwrap();
                     self.gui_summary_waker.wake();
 
-                    async move { web::Response::ok_empty() }.boxed()
+                    async { web::Response::ok_empty() }.boxed()
                 }
-                _ => async move { web::Response::error_405() }.boxed(),
+                _ => async { web::Response::error_405() }.boxed(),
             },
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

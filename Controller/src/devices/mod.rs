@@ -98,9 +98,9 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
 
                     let device_data = DeviceData { name, class };
 
-                    async move { web::Response::ok_json(device_data) }.boxed()
+                    async { web::Response::ok_json(device_data) }.boxed()
                 }
-                _ => async move { web::Response::error_405() }.boxed(),
+                _ => async { web::Response::error_405() }.boxed(),
             },
             uri_cursor::UriCursor::Next("gui-summary", uri_cursor) => {
                 match self.device().as_gui_summary_device_base() {
@@ -108,22 +108,22 @@ impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
                         uri_cursor::UriCursor::Terminal => match *request.method() {
                             http::Method::GET => {
                                 let value = gui_summary_device_base.value();
-                                async move { web::Response::ok_json(value) }.boxed()
+                                async { web::Response::ok_json(value) }.boxed()
                             }
-                            _ => async move { web::Response::error_405() }.boxed(),
+                            _ => async { web::Response::error_405() }.boxed(),
                         },
-                        _ => async move { web::Response::error_404() }.boxed(),
+                        _ => async { web::Response::error_404() }.boxed(),
                     },
-                    None => async move { web::Response::error_404() }.boxed(),
+                    None => async { web::Response::error_404() }.boxed(),
                 }
             }
             uri_cursor::UriCursor::Next("device", uri_cursor) => {
                 match self.device().as_web_handler() {
                     Some(handler) => handler.handle(request, uri_cursor),
-                    None => async move { web::Response::error_404() }.boxed(),
+                    None => async { web::Response::error_404() }.boxed(),
                 }
             }
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

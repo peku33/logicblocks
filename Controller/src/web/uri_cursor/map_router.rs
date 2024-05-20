@@ -21,10 +21,10 @@ impl<'h> Handler for MapRouter<'h> {
         uri_cursor: &UriCursor,
     ) -> BoxFuture<'static, Response> {
         match uri_cursor {
-            UriCursor::Terminal => async move { Response::error_404() }.boxed(),
+            UriCursor::Terminal => async { Response::error_404() }.boxed(),
             UriCursor::Next(prefix, uri_cursor) => match self.handlers.get(*prefix) {
                 Some(handler) => handler.handle(request, uri_cursor),
-                None => async move { Response::error_404() }.boxed(),
+                None => async { Response::error_404() }.boxed(),
             },
         }
     }

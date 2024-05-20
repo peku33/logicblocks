@@ -98,7 +98,7 @@ impl<V: Value + Clone> StateTargetRemoteBase for Signal<V> {
                 continue;
             }
 
-            lock.last = value.clone();
+            lock.last.clone_from(&value);
             lock.pending.push(value);
 
             changes = true;

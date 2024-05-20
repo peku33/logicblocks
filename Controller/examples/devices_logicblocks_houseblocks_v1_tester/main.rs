@@ -200,7 +200,7 @@ fn submenu_ask_device_address_manual() -> Result<Option<Address>, Error> {
 }
 
 fn master_device_discovery(master: &Master) -> Result<Address, Error> {
-    execute_on_tokio(async move {
+    execute_on_tokio(async {
         let transaction = master.transaction_device_discovery();
         transaction.await
     })

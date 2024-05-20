@@ -66,7 +66,7 @@ impl Device {
         self.signals_targets_changed_waker
             .stream()
             .stream_take_until_exhausted(exit_flag)
-            .for_each(async move |()| {
+            .for_each(|()| async {
                 self.signals_targets_changed();
             })
             .await;
@@ -157,18 +157,17 @@ impl uri_cursor::Handler for Device {
                     let value = match request.body_parse_json::<bool>() {
                         Ok(value) => value,
                         Err(error) => {
-                            return async move { web::Response::error_400_from_error(error) }
-                                .boxed()
+                            return async { web::Response::error_400_from_error(error) }.boxed()
                         }
                     };
 
                     self.push(value);
 
-                    async move { web::Response::ok_empty() }.boxed()
+                    async { web::Response::ok_empty() }.boxed()
                 }
-                _ => async move { web::Response::error_405() }.boxed(),
+                _ => async { web::Response::error_405() }.boxed(),
             },
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

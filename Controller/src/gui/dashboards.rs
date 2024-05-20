@@ -164,22 +164,22 @@ impl uri_cursor::Handler for Dashboard {
                     http::Method::GET => {
                         let dashboard_summary_serialize = DashboardSummarySerialize::new(self);
 
-                        async move { web::Response::ok_json(dashboard_summary_serialize) }.boxed()
+                        async { web::Response::ok_json(dashboard_summary_serialize) }.boxed()
                     }
-                    _ => async move { web::Response::error_405() }.boxed(),
+                    _ => async { web::Response::error_405() }.boxed(),
                 },
-                _ => async move { web::Response::error_404() }.boxed(),
+                _ => async { web::Response::error_404() }.boxed(),
             },
             uri_cursor::UriCursor::Next("content", uri_cursor) => match uri_cursor.as_ref() {
                 uri_cursor::UriCursor::Terminal => match *request.method() {
                     http::Method::GET => {
                         let dashboard_content_serialize = DashboardContentSerialize::new(self);
 
-                        async move { web::Response::ok_json(dashboard_content_serialize) }.boxed()
+                        async { web::Response::ok_json(dashboard_content_serialize) }.boxed()
                     }
-                    _ => async move { web::Response::error_405() }.boxed(),
+                    _ => async { web::Response::error_405() }.boxed(),
                 },
-                _ => async move { web::Response::error_404() }.boxed(),
+                _ => async { web::Response::error_404() }.boxed(),
             },
             uri_cursor::UriCursor::Next(content_path_item, uri_cursor) => {
                 match &self.content {
@@ -187,18 +187,18 @@ impl uri_cursor::Handler for Dashboard {
                     Content::SectionContent(section_content) => {
                         let dashboard_index: usize = match content_path_item.parse() {
                             Ok(dashboard_index) => dashboard_index,
-                            Err(_) => return async move { web::Response::error_404() }.boxed(),
+                            Err(_) => return async { web::Response::error_404() }.boxed(),
                         };
 
                         let dashboards = match &section_content.section_content {
                             SectionContent::Dashboards(dashboards) => dashboards,
                             SectionContent::Devices(_) => {
-                                return async move { web::Response::error_404() }.boxed()
+                                return async { web::Response::error_404() }.boxed()
                             }
                         };
                         let dashboard = match dashboards.dashboards.get(dashboard_index) {
                             Some(dashboard) => dashboard,
-                            None => return async move { web::Response::error_404() }.boxed(),
+                            None => return async { web::Response::error_404() }.boxed(),
                         };
 
                         dashboard.handle(request, uri_cursor)
@@ -210,39 +210,39 @@ impl uri_cursor::Handler for Dashboard {
                                 Some((section_index, dashboard_index)) => {
                                     (section_index, dashboard_index)
                                 }
-                                None => return async move { web::Response::error_404() }.boxed(),
+                                None => return async { web::Response::error_404() }.boxed(),
                             };
 
                         let section_index: usize = match section_index.parse() {
                             Ok(section_index) => section_index,
-                            Err(_) => return async move { web::Response::error_404() }.boxed(),
+                            Err(_) => return async { web::Response::error_404() }.boxed(),
                         };
                         let dashboard_index: usize = match dashboard_index.parse() {
                             Ok(dashboard_index) => dashboard_index,
-                            Err(_) => return async move { web::Response::error_404() }.boxed(),
+                            Err(_) => return async { web::Response::error_404() }.boxed(),
                         };
 
                         let section = match sections.sections.get(section_index) {
                             Some(section) => section,
-                            None => return async move { web::Response::error_404() }.boxed(),
+                            None => return async { web::Response::error_404() }.boxed(),
                         };
 
                         let dashboards = match &section.content {
                             SectionContent::Dashboards(dashboards) => dashboards,
                             SectionContent::Devices(_) => {
-                                return async move { web::Response::error_404() }.boxed()
+                                return async { web::Response::error_404() }.boxed()
                             }
                         };
                         let dashboard = match dashboards.dashboards.get(dashboard_index) {
                             Some(dashboard) => dashboard,
-                            None => return async move { web::Response::error_404() }.boxed(),
+                            None => return async { web::Response::error_404() }.boxed(),
                         };
 
                         dashboard.handle(request, uri_cursor)
                     }
                 }
             }
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

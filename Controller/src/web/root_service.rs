@@ -37,7 +37,7 @@ impl<'a> Handler for RootService<'a> {
         let gui_response =
             self.gui_responder
                 .respond(request.method(), request.uri(), request.headers());
-        async move { gui_response }.boxed()
+        async { gui_response }.boxed()
     }
 }
 
@@ -70,7 +70,7 @@ mod gui_responder {
         pub fn new() -> Self {
             let inner = GuiResponderInnerBuilder {
                 loader: Loader::new(include_bytes!(env!("CI_WEB_STATIC_PACK_GUI"))).unwrap(),
-                responder_builder: move |loader| Responder::new(loader),
+                responder_builder: |loader| Responder::new(loader),
             }
             .build();
 

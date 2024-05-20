@@ -107,7 +107,7 @@ impl Device {
         self.signals_targets_changed_waker
             .stream()
             .stream_take_until_exhausted(exit_flag)
-            .for_each(async move |()| {
+            .for_each(|()| async {
                 self.signals_targets_changed();
             })
             .await;
@@ -202,25 +202,25 @@ impl uri_cursor::Handler for Device {
             Some("r") => match *request.method() {
                 http::Method::POST => {
                     self.set(false);
-                    async move { web::Response::ok_empty() }.boxed()
+                    async { web::Response::ok_empty() }.boxed()
                 }
-                _ => async move { web::Response::error_405() }.boxed(),
+                _ => async { web::Response::error_405() }.boxed(),
             },
             Some("s") => match *request.method() {
                 http::Method::POST => {
                     self.set(true);
-                    async move { web::Response::ok_empty() }.boxed()
+                    async { web::Response::ok_empty() }.boxed()
                 }
-                _ => async move { web::Response::error_405() }.boxed(),
+                _ => async { web::Response::error_405() }.boxed(),
             },
             Some("t") => match *request.method() {
                 http::Method::POST => {
                     self.invert();
-                    async move { web::Response::ok_empty() }.boxed()
+                    async { web::Response::ok_empty() }.boxed()
                 }
-                _ => async move { web::Response::error_405() }.boxed(),
+                _ => async { web::Response::error_405() }.boxed(),
             },
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

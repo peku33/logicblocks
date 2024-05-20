@@ -99,7 +99,7 @@ async fn main() -> Result<(), Error> {
     let event_stream_manager_receiver_runner = tokio_stream::wrappers::WatchStream::new(
         event_stream_manager.receiver(),
     )
-    .for_each(async move |events| {
+    .for_each(|events| async move {
         log::info!("events: {:?}", events);
     });
     pin_mut!(event_stream_manager_receiver_runner);

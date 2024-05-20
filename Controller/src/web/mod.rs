@@ -111,7 +111,7 @@ impl Response {
         // FIXME: webkit based browsers (firefox, safari) won't see the stream opened until something is written
         let ping_event = ":\r\n".to_owned();
         let hyper_body = Body::wrap_stream(
-            once(async move { Ok(ping_event) })
+            once(async { Ok(ping_event) })
                 .chain(sse_stream.map(|event| Ok::<_, Error>(event.to_payload()))),
         );
         let hyper_response = HyperResponse::builder()

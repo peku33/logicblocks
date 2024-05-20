@@ -12,7 +12,6 @@
 #![feature(int_roundings)]
 #![feature(let_chains)]
 #![feature(never_type)]
-#![feature(raw_vec_internals)]
 #![feature(sync_unsafe_cell)]
 #![feature(trait_alias)]
 #![feature(try_blocks)]

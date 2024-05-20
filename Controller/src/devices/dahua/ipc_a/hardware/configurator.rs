@@ -570,7 +570,7 @@ impl<'a> Configurator<'a> {
     where
         E: FnOnce(&mut serde_json::Map<String, serde_json::Value>) -> Result<(), Error>,
     {
-        self.config_patch_with(name, move |config| -> Result<(), Error> {
+        self.config_patch_with(name, |config| -> Result<(), Error> {
             let config = config
                 .as_object_mut()
                 .ok_or_else(|| anyhow!("expected object"))?;
@@ -592,7 +592,7 @@ impl<'a> Configurator<'a> {
     where
         E: FnOnce(&mut serde_json::Map<String, serde_json::Value>) -> Result<(), Error>,
     {
-        self.config_patch_with(name, move |config| -> Result<(), Error> {
+        self.config_patch_with(name, |config| -> Result<(), Error> {
             let config = config
                 .as_array_mut()
                 .ok_or_else(|| anyhow!("expected array"))?;
@@ -618,7 +618,7 @@ impl<'a> Configurator<'a> {
         name: &str,
         patch: HashMap<&str, serde_json::Value>,
     ) -> Result<(), Error> {
-        self.config_patch_object_with(name, move |config| -> Result<(), Error> {
+        self.config_patch_object_with(name, |config| -> Result<(), Error> {
             patch_object(config, patch).context("patch_object")?;
 
             Ok(())
@@ -633,7 +633,7 @@ impl<'a> Configurator<'a> {
         name: &str,
         patch: HashMap<&str, serde_json::Value>,
     ) -> Result<(), Error> {
-        self.config_patch_array_object_with(name, move |config| -> Result<(), Error> {
+        self.config_patch_array_object_with(name, |config| -> Result<(), Error> {
             patch_object(config, patch).context("patch_object")?;
 
             Ok(())
@@ -974,7 +974,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn system_multicast_disable(&mut self) -> Result<(), Error> {
-        self.config_patch_with("Multicast", move |config| {
+        self.config_patch_with("Multicast", |config| {
             *config
                 .pointer_mut("/DHII/0/Enable")
                 .ok_or_else(|| anyhow!("missing item"))? = json!(false);
@@ -1201,37 +1201,34 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn system_storage_disable(&mut self) -> Result<(), Error> {
-        self.config_patch_array_object_with(
-            "RecordStoragePoint",
-            move |config| -> Result<(), Error> {
-                config
-                    .values_mut()
-                    .try_for_each(|config| -> Result<(), Error> {
-                        let config = config
-                            .as_object_mut()
-                            .ok_or_else(|| anyhow!("expected object"))?;
+        self.config_patch_array_object_with("RecordStoragePoint", |config| -> Result<(), Error> {
+            config
+                .values_mut()
+                .try_for_each(|config| -> Result<(), Error> {
+                    let config = config
+                        .as_object_mut()
+                        .ok_or_else(|| anyhow!("expected object"))?;
 
-                        // at least one element must be set to true, otherwise detections wont work
-                        patch_object(
-                            config,
-                            hashmap! {
-                                "AutoSync" => json!(false),
-                                "Custom" => json!(true),
-                                "FTP" => json!(false),
-                                "Local" => json!(false),
-                                "LocalForEmergency" => json!(false),
-                                "Redundant" => json!(false),
-                                "Remote" => json!(false),
-                            },
-                        )
-                        .context("patch_object")?;
+                    // at least one element must be set to true, otherwise detections wont work
+                    patch_object(
+                        config,
+                        hashmap! {
+                            "AutoSync" => json!(false),
+                            "Custom" => json!(true),
+                            "FTP" => json!(false),
+                            "Local" => json!(false),
+                            "LocalForEmergency" => json!(false),
+                            "Redundant" => json!(false),
+                            "Remote" => json!(false),
+                        },
+                    )
+                    .context("patch_object")?;
 
-                        Ok(())
-                    })?;
+                    Ok(())
+                })?;
 
-                Ok(())
-            },
-        )
+            Ok(())
+        })
         .await
         .context("config_patch_array_object_with")?;
 
@@ -1254,7 +1251,7 @@ impl<'a> Configurator<'a> {
         let mut changed = false;
 
         let changed_ref = &mut changed;
-        self.config_patch_with("VideoStandard", move |config| {
+        self.config_patch_with("VideoStandard", |config| {
             let config_new = json!("NTSC");
             if *config != config_new {
                 *config = config_new;
@@ -1495,7 +1492,7 @@ impl<'a> Configurator<'a> {
             Ok(())
         }
 
-        self.config_patch_array_object_with("Encode", move |config| {
+        self.config_patch_array_object_with("Encode", |config| {
             let main_format = config
                 .get_mut("MainFormat")
                 .ok_or_else(|| anyhow!("missing MainFormat"))?
@@ -1504,7 +1501,7 @@ impl<'a> Configurator<'a> {
             ensure!(main_format.len() == 4);
             main_format
                 .iter_mut()
-                .try_for_each(move |config| apply_main_format(config, width, height))?;
+                .try_for_each(|config| apply_main_format(config, width, height))?;
 
             let extra_format = config
                 .get_mut("ExtraFormat")
@@ -1589,7 +1586,7 @@ impl<'a> Configurator<'a> {
             .context("config_patch_object")?;
         }
 
-        self.config_patch_with("VideoWidget", move |config| {
+        self.config_patch_with("VideoWidget", |config| {
             *config
                 .pointer_mut("/0/ChannelTitle/EncodeBlend")
                 .ok_or_else(|| anyhow!("missing EncodeBlend"))? = json!(channel_title.is_some());
@@ -1643,7 +1640,7 @@ impl<'a> Configurator<'a> {
 
         let privacy_mask = privacy_mask.unwrap_or_else(PrivacyMask::none);
 
-        self.config_patch_array_object_with("VideoWidget", move |config| {
+        self.config_patch_array_object_with("VideoWidget", |config| {
             let covers = config
                 .get_mut("Covers")
                 .ok_or_else(|| anyhow!("missing Covers"))?
@@ -1686,7 +1683,7 @@ impl<'a> Configurator<'a> {
             return Ok(());
         }
 
-        self.config_patch_with("ExAlarm", move |config| -> Result<(), Error> {
+        self.config_patch_with("ExAlarm", |config| -> Result<(), Error> {
             let config = config
                 .as_array_mut()
                 .ok_or_else(|| anyhow!("expected array"))?;
@@ -2030,7 +2027,7 @@ impl<'a> Configurator<'a> {
                 build: 1053483,
             });
 
-        self.config_patch_with("AudioDetect", move |config| -> Result<(), Error> {
+        self.config_patch_with("AudioDetect", |config| -> Result<(), Error> {
             let config = config
                 .as_array_mut()
                 .ok_or_else(|| anyhow!("expected array"))?;

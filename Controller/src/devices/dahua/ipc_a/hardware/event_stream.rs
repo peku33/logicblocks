@@ -173,7 +173,7 @@ impl<'a> Manager<'a> {
 
         self.events_active
             .borrow_mut()
-            .extract_if(move |event, started| {
+            .extract_if(|event, started| {
                 if *started < fix_before {
                     log::warn!("removing outdated events: {:?}", event);
                     true
@@ -208,7 +208,7 @@ impl<'a> Manager<'a> {
             .context("http_request_boundary_stream")?;
 
         let item_stream_runner = item_stream
-            .try_for_each(async move |item| -> Result<(), Error> {
+            .try_for_each(|item| async move {
                 let event_state_update =
                     Self::event_state_update_parse(&item).context("event_state_update_parse")?;
 
@@ -220,7 +220,7 @@ impl<'a> Manager<'a> {
                 }
                 Ok(())
             })
-            .map(move |result| match result.context("item_stream_runner") {
+            .map(|result| match result.context("item_stream_runner") {
                 Ok(()) => anyhow!("item_stream completed"),
                 Err(error) => error,
             });
@@ -230,7 +230,7 @@ impl<'a> Manager<'a> {
         let events_fixer_runner = tokio_stream::wrappers::IntervalStream::new(
             tokio::time::interval(Self::EVENT_FIXER_INTERVAL),
         )
-        .for_each(async move |time_point| {
+        .for_each(|time_point| async move {
             if self.events_fixer_handle(time_point.into_std()) {
                 self.events_propagate();
             }

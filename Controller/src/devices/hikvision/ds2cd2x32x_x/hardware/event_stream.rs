@@ -112,7 +112,7 @@ impl<'a> Manager<'a> {
     fn events_disabler_handle(&self) -> bool {
         self.events_active
             .borrow_mut()
-            .extract_if(|_, ticks_left| {
+            .extract_if(|_event, ticks_left| {
                 *ticks_left -= 1;
                 *ticks_left == 0
             })
@@ -140,7 +140,7 @@ impl<'a> Manager<'a> {
 
         // TODO: Add timeout
         let element_stream_runner = element_stream
-            .try_for_each(async move |item| -> Result<(), Error> {
+            .try_for_each(|item| async {
                 let event_state_update =
                     Self::event_state_update_parse(item).context("event_state_update_parse")?;
 
@@ -159,7 +159,7 @@ impl<'a> Manager<'a> {
         let events_disabler_runner = tokio_stream::wrappers::IntervalStream::new(
             tokio::time::interval(Self::EVENTS_DISABLER_TICK_INTERVAL),
         )
-        .for_each(async move |_time_point| {
+        .for_each(|_time_point| async {
             let mut events_changed = false;
             events_changed |= self.events_disabler_handle();
             if events_changed {

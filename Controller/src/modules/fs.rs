@@ -17,6 +17,7 @@ impl Fs {
         create_dir_all(&persistent_root).unwrap();
 
         // TODO: Make this instance dependant
+        // FIXME: XDG_RUNTIME_DIR may not exist
         let temporary_root = if cfg!(unix) {
             if let Ok(temporary_root) = env::var("XDG_RUNTIME_DIR") {
                 PathBuf::from(temporary_root)

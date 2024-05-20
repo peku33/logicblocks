@@ -5,7 +5,7 @@ use crate::{
     util::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use async_trait::async_trait;
@@ -44,7 +44,7 @@ where
             .take_pending()
             .into_vec()
             .into_iter()
-            .for_each(move |value| {
+            .for_each(|value| {
                 self.sink.push(now, value);
             });
     }
@@ -56,7 +56,7 @@ where
         self.signals_targets_changed_waker
             .stream()
             .stream_take_until_exhausted(exit_flag)
-            .for_each(async move |()| {
+            .for_each(|()| async {
                 self.signals_targets_changed();
             })
             .await;

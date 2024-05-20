@@ -69,7 +69,7 @@ impl<'h> Server<'h> {
     // Unsafe because of transmuting.
     // To use it, you must ensure that all spawned futures ended (possibly by waiting for runtime closing)
     async unsafe fn run(&self) -> ! {
-        let self_static = transmute::<_, &'static Server<'static>>(self);
+        let self_static = transmute::<&'_ Server<'_>, &'static Server<'static>>(self);
         let make_service = make_service_fn(|connection: &AddrStream| {
             let remote_address = connection.remote_addr();
             async move {
@@ -133,7 +133,7 @@ impl<'r, 'h> Runner<'r, 'h> {
 
         let inner = RunnerInnerBuilder {
             server,
-            runtime_scope_runnable_builder: move |server| {
+            runtime_scope_runnable_builder: |server| {
                 let runtime_scope_runnable = RuntimeScopeRunnable::new(runtime, server);
                 let runtime_scope_runnable = ManuallyDrop::new(runtime_scope_runnable);
                 runtime_scope_runnable
@@ -149,7 +149,7 @@ impl<'r, 'h> Runner<'r, 'h> {
     pub async fn finalize(mut self) {
         let runtime_scope_runnable =
             self.inner
-                .with_runtime_scope_runnable_mut(move |runtime_scope_runnable| unsafe {
+                .with_runtime_scope_runnable_mut(|runtime_scope_runnable| unsafe {
                     ManuallyDrop::take(runtime_scope_runnable)
                 });
         runtime_scope_runnable.finalize().await;
@@ -191,7 +191,7 @@ impl<'h> RunnerOwned<'h> {
         let inner = RunnerOwnedInnerBuilder {
             runtime,
 
-            runner_builder: move |runtime| {
+            runner_builder: |runtime| {
                 let runner = Runner::new(runtime, bind, handler);
                 let runner = ManuallyDrop::new(runner);
                 runner
@@ -207,7 +207,7 @@ impl<'h> RunnerOwned<'h> {
     pub async fn finalize(mut self) {
         let runner = self
             .inner
-            .with_runner_mut(move |runner| unsafe { ManuallyDrop::take(runner) });
+            .with_runner_mut(|runner| unsafe { ManuallyDrop::take(runner) });
         runner.finalize().await;
 
         self.drop_guard.set();

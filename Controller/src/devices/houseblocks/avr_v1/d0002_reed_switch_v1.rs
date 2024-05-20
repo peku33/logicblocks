@@ -43,7 +43,7 @@ pub mod logic {
                 properties_remote: hardware_device.properties_remote(),
 
                 signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-                signal_inputs: array_init(|_| {
+                signal_inputs: array_init(|_input_index| {
                     signal::state_source::Signal::<Resistance>::new(None)
                 }),
 
@@ -92,7 +92,7 @@ pub mod logic {
                 .ins_changed_waker_remote
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(async move |()| {
+                .for_each(|()| async {
                     self.properties_ins_changed();
                 })
                 .await;
@@ -413,7 +413,7 @@ pub mod hardware {
         }
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
             let inputs = (0..INPUTS_COUNT)
-                .map(|_| -> Result<_, Error> {
+                .map(|_input_index| -> Result<_, Error> {
                     let input_raw = parser.expect_u8().context("expect_u8")?;
                     let input =
                         Self::transform_input_raw(input_raw).context("transform_input_raw")?;

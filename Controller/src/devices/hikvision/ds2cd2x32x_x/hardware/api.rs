@@ -306,7 +306,7 @@ impl Api {
         result
     }
     fn firmware_version_supported(firmware_version: &Version) -> bool {
-        let supported_versions = vec![VersionReq::parse("^5.2.0").unwrap()];
+        let supported_versions = [VersionReq::parse("^5.2.0").unwrap()];
         supported_versions
             .iter()
             .any(|supported_version| supported_version.matches(firmware_version))

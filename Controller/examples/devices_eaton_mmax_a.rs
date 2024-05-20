@@ -111,7 +111,7 @@ async fn main() -> Result<(), Error> {
         .output_getter()
         .value_stream(true)
         .stream_take_until_exhausted(exit_flag_sender.receiver())
-        .for_each(async move |output_state| {
+        .for_each(|output_state| async move {
             log::info!("output_state: {:#?}", output_state);
         });
 

@@ -182,7 +182,7 @@ impl<'d> Exchanger<'d> {
             .borrow_child()
             .connections
             .keys()
-            .map(move |sources_changed_waker_remote| {
+            .map(|sources_changed_waker_remote| {
                 let sources_changed_waker_remote_stream = sources_changed_waker_remote.stream();
 
                 (
@@ -195,7 +195,7 @@ impl<'d> Exchanger<'d> {
         sources_changed_waker_remote_streams
             .iter_mut()
             .map(
-                move |(sources_changed_waker_remote, sources_changed_waker_remote_stream)| {
+                |(sources_changed_waker_remote, sources_changed_waker_remote_stream)| {
                     let sources_changed_waker_remote = *sources_changed_waker_remote;
 
                     sources_changed_waker_remote_stream
@@ -206,13 +206,13 @@ impl<'d> Exchanger<'d> {
             .collect::<StreamSelectAllOrPending<_>>()
             .stream_take_until_exhausted(exit_flag)
             .ready_chunks_dynamic()
-            .map(move |sources_changed_waker_remotes| {
+            .map(|sources_changed_waker_remotes| {
                 sources_changed_waker_remotes
                     .into_vec()
                     .into_iter()
                     .collect::<HashSet<_>>()
             })
-            .for_each(async move |sources_changed_waker_remotes| {
+            .for_each(|sources_changed_waker_remotes| async {
                 let mut targets_changed_waker_remotes =
                     HashSet::<ByAddress<&TargetsChangedWakerRemote<'d>>>::new();
 
@@ -292,7 +292,7 @@ fn new_inner<'d>(
 ) -> Result<ExchangerInner<'d>, Error> {
     let inner = ExchangerInner::try_new(
         new_inner_parent(devices).context("new_inner_parent")?,
-        move |parent| -> Result<_, Error> {
+        |parent| -> Result<_, Error> {
             let child =
                 new_inner_child(parent, connections_requested).context("new_inner_child")?;
             Ok(child)
@@ -321,7 +321,7 @@ fn new_inner_parent<'d>(
         ),
     > = devices
         .iter()
-        .map(move |(device_id, device)| {
+        .map(|(device_id, device)| {
             let targets_changed_waker_remote = device
                 .targets_changed_waker()
                 .map(|targets_changed_waker| targets_changed_waker.remote());
@@ -343,9 +343,7 @@ fn new_inner_parent<'d>(
             }
             let signals_remote_base_by_identifier = signals_by_identifier
                 .into_iter()
-                .map(move |(signal_identifier, signal)| {
-                    (signal_identifier, signal.as_remote_base())
-                })
+                .map(|(signal_identifier, signal)| (signal_identifier, signal.as_remote_base()))
                 .collect::<HashMap<_, _>>();
 
             (

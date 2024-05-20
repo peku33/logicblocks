@@ -49,7 +49,7 @@ async fn main() -> Result<(), Error> {
     let segment_deleter_runner = channel_segment_receiver
         .by_ref()
         .stream_take_until_exhausted(exit_flag_sender.receiver())
-        .for_each(async move |channel_segment| {
+        .for_each(|channel_segment| async {
             log::info!("received segment: {:?}", channel_segment);
             fs::remove_file(channel_segment.segment.path).await.unwrap();
         });
@@ -60,7 +60,7 @@ async fn main() -> Result<(), Error> {
         tokio::time::interval(DETECTION_CHANGE_INTERVAL),
     )
     .stream_take_until_exhausted(exit_flag_sender.receiver())
-    .for_each(async move |_| {
+    .for_each(|_| async {
         let mut rng = rand::thread_rng();
         let detection_level: Option<Ratio> = if rng.gen_bool(0.7) {
             let ratio_f64: f64 = rng.gen_range(0.0..1.0);

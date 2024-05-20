@@ -206,11 +206,13 @@ impl<'a> Responder<'a> {
         let waker_to_sender_runner = self
             .topic_paths
             .values()
-            .map(move |value| {
+            .map(|value| {
                 let receiver = value.waker.receiver();
                 let sender = &value.sender;
 
-                receiver.for_each(async move |()| sender.wake()).boxed()
+                receiver
+                    .for_each(move |()| async move { sender.wake() })
+                    .boxed()
             })
             .collect::<FutureSelectAllOrPending<_>>();
         pin_mut!(waker_to_sender_runner);
@@ -256,7 +258,7 @@ impl<'a> uri_cursor::Handler for Responder<'a> {
                     {
                         Ok(filter_param) => filter_param,
                         Err(error) => {
-                            return async move { Response::error_400_from_error(error) }.boxed()
+                            return async { Response::error_400_from_error(error) }.boxed()
                         }
                     };
 
@@ -265,14 +267,14 @@ impl<'a> uri_cursor::Handler for Responder<'a> {
                     {
                         Ok(topic_paths) => topic_paths,
                         Err(error) => {
-                            return async move { Response::error_400_from_error(error) }.boxed()
+                            return async { Response::error_400_from_error(error) }.boxed()
                         }
                     };
 
                     let topic_paths_stream =
                         self.make_topic_paths_stream_skip_missing(&topic_paths);
 
-                    async move { Response::ok_sse_stream(topic_paths_stream) }.boxed()
+                    async { Response::ok_sse_stream(topic_paths_stream) }.boxed()
                 }
                 http::Method::POST => {
                     let topic_paths = match request
@@ -283,18 +285,18 @@ impl<'a> uri_cursor::Handler for Responder<'a> {
                     {
                         Ok(topic_paths) => topic_paths,
                         Err(error) => {
-                            return async move { Response::error_400_from_error(error) }.boxed()
+                            return async { Response::error_400_from_error(error) }.boxed()
                         }
                     };
 
                     let topic_paths_stream =
                         self.make_topic_paths_stream_skip_missing(&topic_paths);
 
-                    async move { Response::ok_sse_stream(topic_paths_stream) }.boxed()
+                    async { Response::ok_sse_stream(topic_paths_stream) }.boxed()
                 }
-                _ => async move { Response::error_405() }.boxed(),
+                _ => async { Response::error_405() }.boxed(),
             },
-            _ => async move { Response::error_404() }.boxed(),
+            _ => async { Response::error_404() }.boxed(),
         }
     }
 }

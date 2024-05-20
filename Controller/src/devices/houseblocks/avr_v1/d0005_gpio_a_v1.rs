@@ -287,7 +287,7 @@ pub mod logic {
                 .signals_targets_changed_waker
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(async move |()| {
+                .for_each(|()| async {
                     self.signals_targets_changed();
                 })
                 .boxed();
@@ -298,7 +298,7 @@ pub mod logic {
                 .ins_changed_waker_remote
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(async move |()| {
+                .for_each(|()| async {
                     self.properties_ins_changed();
                 })
                 .boxed();
@@ -848,7 +848,7 @@ pub mod hardware {
                 .outs_changed_waker
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(async move |()| {
+                .for_each(|()| async {
                     self.poll_waker.wake();
                 })
                 .boxed();
@@ -1438,7 +1438,7 @@ pub mod hardware {
     impl BusResponseDs18x20s {
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
             let values = (0..DS18X20_COUNT)
-                .map(|_| {
+                .map(|_ds18x20_index| {
                     Ds18x20SensorState::parse(parser)
                         .map(|ds18x20_sensor_state| ds18x20_sensor_state.into_inner())
                 })

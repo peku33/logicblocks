@@ -1022,7 +1022,7 @@ impl Device {
             Self::CHANNELS_TICK_INTERVAL,
         ))
         .stream_take_until_exhausted(exit_flag.clone())
-        .for_each(async move |_| {
+        .for_each(|_| async {
             self.channels_tick();
         })
         .boxed();
@@ -1032,7 +1032,7 @@ impl Device {
             .signals_targets_changed_waker
             .stream()
             .stream_take_until_exhausted(exit_flag.clone())
-            .for_each(async move |()| {
+            .for_each(|()| async {
                 self.signals_targets_changed();
             })
             .boxed();
@@ -1341,128 +1341,127 @@ impl uri_cursor::Handler for Device {
                 Some("disable") => match *request.method() {
                     http::Method::POST => {
                         self.device_disable();
-                        async move { web::Response::ok_empty() }.boxed()
+                        async { web::Response::ok_empty() }.boxed()
                     }
-                    _ => async move { web::Response::error_405() }.boxed(),
+                    _ => async { web::Response::error_405() }.boxed(),
                 },
                 Some("pause") => match *request.method() {
                     http::Method::POST => {
                         self.device_pause();
-                        async move { web::Response::ok_empty() }.boxed()
+                        async { web::Response::ok_empty() }.boxed()
                     }
-                    _ => async move { web::Response::error_405() }.boxed(),
+                    _ => async { web::Response::error_405() }.boxed(),
                 },
                 Some("enable") => match *request.method() {
                     http::Method::POST => {
                         self.device_enable();
-                        async move { web::Response::ok_empty() }.boxed()
+                        async { web::Response::ok_empty() }.boxed()
                     }
-                    _ => async move { web::Response::error_405() }.boxed(),
+                    _ => async { web::Response::error_405() }.boxed(),
                 },
-                _ => async move { web::Response::error_404() }.boxed(),
+                _ => async { web::Response::error_404() }.boxed(),
             },
             uri_cursor::UriCursor::Next("channels", uri_cursor) => match uri_cursor.as_ref() {
                 uri_cursor::UriCursor::Next("all", uri_cursor) => match uri_cursor.as_last() {
                     Some("clear") => match *request.method() {
                         http::Method::POST => {
                             self.channels_clear();
-                            async move { web::Response::ok_empty() }.boxed()
+                            async { web::Response::ok_empty() }.boxed()
                         }
-                        _ => async move { web::Response::error_405() }.boxed(),
+                        _ => async { web::Response::error_405() }.boxed(),
                     },
                     Some("add") => match *request.method() {
                         http::Method::POST => {
                             let multiplier = match request.body_parse_json::<Multiplier>() {
                                 Ok(handler_channel_add) => handler_channel_add,
-                                Err(error) => return async move {
-                                    web::Response::error_400_from_error(error)
+                                Err(error) => {
+                                    return async { web::Response::error_400_from_error(error) }
+                                        .boxed()
                                 }
-                                .boxed(),
                             };
 
                             self.channels_add(multiplier);
-                            async move { web::Response::ok_empty() }.boxed()
+                            async { web::Response::ok_empty() }.boxed()
                         }
-                        _ => async move { web::Response::error_405() }.boxed(),
+                        _ => async { web::Response::error_405() }.boxed(),
                     },
-                    _ => async move { web::Response::error_404() }.boxed(),
+                    _ => async { web::Response::error_404() }.boxed(),
                 },
                 uri_cursor::UriCursor::Next(channel_id_string, uri_cursor) => {
                     let channel_id: usize = match channel_id_string.parse().context("channel_id") {
                         Ok(channel_id) => channel_id,
                         Err(error) => {
-                            return async move { web::Response::error_400_from_error(error) }
-                                .boxed()
+                            return async { web::Response::error_400_from_error(error) }.boxed()
                         }
                     };
                     if !(0..self.configuration.channels.len()).contains(&channel_id) {
-                        return async move { web::Response::error_404() }.boxed();
+                        return async { web::Response::error_404() }.boxed();
                     }
 
                     match uri_cursor.as_last() {
                         Some("disable") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_disable(channel_id);
-                                async move { web::Response::ok_empty() }.boxed()
+                                async { web::Response::ok_empty() }.boxed()
                             }
-                            _ => async move { web::Response::error_405() }.boxed(),
+                            _ => async { web::Response::error_405() }.boxed(),
                         },
                         Some("pause") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_pause(channel_id);
-                                async move { web::Response::ok_empty() }.boxed()
+                                async { web::Response::ok_empty() }.boxed()
                             }
-                            _ => async move { web::Response::error_405() }.boxed(),
+                            _ => async { web::Response::error_405() }.boxed(),
                         },
                         Some("enable") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_enable(channel_id);
-                                async move { web::Response::ok_empty() }.boxed()
+                                async { web::Response::ok_empty() }.boxed()
                             }
-                            _ => async move { web::Response::error_405() }.boxed(),
+                            _ => async { web::Response::error_405() }.boxed(),
                         },
                         Some("clear") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_clear(channel_id);
-                                async move { web::Response::ok_empty() }.boxed()
+                                async { web::Response::ok_empty() }.boxed()
                             }
-                            _ => async move { web::Response::error_405() }.boxed(),
+                            _ => async { web::Response::error_405() }.boxed(),
                         },
                         Some("add") => match *request.method() {
                             http::Method::POST => {
                                 let multiplier = match request.body_parse_json::<Multiplier>() {
                                     Ok(handler_channel_add) => handler_channel_add,
-                                    Err(error) => return async move {
-                                        web::Response::error_400_from_error(error)
+                                    Err(error) => {
+                                        return async { web::Response::error_400_from_error(error) }
+                                            .boxed()
                                     }
-                                    .boxed(),
                                 };
 
                                 self.channel_add(channel_id, multiplier);
-                                async move { web::Response::ok_empty() }.boxed()
+                                async { web::Response::ok_empty() }.boxed()
                             }
-                            _ => async move { web::Response::error_405() }.boxed(),
+                            _ => async { web::Response::error_405() }.boxed(),
                         },
-                        Some("move-front") => match *request.method() {
+                        Some("async { web::Response-front") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_move_front(channel_id);
-                                async move { web::Response::ok_empty() }.boxed()
+                                async { web::Response::ok_empty() }.boxed()
                             }
-                            _ => async move { web::Response::error_405() }.boxed(),
+                            _ => async { web::Response::error_405() }.boxed(),
                         },
-                        Some("move-back") => match *request.method() {
+                        Some("async { web::Response-back") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_move_back(channel_id);
-                                async move { web::Response::ok_empty() }.boxed()
+                                async { web::Response::ok_empty() }.boxed()
                             }
-                            _ => async move { web::Response::error_405() }.boxed(),
+                            _ => async { web::Response::error_405() }.boxed(),
                         },
-                        _ => async move { web::Response::error_404() }.boxed(),
+                        _ => async { web::Response::error_404() }.boxed(),
                     }
                 }
-                _ => async move { web::Response::error_404() }.boxed(),
+                _ => async { web::Response::error_404() }.boxed(),
             },
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

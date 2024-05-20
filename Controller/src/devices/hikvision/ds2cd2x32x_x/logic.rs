@@ -273,7 +273,7 @@ impl Device {
         let events_stream_manager_receiver_runner = tokio_stream::wrappers::WatchStream::new(
             events_stream_manager.receiver(),
         )
-        .for_each(async move |hardware_events| {
+        .for_each(|hardware_events| async move {
             let events = Events::from_event_stream_events(&hardware_events);
             self.events_handle(events);
         });
@@ -423,7 +423,7 @@ impl uri_cursor::Handler for Device {
             uri_cursor::UriCursor::Next("snapshot", uri_cursor) => {
                 self.snapshot_manager.handle(request, uri_cursor)
             }
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

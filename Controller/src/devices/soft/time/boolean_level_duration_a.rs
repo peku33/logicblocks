@@ -48,7 +48,7 @@ impl Device {
             signal_input: signal::state_target_queued::Signal::<bool>::new(),
             signal_started: signal::event_source::Signal::<()>::new(),
             signal_breakpoints: (0..breakpoints_count)
-                .map(|_| {
+                .map(|_breakpoint_index| {
                     (
                         signal::event_source::Signal::<()>::new(),
                         signal::event_source::Signal::<()>::new(),
@@ -65,7 +65,7 @@ impl Device {
     ) -> Exited {
         let signal_input_stream_filtered =
             StateTargetQueuedStream::new(&self.signals_targets_changed_waker, &self.signal_input)
-                .filter_map(async move |value| value);
+                .filter_map(|value| async move { value });
         pin_mut!(signal_input_stream_filtered);
 
         'outer: loop {

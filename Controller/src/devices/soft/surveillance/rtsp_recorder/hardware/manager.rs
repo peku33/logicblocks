@@ -7,7 +7,7 @@ use crate::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
         fs::{move_file, remove_all_dir_empty},
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use anyhow::{Context, Error};
@@ -56,7 +56,7 @@ impl<'f> Manager<'f> {
         name: String,
         fs: &'f Fs,
     ) -> Self {
-        let sqlite = SQLite::new(fs, format!("rtsp_recorder.manager.{}", name));
+        let sqlite = SQLite::new(format!("rtsp_recorder.manager.{}", name), fs);
 
         let initialized = Barrier::new();
 
@@ -80,7 +80,7 @@ impl<'f> Manager<'f> {
     // initialization
     async fn initialize_once(&self) -> Result<(), Error> {
         self.sqlite
-            .query(move |connection| -> Result<(), Error> {
+            .query(|connection| -> Result<(), Error> {
                 connection.execute_batch(indoc!("
                     CREATE TABLE IF NOT EXISTS storage_groups (
                         storage_group_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -144,7 +144,7 @@ impl<'f> Manager<'f> {
             .sqlite
             .query(
                 #[allow(clippy::type_complexity)]
-                move |connection| -> Result<Box<[(usize, String, Ratio)]>, Error> {
+                |connection| -> Result<Box<[(usize, String, Ratio)]>, Error> {
                     let channels = connection
                         .prepare(indoc!(
                             "
@@ -158,7 +158,7 @@ impl<'f> Manager<'f> {
                                 enabled
                         "
                         ))?
-                        .query_map([], move |row| {
+                        .query_map([], |row| {
                             let channel_id = row.get_ref_unwrap(0).as_i64()? as usize;
                             let name = row.get_ref_unwrap(1).as_str()?.to_owned();
                             let detection_threshold =
@@ -244,8 +244,8 @@ impl<'f> Manager<'f> {
             .borrow_mut()
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
-            .map(Ok)
-            .try_for_each_concurrent(None, async move |channel_id_segment| -> Result<(), Error> {
+            .map(Result::<_, Error>::Ok)
+            .try_for_each_concurrent(None, |channel_id_segment| async move {
                 self.channel_segment_handle(channel_id_segment.id, channel_id_segment.segment)
                     .await
                     .context("channel_segment_handle")?;
@@ -288,7 +288,7 @@ impl<'f> Manager<'f> {
         // find recordings to remove
         let recordings_to_remove = self
             .sqlite
-            .query(move |connection| -> Result<Box<[(usize, PathBuf)]>, Error> {
+            .query(|connection| -> Result<Box<[(usize, PathBuf)]>, Error> {
                 let recordings_to_remove = connection
                     .prepare(indoc!(
                         "
@@ -325,7 +325,7 @@ impl<'f> Manager<'f> {
                                 size_bytes DESC
                         "
                     ))?
-                    .query_map([], move |row| {
+                    .query_map([], |row| {
                         let recording_id = row.get_ref_unwrap(0).as_i64()? as usize;
                         let path_storage_relative = PathBuf::from(row.get_ref_unwrap(1).as_str()?);
                         Ok((recording_id, path_storage_relative))

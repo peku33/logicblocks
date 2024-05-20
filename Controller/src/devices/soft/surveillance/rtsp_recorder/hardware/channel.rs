@@ -4,7 +4,7 @@ use crate::{
     util::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use anyhow::{Context, Error};
@@ -205,8 +205,8 @@ impl Channel {
             .borrow_mut()
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
-            .map(Ok)
-            .try_for_each(async move |segment| -> Result<(), Error> {
+            .map(Result::<_, Error>::Ok)
+            .try_for_each(|segment| async move {
                 self.channel_segment_forward(segment)
                     .await
                     .context("channel_segment_forward")?;
@@ -254,12 +254,9 @@ impl Channel {
             channel_segment_forwarder_exit_flag_receiver,
         ) = async_flag::pair();
 
-        let recorder_runner = self
-            .recorder
-            .run(recorder_exit_flag)
-            .inspect(move |_: &Exited| {
-                channel_segment_forwarder_exit_flag_sender.signal();
-            });
+        let recorder_runner = self.recorder.run(recorder_exit_flag).inspect(|_: &Exited| {
+            channel_segment_forwarder_exit_flag_sender.signal();
+        });
 
         let channel_segment_forwarder_runner =
             self.channel_segment_forwarder_run(channel_segment_forwarder_exit_flag_receiver);

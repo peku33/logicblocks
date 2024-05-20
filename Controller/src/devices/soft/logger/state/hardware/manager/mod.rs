@@ -6,7 +6,7 @@ use crate::{
         async_barrier::Barrier,
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use anyhow::{ensure, Context, Error};
@@ -115,7 +115,7 @@ impl<'f> Manager<'f> {
         name: String,
         fs: &'f Fs,
     ) -> Self {
-        let sqlite = SQLite::new(fs, format!("logger.state.manager.{}", name));
+        let sqlite = SQLite::new(format!("logger.state.manager.{}", name), fs);
 
         let initialized = Barrier::new();
 
@@ -141,7 +141,7 @@ impl<'f> Manager<'f> {
         let rows = self
             .sqlite
             .query(
-                move |connection| -> Result<_, Error> {
+                |connection| -> Result<_, Error> {
                     let rows = connection
                         .prepare(indoc!("
                             -------------------------------------------------------------------------
@@ -152,7 +152,7 @@ impl<'f> Manager<'f> {
                             WHERE
                                 `enabled`
                         "))?
-                        .query_map([], move |row| -> rusqlite::Result<(SinkId, String, Class)> {
+                        .query_map([], |row| -> rusqlite::Result<(SinkId, String, Class)> {
                             let sink_id = row.get_ref_unwrap(0).as_i64()? as usize;
                             let name = row.get_ref_unwrap(1).as_str()?.to_owned();
                             let class = Class::from_string(row.get_ref_unwrap(2).as_str()?).unwrap();
@@ -169,7 +169,7 @@ impl<'f> Manager<'f> {
         let sink_data = rows
             .into_vec()
             .into_iter()
-            .map(move |(sink_id, name, class)| (sink_id, SinkDataDetails { name, class }))
+            .map(|(sink_id, name, class)| (sink_id, SinkDataDetails { name, class }))
             .collect::<HashMap<_, _>>();
 
         Ok(sink_data)
@@ -315,8 +315,8 @@ impl<'f> Manager<'f> {
             Self::SINK_ITEMS_TO_BUFFER_TO_STORAGE_INTERVAL,
         ))
         .stream_take_until_exhausted(exit_flag)
-        .map(Ok)
-        .try_for_each(async move |_| -> Result<(), Error> {
+        .map(Result::<_, Error>::Ok)
+        .try_for_each(|_| async {
             self.db_sink_items_to_buffer_to_storage()
                 .await
                 .context("db_sink_items_to_buffer_to_storage")?;
@@ -331,7 +331,7 @@ impl<'f> Manager<'f> {
     // db methods
     async fn db_initialize(&self) -> Result<(), Error> {
         self.sqlite
-            .transaction(move |transaction| -> Result<(), Error> {
+            .transaction(|transaction| -> Result<(), Error> {
                 Self::sql_initialize(transaction).context("sql_initialize")?;
                 Self::sql_buffer_to_storage(transaction).context("sql_buffer_to_storage")?;
 
@@ -345,7 +345,7 @@ impl<'f> Manager<'f> {
     async fn db_sinks_data_get(&self) -> Result<HashMap<SinkId, SinkData>, Error> {
         let sinks_data = self
             .sqlite
-            .query(move |connection| -> Result<_, Error> {
+            .query(|connection| -> Result<_, Error> {
                 let rows = connection
                     .prepare(indoc!("
                         -----------------------------------------------------------------------------
@@ -357,7 +357,7 @@ impl<'f> Manager<'f> {
                     ))?
                     .query_map(
                         [],
-                        move |row| -> rusqlite::Result<(SinkId, String, Class, f64, bool)> {
+                        |row| -> rusqlite::Result<(SinkId, String, Class, f64, bool)> {
                             let sink_id = row.get_ref_unwrap(0).as_i64()? as usize;
                             let name = row.get_ref_unwrap(1).as_str()?.to_owned();
                             let class =
@@ -400,7 +400,7 @@ impl<'f> Manager<'f> {
         }
 
         self.sqlite
-            .transaction(move |connection| -> Result<_, Error> {
+            .transaction(|connection| -> Result<_, Error> {
                 Self::sql_sinks_remove(connection, sink_ids).context("sql_sinks_remove")?;
 
                 Ok(())
@@ -419,7 +419,7 @@ impl<'f> Manager<'f> {
         }
 
         self.sqlite
-            .transaction(move |connection| -> Result<_, Error> {
+            .transaction(|connection| -> Result<_, Error> {
                 Self::sql_sinks_upsert(connection, sinks_data).context("sql_sinks_upsert")?;
 
                 Ok(())
@@ -458,7 +458,7 @@ impl<'f> Manager<'f> {
 
         // boolean
         if !items_boolean.is_empty() {
-            self.sqlite.transaction(move |transaction| -> Result<(), Error> {
+            self.sqlite.transaction(|transaction| -> Result<(), Error> {
                 let mut statement = transaction
                     .prepare(indoc!("
                         ---------------------------------------------------------------------------------
@@ -487,7 +487,7 @@ impl<'f> Manager<'f> {
 
         // real
         if !items_real.is_empty() {
-            self.sqlite.transaction(move |transaction| -> Result<(), Error> {
+            self.sqlite.transaction(|transaction| -> Result<(), Error> {
                 let mut statement = transaction
                     .prepare(indoc!("
                         ---------------------------------------------------------------------------------
@@ -517,7 +517,7 @@ impl<'f> Manager<'f> {
         // forward all
         if sink_any {
             self.sqlite
-                .transaction(move |transaction| -> Result<(), Error> {
+                .transaction(|transaction| -> Result<(), Error> {
                     Self::sql_buffer_to_storage(transaction).context("sql_buffer_to_storage")?;
 
                     Ok(())
@@ -530,7 +530,7 @@ impl<'f> Manager<'f> {
     }
     async fn db_finalize(&self) -> Result<(), Error> {
         self.sqlite
-            .transaction(move |transaction| -> Result<(), Error> {
+            .transaction(|transaction| -> Result<(), Error> {
                 Self::sql_buffer_finalize_with_nulls(transaction)
                     .context("sql_buffer_finalize_with_nulls")?;
 

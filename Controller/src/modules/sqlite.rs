@@ -6,7 +6,7 @@ use futures::{
     future::{Future, FutureExt},
 };
 use rusqlite::{vtab, Connection, Transaction};
-use std::{fmt, mem::ManuallyDrop, path::PathBuf, thread};
+use std::{any::type_name, fmt, mem::ManuallyDrop, path::PathBuf, thread};
 
 type Operation = Box<dyn FnOnce(&mut Connection) + Send + 'static>;
 
@@ -14,13 +14,14 @@ type Operation = Box<dyn FnOnce(&mut Connection) + Send + 'static>;
 pub struct SQLite<'f> {
     name: String,
     fs: &'f Fs,
+
     operation_sender: ManuallyDrop<channel::Sender<Operation>>,
     sqlite_thread: ManuallyDrop<thread::JoinHandle<Result<(), Error>>>,
 }
 impl<'f> SQLite<'f> {
     pub fn new(
-        fs: &'f Fs,
         name: String,
+        fs: &'f Fs,
     ) -> Self {
         assert!(
             name.chars()
@@ -101,7 +102,7 @@ impl<'f> SQLite<'f> {
         R: Send + 'static,
     {
         let (result_sender, result_receiver) = oneshot::channel::<R>();
-        let operation = Box::new(move |connection: &mut Connection| {
+        let operation = Box::new(|connection: &mut Connection| {
             let result = e(connection);
             let _ = result_sender.send(result);
         });
@@ -118,7 +119,7 @@ impl<'f> SQLite<'f> {
         R: Send + 'static,
     {
         let (result_sender, result_receiver) = oneshot::channel::<Result<R, Error>>();
-        let operation = Box::new(move |connection: &mut Connection| {
+        let operation = Box::new(|connection: &mut Connection| {
             let result = try {
                 let mut transaction_object = connection.transaction().context("transaction")?;
                 let result = e(&mut transaction_object);
@@ -136,7 +137,7 @@ impl<'f> fmt::Display for SQLite<'f> {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "SQLite({})", self.name)
+        write!(f, "{}({})", type_name::<Self>(), self.name)
     }
 }
 impl<'f> Drop for SQLite<'f> {

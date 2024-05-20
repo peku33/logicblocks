@@ -90,11 +90,11 @@ impl uri_cursor::Handler for Device {
             uri_cursor::UriCursor::Terminal => match *request.method() {
                 http::Method::POST => {
                     self.click();
-                    async move { web::Response::ok_empty() }.boxed()
+                    async { web::Response::ok_empty() }.boxed()
                 }
-                _ => async move { web::Response::error_405() }.boxed(),
+                _ => async { web::Response::error_405() }.boxed(),
             },
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

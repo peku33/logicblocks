@@ -255,7 +255,7 @@ impl Master {
         let worker_ftdi_descriptor = ftdi_descriptor.clone();
         let worker_thread = thread::Builder::new()
             .name(module_path_name.thread_name())
-            .spawn(move || {
+            .spawn(|| {
                 Self::thread_main(worker_ftdi_descriptor, transaction_receiver);
             })
             .unwrap();

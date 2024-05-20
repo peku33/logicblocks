@@ -33,7 +33,7 @@ impl Device {
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_inputs: (0..configuration.inputs_count)
-                .map(|_| signal::state_target_last::Signal::<bool>::new())
+                .map(|_input_index| signal::state_target_last::Signal::<bool>::new())
                 .collect::<Box<[_]>>(),
             signal_output: signal::state_source::Signal::<bool>::new(None),
         }
@@ -72,7 +72,7 @@ impl Device {
         self.signals_targets_changed_waker
             .stream()
             .stream_take_until_exhausted(exit_flag)
-            .for_each(async move |()| {
+            .for_each(|()| async {
                 self.signals_targets_changed();
             })
             .await;

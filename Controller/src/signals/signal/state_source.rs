@@ -44,7 +44,7 @@ impl<V: Value + Clone> Signal<V> {
         if lock.last == value {
             return false;
         }
-        lock.last = value.clone();
+        lock.last.clone_from(&value);
         lock.pending.push(value);
 
         drop(lock);
@@ -69,7 +69,7 @@ impl<V: Value + Clone> Signal<V> {
                 continue;
             }
 
-            lock.last = value.clone();
+            lock.last.clone_from(&value);
             lock.pending.push(value);
 
             changes = true;

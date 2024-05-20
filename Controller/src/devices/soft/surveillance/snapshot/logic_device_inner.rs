@@ -74,7 +74,7 @@ impl uri_cursor::Handler for ManagerSize {
                 http::Method::GET => {
                     let jpeg_bytes = self.jpeg_bytes.read().clone();
 
-                    async move {
+                    async {
                         match jpeg_bytes {
                             Some(jpeg_bytes) => {
                                 web::Response::ok_content_type_body("image/jpeg", jpeg_bytes)
@@ -84,9 +84,9 @@ impl uri_cursor::Handler for ManagerSize {
                     }
                     .boxed()
                 }
-                _ => async move { web::Response::error_405() }.boxed(),
+                _ => async { web::Response::error_405() }.boxed(),
             },
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }
@@ -135,7 +135,7 @@ impl uri_cursor::Handler for Manager {
             uri_cursor::UriCursor::Next("320", uri_cursor) => {
                 self.size_320.handle(request, uri_cursor)
             }
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

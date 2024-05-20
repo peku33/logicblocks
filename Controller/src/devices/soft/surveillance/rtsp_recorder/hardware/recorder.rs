@@ -3,7 +3,7 @@ use crate::{
     util::{
         anyhow_multiple_error::AnyhowMultipleError,
         async_flag,
-        runtime::{Exited, Runnable},
+        runnable::{Exited, Runnable},
     },
 };
 use anyhow::{anyhow, ensure, Context, Error};
@@ -187,10 +187,12 @@ impl Recorder {
         let stdout = tokio_stream::wrappers::LinesStream::new(
             BufReader::new(child.stdout.take().unwrap()).lines(),
         )
-        .for_each(async move |item| match item.context("stdout") {
-            Ok(line) => log::warn!("{}: ffmpeg stdout: {}", self, line),
-            Err(error) => {
-                log::error!("{}: error while reading ffmpeg stdout: {:?}", self, error)
+        .for_each(|item| async move {
+            match item.context("stdout") {
+                Ok(line) => log::warn!("{}: ffmpeg stdout: {}", self, line),
+                Err(error) => {
+                    log::error!("{}: error while reading ffmpeg stdout: {:?}", self, error)
+                }
             }
         });
         pin_mut!(stdout);
@@ -199,10 +201,12 @@ impl Recorder {
         let stderr = tokio_stream::wrappers::LinesStream::new(
             BufReader::new(child.stderr.take().unwrap()).lines(),
         )
-        .for_each(async move |item| match item.context("stderr") {
-            Ok(line) => log::warn!("{}: ffmpeg stderr: {}", self, line),
-            Err(error) => {
-                log::error!("{}: error while reading ffmpeg stderr: {:?}", self, error)
+        .for_each(|item| async move {
+            match item.context("stderr") {
+                Ok(line) => log::warn!("{}: ffmpeg stderr: {}", self, line),
+                Err(error) => {
+                    log::error!("{}: error while reading ffmpeg stderr: {:?}", self, error)
+                }
             }
         });
         pin_mut!(stderr);
@@ -358,7 +362,7 @@ impl Recorder {
         let error_stream = inotify_instance
             .event_stream(buffer)
             .context("event_stream")?
-            .filter_map(async move |event| {
+            .filter_map(|event| async move {
                 match self
                     .inotify_handle_event(event)
                     .await
@@ -463,14 +467,14 @@ impl Recorder {
                 .context("read_dir")?,
         )
         .err_into::<Error>()
-        .and_then(async move |entry| -> Result<(), Error> {
+        .and_then(|entry| async move {
             self.fixer_handle_directory_entry(entry)
                 .await
                 .context("fixer_handle_directory_entry")?;
 
             Ok(())
         })
-        .filter_map(async move |result| result.err())
+        .filter_map(|result| async move { result.err() })
         .collect::<Vec<_>>()
         .await;
 
@@ -524,14 +528,14 @@ impl Recorder {
                 .context("read_dir")?,
         )
         .err_into::<Error>()
-        .and_then(async move |entry| -> Result<(), Error> {
+        .and_then(|entry| async move {
             self.handle_file(&entry.path())
                 .await
                 .context("handle_file")?;
 
             Ok(())
         })
-        .filter_map(async move |result| result.err())
+        .filter_map(|result| async move { result.err() })
         .collect::<Vec<_>>()
         .await;
 
@@ -590,12 +594,12 @@ impl Recorder {
 
         let fixer_runner = self
             .fixer_run(fixer_exit_flag_receiver)
-            .inspect(move |_: &Exited| {
+            .inspect(|_: &Exited| {
                 ffmpeg_or_nop_run_exit_flag_sender.signal();
             });
         let ffmpeg_or_nop_runner = self
             .ffmpeg_or_nop_run(ffmpeg_or_nop_run_exit_flag_receiver)
-            .inspect(move |_: &Exited| {
+            .inspect(|_: &Exited| {
                 inotify_exit_flag_sender.signal();
             });
         let inotify_runner = self.inotify_run(inotify_exit_flag_receiver);

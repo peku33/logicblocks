@@ -3,11 +3,13 @@ use super::{
     sink::SinkBase,
 };
 use crate::{
-    modules::fs::Fs,
+    modules::{fs::Fs, module_path::ModulePath},
     util::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
-        runtime::{Exited, FinalizeGuard, Runnable, Runtime, RuntimeScope, RuntimeScopeRunnable},
+        drop_guard::DropGuard,
+        runnable::{Exited, Runnable},
+        runtime::{Runtime, RuntimeScope, RuntimeScopeRunnable},
     },
 };
 use anyhow::{Context, Error};
@@ -18,6 +20,7 @@ use futures::{
     join,
     stream::StreamExt,
 };
+use lazy_static::lazy_static;
 use ouroboros::self_referencing;
 use std::{
     collections::HashMap,
@@ -70,7 +73,7 @@ impl RunnerSink {
         let sink_items_receiver_runner = sink_items_receiver
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
-            .for_each(async move |time_value| {
+            .for_each(|time_value| async {
                 let sink_item = SinkItem {
                     sink_id: self.sink_id,
                     time_value,
@@ -107,14 +110,14 @@ struct RunnerSinkRunnerInner<'r> {
 struct RunnerSinkRunner<'r> {
     inner: RunnerSinkRunnerInner<'r>,
 
-    finalize_guard: FinalizeGuard,
+    drop_guard: DropGuard,
 }
 impl<'r> RunnerSinkRunner<'r> {
     fn new(
         runner_sink: RunnerSink,
         runtime: &'r Runtime,
     ) -> Self {
-        let inner = RunnerSinkRunnerInner::new(runner_sink, move |runner_sink| {
+        let inner = RunnerSinkRunnerInner::new(runner_sink, |runner_sink| {
             let runner_sink_runtime_scope_runnable =
                 RuntimeScopeRunnable::new(runtime, runner_sink);
             let runner_sink_runtime_scope_runnable =
@@ -122,12 +125,9 @@ impl<'r> RunnerSinkRunner<'r> {
             runner_sink_runtime_scope_runnable
         });
 
-        let finalize_guard = FinalizeGuard::new();
+        let drop_guard = DropGuard::new();
 
-        Self {
-            inner,
-            finalize_guard,
-        }
+        Self { inner, drop_guard }
     }
 
     pub fn runner_sink(&self) -> &RunnerSink {
@@ -135,23 +135,22 @@ impl<'r> RunnerSinkRunner<'r> {
     }
 
     async fn finalize(mut self) -> RunnerSink {
-        let runner_sink_runtime_scope_runnable =
-            self.inner.with_runner_sink_runtime_scope_runnable_mut(
-                move |runner_sink_runtime_scope_runnable| {
-                    let runner_sink_runtime_scope_runnable = unsafe {
-                        transmute::<
-                            &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, RunnerSink>>,
-                            &mut ManuallyDrop<RuntimeScopeRunnable<'static, 'static, RunnerSink>>,
-                        >(runner_sink_runtime_scope_runnable)
-                    };
-                    let runner_sink_runtime_scope_runnable =
-                        unsafe { ManuallyDrop::take(runner_sink_runtime_scope_runnable) };
-                    runner_sink_runtime_scope_runnable
-                },
-            );
+        let runner_sink_runtime_scope_runnable = self
+            .inner
+            .with_runner_sink_runtime_scope_runnable_mut(|runner_sink_runtime_scope_runnable| {
+                let runner_sink_runtime_scope_runnable = unsafe {
+                    transmute::<
+                        &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, RunnerSink>>,
+                        &mut ManuallyDrop<RuntimeScopeRunnable<'static, 'static, RunnerSink>>,
+                    >(runner_sink_runtime_scope_runnable)
+                };
+                let runner_sink_runtime_scope_runnable =
+                    unsafe { ManuallyDrop::take(runner_sink_runtime_scope_runnable) };
+                runner_sink_runtime_scope_runnable
+            });
         runner_sink_runtime_scope_runnable.finalize().await;
 
-        self.finalize_guard.finalized();
+        self.drop_guard.set();
 
         let inner_heads = self.inner.into_heads();
         inner_heads.runner_sink
@@ -180,7 +179,7 @@ impl<'r> RunnerSinksRunner<'r> {
     async fn finalize(self) {
         self.inner
             .into_values()
-            .map(move |runner_sink_runner| runner_sink_runner.finalize())
+            .map(|runner_sink_runner| runner_sink_runner.finalize())
             .collect::<JoinAll<_>>()
             .await;
     }
@@ -212,25 +211,22 @@ struct ManagerRunnerInner<'f: 'r, 'r> {
 struct ManagerRunner<'f: 'r, 'r> {
     inner: ManagerRunnerInner<'f, 'r>,
 
-    finalize_guard: FinalizeGuard,
+    drop_guard: DropGuard,
 }
 impl<'f: 'r, 'r> ManagerRunner<'f, 'r> {
     fn new(
         manager: Manager<'f>,
         runtime: &'r Runtime,
     ) -> Self {
-        let inner = ManagerRunnerInner::new(manager, move |manager| {
+        let inner = ManagerRunnerInner::new(manager, |manager| {
             let manager_runtime_scope_runnable = RuntimeScopeRunnable::new(runtime, manager);
             let manager_runtime_scope_runnable = ManuallyDrop::new(manager_runtime_scope_runnable);
             manager_runtime_scope_runnable
         });
 
-        let finalize_guard = FinalizeGuard::new();
+        let drop_guard = DropGuard::new();
 
-        Self {
-            inner,
-            finalize_guard,
-        }
+        Self { inner, drop_guard }
     }
 
     pub fn manager(&self) -> &Manager<'f> {
@@ -238,22 +234,24 @@ impl<'f: 'r, 'r> ManagerRunner<'f, 'r> {
     }
 
     async fn finalize(mut self) -> Manager<'f> {
-        let manager_runtime_scope_runnable = self.inner.with_manager_runtime_scope_runnable_mut(
-            move |manager_runtime_scope_runnable| {
-                let manager_runtime_scope_runnable = unsafe {
-                    transmute::<
-                        &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, Manager<'_>>>,
-                        &mut ManuallyDrop<RuntimeScopeRunnable<'static, 'static, Manager<'static>>>,
-                    >(manager_runtime_scope_runnable)
-                };
-                let manager_runtime_scope_runnable =
-                    unsafe { ManuallyDrop::take(manager_runtime_scope_runnable) };
-                manager_runtime_scope_runnable
-            },
-        );
+        let manager_runtime_scope_runnable =
+            self.inner
+                .with_manager_runtime_scope_runnable_mut(|manager_runtime_scope_runnable| {
+                    let manager_runtime_scope_runnable = unsafe {
+                        transmute::<
+                            &mut ManuallyDrop<RuntimeScopeRunnable<'_, '_, Manager<'_>>>,
+                            &mut ManuallyDrop<
+                                RuntimeScopeRunnable<'static, 'static, Manager<'static>>,
+                            >,
+                        >(manager_runtime_scope_runnable)
+                    };
+                    let manager_runtime_scope_runnable =
+                        unsafe { ManuallyDrop::take(manager_runtime_scope_runnable) };
+                    manager_runtime_scope_runnable
+                });
         manager_runtime_scope_runnable.finalize().await;
 
-        self.finalize_guard.finalized();
+        self.drop_guard.set();
 
         let inner = self.inner.into_heads();
         inner.manager
@@ -334,7 +332,7 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
 
         let runner_sink_runners = sinks_data
             .into_iter()
-            .map(move |(sink_id, sink_data)| -> Result<_, Error> {
+            .map(|(sink_id, sink_data)| -> Result<_, Error> {
                 let sink_base = SinkBase::new(sink_data.class);
 
                 let runner_sink = RunnerSink::new(
@@ -390,35 +388,40 @@ struct RunnerOwnedInner<'f> {
 pub struct RunnerOwned<'f> {
     inner: RunnerOwnedInner<'f>,
 
-    finalize_guard: FinalizeGuard,
+    drop_guard: DropGuard,
 }
 impl<'f> RunnerOwned<'f> {
+    fn module_path() -> &'static ModulePath {
+        lazy_static! {
+            static ref MODULE_PATH: ModulePath =
+                ModulePath::new(&["devices", "soft", "logger", "state"]);
+        }
+        &MODULE_PATH
+    }
+
     pub fn new(
         name: String,
         fs: &'f Fs,
     ) -> Self {
-        let runtime = Runtime::new(&format!("{}.state.logger", name), 1, 1);
+        let runtime = Runtime::new(Self::module_path(), 1, 1);
 
         let inner = RunnerOwnedInner::new(
             runtime,
-            move |runtime| {
+            |runtime| {
                 let runner = Runner::new(name, fs, runtime);
                 let runner = ManuallyDrop::new(runner);
                 runner
             },
-            move |runtime, runner| {
+            |runtime, runner| {
                 let runner_runtime_scope = RuntimeScope::new(runtime, &**runner);
                 let runner_runtime_scope = ManuallyDrop::new(runner_runtime_scope);
                 runner_runtime_scope
             },
         );
 
-        let finalize_guard = FinalizeGuard::new();
+        let drop_guard = DropGuard::new();
 
-        Self {
-            inner,
-            finalize_guard,
-        }
+        Self { inner, drop_guard }
     }
 
     pub async fn sinks_data_set(
@@ -427,7 +430,7 @@ impl<'f> RunnerOwned<'f> {
     ) -> Result<(), Error> {
         let runner_runtime_scope: &RuntimeScope<'f, 'f, Runner<'f, 'f>> = self
             .inner
-            .with_runner_runtime_scope(move |runner_runtime_scope| unsafe {
+            .with_runner_runtime_scope(|runner_runtime_scope| unsafe {
                 #[allow(clippy::transmute_ptr_to_ptr)]
                 transmute::<
                     &RuntimeScope<'_, '_, Runner<'_, '_>>,
@@ -435,13 +438,13 @@ impl<'f> RunnerOwned<'f> {
                 >(runner_runtime_scope)
             });
         runner_runtime_scope
-            .execute(move |runner| runner.sinks_data_set(sinks_data).boxed())
+            .execute(|runner| runner.sinks_data_set(sinks_data).boxed())
             .await
     }
     pub async fn sinks_reload(&self) -> Result<(), Error> {
         let runner_runtime_scope: &RuntimeScope<'f, 'f, Runner<'f, 'f>> = self
             .inner
-            .with_runner_runtime_scope(move |runner_runtime_scope| unsafe {
+            .with_runner_runtime_scope(|runner_runtime_scope| unsafe {
                 #[allow(clippy::transmute_ptr_to_ptr)]
                 transmute::<
                     &RuntimeScope<'_, '_, Runner<'_, '_>>,
@@ -449,11 +452,11 @@ impl<'f> RunnerOwned<'f> {
                 >(runner_runtime_scope)
             });
         runner_runtime_scope
-            .execute(move |runner| runner.sinks_reload().boxed())
+            .execute(|runner| runner.sinks_reload().boxed())
             .await
     }
     pub fn sinks_lock(&self) -> Option<RunnerSinksLock<'_, '_>> {
-        let runner: &Runner<'_, '_> = self.inner.with_runner(move |runner| unsafe {
+        let runner: &Runner<'_, '_> = self.inner.with_runner(|runner| unsafe {
             #[allow(clippy::transmute_ptr_to_ptr)]
             transmute::<&Runner<'_, '_>, &Runner<'static, 'static>>(runner)
         });
@@ -461,23 +464,23 @@ impl<'f> RunnerOwned<'f> {
     }
 
     pub async fn finalize(self) {
-        let runner_runtime_scope =
-            self.inner
-                .with_runner_runtime_scope(move |runner_runtime_scope| {
-                    #[allow(mutable_transmutes)]
-                    let runner_runtime_scope = unsafe {
-                        #[allow(clippy::transmute_ptr_to_ptr)]
-                        transmute::<
-                            &ManuallyDrop<RuntimeScope<'_, '_, Runner<'_, '_>>>,
-                            &mut ManuallyDrop<RuntimeScope<'f, 'f, Runner<'f, 'f>>>,
-                        >(runner_runtime_scope)
-                    };
-                    let runner_runtime_scope = unsafe { ManuallyDrop::take(runner_runtime_scope) };
-                    runner_runtime_scope
-                });
+        let runner_runtime_scope = self
+            .inner
+            .with_runner_runtime_scope(|runner_runtime_scope| {
+                #[allow(mutable_transmutes)]
+                let runner_runtime_scope = unsafe {
+                    #[allow(clippy::transmute_ptr_to_ptr)]
+                    transmute::<
+                        &ManuallyDrop<RuntimeScope<'_, '_, Runner<'_, '_>>>,
+                        &mut ManuallyDrop<RuntimeScope<'f, 'f, Runner<'f, 'f>>>,
+                    >(runner_runtime_scope)
+                };
+                let runner_runtime_scope = unsafe { ManuallyDrop::take(runner_runtime_scope) };
+                runner_runtime_scope
+            });
         runner_runtime_scope.finalize().await;
 
-        let runner = self.inner.with_runner(move |runner| {
+        let runner = self.inner.with_runner(|runner| {
             #[allow(mutable_transmutes)]
             let runner = unsafe {
                 #[allow(clippy::transmute_ptr_to_ptr)]
@@ -490,7 +493,7 @@ impl<'f> RunnerOwned<'f> {
         });
         runner.finalize().await;
 
-        self.finalize_guard.finalized();
+        self.drop_guard.set();
 
         let inner_heads = self.inner.into_heads();
         drop(inner_heads);

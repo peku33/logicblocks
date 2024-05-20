@@ -51,7 +51,9 @@ pub mod logic {
                 properties_remote: hardware_device.properties_remote(),
 
                 signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
-                signal_outputs: array_init(|_| signal::state_target_last::Signal::<bool>::new()),
+                signal_outputs: array_init(|_output_index| {
+                    signal::state_target_last::Signal::<bool>::new()
+                }),
 
                 gui_summary_waker: devices::gui_summary::Waker::new(),
 
@@ -100,7 +102,7 @@ pub mod logic {
             self.signals_targets_changed_waker
                 .stream()
                 .stream_take_until_exhausted(exit_flag)
-                .for_each(async move |()| {
+                .for_each(|()| async {
                     self.signals_targets_changed();
                 })
                 .await;
@@ -274,7 +276,7 @@ pub mod hardware {
                 .outs_changed_waker
                 .stream()
                 .stream_take_until_exhausted(exit_flag)
-                .for_each(async move |()| {
+                .for_each(|()| async {
                     self.poll_waker.wake();
                 })
                 .boxed();
@@ -323,7 +325,7 @@ pub mod hardware {
             let request = BusRequest {
                 outputs: outputs_pending
                     .as_ref()
-                    .map(move |outputs| BusRequestOutputs { values: **outputs }),
+                    .map(|outputs| BusRequestOutputs { values: **outputs }),
             };
             // we make a request no matter if it's required or not to confirm device is up
             let request_payload = request.to_payload();

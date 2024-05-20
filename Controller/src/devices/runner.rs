@@ -171,7 +171,7 @@ impl<'d> Runner<'d> {
 
         let devices_wrapper_runtime_scope_runnable =
             self.inner.with_devices_wrapper_runtime_scope_runnable_mut(
-                move |devices_wrapper_runtime_scope_runnable| unsafe {
+                |devices_wrapper_runtime_scope_runnable| unsafe {
                     ManuallyDrop::take(devices_wrapper_runtime_scope_runnable)
                 },
             );
@@ -207,11 +207,11 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
                                 .keys()
                                 .copied()
                                 .collect::<Box<[_]>>();
-                            async move { web::Response::ok_json(device_ids) }.boxed()
+                            async { web::Response::ok_json(device_ids) }.boxed()
                         }
-                        _ => async move { web::Response::error_405() }.boxed(),
+                        _ => async { web::Response::error_405() }.boxed(),
                     },
-                    _ => async move { web::Response::error_404() }.boxed(),
+                    _ => async { web::Response::error_404() }.boxed(),
                 },
                 uri_cursor::UriCursor::Next("gui-summary-sse", uri_cursor) => self
                     .inner
@@ -221,20 +221,19 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
                     let device_id: DeviceId = match device_id_str.parse().context("device_id") {
                         Ok(device_id) => device_id,
                         Err(error) => {
-                            return async move { web::Response::error_400_from_error(error) }
-                                .boxed()
+                            return async { web::Response::error_400_from_error(error) }.boxed()
                         }
                     };
                     let device_wrapper =
                         match self.inner.borrow_device_wrappers_by_id().get(&device_id) {
                             Some(device_wrapper) => device_wrapper,
-                            None => return async move { web::Response::error_404() }.boxed(),
+                            None => return async { web::Response::error_404() }.boxed(),
                         };
                     device_wrapper.handle(request, uri_cursor.as_ref())
                 }
-                _ => async move { web::Response::error_404() }.boxed(),
+                _ => async { web::Response::error_404() }.boxed(),
             },
-            _ => async move { web::Response::error_404() }.boxed(),
+            _ => async { web::Response::error_404() }.boxed(),
         }
     }
 }

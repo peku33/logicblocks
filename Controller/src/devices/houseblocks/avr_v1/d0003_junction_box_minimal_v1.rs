@@ -48,8 +48,12 @@ pub mod logic {
 
                 signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
                 signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-                signal_keys: array_init(|_| signal::state_source::Signal::<bool>::new(None)),
-                signal_leds: array_init(|_| signal::state_target_last::Signal::<bool>::new()),
+                signal_keys: array_init(|_key_index| {
+                    signal::state_source::Signal::<bool>::new(None)
+                }),
+                signal_leds: array_init(|_led_index| {
+                    signal::state_target_last::Signal::<bool>::new()
+                }),
                 signal_buzzer: signal::event_target_last::Signal::<Duration>::new(),
                 signal_temperature: signal::state_source::Signal::<Temperature>::new(None),
 
@@ -164,7 +168,7 @@ pub mod logic {
                 .signals_targets_changed_waker
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(async move |()| {
+                .for_each(|()| async {
                     self.signals_targets_changed();
                 })
                 .boxed();
@@ -175,7 +179,7 @@ pub mod logic {
                 .ins_changed_waker_remote
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(async move |()| {
+                .for_each(|()| async {
                     self.properties_ins_changed();
                 })
                 .boxed();
@@ -407,7 +411,7 @@ pub mod hardware {
                 .outs_changed_waker
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(async move |()| {
+                .for_each(|()| async {
                     self.poll_waker.wake();
                 })
                 .boxed();
@@ -763,7 +767,7 @@ pub mod hardware {
     impl BusResponseKeys {
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
             let keys = (0..KEY_COUNT)
-                .map(|_| BusResponseKey::parse(parser))
+                .map(|_key_index| BusResponseKey::parse(parser))
                 .collect::<Result<ArrayVec<_, { KEY_COUNT }>, _>>()
                 .context("collect")?
                 .into_inner()

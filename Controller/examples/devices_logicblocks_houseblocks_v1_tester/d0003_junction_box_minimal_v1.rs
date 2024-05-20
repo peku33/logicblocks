@@ -48,7 +48,7 @@ async fn run_inner(
 
     let runner_runner = runner.run(exit_flag_sender.receiver());
 
-    let abort_runner = ctrl_c().then(async move |_| {
+    let abort_runner = ctrl_c().then(|_| async {
         exit_flag_sender.signal();
     });
 
@@ -110,7 +110,7 @@ async fn run_inner(
     let ins_changed_waker_remote_runner = async {
         futures::stream::once(async {})
             .chain(ins_changed_waker_remote.stream())
-            .for_each(|()| async move {
+            .for_each(|()| async {
                 keys_changed();
                 ds18x20_changed();
             })
