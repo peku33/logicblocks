@@ -1,5 +1,5 @@
 use anyhow::{ensure, Context, Error};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use std::{collections::VecDeque, str};
 
@@ -22,12 +22,12 @@ impl Extractor {
     }
 
     pub fn try_extract(&mut self) -> Result<Option<String>, Error> {
-        lazy_static! {
-            static ref PATTERN: Regex = RegexBuilder::new(r"--myboundary(\r\n)?Content-Type: text/plain(\r\n)Content-Length:( )?(\d+)(\r\n){1,2}(.+?)(\r\n){1,2}")
-            .dot_matches_new_line(true)
-            .build()
-            .unwrap();
-        }
+        static PATTERN: Lazy<Regex> = Lazy::new(|| {
+            RegexBuilder::new(r"--myboundary(\r\n)?Content-Type: text/plain(\r\n)Content-Length:( )?(\d+)(\r\n){1,2}(.+?)(\r\n){1,2}")
+                .dot_matches_new_line(true)
+                .build()
+                .unwrap()
+        });
 
         let buffer = self.buffer.make_contiguous();
         let buffer = unsafe { str::from_utf8_unchecked(buffer) }; // SAFETY: buffer accepts &str only

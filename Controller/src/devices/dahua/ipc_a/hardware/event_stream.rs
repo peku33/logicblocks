@@ -11,7 +11,7 @@ use futures::{
     pin_mut, select,
     stream::{StreamExt, TryStreamExt},
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use std::{
     collections::{HashMap, HashSet},
@@ -89,13 +89,12 @@ impl<'a> Manager<'a> {
         }
     }
     fn event_state_update_parse(item: &str) -> Result<Option<EventStateUpdate>, Error> {
-        lazy_static! {
-            static ref PATTERN: Regex =
-                RegexBuilder::new(r"^Code=(\w+);action=(\w+);index=0(;data=(.+))?$")
-                    .dot_matches_new_line(true)
-                    .build()
-                    .unwrap();
-        }
+        static PATTERN: Lazy<Regex> = Lazy::new(|| {
+            RegexBuilder::new(r"^Code=(\w+);action=(\w+);index=0(;data=(.+))?$")
+                .dot_matches_new_line(true)
+                .build()
+                .unwrap()
+        });
 
         let captures = PATTERN
             .captures(item)

@@ -16,7 +16,7 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Request as HyperRequest, Response as HyperResponse, Server as HyperServer,
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use ouroboros::self_referencing;
 use std::{
     convert::Infallible,
@@ -176,9 +176,7 @@ pub struct RunnerOwned<'h> {
 }
 impl<'h> RunnerOwned<'h> {
     fn module_path() -> &'static ModulePath {
-        lazy_static! {
-            static ref MODULE_PATH: ModulePath = ModulePath::new(&["web", "server"]);
-        }
+        static MODULE_PATH: Lazy<ModulePath> = Lazy::new(|| ModulePath::new(&["web", "server"]));
         &MODULE_PATH
     }
 

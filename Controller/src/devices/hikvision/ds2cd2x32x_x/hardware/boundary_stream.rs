@@ -1,6 +1,6 @@
 use anyhow::{Context, Error};
-use lazy_static::lazy_static;
-use regex::Regex;
+use once_cell::sync::Lazy;
+use regex::{Regex, RegexBuilder};
 use std::{collections::VecDeque, str};
 use xmltree::Element;
 
@@ -22,9 +22,12 @@ impl Extractor {
     }
 
     pub fn try_extract(&mut self) -> Result<Option<Element>, Error> {
-        lazy_static! {
-            static ref PATTERN: Regex = Regex::new("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: (\\d+)\r\n\r\n").unwrap();
-        }
+        static PATTERN: Lazy<Regex> = Lazy::new(|| {
+            RegexBuilder::new("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: (\\d+)\r\n\r\n")
+                .dot_matches_new_line(true)
+                .build()
+                .unwrap()
+        });
 
         let buffer = self.buffer.make_contiguous();
         let buffer = unsafe { str::from_utf8_unchecked(buffer) }; // SAFETY: buffer accepts &str only

@@ -112,12 +112,11 @@ impl fmt::Display for ModulePathName {
 #[cfg(test)]
 mod tests_module_path_name {
     use super::{ModulePath, ModulePathName};
-    use lazy_static::lazy_static;
+    use once_cell::sync::Lazy;
 
     fn module_path() -> &'static ModulePath {
-        lazy_static! {
-            static ref MODULE_PATH: ModulePath = ModulePath::new(&["this", "is", "module"]);
-        }
+        static MODULE_PATH: Lazy<ModulePath> =
+            Lazy::new(|| ModulePath::new(&["this", "is", "module"]));
         &MODULE_PATH
     }
 

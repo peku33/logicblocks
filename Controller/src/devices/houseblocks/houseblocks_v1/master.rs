@@ -12,7 +12,7 @@ use crate::{
 use anyhow::{bail, ensure, Context, Error};
 use crossbeam::channel;
 use futures::channel::oneshot;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::{fmt::Debug, mem::ManuallyDrop, thread, time::Duration};
 
 #[derive(Debug)]
@@ -237,10 +237,8 @@ pub struct Master {
 }
 impl Master {
     fn module_path() -> &'static ModulePath {
-        lazy_static! {
-            static ref MODULE_PATH: ModulePath =
-                ModulePath::new(&["devices", "houseblocks", "houseblocks_v1", "master"]);
-        }
+        static MODULE_PATH: Lazy<ModulePath> =
+            Lazy::new(|| ModulePath::new(&["devices", "houseblocks", "houseblocks_v1", "master"]));
         &MODULE_PATH
     }
 

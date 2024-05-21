@@ -16,7 +16,7 @@ use crate::{
 };
 use anyhow::{Context, Error};
 use futures::future::{BoxFuture, FutureExt, JoinAll};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use ouroboros::self_referencing;
 use std::{collections::HashMap, mem::ManuallyDrop};
 
@@ -62,9 +62,8 @@ pub struct Runner<'d> {
 }
 impl<'d> Runner<'d> {
     fn module_path() -> &'static ModulePath {
-        lazy_static! {
-            static ref MODULE_PATH: ModulePath = ModulePath::new(&["devices", "runner"]);
-        }
+        static MODULE_PATH: Lazy<ModulePath> =
+            Lazy::new(|| ModulePath::new(&["devices", "runner"]));
         &MODULE_PATH
     }
 

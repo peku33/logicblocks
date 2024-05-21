@@ -7,7 +7,7 @@ use anyhow::{ensure, Context, Error};
 use crc::{Crc, CRC_16_MODBUS};
 use crossbeam::channel;
 use futures::channel::oneshot;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::{any::Any, fmt::Debug, mem::ManuallyDrop, slice, thread, time::Duration};
 
 #[derive(Debug)]
@@ -316,10 +316,8 @@ pub struct AsyncBus {
 }
 impl AsyncBus {
     fn module_path() -> &'static ModulePath {
-        lazy_static! {
-            static ref MODULE_PATH: ModulePath =
-                ModulePath::new(&["interfaces", "modbus_rtu", "bus", "async_bus"]);
-        }
+        static MODULE_PATH: Lazy<ModulePath> =
+            Lazy::new(|| ModulePath::new(&["interfaces", "modbus_rtu", "bus", "async_bus"]));
         &MODULE_PATH
     }
 
