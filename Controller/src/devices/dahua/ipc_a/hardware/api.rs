@@ -1,5 +1,5 @@
 use super::boundary_stream;
-use anyhow::{anyhow, ensure, Context, Error};
+use anyhow::{anyhow, bail, ensure, Context, Error};
 use bytes::Bytes;
 use digest_auth::{AuthContext, WwwAuthenticateHeader};
 use futures::{
@@ -13,6 +13,8 @@ use http::{
 use image::DynamicImage;
 use itertools::Itertools;
 use md5::{Digest, Md5};
+use once_cell::sync::Lazy;
+use regex::{Regex, RegexBuilder};
 use serde_json::json;
 use std::{
     fmt,
@@ -376,7 +378,10 @@ impl Api {
         &self,
         password_digest: &str,
         session: &str,
-    ) -> Result<u64, Error> {
+    ) -> Result<
+        (String, u64), // (new session, session_expiration_seconds)
+        Error,
+    > {
         let request = Rpc2Request {
             method: "global.login".to_owned(),
             params: json!({
@@ -421,12 +426,12 @@ impl Api {
             .as_u64()
             .ok_or_else(|| anyhow!("expected number"))?;
 
-        ensure!(
-            response.session.as_deref() == Some(session),
-            "session mismatch"
-        );
+        let session = match response.session {
+            Some(session) => session,
+            None => bail!("missing session"),
+        };
 
-        Ok(keep_alive_interval)
+        Ok((session, keep_alive_interval))
     }
     async fn rpc2_login(
         &self
@@ -442,7 +447,7 @@ impl Api {
             .rpc2_login_prepare_password()
             .await
             .context("rpc2_login_prepare_password")?;
-        let session_expiration_seconds = self
+        let (session, session_expiration_seconds) = self
             .rpc2_login_initialize_session(&password_digest, &session)
             .await
             .context("rpc2_login_initialize_session")?;
@@ -609,7 +614,13 @@ impl Api {
     }
 
     pub fn device_type_supported(device_type: &str) -> bool {
-        matches!(device_type, "IPC-HDW4631C-A" | "IPC-HDW3841TMP-AS")
+        static PATTERN: Lazy<Regex> = Lazy::new(|| {
+            RegexBuilder::new(r"^(DH-)?IPC-HDW(2|3|4)(6|8)(3|4)(0|1)([A-Z]+)-([A-Z]+)$")
+                .dot_matches_new_line(true)
+                .build()
+                .unwrap()
+        });
+        PATTERN.is_match(device_type)
     }
     pub fn web_version_supported(web_version: &WebVersion) -> bool {
         matches!(
@@ -618,27 +629,15 @@ impl Api {
                 major: 3,
                 minor: 2,
                 revision: 1,
-                build: 561950,
-            } | WebVersion {
-                major: 3,
-                minor: 2,
-                revision: 1,
-                build: 582554,
-            } | WebVersion {
-                major: 3,
-                minor: 2,
-                revision: 1,
-                build: 1053483,
-            } | WebVersion {
-                major: 3,
-                minor: 2,
-                revision: 1,
-                build: 1400564,
+                build: _,
             }
         )
     }
     pub fn update_build_supported(build: &str) -> bool {
-        matches!(build, "V2.820.0000000.28.R.230314")
+        matches!(
+            build,
+            "V2.820.0000000.28.R.230314" | "2.880.0000000.11.R.240420"
+        )
     }
 
     pub async fn validate_basic_device_info(&self) -> Result<BasicDeviceInfo, Error> {

@@ -28,6 +28,8 @@ use parking_lot::RwLock;
 use serde::Serialize;
 use std::{borrow::Cow, time::Duration};
 
+// TODO: get actual event stream count from the camera
+
 #[derive(Debug)]
 pub enum ConfigurationHardware {
     Full {
@@ -243,7 +245,7 @@ impl Device {
                     .await
                     .context("connect")?;
                 configurator
-                    .configure(hardware_configuration.clone())
+                    .configure(true, hardware_configuration.clone())
                     .await
                     .context("configure")?;
 

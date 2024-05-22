@@ -644,6 +644,12 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
 
+    pub async fn dump(&mut self) -> Result<serde_json::Value, Error> {
+        let config = self.config_get("All").await.context("config_get")?;
+
+        Ok(config)
+    }
+
     async fn wait_for_power_down(&mut self) -> Result<(), Error> {
         for _ in 0..60 {
             if self.healthcheck().await.is_err() {
@@ -961,11 +967,11 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
-    pub async fn system_ipv6_disable(&mut self) -> Result<(), Error> {
+    pub async fn system_ipv6_enable(&mut self) -> Result<(), Error> {
         self.config_patch_object(
             "IPv6",
             hashmap! {
-                "Enable" => json!(false),
+                "Enable" => json!(true),
             },
         )
         .await
@@ -1013,6 +1019,18 @@ impl<'a> Configurator<'a> {
     }
 
     pub async fn system_snmp_disable(&mut self) -> Result<(), Error> {
+        // TODO: check if this is covered by something like "get caps"
+        if self.basic_device_info.web_version
+            >= (WebVersion {
+                major: 3,
+                minor: 2,
+                revision: 1,
+                build: 1850781,
+            })
+        {
+            return Ok(());
+        }
+
         self.config_patch_object(
             "SNMP",
             hashmap! {
@@ -1062,6 +1080,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn system_onvif_disable(&mut self) -> Result<(), Error> {
+        // TODO: check if this is covered by something like "get caps"
         if self.basic_device_info.web_version
             < (WebVersion {
                 major: 3,
@@ -1085,6 +1104,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn system_genetec_disable(&mut self) -> Result<(), Error> {
+        // TODO: check if this is covered by something like "get caps"
         if self.basic_device_info.web_version
             < (WebVersion {
                 major: 3,
@@ -1120,6 +1140,7 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn system_mobile_phone_platform_disable(&mut self) -> Result<(), Error> {
+        // TODO: check if this is covered by something like "get caps"
         if self.basic_device_info.web_version
             < (WebVersion {
                 major: 3,
@@ -1298,7 +1319,26 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
     pub async fn video_quality_configure(&mut self) -> Result<(), Error> {
-        let video_input_caps = self
+        let encode_capabilities = self
+            .api
+            .rpc2_call_params("encode.getCaps", serde_json::Value::Null)
+            .await
+            .context("rpc2_call_params")?;
+
+        let extra_streams_count = encode_capabilities
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?
+            .get("caps")
+            .ok_or_else(|| anyhow!("missing MaxWidth"))?
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?
+            .get("MaxExtraStream")
+            .ok_or_else(|| anyhow!("missing MaxExtraStream"))?
+            .as_u64()
+            .ok_or_else(|| anyhow!("expected number"))? as usize;
+        ensure!((1..=2).contains(&extra_streams_count));
+
+        let video_input_capabilities = self
             .api
             .rpc2_call_params(
                 "devVideoInput.getCaps",
@@ -1308,21 +1348,21 @@ impl<'a> Configurator<'a> {
             )
             .await
             .context("rpc2_call_params")?;
-        let video_input_caps = video_input_caps
+        let video_input_capabilities = video_input_capabilities
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?
             .get("caps")
-            .ok_or_else(|| anyhow!("missing MaxWidth"))?
+            .ok_or_else(|| anyhow!("missing caps"))?
             .as_object()
             .ok_or_else(|| anyhow!("expected object"))?;
 
-        let width = video_input_caps
+        let width = video_input_capabilities
             .get("MaxWidth")
             .ok_or_else(|| anyhow!("missing MaxWidth"))?
             .as_u64()
             .ok_or_else(|| anyhow!("expected number"))? as usize;
 
-        let height = video_input_caps
+        let height = video_input_capabilities
             .get("MaxHeight")
             .ok_or_else(|| anyhow!("missing MaxHeight"))?
             .as_u64()
@@ -1510,11 +1550,15 @@ impl<'a> Configurator<'a> {
                 .ok_or_else(|| anyhow!("expected array"))?;
             ensure!(extra_format.len() == 3);
 
-            let sub1_format = extra_format.get_mut(0).unwrap();
-            apply_sub1_format(sub1_format)?;
+            if extra_streams_count >= 1 {
+                let sub1_format = extra_format.get_mut(0).unwrap();
+                apply_sub1_format(sub1_format).context("apply_sub1_format")?;
+            }
 
-            let sub2_format = extra_format.get_mut(1).unwrap();
-            apply_sub2_format(sub2_format)?;
+            if extra_streams_count >= 2 {
+                let sub2_format = extra_format.get_mut(1).unwrap();
+                apply_sub2_format(sub2_format).context("apply_sub2_format")?;
+            }
 
             // sub3 format is not used?
 
@@ -1670,8 +1714,55 @@ impl<'a> Configurator<'a> {
         Ok(())
     }
 
+    async fn detection_capabilities_get(
+        &mut self
+    ) -> Result<serde_json::Map<String, serde_json::Value>, Error> {
+        let (detection_capabilities_key, _) = self
+            .api
+            .rpc2_call(
+                "devVideoDetect.factory.instance",
+                json!({
+                    "channel": 0_usize,
+                }),
+                None,
+            )
+            .await
+            .context("rpc2_call")?;
+        let detection_capabilities_key = detection_capabilities_key
+            .ok_or_else(|| anyhow!("missing result"))?
+            .as_u64()
+            .ok_or_else(|| anyhow!("expected number"))?;
+
+        let (result, detection_capabilities) = self
+            .api
+            .rpc2_call(
+                "devVideoDetect.getCaps",
+                serde_json::Value::Null,
+                Some(serde_json::Value::Number(detection_capabilities_key.into())),
+            )
+            .await
+            .context("rpc2_call_params")?;
+
+        let result = result
+            .ok_or_else(|| anyhow!("missing result"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+        ensure!(result, "request failed with result = {}", result);
+
+        let detection_capabilities = detection_capabilities
+            .ok_or_else(|| anyhow!("missing params"))?
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?
+            .get("caps")
+            .ok_or_else(|| anyhow!("missing caps"))?
+            .as_object()
+            .ok_or_else(|| anyhow!("expected object"))?
+            .clone();
+
+        Ok(detection_capabilities)
+    }
     pub async fn detection_external_alarm_disable(&mut self) -> Result<(), Error> {
-        // not available since this software
+        // TODO: check if this is covered by something like "get caps"
         if self.basic_device_info.web_version
             >= (WebVersion {
                 major: 3,
@@ -1776,8 +1867,21 @@ impl<'a> Configurator<'a> {
     }
     pub async fn detection_motion_configure(
         &mut self,
+        detection_capabilities: &serde_json::Map<String, serde_json::Value>,
         motion_detection: Option<MotionDetection>,
     ) -> Result<(), Error> {
+        let supported = detection_capabilities
+            .get("SupportMotion")
+            .ok_or_else(|| anyhow!("missing SupportMotion"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+        if !supported {
+            if motion_detection.is_some() {
+                log::warn!("motion detection is not supported, skipping");
+            }
+            return Ok(());
+        }
+
         self.config_patch_array_object_with("MotionDetect", |config| -> Result<(), Error> {
             patch_nested_event_handler(config).context("patch_nested_event_handler")?;
 
@@ -1790,71 +1894,113 @@ impl<'a> Configurator<'a> {
             .context("patch_object")?;
 
             if let Some(motion_detection) = motion_detection {
-                // old-style compat-config
-                patch_object(
-                    config,
-                    hashmap! {
-                        "Level" => json!(3),
-                        "Region" => json!(
+                // detect version
+                let mut detect_version_1 = false;
+                let mut detect_version_3 = false;
+
+                let detect_versions = detection_capabilities
+                    .get("DetectVersion")
+                    .ok_or_else(|| anyhow!("missing DetectVersion"))?
+                    .as_array()
+                    .ok_or_else(|| anyhow!("expected array"))?;
+                for detect_version in detect_versions {
+                    let detect_version = detect_version
+                        .as_str()
+                        .ok_or_else(|| anyhow!("expected string"))?;
+                    match detect_version {
+                        "V1.0" => {
+                            detect_version_1 = true;
+                        }
+                        "V3.0" => {
+                            detect_version_3 = true;
+                        }
+                        _ => log::warn!("unknown detection version: {detect_version}"),
+                    }
+                }
+
+                // validate grid size
+                let columns = detection_capabilities
+                    .get("MotionColumns")
+                    .ok_or_else(|| anyhow!("missing MotionColumns"))?
+                    .as_u64()
+                    .ok_or_else(|| anyhow!("expected number"))? as usize;
+                let rows = detection_capabilities
+                    .get("MotionRows")
+                    .ok_or_else(|| anyhow!("missing MotionRows"))?
+                    .as_u64()
+                    .ok_or_else(|| anyhow!("expected number"))? as usize;
+
+                ensure!(columns == Grid22x18::COLUMNS && rows == Grid22x18::ROWS);
+
+                // set v1
+                if detect_version_1 {
+                    patch_object(
+                        config,
+                        hashmap! {
+                            "Level" => json!(3),
+                            "Region" => json!(
+                                motion_detection
+                                    .regions
+                                    .get(0)
+                                    .map(|region| region.grid)
+                                    .unwrap_or_else(Grid22x18::empty)
+                                    .as_rows_ltr()
+                            )
+                        },
+                    )
+                    .context("patch_object")?;
+                }
+
+                // set v3
+                if detect_version_3 {
+                    let motion_detection_windows = config
+                        .get_mut("MotionDetectWindow")
+                        .ok_or_else(|| anyhow!("missing MotionDetectWindow"))?
+                        .as_array_mut()
+                        .ok_or_else(|| anyhow!("expected array"))?;
+
+                    ensure!(motion_detection_windows.len() >= motion_detection.regions.len());
+
+                    motion_detection_windows
+                        .iter_mut()
+                        .zip(
                             motion_detection
                                 .regions
-                                .get(0)
-                                .map(|region| region.grid)
-                                .unwrap_or_else(Grid22x18::empty)
-                                .as_rows_ltr()
+                                .iter()
+                                .map(Some)
+                                .chain(iter::repeat(None)),
                         )
-                    },
-                )
-                .context("patch_object")?;
+                        .try_for_each(|(config, region)| -> Result<(), Error> {
+                            let config = config
+                                .as_object_mut()
+                                .ok_or_else(|| anyhow!("expected object"))?;
 
-                // new-style configs
-                let motion_detection_windows = config
-                    .get_mut("MotionDetectWindow")
-                    .ok_or_else(|| anyhow!("missing MotionDetectWindow"))?
-                    .as_array_mut()
-                    .ok_or_else(|| anyhow!("expected array"))?;
+                            if let Some(region) = region {
+                                patch_object(
+                                    config,
+                                    hashmap! {
+                                        "Name" => json!(region.name),
+                                        "Region" => json!(region.grid.as_rows_rtl()),
+                                        "Window" => json!(region.grid.as_region().as_coords()),
+                                        "Sensitive" => json!(region.sensitivity.value),
+                                        "Threshold" => json!(region.threshold.value),
+                                    },
+                                )
+                                .context("patch_object")?;
+                            } else {
+                                patch_object(
+                                    config,
+                                    hashmap! {
+                                        "Region" => json!(Grid22x18::empty().as_rows_rtl()),
+                                        "Window" => json!(Grid22x18::empty().as_region().as_coords()),
+                                    },
+                                )
+                                .context("patch_object")?;
+                            }
 
-                ensure!(motion_detection_windows.len() >= motion_detection.regions.len());
-
-                motion_detection_windows
-                    .iter_mut()
-                    .zip(
-                        motion_detection
-                            .regions
-                            .iter()
-                            .map(Some)
-                            .chain(iter::repeat(None)),
-                    )
-                    .try_for_each(|(config, region)| -> Result<(), Error> {
-                        let config = config
-                            .as_object_mut()
-                            .ok_or_else(|| anyhow!("expected object"))?;
-
-                        if let Some(region) = region {
-                            patch_object(
-                                config,
-                                hashmap! {
-                                    "Name" => json!(region.name),
-                                    "Region" => json!(region.grid.as_rows_rtl()),
-                                    "Window" => json!(region.grid.as_region().as_coords()),
-                                    "Sensitive" => json!(region.sensitivity.value),
-                                    "Threshold" => json!(region.threshold.value),
-                                },
-                            )
-                            .context("patch_object")?;
-                        } else {
-                            patch_object(
-                                config,
-                                hashmap! {
-                                    "Region" => json!(Grid22x18::empty().as_rows_rtl()),
-                                    "Window" => json!(Grid22x18::empty().as_region().as_coords()),
-                                },
-                            )
-                            .context("patch_object")?;
-                        }
-
-                        Ok(())
-                    })?;
+                            Ok(())
+                        })?;
+                }
             }
 
             Ok(())
@@ -1866,54 +2012,15 @@ impl<'a> Configurator<'a> {
     }
     pub async fn detection_smart_motion_configure(
         &mut self,
+        detection_capabilities: &serde_json::Map<String, serde_json::Value>,
         smart_motion_detection: Option<SmartMotionDetection>,
     ) -> Result<(), Error> {
-        let (detection_capabilities_key, _) = self
-            .api
-            .rpc2_call(
-                "devVideoDetect.factory.instance",
-                json!({
-                    "channel": 0_usize,
-                }),
-                None,
-            )
-            .await
-            .context("rpc2_call")?;
-        let detection_capabilities_key = detection_capabilities_key
-            .ok_or_else(|| anyhow!("missing result"))?
-            .as_u64()
-            .ok_or_else(|| anyhow!("expected number"))?;
-
-        let (result, detection_capabilities) = self
-            .api
-            .rpc2_call(
-                "devVideoDetect.getCaps",
-                serde_json::Value::Null,
-                Some(serde_json::Value::Number(detection_capabilities_key.into())),
-            )
-            .await
-            .context("rpc2_call_params")?;
-
-        let result = result
-            .ok_or_else(|| anyhow!("missing result"))?
-            .as_bool()
-            .ok_or_else(|| anyhow!("expected bool"))?;
-        ensure!(result, "request failed with result = {}", result);
-
-        let smart_motion_detection_object = detection_capabilities
-            .as_ref()
-            .ok_or_else(|| anyhow!("missing params"))?
-            .as_object()
-            .ok_or_else(|| anyhow!("expected object"))?
-            .get("caps")
-            .ok_or_else(|| anyhow!("missing caps"))?
-            .as_object()
-            .ok_or_else(|| anyhow!("expected object"))?
-            .get("SmartMotion");
-
-        let smart_motion_detection_object = match smart_motion_detection_object {
+        let smart_motion_detection_object = match detection_capabilities.get("SmartMotion") {
             Some(smart_motion_detection_object) => smart_motion_detection_object,
             None => {
+                if smart_motion_detection.is_some() {
+                    log::warn!("smart motion is not supported, skipping");
+                }
                 return Ok(());
             }
         };
@@ -1927,6 +2034,9 @@ impl<'a> Configurator<'a> {
             .ok_or_else(|| anyhow!("expected bool"))?;
 
         if !smart_motion_detection_support {
+            if smart_motion_detection.is_some() {
+                log::warn!("smart motion is not supported, skipping");
+            }
             return Ok(());
         }
 
@@ -1966,7 +2076,19 @@ impl<'a> Configurator<'a> {
 
         Ok(())
     }
-    pub async fn detection_video_blind_enable(&mut self) -> Result<(), Error> {
+    pub async fn detection_video_blind_enable(
+        &mut self,
+        detection_capabilities: &serde_json::Map<String, serde_json::Value>,
+    ) -> Result<(), Error> {
+        let supported = detection_capabilities
+            .get("SupportBlind")
+            .ok_or_else(|| anyhow!("missing SupportBlind"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+        if !supported {
+            return Ok(());
+        }
+
         self.config_patch_array_object_with("BlindDetect", |config| -> Result<(), Error> {
             patch_nested_event_handler(config).context("patch_nested_event_handler")?;
 
@@ -1988,8 +2110,21 @@ impl<'a> Configurator<'a> {
     }
     pub async fn detection_scene_moved_configure(
         &mut self,
+        detection_capabilities: &serde_json::Map<String, serde_json::Value>,
         scene_moved_detection: Option<SceneMovedDetection>,
     ) -> Result<(), Error> {
+        let supported = detection_capabilities
+            .get("SupportMovedDetect")
+            .ok_or_else(|| anyhow!("missing SupportMovedDetect"))?
+            .as_bool()
+            .ok_or_else(|| anyhow!("expected bool"))?;
+        if !supported {
+            if scene_moved_detection.is_some() {
+                log::warn!("scene moved is not supported, skipping");
+            }
+            return Ok(());
+        }
+
         self.config_patch_array_object_with("MovedDetect", |config| -> Result<(), Error> {
             patch_nested_event_handler(config).context("patch_nested_event_handler")?;
 
@@ -2019,6 +2154,7 @@ impl<'a> Configurator<'a> {
         &mut self,
         audio_mutation_detection: Option<AudioMutationDetection>,
     ) -> Result<(), Error> {
+        // TODO: check if this is covered by something like "get caps"
         let legacy_config_object = self.basic_device_info.web_version
             < (WebVersion {
                 major: 3,
@@ -2077,12 +2213,17 @@ impl<'a> Configurator<'a> {
 
     pub async fn configure(
         &mut self,
+        factory_reset: bool,
         configuration: Configuration,
     ) -> Result<(), Error> {
-        log::trace!("system_factory_reset");
-        self.system_factory_reset()
-            .await
-            .context("system_factory_reset")?;
+        if factory_reset {
+            log::trace!("system_factory_reset");
+            self.system_factory_reset()
+                .await
+                .context("system_factory_reset")?;
+        } else {
+            log::trace!("skipping factory reset");
+        }
 
         // TODO: maybe allow upgrading with incompatible web version?
         // TODO: check web and firmware version after upgrade
@@ -2106,10 +2247,10 @@ impl<'a> Configurator<'a> {
             .await
             .context("system_device_discovery_disable")?;
 
-        log::trace!("system_ipv6_disable");
-        self.system_ipv6_disable()
+        log::trace!("system_ipv6_enable");
+        self.system_ipv6_enable()
             .await
-            .context("system_ipv6_disable")?;
+            .context("system_ipv6_enable")?;
 
         log::trace!("system_multicast_disable");
         self.system_multicast_disable()
@@ -2231,6 +2372,12 @@ impl<'a> Configurator<'a> {
             .await
             .context("video_privacy_mask_configure")?;
 
+        log::trace!("detection_capabilities_get");
+        let detection_capabilities = self
+            .detection_capabilities_get()
+            .await
+            .context("detection_capabilities_get")?;
+
         log::trace!("detection_external_alarm_disable");
         self.detection_external_alarm_disable()
             .await
@@ -2262,24 +2409,30 @@ impl<'a> Configurator<'a> {
             .context("detection_storage_health_alarm_disable")?;
 
         log::trace!("detection_motion_configure");
-        self.detection_motion_configure(configuration.motion_detection)
+        self.detection_motion_configure(&detection_capabilities, configuration.motion_detection)
             .await
             .context("detection_motion_configure")?;
 
         log::trace!("detection_smart_motion_configure");
-        self.detection_smart_motion_configure(configuration.smart_motion_detection)
-            .await
-            .context("detection_smart_motion_configure")?;
+        self.detection_smart_motion_configure(
+            &detection_capabilities,
+            configuration.smart_motion_detection,
+        )
+        .await
+        .context("detection_smart_motion_configure")?;
 
         log::trace!("detection_video_blind_enable");
-        self.detection_video_blind_enable()
+        self.detection_video_blind_enable(&detection_capabilities)
             .await
             .context("detection_video_blind_enable")?;
 
         log::trace!("detection_scene_moved_configure");
-        self.detection_scene_moved_configure(configuration.scene_moved_detection)
-            .await
-            .context("detection_scene_moved_configure")?;
+        self.detection_scene_moved_configure(
+            &detection_capabilities,
+            configuration.scene_moved_detection,
+        )
+        .await
+        .context("detection_scene_moved_configure")?;
 
         log::trace!("detection_audio_configure");
         self.detection_audio_configure(configuration.audio_mutation_detection)

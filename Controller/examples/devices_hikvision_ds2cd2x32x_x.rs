@@ -25,11 +25,12 @@ struct Arguments {
     admin_password: String,
 
     #[clap(subcommand)]
-    subcommand: Option<ArgumentsSubcommand>,
+    subcommand: ArgumentsSubcommand,
 }
 
 #[derive(Debug, Parser)]
 enum ArgumentsSubcommand {
+    EventStream,
     Configure(CommandConfigure),
 }
 
@@ -52,63 +53,67 @@ async fn main() -> Result<(), Error> {
 
     let api = Api::new(arguments.host, arguments.admin_password);
 
-    if let Some(ArgumentsSubcommand::Configure(command_configure)) = arguments.subcommand {
-        let mut configurator = Configurator::connect(&api).await.context("connect")?;
-        log::info!("basic_device_info: {:?}", configurator.basic_device_info());
-        log::info!("capabilities: {:?}", configurator.capabilities());
-        log::info!("starting configuration");
-        configurator
-            .configure(Configuration {
-                device_name: command_configure.device_name,
-                device_id: command_configure.device_id,
-                shared_user_password: command_configure.shared_user_password,
-                video_upside_down: command_configure.video_upside_down,
-                overlay_text: command_configure.overlay_text,
-                privacy_mask: None,
-                motion_detection: Some(
-                    MotionDetection::new(
-                        vec![MotionDetectionRegion {
-                            region: RegionSquare::full(),
-                            sensitivity: Percentage::new(50).unwrap(),
-                            object_size: Percentage::new(0).unwrap(),
-                        }]
-                        .into_boxed_slice(),
-                    )
-                    .unwrap(),
-                ),
-                field_detection: None,
-                line_detection: None,
-            })
-            .await
-            .context("configure")?;
-        log::info!("configuration completed");
-    } else {
-        let basic_device_info = api
-            .validate_basic_device_info()
-            .await
-            .context("validate_basic_device_info")?;
-        log::info!("basic_device_info: {:?}", basic_device_info);
-    }
+    match arguments.subcommand {
+        ArgumentsSubcommand::EventStream => {
+            let basic_device_info = api
+                .validate_basic_device_info()
+                .await
+                .context("validate_basic_device_info")?;
+            log::info!("basic_device_info: {:?}", basic_device_info);
 
-    let event_stream_manager = Manager::new(&api);
+            let event_stream_manager = Manager::new(&api);
 
-    let event_stream_manager_runner = event_stream_manager.run();
-    pin_mut!(event_stream_manager_runner);
-    let mut event_stream_manager_runner = event_stream_manager_runner.fuse();
+            let event_stream_manager_runner = event_stream_manager.run();
+            pin_mut!(event_stream_manager_runner);
+            let mut event_stream_manager_runner = event_stream_manager_runner.fuse();
 
-    let event_stream_manager_receiver_runner = tokio_stream::wrappers::WatchStream::new(
-        event_stream_manager.receiver(),
-    )
-    .for_each(|events| async move {
-        log::info!("events: {:?}", events);
-    });
-    pin_mut!(event_stream_manager_receiver_runner);
-    let mut event_stream_manager_receiver_runner = event_stream_manager_receiver_runner.fuse();
+            let event_stream_manager_receiver_runner = tokio_stream::wrappers::WatchStream::new(
+                event_stream_manager.receiver(),
+            )
+            .for_each(|events| async move {
+                log::info!("events: {:?}", events);
+            });
+            pin_mut!(event_stream_manager_receiver_runner);
+            let mut event_stream_manager_receiver_runner =
+                event_stream_manager_receiver_runner.fuse();
 
-    select! {
-        _ = ctrl_c().fuse() => (),
-        _ = event_stream_manager_runner => panic!("event_stream_manager_runner yielded"),
-        _ = event_stream_manager_receiver_runner => panic!("event_stream_manager_receiver_runner yielded"),
+            select! {
+                _ = ctrl_c().fuse() => (),
+                _ = event_stream_manager_runner => panic!("event_stream_manager_runner yielded"),
+                _ = event_stream_manager_receiver_runner => panic!("event_stream_manager_receiver_runner yielded"),
+            }
+        }
+        ArgumentsSubcommand::Configure(command_configure) => {
+            let mut configurator = Configurator::connect(&api).await.context("connect")?;
+            log::info!("basic_device_info: {:?}", configurator.basic_device_info());
+            log::info!("capabilities: {:?}", configurator.capabilities());
+            log::info!("starting configuration");
+            configurator
+                .configure(Configuration {
+                    device_name: command_configure.device_name,
+                    device_id: command_configure.device_id,
+                    shared_user_password: command_configure.shared_user_password,
+                    video_upside_down: command_configure.video_upside_down,
+                    overlay_text: command_configure.overlay_text,
+                    privacy_mask: None,
+                    motion_detection: Some(
+                        MotionDetection::new(
+                            vec![MotionDetectionRegion {
+                                region: RegionSquare::full(),
+                                sensitivity: Percentage::new(50).unwrap(),
+                                object_size: Percentage::new(0).unwrap(),
+                            }]
+                            .into_boxed_slice(),
+                        )
+                        .unwrap(),
+                    ),
+                    field_detection: None,
+                    line_detection: None,
+                })
+                .await
+                .context("configure")?;
+            log::info!("configuration completed");
+        }
     }
 
     Ok(())
