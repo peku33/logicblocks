@@ -213,7 +213,7 @@ impl<'d> Exchanger<'d> {
                     .into_iter()
                     .collect::<HashSet<_>>()
             })
-            .for_each(|sources_changed_waker_remotes| async {
+            .for_each(async |sources_changed_waker_remotes| {
                 let mut targets_changed_waker_remotes =
                     HashSet::<ByAddress<&TargetsChangedWakerRemote<'d>>>::new();
 

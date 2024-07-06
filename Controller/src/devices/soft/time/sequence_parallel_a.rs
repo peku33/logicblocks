@@ -1024,7 +1024,7 @@ impl Device {
             Self::CHANNELS_TICK_INTERVAL,
         ))
         .stream_take_until_exhausted(exit_flag.clone())
-        .for_each(|_| async {
+        .for_each(async |_| {
             self.channels_tick();
         })
         .boxed();
@@ -1034,7 +1034,7 @@ impl Device {
             .signals_targets_changed_waker
             .stream()
             .stream_take_until_exhausted(exit_flag.clone())
-            .for_each(|()| async {
+            .for_each(async |()| {
                 self.signals_targets_changed();
             })
             .boxed();

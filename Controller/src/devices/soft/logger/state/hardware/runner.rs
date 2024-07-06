@@ -73,7 +73,7 @@ impl RunnerSink {
         let sink_items_receiver_runner = sink_items_receiver
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
-            .for_each(|time_value| async {
+            .for_each(async |time_value| {
                 let sink_item = SinkItem {
                     sink_id: self.sink_id,
                     time_value,

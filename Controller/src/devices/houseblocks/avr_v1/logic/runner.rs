@@ -124,7 +124,7 @@ where
                 .as_signal()
                 .receiver()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(|()| async {
+                .for_each(async |()| {
                     self.gui_summary_waker.wake();
                 })
                 .boxed();
@@ -136,7 +136,7 @@ where
                 .map(|gui_summary_provider| gui_summary_provider.waker().as_signal().receiver()),
         )
         .stream_take_until_exhausted(exit_flag.clone())
-        .for_each(|()| async {
+        .for_each(async |()| {
             self.gui_summary_waker.wake();
         })
         .boxed();

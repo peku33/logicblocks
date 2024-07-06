@@ -210,9 +210,7 @@ impl<'a> Responder<'a> {
                 let receiver = value.waker.receiver();
                 let sender = &value.sender;
 
-                receiver
-                    .for_each(move |()| async move { sender.wake() })
-                    .boxed()
+                receiver.for_each(async move |_| sender.wake()).boxed()
             })
             .collect::<FutureSelectAllOrPending<_>>();
         pin_mut!(waker_to_sender_runner);

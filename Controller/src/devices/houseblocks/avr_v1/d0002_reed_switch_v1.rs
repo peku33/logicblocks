@@ -92,7 +92,7 @@ pub mod logic {
                 .ins_changed_waker_remote
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(|()| async {
+                .for_each(async |()| {
                     self.properties_ins_changed();
                 })
                 .await;

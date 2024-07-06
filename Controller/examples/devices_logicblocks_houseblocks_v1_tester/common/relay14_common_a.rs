@@ -45,7 +45,7 @@ async fn run_inner<S: Specification>(
 
     let runner_runner = runner.run(exit_flag_sender.receiver());
 
-    let abort_runner = ctrl_c().then(|_| async {
+    let abort_runner = ctrl_c().then(async |_| {
         exit_flag_sender.signal();
     });
 

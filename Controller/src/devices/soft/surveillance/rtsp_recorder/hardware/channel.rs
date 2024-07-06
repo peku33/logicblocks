@@ -206,7 +206,7 @@ impl Channel {
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
             .map(Result::<_, Error>::Ok)
-            .try_for_each(|segment| async move {
+            .try_for_each(async |segment| {
                 self.channel_segment_forward(segment)
                     .await
                     .context("channel_segment_forward")?;

@@ -25,7 +25,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tokio::{
-    fs,
+    fs::{self, DirEntry},
     io::{AsyncBufReadExt, BufReader},
     process::Command,
     sync::watch,
@@ -187,28 +187,28 @@ impl Recorder {
         let stdout = tokio_stream::wrappers::LinesStream::new(
             BufReader::new(child.stdout.take().unwrap()).lines(),
         )
-        .for_each(|item| async move {
-            match item.context("stdout") {
+        .for_each(
+            async |item: Result<String, _>| match item.context("stdout") {
                 Ok(line) => log::warn!("{}: ffmpeg stdout: {}", self, line),
                 Err(error) => {
                     log::error!("{}: error while reading ffmpeg stdout: {:?}", self, error)
                 }
-            }
-        });
+            },
+        );
         pin_mut!(stdout);
         let mut stdout = stdout.fuse();
 
         let stderr = tokio_stream::wrappers::LinesStream::new(
             BufReader::new(child.stderr.take().unwrap()).lines(),
         )
-        .for_each(|item| async move {
-            match item.context("stderr") {
+        .for_each(
+            async |item: Result<String, _>| match item.context("stderr") {
                 Ok(line) => log::warn!("{}: ffmpeg stderr: {}", self, line),
                 Err(error) => {
                     log::error!("{}: error while reading ffmpeg stderr: {:?}", self, error)
                 }
-            }
-        });
+            },
+        );
         pin_mut!(stderr);
         let mut stderr = stderr.fuse();
 
@@ -362,7 +362,7 @@ impl Recorder {
         let error_stream = inotify_instance
             .event_stream(buffer)
             .context("event_stream")?
-            .filter_map(|event| async move {
+            .filter_map(async |event| {
                 match self
                     .inotify_handle_event(event)
                     .await
@@ -467,14 +467,14 @@ impl Recorder {
                 .context("read_dir")?,
         )
         .err_into::<Error>()
-        .and_then(|entry| async move {
+        .and_then(async |entry| {
             self.fixer_handle_directory_entry(entry)
                 .await
                 .context("fixer_handle_directory_entry")?;
 
             Ok(())
         })
-        .filter_map(|result| async move { result.err() })
+        .filter_map(async |result: Result<(), _>| result.err())
         .collect::<Vec<_>>()
         .await;
 
@@ -528,14 +528,14 @@ impl Recorder {
                 .context("read_dir")?,
         )
         .err_into::<Error>()
-        .and_then(|entry| async move {
+        .and_then(async |entry: DirEntry| {
             self.handle_file(&entry.path())
                 .await
                 .context("handle_file")?;
 
             Ok(())
         })
-        .filter_map(|result| async move { result.err() })
+        .filter_map(async |result: Result<(), _>| result.err())
         .collect::<Vec<_>>()
         .await;
 

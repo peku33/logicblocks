@@ -45,7 +45,7 @@ impl Device {
         let signal_input_changed_stream = self
             .signals_targets_changed_waker
             .stream()
-            .filter(|()| async { self.signal_input.take_pending().is_some() });
+            .filter(|_| async { self.signal_input.take_pending().is_some() });
         pin_mut!(signal_input_changed_stream);
 
         loop {

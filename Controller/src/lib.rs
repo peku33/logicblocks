@@ -4,7 +4,6 @@
 #![feature(associated_type_defaults)]
 #![feature(async_closure)]
 #![feature(const_fn_floating_point_arithmetic)]
-#![feature(div_duration)]
 #![feature(duration_consts_float)]
 #![feature(exact_size_is_empty)]
 #![feature(hash_extract_if)]

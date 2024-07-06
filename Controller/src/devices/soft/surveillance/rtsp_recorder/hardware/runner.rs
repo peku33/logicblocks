@@ -92,7 +92,7 @@ impl RunnerChannel {
             .channel_segment_receiver_borrow_mut()
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
-            .for_each(|channel_segment| async move {
+            .for_each(async |channel_segment| {
                 let channel_id_segment = ChannelIdSegment {
                     id: self.channel_id,
                     segment: channel_segment,

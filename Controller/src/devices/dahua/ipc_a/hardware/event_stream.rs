@@ -206,7 +206,7 @@ impl<'a> Manager<'a> {
             .context("http_request_boundary_stream")?;
 
         let item_stream_runner = item_stream
-            .try_for_each(|item| async move {
+            .try_for_each(async |item: String| {
                 let event_state_update =
                     Self::event_state_update_parse(&item).context("event_state_update_parse")?;
 
@@ -228,7 +228,7 @@ impl<'a> Manager<'a> {
         let events_fixer_runner = tokio_stream::wrappers::IntervalStream::new(
             tokio::time::interval(Self::EVENT_FIXER_INTERVAL),
         )
-        .for_each(|time_point| async move {
+        .for_each(async |time_point: tokio::time::Instant| {
             if self.events_fixer_handle(time_point.into_std()) {
                 self.events_propagate();
             }

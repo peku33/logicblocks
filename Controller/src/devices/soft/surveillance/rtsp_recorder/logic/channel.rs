@@ -52,7 +52,7 @@ impl<'c> Device<'c> {
         self.signals_targets_changed_waker
             .stream()
             .stream_take_until_exhausted(exit_flag)
-            .for_each(|()| async {
+            .for_each(async |()| {
                 self.signals_targets_changed();
             })
             .await;

@@ -65,7 +65,7 @@ impl Device {
     ) -> Exited {
         let signal_input_stream_filtered =
             StateTargetQueuedStream::new(&self.signals_targets_changed_waker, &self.signal_input)
-                .filter_map(|value| async move { value });
+                .filter_map(async |value| value);
         pin_mut!(signal_input_stream_filtered);
 
         'outer: loop {

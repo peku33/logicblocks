@@ -168,7 +168,7 @@ pub mod logic {
                 .signals_targets_changed_waker
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(|()| async {
+                .for_each(async |()| {
                     self.signals_targets_changed();
                 })
                 .boxed();
@@ -179,7 +179,7 @@ pub mod logic {
                 .ins_changed_waker_remote
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(|()| async {
+                .for_each(async |()| {
                     self.properties_ins_changed();
                 })
                 .boxed();
@@ -411,7 +411,7 @@ pub mod hardware {
                 .outs_changed_waker
                 .stream()
                 .stream_take_until_exhausted(exit_flag.clone())
-                .for_each(|()| async {
+                .for_each(async |()| {
                     self.poll_waker.wake();
                 })
                 .boxed();

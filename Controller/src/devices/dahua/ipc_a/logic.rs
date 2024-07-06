@@ -291,7 +291,7 @@ impl Device {
         let events_stream_manager_receiver_runner = tokio_stream::wrappers::WatchStream::new(
             events_stream_manager.receiver(),
         )
-        .for_each(|hardware_events| async move {
+        .for_each(async |hardware_events| {
             let events = Events::from_event_stream_events(&hardware_events);
             self.events_handle(events);
         });

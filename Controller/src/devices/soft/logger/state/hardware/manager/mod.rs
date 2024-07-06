@@ -317,7 +317,7 @@ impl<'f> Manager<'f> {
         ))
         .stream_take_until_exhausted(exit_flag)
         .map(Result::<_, Error>::Ok)
-        .try_for_each(|_| async {
+        .try_for_each(async |_| {
             self.db_sink_items_to_buffer_to_storage()
                 .await
                 .context("db_sink_items_to_buffer_to_storage")?;

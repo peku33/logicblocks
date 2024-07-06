@@ -140,7 +140,7 @@ impl<'a> Manager<'a> {
 
         // TODO: Add timeout
         let element_stream_runner = element_stream
-            .try_for_each(|item| async {
+            .try_for_each(async |item| {
                 let event_state_update =
                     Self::event_state_update_parse(item).context("event_state_update_parse")?;
 
@@ -159,7 +159,7 @@ impl<'a> Manager<'a> {
         let events_disabler_runner = tokio_stream::wrappers::IntervalStream::new(
             tokio::time::interval(Self::EVENTS_DISABLER_TICK_INTERVAL),
         )
-        .for_each(|_time_point| async {
+        .for_each(async |_time_point| {
             let mut events_changed = false;
             events_changed |= self.events_disabler_handle();
             if events_changed {

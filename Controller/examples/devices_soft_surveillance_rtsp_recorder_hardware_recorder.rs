@@ -49,7 +49,7 @@ async fn main() -> Result<(), Error> {
     let forwarder_runner_persistent_storage_directory = &arguments.persistent_storage_directory;
     let forwarder_runner = segment_receiver
         .stream_take_until_exhausted(exit_flag_sender.receiver())
-        .for_each(|segment| async {
+        .for_each(async |segment| {
             let target_path = forwarder_runner_persistent_storage_directory
                 .join(segment.path.file_name().unwrap());
             log::info!(
