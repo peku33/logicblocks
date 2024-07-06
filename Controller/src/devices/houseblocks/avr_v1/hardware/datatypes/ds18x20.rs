@@ -34,8 +34,9 @@ impl SensorState {
 
         let temperature = match sensor_type {
             SensorType::S | SensorType::B => {
-                // Normally, left bits are used for sign but we cut it during transmission to reduce space
-                // Bits 15:11 are always equal, so we can use 11 only
+                // Normally, left bits are used for sign but we cut it during transmission to
+                // reduce space Bits 15:11 are always equal, so we can use 11
+                // only
                 let mut temperature = value & 0b0000_1111_1111_1111;
                 if temperature & 0b0000_1000_0000_0000 != 0 {
                     temperature |= 0b1111_0000_0000_0000;

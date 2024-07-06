@@ -128,8 +128,8 @@ where
 }
 
 // Getter
-/// Getter object - read only part od [`Value`]. Creating and keeping this object has no cost, it's just a proxy around
-/// read-only methods of [`Value`].
+/// Getter object - read only part od [`Value`]. Creating and keeping this
+/// object has no cost, it's just a proxy around read-only methods of [`Value`].
 #[derive(Debug)]
 pub struct Getter<'v, T>
 where
@@ -174,8 +174,9 @@ where
 }
 
 // Setter
-/// Setter object - read-write part od [`Value`]. Creating and keeping this object has no cost, it's just a proxy around
-/// read-write methods of [`Value`].
+/// Setter object - read-write part od [`Value`]. Creating and keeping this
+/// object has no cost, it's just a proxy around read-write methods of
+/// [`Value`].
 #[derive(Debug)]
 pub struct Setter<'v, T>
 where
@@ -229,8 +230,9 @@ where
 }
 
 // Observer
-/// Observer object. This internally keeps the copy of "last seen" or "last processed" value. Calling its method will
-/// compare this value against global (from [`Value`]) value and tell whether it was changed.
+/// Observer object. This internally keeps the copy of "last seen" or "last
+/// processed" value. Calling its method will compare this value against global
+/// (from [`Value`]) value and tell whether it was changed.
 #[derive(Debug)]
 pub struct Observer<'v, T>
 where
@@ -259,7 +261,8 @@ where
         }
     }
 
-    /// Returns latest global (from [`Value`]) value and marks it as "last seen".
+    /// Returns latest global (from [`Value`]) value and marks it as "last
+    /// seen".
     pub fn get_update(&mut self) -> &T {
         let parent_inner = self.parent.inner.read();
 
@@ -272,8 +275,8 @@ where
         self.last_seen_value.as_ref().unwrap()
     }
 
-    /// Returns latest global (from [`Value`]) value and marks it as "last seen" only if it differs from previous
-    /// "last seen".
+    /// Returns latest global (from [`Value`]) value and marks it as "last seen"
+    /// only if it differs from previous "last seen".
     pub fn get_changed_update(&mut self) -> Option<&T> {
         let parent_inner = self.parent.inner.read();
 
@@ -289,7 +292,8 @@ where
         changed
     }
 
-    /// Returns [`ObserverCommitter`] object if global (from [`Value`]) value differs from "last seen".
+    /// Returns [`ObserverCommitter`] object if global (from [`Value`]) value
+    /// differs from "last seen".
     pub fn get_changed_committer(&mut self) -> Option<ObserverCommitter<'_, 'v, T>> {
         let parent_inner = self.parent.inner.read();
 
@@ -310,8 +314,9 @@ where
     }
 }
 
-/// This object allows to first freeze the value and then mark it (or not) as "last seen" or "last processed". This
-/// is useful if processing of the value may fail and we may want to retry later, keeping pending state.
+/// This object allows to first freeze the value and then mark it (or not) as
+/// "last seen" or "last processed". This is useful if processing of the value
+/// may fail and we may want to retry later, keeping pending state.
 #[derive(Debug)]
 pub struct ObserverCommitter<'r, 'v, T>
 where
@@ -334,8 +339,8 @@ where
         }
     }
 
-    /// Returns value. The value is frozen inside, meaning it won't change between calls, event if [`Value`] value was
-    /// updated.
+    /// Returns value. The value is frozen inside, meaning it won't change
+    /// between calls, event if [`Value`] value was updated.
     pub fn value(&self) -> &T {
         &self.pending_value
     }
@@ -346,8 +351,8 @@ where
 }
 
 // ObserverChanged
-/// Future that will complete if value stored in [`Observer`] (aka last seen) differs from value stored
-/// in [`Value`] (aka global).
+/// Future that will complete if value stored in [`Observer`] (aka last seen)
+/// differs from value stored in [`Value`] (aka global).
 #[derive(Debug)]
 pub struct ObserverChanged<'r, 'v, T>
 where
@@ -437,9 +442,10 @@ where
 }
 
 // ChangedStream
-/// Stream yielding () when value is changed. Remembers value from previous yield and yields only if value differs. If
-/// value went A -> B -> A quickly, it is possible it won't yield. Use this when you don't need value returned from
-/// stream, as this is a bit faster then [`ValueStream`].
+/// Stream yielding () when value is changed. Remembers value from previous
+/// yield and yields only if value differs. If value went A -> B -> A quickly,
+/// it is possible it won't yield. Use this when you don't need value returned
+/// from stream, as this is a bit faster then [`ValueStream`].
 #[derive(Debug)]
 pub struct ChangedStream<'v, T>
 where
@@ -533,9 +539,11 @@ where
 }
 
 // ValueStream
-/// Stream yielding value when it is changed. Remembers value from previous yield and yields only if value differs. If
-/// value went A -> B -> A quickly, it is possible it won't yield. A bit slower then [`ChangedStream`], because of
-/// additional clone, so use it only when you actually need value from stream, not just information it was changed.
+/// Stream yielding value when it is changed. Remembers value from previous
+/// yield and yields only if value differs. If value went A -> B -> A quickly,
+/// it is possible it won't yield. A bit slower then [`ChangedStream`], because
+/// of additional clone, so use it only when you actually need value from
+/// stream, not just information it was changed.
 #[derive(Debug)]
 pub struct ValueStream<'v, T>
 where

@@ -15,11 +15,9 @@ use futures::stream::StreamExt;
 use maplit::hashmap;
 use std::{any::type_name, borrow::Cow};
 
-/**
- * State<V> signal is provided on input target
- * when Event<()> hits trigger target
- * current input value is emitted as Event<V> from output source
- */
+/// State<V> signal is provided on input target
+/// when Event<()> hits trigger target
+/// current input value is emitted as Event<V> from output source
 #[derive(Debug)]
 pub struct Device<V>
 where

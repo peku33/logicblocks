@@ -679,7 +679,9 @@ pub mod spa {
         pub fn calculate(
             spa3: SPA3,
             slope: f64, // slope of the surface measured from the horizontal plane in radians
-            azimuth: f64, // surface azimuth rotation angle, measured from south to the projection of the surface normal on the horizontal plane, positive or negative if oriented west or east from south, respectively in radians
+            azimuth: f64, /* surface azimuth rotation angle, measured from south to the projection
+                         * of the surface normal on the horizontal plane, positive or negative
+                         * if oriented west or east from south, respectively in radians */
         ) -> Self {
             let SPA3 { spa2, theta, .. } = spa3;
             let SPA2 { gamma_cap, .. } = spa2;

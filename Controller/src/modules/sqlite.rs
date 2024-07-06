@@ -75,7 +75,8 @@ impl<'f> SQLite<'f> {
         // TODO: set locking_mode to EXCLUSIVE, as we are using single connection?
         // this won't allow to view the database while it's opened though
         // TODO: auto_vacuum = INCREMENTAL does not actually vacuum anything
-        // expose .vacuum() method and add it on system start/stop or with some periodic stuff
+        // expose .vacuum() method and add it on system start/stop or with some periodic
+        // stuff
         // TODO: use pragma optimize before opening/closing the connection
         vtab::array::load_module(&connection).context("vtab load_module")?;
 

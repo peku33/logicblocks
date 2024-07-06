@@ -205,7 +205,8 @@ where
     }
 
     // TODO: WTF is happening with the type in here?
-    // SAFE: The signal identifier itself is 'static, so there shouldn't be problems in here
+    // SAFE: The signal identifier itself is 'static, so there shouldn't be problems
+    // in here
     type Identifier = <<DF as DeviceFactory>::Device<'static> as signals::Device>::Identifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
         let device_static = unsafe {

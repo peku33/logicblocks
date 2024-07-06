@@ -46,7 +46,8 @@ where
         let mut gui_summary_changed = false;
 
         if self.signal_input.take_pending().is_some() {
-            // we don't really care about the value, as it's going to be read by gui summary value
+            // we don't really care about the value, as it's going to be read by gui summary
+            // value
             gui_summary_changed = true;
         }
 

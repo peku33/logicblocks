@@ -178,7 +178,8 @@ impl<'f> Manager<'f> {
         &self,
         mut sinks_data: HashMap<SinkId, SinkData>,
     ) -> Result<(), Error> {
-        // FIXME: this should be done atomically, race condition is possible because of read-modify-write pattern
+        // FIXME: this should be done atomically, race condition is possible because of
+        // read-modify-write pattern
 
         self.initialized.waiter().await;
 
@@ -798,7 +799,7 @@ impl<'f> Manager<'f> {
 
         transaction
             .execute(
-                include_str!("buffer_finalize_with_nulls_real.sql"), //break
+                include_str!("buffer_finalize_with_nulls_real.sql"), // break
                 params,
             )
             .context("buffer_finalize_with_nulls_real")?;

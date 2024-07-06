@@ -1,8 +1,7 @@
-/**
- * In general camera events are fucked up.
- * For example if motion starts in region 1 and ends in region 2, the camera will issue start for region 1 and stop for region 2
- * Even sometimes there are two ending regions, which makes it even more useless.
-*/
+/// In general camera events are fucked up.
+/// For example if motion starts in region 1 and ends in region 2, the camera
+/// will issue start for region 1 and stop for region 2 Even sometimes there
+/// are two ending regions, which makes it even more useless.
 use super::api::Api;
 use anyhow::{anyhow, bail, Context, Error};
 use atomic_refcell::AtomicRefCell;

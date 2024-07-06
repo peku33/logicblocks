@@ -200,7 +200,8 @@ impl<'d> Exchanger<'d> {
 
                     sources_changed_waker_remote_stream
                         .map(move |()| sources_changed_waker_remote)
-                        .boxed() // FIXME: boxed is required because of some problems with unpin
+                        .boxed() // FIXME: boxed is required because of some
+                                 // problems with unpin
                 },
             )
             .collect::<StreamSelectAllOrPending<_>>()
@@ -393,9 +394,9 @@ fn new_inner_child<'p, 'd>(
         ),
     >::new();
 
-    // check if each device with targets has targets waker and each device with source has source waker
-    // fill state_targets_disconnected with all signals, will be removed later
-    // fill connections with sources for all signals
+    // check if each device with targets has targets waker and each device with
+    // source has source waker fill state_targets_disconnected with all signals,
+    // will be removed later fill connections with sources for all signals
     for (
         device_id,
         (device, targets_changed_waker_remote, sources_changed_waker_remote, signals_by_identifier),

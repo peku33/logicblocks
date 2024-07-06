@@ -916,7 +916,8 @@ impl Device {
         }
 
         // in the second iteration we add new channels if they are ready to be run
-        // we process and try to enable them processed by order, until first failure, to prevent starvation
+        // we process and try to enable them processed by order, until first failure, to
+        // prevent starvation
         let channel_ids = zip_eq(self.configuration.channels.iter(), channels.iter())
             .enumerate()
             .filter_map(
@@ -967,8 +968,9 @@ impl Device {
                         }
                         gui_summary_changed = true;
                     } else {
-                        // to prevent starvation we end iterating when first channel does not meet power condition
-                        // this makes sure that iteration will stop here until this channel is ready to run
+                        // to prevent starvation we end iterating when first channel does not meet
+                        // power condition this makes sure that iteration
+                        // will stop here until this channel is ready to run
                         break;
                     }
                 }

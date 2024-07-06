@@ -108,7 +108,8 @@ impl Response {
         Response { hyper_response }
     }
     pub fn ok_sse_stream<S: Stream<Item = sse::Event> + Send + 'static>(sse_stream: S) -> Self {
-        // FIXME: webkit based browsers (firefox, safari) won't see the stream opened until something is written
+        // FIXME: webkit based browsers (firefox, safari) won't see the stream opened
+        // until something is written
         let ping_event = ":\r\n".to_owned();
         let hyper_body = Body::wrap_stream(
             once(async { Ok(ping_event) })

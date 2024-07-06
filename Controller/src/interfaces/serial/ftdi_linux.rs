@@ -274,7 +274,8 @@ impl Device {
         let ftdi_write_data_submit_result = unsafe {
             ftdi_write_data_submit(
                 self.context,
-                data.as_ptr() as *mut u8, // No idea why "write" takes non-const, it is not used mutably in lib
+                data.as_ptr() as *mut u8, /* No idea why "write" takes non-const, it is not used
+                                           * mutably in lib */
                 data.len() as i32,
             )
         };

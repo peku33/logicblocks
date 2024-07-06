@@ -67,7 +67,8 @@ impl<'h> Server<'h> {
     }
 
     // Unsafe because of transmuting.
-    // To use it, you must ensure that all spawned futures ended (possibly by waiting for runtime closing)
+    // To use it, you must ensure that all spawned futures ended (possibly by
+    // waiting for runtime closing)
     async unsafe fn run(&self) -> ! {
         let self_static = transmute::<&'_ Server<'_>, &'static Server<'static>>(self);
         let make_service = make_service_fn(|connection: &AddrStream| {

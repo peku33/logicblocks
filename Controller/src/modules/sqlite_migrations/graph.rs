@@ -18,11 +18,13 @@ pub fn resolve(
     graph: &Graph,
     source: Version,
 ) -> (Version, Option<Box<[Migration]>>) {
-    // validate graph. errors in graph are treated as programming error and cannot be handled
+    // validate graph. errors in graph are treated as programming error and cannot
+    // be handled
     graph.into_iter().for_each(|(target, sources)| {
         sources.into_iter().for_each(|(source, _)| {
             // only forward migrations are supported for now
-            // this also implies that target > 0 and that graph contains no cycles and is monotonic
+            // this also implies that target > 0 and that graph contains no cycles and is
+            // monotonic
             assert!(
                 target > source,
                 "unsupported negative migration found in graph"
