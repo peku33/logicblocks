@@ -36,7 +36,7 @@ impl<'a> Handler for RootService<'a> {
         // Serve GUI
         let gui_response =
             self.gui_responder
-                .respond(request.method(), request.uri(), request.headers());
+                .respond(request.method(), request.uri().path(), request.headers());
         async { gui_response }.boxed()
     }
 }
@@ -44,70 +44,63 @@ impl<'a> Handler for RootService<'a> {
 #[cfg(feature = "ci-packed-gui")]
 mod gui_responder {
     use super::super::Response;
-    use http::{HeaderMap, Method, Uri};
-    use ouroboros::self_referencing;
+    use bytes::Bytes;
+    use http::{HeaderMap, Method, Response as HttpResponse};
+    use http_body_util::{combinators::BoxBody, BodyExt};
     use std::{env, include_bytes};
     use web_static_pack::{
-        hyper_loader::{Responder, ResponderError},
-        loader::Loader,
+        common::pack::PackArchived,
+        loader::load,
+        responder::{Responder, ResponderRespondError, Response as ResponderResponse},
     };
 
-    #[self_referencing]
-    // #[derive(Debug)] // Loader & Responder does not implement Debug
-    struct GuiResponderInner {
-        loader: Loader,
+    static GUI_PACK_ARCHIVED: &[u8] = include_bytes!(env!("CI_WEB_STATIC_PACK_GUI"));
 
-        #[borrows(loader)]
-        #[covariant]
-        responder: Responder<'this>,
-    }
-
-    // #[derive(Debug)] // GuiResponderInner does not implement Debug
+    #[derive(Debug)] // GuiResponderInner does not implement Debug
     pub struct GuiResponder {
-        inner: GuiResponderInner,
+        inner: Responder<'static, PackArchived>,
     }
     impl GuiResponder {
         pub fn new() -> Self {
-            let inner = GuiResponderInnerBuilder {
-                loader: Loader::new(include_bytes!(env!("CI_WEB_STATIC_PACK_GUI"))).unwrap(),
-                responder_builder: |loader| Responder::new(loader),
-            }
-            .build();
-
+            let pack_archived = unsafe { load(GUI_PACK_ARCHIVED) }.unwrap();
+            let inner = Responder::new(pack_archived);
             Self { inner }
         }
 
         pub fn respond(
             &self,
             method: &Method,
-            uri: &Uri,
+            path: &str,
             headers: &HeaderMap,
         ) -> Response {
-            let responder = self.inner.borrow_responder();
-
-            // If path is /, use index.html
-            if uri.path() == "/" {
-                match responder.parts_respond_or_error(
-                    method,
-                    &Uri::from_static("/index.html"),
-                    headers,
-                ) {
-                    Ok(response) => return Response::from_hyper_response(response),
-                    Err(error) => return Response::error(error.as_http_status_code()),
-                };
-            }
-
-            // Try actual file
-            match responder.parts_respond_or_error(method, uri, headers) {
-                Ok(response) => return Response::from_hyper_response(response),
-                Err(error) => match error {
-                    ResponderError::LoaderPathNotFound => (),
-                    _ => return Response::error(error.as_http_status_code()),
-                },
+            let path = match path {
+                "/" => "/index.html",
+                path => path,
             };
 
-            // Fallback to /
-            Response::redirect_302("/")
+            match self.inner.respond(method, path, headers) {
+                Ok(response) => Self::convert_response(response),
+                Err(error) => match error {
+                    ResponderRespondError::PackPathNotFound => Response::redirect_302("/"),
+                    error => Self::convert_response(error.into_response()),
+                },
+            }
+        }
+
+        fn convert_response(responder_response: ResponderResponse<'static>) -> Response {
+            let (parts, body) = responder_response.into_parts();
+            // impl Body<&[u8]> -> impl Body<Bytes>
+            let body = body.map_frame(|frame| frame.map_data(Bytes::from_static));
+            // impl Body<Bytes> -> BoxBody<Bytes>
+            let body = BoxBody::new(body);
+
+            // make HttpResponse<BoxBody<Bytes>, _>
+            let http_response = HttpResponse::from_parts(parts, body);
+
+            // make Response
+            let response = Response::from_http_response(http_response);
+
+            response
         }
     }
 }
@@ -115,7 +108,7 @@ mod gui_responder {
 #[cfg(not(feature = "ci-packed-gui"))]
 mod gui_responder {
     use super::super::Response;
-    use http::{HeaderMap, Method, Uri};
+    use http::{HeaderMap, Method};
 
     #[derive(Debug)]
     pub struct GuiResponder {}
@@ -127,7 +120,7 @@ mod gui_responder {
         pub fn respond(
             &self,
             _method: &Method,
-            _uri: &Uri,
+            _path: &str,
             _headers: &HeaderMap,
         ) -> Response {
             Response::error_404()

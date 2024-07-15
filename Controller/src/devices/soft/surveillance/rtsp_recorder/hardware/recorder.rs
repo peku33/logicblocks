@@ -187,28 +187,24 @@ impl Recorder {
         let stdout = tokio_stream::wrappers::LinesStream::new(
             BufReader::new(child.stdout.take().unwrap()).lines(),
         )
-        .for_each(
-            async |item: Result<String, _>| match item.context("stdout") {
-                Ok(line) => log::warn!("{}: ffmpeg stdout: {}", self, line),
-                Err(error) => {
-                    log::error!("{}: error while reading ffmpeg stdout: {:?}", self, error)
-                }
-            },
-        );
+        .for_each(async |item| match item.context("stdout") {
+            Ok(line) => log::warn!("{}: ffmpeg stdout: {}", self, line),
+            Err(error) => {
+                log::error!("{}: error while reading ffmpeg stdout: {:?}", self, error)
+            }
+        });
         pin_mut!(stdout);
         let mut stdout = stdout.fuse();
 
         let stderr = tokio_stream::wrappers::LinesStream::new(
             BufReader::new(child.stderr.take().unwrap()).lines(),
         )
-        .for_each(
-            async |item: Result<String, _>| match item.context("stderr") {
-                Ok(line) => log::warn!("{}: ffmpeg stderr: {}", self, line),
-                Err(error) => {
-                    log::error!("{}: error while reading ffmpeg stderr: {:?}", self, error)
-                }
-            },
-        );
+        .for_each(async |item| match item.context("stderr") {
+            Ok(line) => log::warn!("{}: ffmpeg stderr: {}", self, line),
+            Err(error) => {
+                log::error!("{}: error while reading ffmpeg stderr: {:?}", self, error)
+            }
+        });
         pin_mut!(stderr);
         let mut stderr = stderr.fuse();
 
@@ -474,7 +470,7 @@ impl Recorder {
 
             Ok(())
         })
-        .filter_map(async |result: Result<(), _>| result.err())
+        .filter_map(async |result| result.err())
         .collect::<Vec<_>>()
         .await;
 
@@ -535,7 +531,7 @@ impl Recorder {
 
             Ok(())
         })
-        .filter_map(async |result: Result<(), _>| result.err())
+        .filter_map(async |result| result.err())
         .collect::<Vec<_>>()
         .await;
 
@@ -594,17 +590,17 @@ impl Recorder {
 
         let fixer_runner = self
             .fixer_run(fixer_exit_flag_receiver)
-            .inspect(|_: &Exited| {
+            .then(async |Exited| {
                 ffmpeg_or_nop_run_exit_flag_sender.signal();
             });
         let ffmpeg_or_nop_runner = self
             .ffmpeg_or_nop_run(ffmpeg_or_nop_run_exit_flag_receiver)
-            .inspect(|_: &Exited| {
+            .then(async |Exited| {
                 inotify_exit_flag_sender.signal();
             });
         let inotify_runner = self.inotify_run(inotify_exit_flag_receiver);
 
-        let _: (Exited, Exited, Exited) = join!(fixer_runner, ffmpeg_or_nop_runner, inotify_runner);
+        let _: ((), (), Exited) = join!(fixer_runner, ffmpeg_or_nop_runner, inotify_runner);
 
         Exited
     }

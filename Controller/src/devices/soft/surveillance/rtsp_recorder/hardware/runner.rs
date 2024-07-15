@@ -119,13 +119,13 @@ impl RunnerChannel {
         let channel_runner =
             self.channel
                 .run(channel_run_exit_flag_receiver)
-                .inspect(|_: &Exited| {
+                .then(async |Exited| {
                     channel_segment_forwarder_exit_flag_sender.signal();
                 });
         let channel_segment_forwarder_runner =
             self.channel_segment_forwarder_run(channel_segment_forwarder_exit_flag_receiver);
 
-        let _: (Exited, Exited) = join!(channel_runner, channel_segment_forwarder_runner);
+        let _: ((), Exited) = join!(channel_runner, channel_segment_forwarder_runner);
 
         Exited
     }

@@ -254,14 +254,14 @@ impl Channel {
             channel_segment_forwarder_exit_flag_receiver,
         ) = async_flag::pair();
 
-        let recorder_runner = self.recorder.run(recorder_exit_flag).inspect(|_: &Exited| {
+        let recorder_runner = self.recorder.run(recorder_exit_flag).then(async |Exited| {
             channel_segment_forwarder_exit_flag_sender.signal();
         });
 
         let channel_segment_forwarder_runner =
             self.channel_segment_forwarder_run(channel_segment_forwarder_exit_flag_receiver);
 
-        let _: (Exited, Exited) = join!(recorder_runner, channel_segment_forwarder_runner);
+        let _: ((), Exited) = join!(recorder_runner, channel_segment_forwarder_runner);
 
         Exited
     }

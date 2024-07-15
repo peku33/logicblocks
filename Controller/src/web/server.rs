@@ -8,21 +8,30 @@ use crate::{
         runtime::{Runtime, RuntimeScopeRunnable},
     },
 };
-use anyhow::Context;
+use anyhow::{Context, Error};
 use async_trait::async_trait;
-use futures::{future::FutureExt, pin_mut, select};
-use hyper::{
-    server::conn::AddrStream,
-    service::{make_service_fn, service_fn},
-    Body, Request as HyperRequest, Response as HyperResponse, Server as HyperServer,
+use bytes::Bytes;
+use futures::{
+    future::{select, Either, FutureExt},
+    pin_mut, select,
+};
+use http::{request::Request as HttpRequest, response::Response as HttpResponse};
+use http_body_util::{combinators::BoxBody, BodyExt};
+use hyper::{body::Incoming, service::service_fn};
+use hyper_util::{
+    rt::{TokioExecutor, TokioIo},
+    server::{conn::auto::Builder, graceful::GracefulShutdown},
 };
 use once_cell::sync::Lazy;
 use ouroboros::self_referencing;
 use std::{
     convert::Infallible,
+    fmt,
     mem::{transmute, ManuallyDrop},
     net::SocketAddr,
+    time::Duration,
 };
+use tokio::net::TcpListener;
 
 // #[derive(Debug)] // Debug not possible
 pub struct Server<'h> {
@@ -40,72 +49,138 @@ impl<'h> Server<'h> {
     async fn respond(
         &self,
         remote_address: SocketAddr,
-        hyper_request: HyperRequest<Body>,
-    ) -> HyperResponse<Body> {
-        let (parts, body) = hyper_request.into_parts();
-        let body = match hyper::body::to_bytes(body).await.context("to_bytes") {
-            Ok(body) => body,
-            Err(error) => return Response::error_400_from_error(error).into_hyper_response(),
+        http_request: HttpRequest<Incoming>,
+    ) -> HttpResponse<BoxBody<Bytes, Infallible>> {
+        let (parts, body) = http_request.into_parts();
+        // TODO: we probably want to limit incoming body size here?
+        let body_payload = match body.collect().await.context("collect") {
+            Ok(body_payload) => body_payload.to_bytes(),
+            Err(error) => return Response::error_400_from_error(error).into_http_response(),
         };
 
-        let request = Request::new(remote_address, parts, body);
+        let request = Request::from_http_request(remote_address, parts, body_payload);
         let log_method = request.method().clone();
         let log_uri = request.uri().clone();
 
         let response = self.handler.handle(request).await;
         let log_status_code = response.status_code();
 
-        log::trace!(
-            "{:?} {} {} {}",
+        log::debug!(
+            "{}: {:?} {} {} {}",
+            self,
             remote_address,
             log_method,
             log_uri,
             log_status_code,
         );
 
-        response.into_hyper_response()
+        response.into_http_response()
     }
 
-    // Unsafe because of transmuting.
-    // To use it, you must ensure that all spawned futures ended (possibly by
-    // waiting for runtime closing)
-    async unsafe fn run(&self) -> ! {
-        let self_static = transmute::<&'_ Server<'_>, &'static Server<'static>>(self);
-        let make_service = make_service_fn(|connection: &AddrStream| {
-            let remote_address = connection.remote_addr();
-            async move {
-                Ok::<_, Infallible>(service_fn(
-                    move |hyper_request: HyperRequest<Body>| async move {
-                        let hyper_response =
-                            self_static.respond(remote_address, hyper_request).await;
-                        Ok::<_, Infallible>(hyper_response)
-                    },
-                ))
+    async fn run_once(
+        &self,
+        mut exit_flag: async_flag::Receiver,
+    ) -> Result<Exited, Error> {
+        let listener = TcpListener::bind(self.bind).await.context("bind")?;
+        log::trace!("{self}: server listening");
+
+        let server = Builder::new(TokioExecutor::new());
+        let graceful = GracefulShutdown::new();
+
+        // SAFETY: we guarantee that all connections are closed before leaving
+        // this function, so '_ will outlive the hyper server
+        let self_static = unsafe { transmute::<&'_ Server<'_>, &'static Server<'static>>(self) };
+
+        loop {
+            let listener_accept = listener.accept();
+            pin_mut!(listener_accept);
+
+            match select(listener_accept, &mut exit_flag).await {
+                Either::Left((connection, _)) => {
+                    let (stream, remote_address) = match connection.context("connection") {
+                        Ok(connection) => connection,
+                        Err(error) => {
+                            log::error!("{self}: connection error: {error}");
+                            continue;
+                        }
+                    };
+
+                    let io = TokioIo::new(stream);
+
+                    let connection = server.serve_connection(
+                        io,
+                        service_fn(move |http_request| async move {
+                            let response = self_static.respond(remote_address, http_request).await;
+                            Ok::<_, Infallible>(response)
+                        }),
+                    );
+
+                    let connection_watch = graceful.watch(connection.into_owned());
+
+                    tokio::spawn(async move {
+                        match connection_watch.await {
+                            Ok(()) => {}
+                            Err(error) => {
+                                log::error!("{self_static}: connection error: {error}");
+                            }
+                        };
+                    });
+                }
+                Either::Right(((), _)) => {
+                    log::trace!("{self}: received exit signal");
+                    break;
+                }
             }
-        });
-
-        let server = HyperServer::bind(&self.bind).serve(make_service);
-
-        match server.await {
-            Ok(()) => panic!("server exited with no error"),
-            Err(error) => panic!("server exited with error: {:?}", error),
         }
+
+        // stop accepting new connections
+        drop(listener);
+
+        // shutdown all connections
+        log::trace!("{self}: waiting for all remaining connections to shutdown");
+        graceful.shutdown().await;
+        log::trace!("{self}: all remaining connections closed");
+
+        Ok(Exited)
+    }
+
+    async fn run(
+        &self,
+        mut exit_flag: async_flag::Receiver,
+    ) -> Exited {
+        const ERROR_RESTART_DELAY: Duration = Duration::from_secs(5);
+
+        loop {
+            let error = match self.run_once(exit_flag.clone()).await.context("run_once") {
+                Ok(Exited) => break,
+                Err(error) => error,
+            };
+            log::error!("{self}: {error:?}");
+
+            select! {
+                () = tokio::time::sleep(ERROR_RESTART_DELAY).fuse() => {},
+                () = exit_flag => break,
+            }
+        }
+
+        Exited
     }
 }
 #[async_trait]
 impl<'h> Runnable for Server<'h> {
     async fn run(
         &self,
-        mut exit_flag: async_flag::Receiver,
+        exit_flag: async_flag::Receiver,
     ) -> Exited {
-        let runner = unsafe { self.run() };
-        pin_mut!(runner);
-        let mut runner = runner.fuse();
-
-        select! {
-            _ = runner => panic!("runner yielded"),
-            () = exit_flag => Exited,
-        }
+        self.run(exit_flag).await
+    }
+}
+impl<'h> fmt::Display for Server<'h> {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(f, "Server ({:?})", self.bind)
     }
 }
 

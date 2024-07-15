@@ -245,7 +245,7 @@ impl<'f> Manager<'f> {
             .by_ref()
             .stream_take_until_exhausted(exit_flag)
             .map(Result::<_, Error>::Ok)
-            .try_for_each_concurrent(None, async |channel_id_segment: ChannelIdSegment| {
+            .try_for_each_concurrent(None, async |channel_id_segment| {
                 self.channel_segment_handle(channel_id_segment.id, channel_id_segment.segment)
                     .await
                     .context("channel_segment_handle")?;

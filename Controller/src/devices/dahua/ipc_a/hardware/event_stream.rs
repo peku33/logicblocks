@@ -228,7 +228,7 @@ impl<'a> Manager<'a> {
         let events_fixer_runner = tokio_stream::wrappers::IntervalStream::new(
             tokio::time::interval(Self::EVENT_FIXER_INTERVAL),
         )
-        .for_each(async |time_point: tokio::time::Instant| {
+        .for_each(async |time_point| {
             if self.events_fixer_handle(time_point.into_std()) {
                 self.events_propagate();
             }
