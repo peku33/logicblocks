@@ -8,7 +8,7 @@ use super::Configuration;
 use crate::util::anyhow_multiple_error::AnyhowMultipleError;
 use anyhow::{anyhow, bail, Context, Error};
 use itertools::Itertools;
-use std::{ffi, fmt, fmt::Display, thread, time::Duration};
+use std::{ffi, fmt, thread, time::Duration};
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Descriptor {
@@ -16,7 +16,7 @@ pub struct Descriptor {
     pub pid: u16,
     pub serial_number: ffi::CString,
 }
-impl Display for Descriptor {
+impl fmt::Display for Descriptor {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,

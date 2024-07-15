@@ -1,13 +1,13 @@
 use anyhow::{Context, Error};
 use http::uri::Uri;
 use serde::{Deserialize, Serialize};
-use std::{fmt, fmt::Display, str::FromStr};
+use std::{fmt, str::FromStr};
 
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[serde(try_from = "String")]
 #[serde(into = "String")]
 pub struct IpcRtspUrl(pub Uri);
-impl Display for IpcRtspUrl {
+impl fmt::Display for IpcRtspUrl {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,

@@ -82,7 +82,7 @@ impl<'a> Manager<'a> {
             "SmartMotionHuman" => Ok(Some(Event::SmartMotionHuman)),
             "SmartMotionVehicle" => Ok(Some(Event::SmartMotionVehicle)),
             code => {
-                log::trace!("unrecognized event: {}", code);
+                log::debug!("unrecognized event: {}", code);
                 Ok(None)
             }
         }
