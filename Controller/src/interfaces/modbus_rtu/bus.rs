@@ -8,7 +8,7 @@ use crc::{Crc, CRC_16_MODBUS};
 use crossbeam::channel;
 use futures::channel::oneshot;
 use once_cell::sync::Lazy;
-use std::{any::Any, fmt::Debug, mem::ManuallyDrop, slice, thread, time::Duration};
+use std::{any::Any, fmt, mem::ManuallyDrop, slice, thread, time::Duration};
 
 #[derive(Debug)]
 pub struct Bus {
@@ -421,7 +421,7 @@ struct AsyncBusTransaction {
     result_sender: oneshot::Sender<Result<ResponseErasedWrapper, Error>>,
 }
 
-trait RequestErased: Debug + Send + 'static {
+trait RequestErased: fmt::Debug + Send + 'static {
     fn function_code(&self) -> u8;
     fn data(&self) -> Box<[u8]>;
 
@@ -478,7 +478,7 @@ impl Request for RequestErasedWrapper {
     }
 }
 
-trait ResponseErased: Debug + Send + 'static {
+trait ResponseErased: fmt::Debug + Send + 'static {
     fn into_any(self: Box<Self>) -> Box<dyn Any>;
 }
 impl<T: Response> ResponseErased for T {

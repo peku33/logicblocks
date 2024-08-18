@@ -20,13 +20,7 @@ use futures::{
 use itertools::{izip, zip_eq, Itertools};
 use parking_lot::RwLock;
 use serde::Serialize;
-use std::{
-    borrow::Cow,
-    cmp::min,
-    collections::HashMap,
-    iter::{self, repeat_with},
-    time::Duration,
-};
+use std::{borrow::Cow, cmp::min, collections::HashMap, iter, time::Duration};
 
 #[derive(Debug)]
 pub struct ConfigurationChannel {
@@ -139,9 +133,11 @@ impl Device {
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_add_all: signal::event_target_queued::Signal::<Multiplier>::new(),
             signal_power: signal::state_source::Signal::<Multiplier>::new(Some(Multiplier::zero())),
-            signal_outputs: repeat_with(|| signal::state_source::Signal::<bool>::new(Some(false)))
-                .take(channels_count)
-                .collect::<Box<[_]>>(),
+            signal_outputs: iter::repeat_with(|| {
+                signal::state_source::Signal::<bool>::new(Some(false))
+            })
+            .take(channels_count)
+            .collect::<Box<[_]>>(),
 
             gui_summary_waker: devices::gui_summary::Waker::new(),
         }

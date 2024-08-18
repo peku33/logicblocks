@@ -25,7 +25,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tokio::{
-    fs::{self, DirEntry},
+    fs,
     io::{AsyncBufReadExt, BufReader},
     process::Command,
     sync::watch,

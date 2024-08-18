@@ -1,15 +1,15 @@
 use anyhow::{anyhow, Error};
 use derive_more::Error as ErrorFactory;
-use std::fmt::{self, Debug};
+use std::fmt;
 
-pub trait Request: Debug + Sized + Send + 'static {
+pub trait Request: fmt::Debug + Sized + Send + 'static {
     type Response: Response<Request = Self>;
 
     fn function_code(&self) -> u8; // 1 - 127 (incl.)
     fn data(&self) -> Box<[u8]>; // of size 0 - 253 (incl.)
 }
 
-pub trait Response: Debug + Sized + Send + 'static {
+pub trait Response: fmt::Debug + Sized + Send + 'static {
     type Request: Request<Response = Self>;
 
     fn from_data(
