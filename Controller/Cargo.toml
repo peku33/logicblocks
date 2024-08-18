@@ -18,7 +18,7 @@ chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.8", features = ["derive"] }
 crc = "3.2.1"
 crossbeam = "0.8.4"
-derive_more = "0.99.18"
+derive_more = { version = "1.0.0", features = ["full"] }
 dialoguer = "0.11.0"
 digest_auth = "0.3.1"
 env_logger = "0.11.3"
@@ -45,7 +45,7 @@ phf = { version = "0.11.2", features = ["macros"] }
 rand = "0.8.5"
 regex = "1.10.5"
 reqwest = { version = "0.12.5", features = ["json", "stream"] }
-rusqlite = { version = "0.31.0", features = ["bundled", "array"] }
+rusqlite = { version = "0.32.1", features = ["bundled", "array"] }
 scopeguard = "1.2.0"
 semver = "1.0.23"
 serde = { version = "1.0.203", features = ["derive"] }
