@@ -47,14 +47,15 @@ mod gui_responder {
     use bytes::Bytes;
     use http::{HeaderMap, Method, Response as HttpResponse};
     use http_body_util::{combinators::BoxBody, BodyExt};
-    use std::{env, include_bytes};
+    use include_bytes_aligned::include_bytes_aligned;
+    use std::env;
     use web_static_pack::{
         common::pack::PackArchived,
         loader::load,
         responder::{Responder, ResponderRespondError, Response as ResponderResponse},
     };
 
-    static GUI_PACK_ARCHIVED: &[u8] = include_bytes!(env!("CI_WEB_STATIC_PACK_GUI"));
+    static GUI_PACK_ARCHIVED: &[u8] = include_bytes_aligned!(16, env!("CI_WEB_STATIC_PACK_GUI"));
 
     #[derive(Debug)] // GuiResponderInner does not implement Debug
     pub struct GuiResponder {
