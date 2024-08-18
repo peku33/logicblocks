@@ -206,7 +206,7 @@ impl<'a> Manager<'a> {
             .context("http_request_boundary_stream")?;
 
         let item_stream_runner = item_stream
-            .try_for_each(async |item: String| {
+            .try_for_each(async |item| {
                 let event_state_update =
                     Self::event_state_update_parse(&item).context("event_state_update_parse")?;
 

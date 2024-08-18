@@ -524,7 +524,7 @@ impl Recorder {
                 .context("read_dir")?,
         )
         .err_into::<Error>()
-        .and_then(async |entry: DirEntry| {
+        .and_then(async |entry| {
             self.handle_file(&entry.path())
                 .await
                 .context("handle_file")?;
