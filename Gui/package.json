@@ -1,137 +1,58 @@
 {
-  "name": "@logicblocks/web",
-  "version": "0.1.0",
+  "name": "logicblocks-gui",
   "private": true,
-  "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^6",
-    "@fortawesome/free-regular-svg-icons": "^6",
-    "@fortawesome/free-solid-svg-icons": "^6",
-    "@fortawesome/react-fontawesome": "^0.2",
-    "@types/deep-equal": "^1",
-    "@types/glob-base": "^0.3",
-    "@types/jest": "^29",
-    "@types/node": "^18",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "@types/react-router-dom": "^5",
-    "@types/styled-components": "^5",
-    "csstype": "^3",
-    "deep-equal": "^2",
-    "minireset.css": "^0.0.7",
-    "node-sass": "^8",
-    "p-defer": "^4.0.0",
-    "react": "^18",
-    "react-dom": "^18",
-    "react-router-dom": "^6",
-    "react-scripts": "^5",
-    "setimmediate": "^1.0.5",
-    "styled-components": "^5",
-    "typeface-open-sans": "^1",
-    "typescript": "^4",
-    "use-async-effect": "^2"
-  },
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook"
+    "dev": "vite",
+    "test": "vitest",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
-  "eslintConfig": {
-    "parser": "@typescript-eslint/parser",
-    "plugins": [
-      "@typescript-eslint",
-      "prettier",
-      "react"
-    ],
-    "extends": [
-      "eslint:recommended",
-      "plugin:react/recommended",
-      "plugin:@typescript-eslint/recommended",
-      "plugin:prettier/recommended",
-      "react-app"
-    ],
-    "parserOptions": {
-      "ecmaVersion": 2020,
-      "sourceType": "module",
-      "ecmaFeatures": {
-        "jsx": true
-      }
-    },
-    "rules": {
-      "prettier/prettier": "warn",
-      "react/jsx-uses-react": "off",
-      "react/react-in-jsx-scope": "off",
-      "@typescript-eslint/ban-types": [
-        "error",
-        {
-          "extendDefaults": true,
-          "types": {
-            "{}": false
-          }
-        }
-      ]
-    },
-    "overrides": [
-      {
-        "files": [
-          "**/*.tsx"
-        ],
-        "rules": {
-          "react/prop-types": "off"
-        }
-      },
-      {
-        "files": [
-          "**/*.stories.*"
-        ],
-        "rules": {
-          "import/no-anonymous-default-export": "off"
-        }
-      }
-    ],
-    "settings": {
-      "react": {
-        "version": "detect"
-      }
-    },
-    "env": {
-      "browser": true
-    }
-  },
-  "prettier": {
-    "printWidth": 120,
-    "trailingComma": "all"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "dependencies": {
+    "@fontsource-variable/open-sans": "^5.1.0",
+    "@fortawesome/fontawesome-svg-core": "^6.6.0",
+    "@fortawesome/free-regular-svg-icons": "^6.6.0",
+    "@fortawesome/free-solid-svg-icons": "^6.6.0",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "assert-ts": "^0.3.4",
+    "deep-equal": "^2.2.3",
+    "minireset.css": "^0.0.7",
+    "polished": "^4.3.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "setimmediate": "^1.0.5",
+    "styled-components": "^6.1.13",
+    "use-async-effect": "^2.2.7",
+    "vite-tsconfig-paths": "^5.0.1"
   },
   "devDependencies": {
-    "@storybook/addon-actions": "^6",
-    "@storybook/addon-essentials": "^6",
-    "@storybook/addon-links": "^6",
-    "@storybook/builder-webpack5": "^6",
-    "@storybook/manager-webpack5": "^6",
-    "@storybook/node-logger": "^6",
-    "@storybook/preset-create-react-app": "^4",
-    "@storybook/react": "^6",
-    "@types/setimmediate": "^1.0.2",
-    "@typescript-eslint/eslint-plugin": "^5",
-    "eslint": "^8",
-    "eslint-config-prettier": "^8",
-    "eslint-config-react-app": "^7",
-    "eslint-plugin-prettier": "^4",
-    "eslint-plugin-react": "^7",
-    "prettier": "^2"
+    "@eslint/js": "^9.9.0",
+    "@storybook/addon-essentials": "^8.3.4",
+    "@storybook/blocks": "^8.3.4",
+    "@storybook/react": "^8.3.4",
+    "@storybook/react-vite": "^8.3.4",
+    "@types/deep-equal": "^1.0.4",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react-swc": "^3.5.0",
+    "eslint": "^9.9.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-react": "^7.37.1",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.9",
+    "eslint-plugin-storybook": "^0.9.0",
+    "globals": "^15.9.0",
+    "prettier": "^3.3.3",
+    "storybook": "^8.3.4",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.0.1",
+    "vite": "^5.4.1",
+    "vitest": "^2.1.1"
   }
 }

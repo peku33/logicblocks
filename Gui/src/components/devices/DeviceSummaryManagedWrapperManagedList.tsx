@@ -1,4 +1,4 @@
-import Colors from "components/common/Colors";
+import Colors from "@/components/common/Colors";
 import styled from "styled-components";
 import { DeviceId } from "./Device";
 import DeviceSummaryManagedWrapperManaged from "./DeviceSummaryManagedWrapperManaged";

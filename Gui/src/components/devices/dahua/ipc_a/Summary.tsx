@@ -1,10 +1,10 @@
-import { ButtonGroup, ButtonLink } from "components/common/Button";
-import { Chip, ChipsGroup, ChipType } from "components/common/Chips";
-import { Line } from "components/common/Line";
+import { ButtonGroup, ButtonLink } from "@/components/common/Button";
+import { Chip, ChipsGroup, ChipType } from "@/components/common/Chips";
+import { Line } from "@/components/common/Line";
 import {
   SnapshotDeviceInner,
   SnapshotDeviceInnerNone,
-} from "components/devices/soft/surveillance/ipc/SnapshotDeviceInner";
+} from "@/components/devices/soft/surveillance/ipc/SnapshotDeviceInner";
 import styled from "styled-components";
 
 export type Data = DataInitializing | DataRunning | DataError;

@@ -1,18 +1,18 @@
-import { Meta, Story } from "@storybook/react";
-import { WindowOpenStateOpenClosed, WindowOpenStateOpenTiltedClosed } from "datatypes/building/Window";
+import { WindowOpenStateOpenClosed, WindowOpenStateOpenTiltedClosed } from "@/datatypes/building/Window";
+import { Meta } from "@storybook/react";
 import { WindowOpenStateOpenClosedComponent, WindowOpenStateOpenTiltedClosedComponent } from "./Window";
 
 export default {
   title: "components/datatypes/building/Window",
-} as Meta;
+} satisfies Meta;
 
-export const Empty: Story<{}> = () => (
+export const Empty: React.FC = () => (
   <>
     <WindowOpenStateOpenClosedComponent value={undefined} />
     <WindowOpenStateOpenTiltedClosedComponent value={undefined} />
   </>
 );
-export const Basic: Story<{}> = () => (
+export const Basic: React.FC = () => (
   <>
     {Object.values(WindowOpenStateOpenClosed).map((value) => (
       <WindowOpenStateOpenClosedComponent key={value} value={value} />

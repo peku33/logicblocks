@@ -6,15 +6,15 @@ export const Loader: React.FC<{
 }> = (props) => {
   const { sizeRem } = props;
   return (
-    <LoaderIconWrapper sizeRem={sizeRem}>
+    <LoaderIconWrapper $sizeRem={sizeRem}>
       <FontAwesomeIcon icon={{ prefix: "fas", iconName: "spinner" }} spin />
     </LoaderIconWrapper>
   );
 };
 export default Loader;
 const LoaderIconWrapper = styled.div<{
-  sizeRem: number;
+  $sizeRem: number;
 }>`
   text-align: center;
-  font-size: ${(props) => props.sizeRem}rem;
+  font-size: ${(props) => props.$sizeRem}rem;
 `;

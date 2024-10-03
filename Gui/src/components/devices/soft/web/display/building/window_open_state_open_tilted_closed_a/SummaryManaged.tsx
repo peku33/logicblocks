@@ -1,5 +1,5 @@
-import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
-import { useDeviceSummary } from "components/devices/DeviceSummaryService";
+import { DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
+import { useDeviceSummary } from "@/components/devices/DeviceSummaryService";
 import Component, { Data } from "./Summary";
 
 const ManagedComponent: DeviceSummaryManaged = (props) => {

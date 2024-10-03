@@ -1,11 +1,11 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import Component from "./Summary";
 
 export default {
   title: "components/devices/eaton/mmax_a/Summary",
-} as Meta;
+} satisfies Meta;
 
-export const Running: Story<{}> = () => (
+export const Running: React.FC = () => (
   <Component
     data={{
       state: "Running",
@@ -41,7 +41,7 @@ export const Running: Story<{}> = () => (
   />
 );
 
-export const Error: Story<{}> = () => <Component data={{ state: "Error" }} />;
-export const Initializing: Story<{}> = () => <Component data={{ state: "Initializing" }} />;
+export const Error: React.FC = () => <Component data={{ state: "Error" }} />;
+export const Initializing: React.FC = () => <Component data={{ state: "Initializing" }} />;
 
-export const Empty: Story<{}> = () => <Component data={undefined} />;
+export const Empty: React.FC = () => <Component data={undefined} />;

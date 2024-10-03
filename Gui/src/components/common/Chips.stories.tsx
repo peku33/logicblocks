@@ -1,12 +1,13 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
+
 import styled from "styled-components";
 import { Chip, ChipsGroup, ChipType } from "./Chips";
 
 export default {
   title: "components/common/Chips",
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{}> = () => (
+export const Basic: React.FC = () => (
   <>
     <Line type={ChipType.ERROR} />
     <Line type={ChipType.WARNING} />
@@ -14,7 +15,7 @@ export const Basic: Story<{}> = () => (
     <Line type={ChipType.OK} />
   </>
 );
-export const Group: Story<{}> = () => (
+export const Group: React.FC = () => (
   <>
     <ChipsGroup>
       <Chip type={ChipType.ERROR}>ERROR</Chip>

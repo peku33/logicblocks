@@ -1,4 +1,4 @@
-import { getJson, postEmpty, postJsonEmpty } from "lib/Api";
+import { getJson, postEmpty, postJsonEmpty } from "@/lib/Api";
 
 // from service
 export function endpointBuild(endpoint: string): string {
@@ -20,8 +20,9 @@ export async function deviceClassGetJson<T>(deviceId: DeviceId, endpoint: string
   return await getJson(deviceClassEndpointBuild(deviceId, endpoint));
 }
 export async function deviceClassPostEmpty(deviceId: DeviceId, endpoint: string): Promise<void> {
-  return await postEmpty(deviceClassEndpointBuild(deviceId, endpoint));
+  await postEmpty(deviceClassEndpointBuild(deviceId, endpoint));
 }
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export async function deviceClassPostJsonEmpty<D>(deviceId: DeviceId, endpoint: string, data: D): Promise<void> {
-  return await postJsonEmpty(deviceClassEndpointBuild(deviceId, endpoint), data);
+  await postJsonEmpty(deviceClassEndpointBuild(deviceId, endpoint), data);
 }

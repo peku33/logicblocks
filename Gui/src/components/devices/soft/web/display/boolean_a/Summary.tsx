@@ -1,4 +1,4 @@
-import { Chip, ChipType, ChipsGroup } from "components/common/Chips";
+import { Chip, ChipType, ChipsGroup } from "@/components/common/Chips";
 import styled from "styled-components";
 
 export type Data = boolean;

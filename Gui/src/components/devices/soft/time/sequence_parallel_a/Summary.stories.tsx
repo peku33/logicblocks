@@ -1,11 +1,11 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import Component from "./Summary";
 
 export default {
   title: "components/devices/soft/time/sequence_parallel_a/Summary",
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{}> = () => {
+export const Basic: React.FC = () => {
   return (
     <>
       <Component
@@ -50,18 +50,18 @@ export const Basic: Story<{}> = () => {
             ],
           },
         }}
-        onDeviceDisable={() => ({})}
-        onDevicePause={() => ({})}
-        onDeviceEnable={() => ({})}
-        onChannelsAllClear={() => ({})}
-        onChannelsAllAdd={() => ({})}
-        onChannelDisable={() => ({})}
-        onChannelPause={() => ({})}
-        onChannelEnable={() => ({})}
-        onChannelClear={() => ({})}
-        onChannelAdd={() => ({})}
-        onChannelMoveFront={() => ({})}
-        onChannelMoveBack={() => ({})}
+        onDeviceDisable={async () => {}}
+        onDevicePause={async () => {}}
+        onDeviceEnable={async () => {}}
+        onChannelsAllClear={async () => {}}
+        onChannelsAllAdd={async () => {}}
+        onChannelDisable={async () => {}}
+        onChannelPause={async () => {}}
+        onChannelEnable={async () => {}}
+        onChannelClear={async () => {}}
+        onChannelAdd={async () => {}}
+        onChannelMoveFront={async () => {}}
+        onChannelMoveBack={async () => {}}
       />
     </>
   );

@@ -1,5 +1,5 @@
-import { Chip, ChipType, ChipsGroup } from "components/common/Chips";
-import { WindowOpenStateOpenClosed, WindowOpenStateOpenTiltedClosed } from "datatypes/building/Window";
+import { Chip, ChipType, ChipsGroup } from "@/components/common/Chips";
+import { WindowOpenStateOpenClosed, WindowOpenStateOpenTiltedClosed } from "@/datatypes/building/Window";
 
 export const WindowOpenStateOpenClosedComponent: React.FC<{
   value: WindowOpenStateOpenClosed | null | undefined;

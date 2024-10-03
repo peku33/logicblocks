@@ -1,11 +1,11 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import Component from "./Summary";
 
 export default {
   title: "components/devices/dahua/ipc_a/Summary",
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{}> = () => (
+export const Basic: React.FC = () => (
   <>
     <Component
       data={{
@@ -30,7 +30,7 @@ export const Basic: Story<{}> = () => (
   </>
 );
 
-export const Empty: Story<{}> = () => (
+export const Empty: React.FC = () => (
   <>
     <Component data={undefined} snapshotEndpoint={undefined} />
   </>

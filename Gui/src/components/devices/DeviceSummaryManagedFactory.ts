@@ -21,7 +21,7 @@ import softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA from "./soft/web/d
 import softWebRatioSliderA from "./soft/web/ratio_slider_a/SummaryManaged";
 import UnknownDevice from "./UnknownDeviceSummaryManaged";
 
-const BY_CLASS: { [class_: string]: DeviceSummaryManaged } = {
+const BY_CLASS: Record<string, DeviceSummaryManaged> = {
   "dahua/ipc_a": dahuaIpcA,
   "eaton/mmax_a": eatonMmaxA,
   "hikvision/ds2cd2x32x_x": hikvisionDs2cd2x32xX,
@@ -46,5 +46,6 @@ const BY_CLASS: { [class_: string]: DeviceSummaryManaged } = {
 
 export function getByClass(class_: string): DeviceSummaryManaged {
   const byClass = BY_CLASS[class_];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   return byClass !== undefined ? byClass : UnknownDevice;
 }

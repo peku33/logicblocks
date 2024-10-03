@@ -1,4 +1,4 @@
-import { Line } from "components/common/Line";
+import { Line } from "@/components/common/Line";
 import styled from "styled-components";
 import HardwareRunnerSummary, { Data as HardwareRunnerData } from "./hardware_runner/Summary";
 

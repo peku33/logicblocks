@@ -1,6 +1,6 @@
-import { Icon } from "components/common/FontAwesome";
-import { DeviceId } from "components/devices/Device";
-import { getJson } from "lib/Api";
+import { Icon } from "@/components/common/FontAwesome";
+import { DeviceId } from "@/components/devices/Device";
+import { getJson } from "@/lib/Api";
 import { useState } from "react";
 import useAsyncEffect from "use-async-effect";
 import * as Data from "./Data";
@@ -64,7 +64,10 @@ export class ContentPathItemDashboard {
   public constructor(public readonly dashboardIndex: number) {}
 }
 export class ContentPathItemSectionDashboard {
-  public constructor(public readonly sectionIndex: number, public readonly dashboardIndex: number) {}
+  public constructor(
+    public readonly sectionIndex: number,
+    public readonly dashboardIndex: number,
+  ) {}
 }
 export type ContentPathItem = ContentPathItemDashboard | ContentPathItemSectionDashboard;
 export type ContentPath = ContentPathItem[];

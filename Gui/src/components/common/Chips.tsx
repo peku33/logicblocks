@@ -22,17 +22,17 @@ function enabledColor(type: ChipType): string {
 }
 
 const ChipInner = styled.div<{
-  type: ChipType;
-  enabled?: boolean;
+  $type: ChipType;
+  $enabled?: boolean;
 }>`
   padding: 0.25rem 0.5rem;
   text-align: center;
 
   border-radius: 0.25rem;
-  border: solid 1px ${(props) => enabledColor(props.type)};
+  border: solid 1px ${(props) => enabledColor(props.$type)};
 
-  color: ${(props) => (props.enabled ? Colors.WHITE : enabledColor(props.type))};
-  background-color: ${(props) => (props.enabled ? enabledColor(props.type) : Colors.WHITE)};
+  color: ${(props) => (props.$enabled ? Colors.WHITE : enabledColor(props.$type))};
+  background-color: ${(props) => (props.$enabled ? enabledColor(props.$type) : Colors.WHITE)};
 `;
 export const Chip: React.FC<{
   type: ChipType;
@@ -42,7 +42,7 @@ export const Chip: React.FC<{
   const { type, enabled, children } = props;
 
   return (
-    <ChipInner type={type} enabled={enabled}>
+    <ChipInner $type={type} $enabled={enabled}>
       {children}
     </ChipInner>
   );

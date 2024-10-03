@@ -1,5 +1,5 @@
+import { clamp } from "@/util/Number";
 import styled from "styled-components";
-import { clamp } from "util/Number";
 import Colors from "./Colors";
 
 const GaugeLinear: React.FC<{
@@ -18,7 +18,7 @@ const GaugeLinear: React.FC<{
       {children !== null ? <Description>{children}</Description> : null}
       <GaugeContainer>
         <GaugeLabel>{valueSerializer(value)}</GaugeLabel>
-        <GaugeBar valueRatio={valueRatio} />
+        <GaugeBar $valueRatio={valueRatio} />
       </GaugeContainer>
     </Wrapper>
   );
@@ -51,14 +51,14 @@ const GaugeLabel = styled.div`
   z-index: 1;
 `;
 const GaugeBar = styled.div<{
-  valueRatio: number;
+  $valueRatio: number;
 }>`
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
 
-  width: ${(props) => (props.valueRatio * 100).toFixed(0)}%;
+  width: ${(props) => (props.$valueRatio * 100).toFixed(0)}%;
   transition: width 0.5s;
 
   background-color: ${Colors.GREY_LIGHT};

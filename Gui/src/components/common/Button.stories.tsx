@@ -1,11 +1,11 @@
-import { Meta, Story } from "@storybook/react";
-import { Button, ButtonGroup, ButtonLink } from "./Button";
+import { Meta } from "@storybook/react";
+import { Button, ButtonActionAsync, ButtonGroup, ButtonLink } from "./Button";
 
 export default {
   title: "components/common/Button",
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{}> = () => (
+export const Basic: React.FC = () => (
   <>
     <Button>Inactive button</Button>
     <Button active>Active button</Button>
@@ -20,5 +20,15 @@ export const Basic: Story<{}> = () => (
       <Button active>Center very very large</Button>
       <Button>Last</Button>
     </ButtonGroup>
+    <ButtonActionAsync
+      active
+      onClick={() =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, 1000);
+        })
+      }
+    >
+      Action Button with 1s timeout
+    </ButtonActionAsync>
   </>
 );

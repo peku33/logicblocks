@@ -1,14 +1,14 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import Component from "./Summary";
 
 export default {
   title: "components/devices/soft/web/button_event_a/Summary",
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{}> = () => {
+export const Basic: React.FC = () => {
   return (
     <>
-      <Component onSignal={() => ({})} />
+      <Component onSignal={async () => {}} />
     </>
   );
 };

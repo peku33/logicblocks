@@ -10,7 +10,7 @@ export function clamp(value: number, min: number, max: number): number {
 
 export function formatSI(value: number, fractionDigits: number, unit: string | undefined): string {
   if (!Number.isFinite(value)) {
-    return `${value.toString()}${unit !== undefined ? ` ${unit}` : ``}`;
+    return `${value}${unit !== undefined ? ` ${unit}` : ``}`;
   }
 
   const prefixes = ["p", "n", "µ", "m", "", "k", "M", "G", "T"];

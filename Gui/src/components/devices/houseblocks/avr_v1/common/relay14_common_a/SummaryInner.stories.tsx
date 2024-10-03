@@ -1,11 +1,11 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import Component, { OUTPUT_COUNT } from "./SummaryInner";
 
 export default {
   title: "components/devices/houseblocks/avr_v1/common/relay14_common_a/SummaryInner",
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{}> = () => (
+export const Basic: React.FC = () => (
   <>
     <Component
       data={{
@@ -15,7 +15,7 @@ export const Basic: Story<{}> = () => (
   </>
 );
 
-export const Empty: Story<{}> = () => (
+export const Empty: React.FC = () => (
   <>
     <Component data={undefined} />
   </>

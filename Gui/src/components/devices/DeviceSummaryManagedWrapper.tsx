@@ -1,4 +1,4 @@
-import { Line } from "components/common/Line";
+import { Line } from "@/components/common/Line";
 import styled from "styled-components";
 import { DeviceId } from "./Device";
 import { DeviceData } from "./DeviceData";

@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "assert-ts";
 import deepEqual from "deep-equal";
 import { urlBuild } from "./Api";
 
@@ -39,7 +39,7 @@ export class TopicPaths {
 
     for (const [hash, topicPath] of this.topicPathsMap) {
       // we checked for key equality, so both should have same keys
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
       if (!other.topicPathsMap.get(hash)!.equals(topicPath)) {
         return false;
       }
@@ -68,7 +68,10 @@ export class ClientSubscriptionToken {
   public constructor(public readonly client: Client) {}
 }
 export class Client {
-  public constructor(public readonly endpoint: string, public readonly topicPaths: TopicPaths) {
+  public constructor(
+    public readonly endpoint: string,
+    public readonly topicPaths: TopicPaths,
+  ) {
     assert(!this.topicPaths.empty());
 
     this.eventSourceCreate();
@@ -117,13 +120,13 @@ export class Client {
     this.eventSource.close();
   }
   private eventSourceOnError(event: Event) {
-    console.error("SSETopic", "Client", this.endpoint, this.topicPaths, event);
+    console.error("SSETopic::Client", this.endpoint, this.topicPaths, event);
   }
-  private eventSourceOnOpen(event: Event) {
+  private eventSourceOnOpen(_event: Event) {
     this.handleOpen();
   }
   private eventSourceOnMessage(event: MessageEvent) {
-    const topicPath = JSON.parse(event.data);
+    const topicPath = JSON.parse(event.data as string) as TopicPaths;
 
     assert(Array.isArray(topicPath));
 
@@ -136,9 +139,13 @@ export class Client {
 
   // common
   private handleOpen() {
-    this.subscriptions.forEach((subscription) => subscription.opened());
+    this.subscriptions.forEach((subscription) => {
+      subscription.opened();
+    });
   }
   private handleMessage(topicPath: TopicPath) {
-    this.subscriptions.forEach((subscription) => subscription.message(topicPath));
+    this.subscriptions.forEach((subscription) => {
+      subscription.message(topicPath);
+    });
   }
 }

@@ -1,13 +1,13 @@
-import Loader from "components/common/Loader";
-import { DeviceId, endpointBuild } from "components/devices/Device";
-import DeviceSummaryManagedWrapperManagedList from "components/devices/DeviceSummaryManagedWrapperManagedList";
-import { getJson } from "lib/Api";
+import Loader from "@/components/common/Loader";
+import { DeviceId, endpointBuild } from "@/components/devices/Device";
+import DeviceSummaryManagedWrapperManagedList from "@/components/devices/DeviceSummaryManagedWrapperManagedList";
+import { getJson } from "@/lib/Api";
 import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import useAsyncEffect from "use-async-effect";
 import Error404 from "./Error404";
 
-const DevicesSummary: React.FC<{}> = () => {
+const DevicesSummary: React.FC = () => {
   return (
     <Routes>
       <Route path="" element={<DevicesSummaryListRoute />}></Route>
@@ -17,7 +17,7 @@ const DevicesSummary: React.FC<{}> = () => {
 };
 export default DevicesSummary;
 
-const DevicesSummaryListRoute: React.FC<{}> = () => {
+const DevicesSummaryListRoute: React.FC = () => {
   const deviceIds = useDeviceIds();
 
   if (deviceIds === undefined) {

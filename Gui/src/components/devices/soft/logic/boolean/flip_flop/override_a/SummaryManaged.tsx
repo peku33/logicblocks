@@ -1,6 +1,6 @@
-import { deviceClassPostEmpty, deviceClassPostJsonEmpty } from "components/devices/Device";
-import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
-import { useDeviceSummary } from "components/devices/DeviceSummaryService";
+import { deviceClassPostEmpty, deviceClassPostJsonEmpty } from "@/components/devices/Device";
+import { DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
+import { useDeviceSummary } from "@/components/devices/DeviceSummaryService";
 import { useCallback } from "react";
 import Component, { Data } from "./Summary";
 
@@ -10,16 +10,16 @@ const ManagedComponent: DeviceSummaryManaged = (props) => {
   const data = useDeviceSummary<Data>(deviceId);
 
   const onModeSet = useCallback(
-    (value: boolean | null): void => {
-      deviceClassPostJsonEmpty(deviceId, "/mode/set", value);
+    async (value: boolean | null) => {
+      await deviceClassPostJsonEmpty(deviceId, "/mode/set", value);
     },
     [deviceId],
   );
-  const onModeCyclePassThrough = useCallback((): void => {
-    deviceClassPostEmpty(deviceId, "/mode/cycle/pass-through");
+  const onModeCyclePassThrough = useCallback(async () => {
+    await deviceClassPostEmpty(deviceId, "/mode/cycle/pass-through");
   }, [deviceId]);
-  const onModeCycleNoPassThrough = useCallback((): void => {
-    deviceClassPostEmpty(deviceId, "/mode/cycle/no-pass-through");
+  const onModeCycleNoPassThrough = useCallback(async () => {
+    await deviceClassPostEmpty(deviceId, "/mode/cycle/no-pass-through");
   }, [deviceId]);
 
   return (

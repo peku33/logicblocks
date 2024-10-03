@@ -1,9 +1,9 @@
-import { Chip, ChipsGroup, ChipType } from "components/common/Chips";
-import GaugeLinear from "components/common/GaugeLinear";
-import GaugeLinearRatio from "components/datatypes/ratio/GaugeLinear";
-import { formatVoltage } from "datatypes/Voltage";
+import { Chip, ChipsGroup, ChipType } from "@/components/common/Chips";
+import GaugeLinear from "@/components/common/GaugeLinear";
+import GaugeLinearRatio from "@/components/datatypes/ratio/GaugeLinear";
+import { formatVoltage } from "@/datatypes/Voltage";
+import { formatSI } from "@/util/Number";
 import styled from "styled-components";
-import { formatSI } from "util/Number";
 
 const DC_LINK_VOLTAGE_MAX = 400;
 

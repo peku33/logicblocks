@@ -1,11 +1,11 @@
-import Colors from "components/common/Colors";
+import Colors from "@/components/common/Colors";
 import { Navigate, NavLink, Route, Routes, To } from "react-router-dom";
 import styled from "styled-components";
 import Dashboards from "./Dashboards";
 import DevicesSummary from "./DevicesSummary";
 import Error404 from "./Error404";
 
-const Body: React.FC<{}> = () => {
+const Body: React.FC = () => {
   return (
     <Layout>
       <TopBar>
@@ -43,16 +43,16 @@ const MenuItem: React.FC<{
 }> = (props) => {
   const { to, children } = props;
 
-  return <NavLink to={to}>{({ isActive }) => <MenuLink active={isActive}>{children}</MenuLink>}</NavLink>;
+  return <NavLink to={to}>{({ isActive }) => <MenuLink $active={isActive}>{children}</MenuLink>}</NavLink>;
 };
 const MenuLink = styled.div<{
-  active: boolean;
+  $active: boolean;
 }>`
   display: inline-block;
   padding: 1rem;
 
-  background-color: ${(props) => (props.active ? Colors.BLUE : "unset")};
-  color: ${(props) => (props.active ? Colors.WHITE : "inherit")};
+  background-color: ${(props) => (props.$active ? Colors.BLUE : "unset")};
+  color: ${(props) => (props.$active ? Colors.WHITE : "inherit")};
 
   font-weight: bold;
 `;

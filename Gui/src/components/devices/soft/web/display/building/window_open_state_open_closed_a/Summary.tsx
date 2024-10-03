@@ -1,5 +1,5 @@
-import { WindowOpenStateOpenClosedComponent } from "components/datatypes/building/Window";
-import { WindowOpenStateOpenClosed } from "datatypes/building/Window";
+import { WindowOpenStateOpenClosedComponent } from "@/components/datatypes/building/Window";
+import { WindowOpenStateOpenClosed } from "@/datatypes/building/Window";
 
 export type Data = WindowOpenStateOpenClosed;
 

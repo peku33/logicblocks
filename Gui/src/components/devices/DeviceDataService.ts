@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "assert-ts";
 import { useEffect, useState } from "react";
 import { DeviceId } from "./Device";
 import { DeviceData, fetchDeviceData } from "./DeviceData";
@@ -8,7 +8,10 @@ export class AggregatorSubscriptionToken {
   public constructor(public readonly device: AggregatorSubscriptionDevice) {}
 }
 export class AggregatorSubscriptionDevice {
-  public constructor(public readonly aggregator: Aggregator, public readonly deviceId: DeviceId) {}
+  public constructor(
+    public readonly aggregator: Aggregator,
+    public readonly deviceId: DeviceId,
+  ) {}
   public close() {
     assert(this.subscriptionsEmpty());
   }
@@ -37,7 +40,9 @@ export class AggregatorSubscriptionDevice {
     return this.subscriptionExecutors.size === 0;
   }
   public subscriptionsPropagate() {
-    this.subscriptionExecutors.forEach((executor) => executor(this.deviceData));
+    this.subscriptionExecutors.forEach((executor) => {
+      executor(this.deviceData);
+    });
   }
 
   private deviceData: DeviceData | undefined = undefined;
@@ -88,6 +93,7 @@ export class Aggregator {
   public deviceDataReloadSchedule() {
     if (this.deviceDataReloadScheduleImmediate !== undefined) return;
 
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.deviceDataReloadScheduleImmediate = setImmediate(async () => {
       await this.deviceDataReload();
       this.deviceDataReloadScheduleImmediate = undefined;
@@ -115,9 +121,9 @@ export class Aggregator {
       );
 
       // execute callbacks sequentially
-      subscriptionDevicesReloadRequired.forEach((subscriptionDeviceReloadRequired) =>
-        subscriptionDeviceReloadRequired.subscriptionsPropagate(),
-      );
+      subscriptionDevicesReloadRequired.forEach((subscriptionDeviceReloadRequired) => {
+        subscriptionDeviceReloadRequired.subscriptionsPropagate();
+      });
     }
   }
 }

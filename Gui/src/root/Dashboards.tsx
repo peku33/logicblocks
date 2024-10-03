@@ -3,14 +3,14 @@ import {
   DashboardLinkComponentResolver,
   NavigationLinkComponent,
   NavigationLinkComponentResolver,
-} from "components/dashboards/Dashboards";
-import { PageManaged } from "components/dashboards/DashboardsManaged";
-import * as Data from "components/dashboards/Data";
+} from "@/components/dashboards/Dashboards";
+import { PageManaged } from "@/components/dashboards/DashboardsManaged";
+import * as Data from "@/components/dashboards/Data";
 import { useCallback } from "react";
 import { Link, Route, Routes, useParams } from "react-router-dom";
 import Error404 from "./Error404";
 
-const Root: React.FC<{}> = () => {
+const Root: React.FC = () => {
   return <Content contentPath={[]} />;
 };
 export default Root;
@@ -60,7 +60,7 @@ const ContentChild: React.FC<{ contentPath: Data.ContentPath }> = (props) => {
   const { contentPath } = props;
   const params = useParams();
 
-  const contentPathItem = contentPathItemDeserialize(params.contentPathItemSerialized as string);
+  const contentPathItem = contentPathItemDeserialize(params.contentPathItemSerialized!);
   const contentPathChild = contentPath.concat([contentPathItem]);
 
   return <Content contentPath={contentPathChild} />;

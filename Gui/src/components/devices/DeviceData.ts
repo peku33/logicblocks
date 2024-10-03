@@ -1,4 +1,4 @@
-import { getJson } from "lib/Api";
+import { getJson } from "@/lib/Api";
 import { DeviceId, deviceEndpointBuild } from "./Device";
 
 export interface DeviceData {
