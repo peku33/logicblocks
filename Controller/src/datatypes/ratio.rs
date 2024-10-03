@@ -1,4 +1,8 @@
 use anyhow::{ensure, Error};
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -49,6 +53,14 @@ impl TryFrom<RatioSerde> for Ratio {
 impl Into<RatioSerde> for Ratio {
     fn into(self) -> RatioSerde {
         RatioSerde(self.to_f64())
+    }
+}
+impl Distribution<Ratio> for Standard {
+    fn sample<R: Rng + ?Sized>(
+        &self,
+        rng: &mut R,
+    ) -> Ratio {
+        Ratio::from_f64(rng.gen_range(0.0..=1.0)).unwrap()
     }
 }
 #[derive(Debug, Serialize, Deserialize)]
