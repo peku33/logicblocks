@@ -13,6 +13,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@fontsource-variable/open-sans": "^5.1.0",
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-regular-svg-icons": "^6.6.0",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
@@ -26,7 +27,6 @@
     "react-router-dom": "^6.26.2",
     "setimmediate": "^1.0.5",
     "styled-components": "^6.1.13",
-    "typeface-open-sans": "^1.1.13",
     "use-async-effect": "^2.2.7",
     "vite-tsconfig-paths": "^5.0.1"
   },
