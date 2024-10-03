@@ -1,4 +1,4 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import Component from "./Summary";
 
 export default {
@@ -12,9 +12,9 @@ export default {
       action: "onValueChanged",
     },
   },
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{
+export const Basic: React.FC<{
   value: boolean;
   onValueChanged: (value: boolean) => void;
 }> = (props) => {

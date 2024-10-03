@@ -1,6 +1,6 @@
-import Colors from "components/common/Colors";
-import { formatDegreesOrUnknown } from "datatypes/Angle";
-import { formatRealOrUnknown } from "datatypes/Real";
+import Colors from "@/components/common/Colors";
+import { formatDegreesOrUnknown } from "@/datatypes/Angle";
+import { formatRealOrUnknown } from "@/datatypes/Real";
 import styled from "styled-components";
 
 export interface DataInner {

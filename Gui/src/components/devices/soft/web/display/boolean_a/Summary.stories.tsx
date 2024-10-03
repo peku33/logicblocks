@@ -1,4 +1,4 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import Component, { Data } from "./Summary";
 
 export default {
@@ -9,9 +9,9 @@ export default {
       defaultValue: false,
     },
   },
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{
+export const Basic: React.FC<{
   value: Data;
 }> = (props) => {
   const { value } = props;
@@ -23,7 +23,7 @@ export const Basic: Story<{
   );
 };
 
-export const Empty: Story<{}> = () => (
+export const Empty: React.FC = () => (
   <>
     <Component data={undefined} />
   </>

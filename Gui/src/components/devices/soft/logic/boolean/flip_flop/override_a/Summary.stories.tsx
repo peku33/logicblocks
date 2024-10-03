@@ -1,4 +1,4 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import Component from "./Summary";
 
 export default {
@@ -13,9 +13,9 @@ export default {
       defaultValue: false,
     },
   },
-} as Meta;
+} satisfies Meta;
 
-export const PassThrough: Story<{ inputValue: boolean }> = (props) => (
+export const PassThrough: React.FC<{ inputValue: boolean }> = (props) => (
   <Component
     data={{
       input_value: props.inputValue,
@@ -23,13 +23,13 @@ export const PassThrough: Story<{ inputValue: boolean }> = (props) => (
         mode: "PassThrough",
       },
     }}
-    onModeSet={() => ({})}
-    onModeCyclePassThrough={() => ({})}
-    onModeCycleNoPassThrough={() => ({})}
+    onModeSet={async () => {}}
+    onModeCyclePassThrough={async () => {}}
+    onModeCycleNoPassThrough={async () => {}}
   />
 );
 
-export const Override: Story<{ inputValue: boolean; overrideValue: boolean }> = (props) => (
+export const Override: React.FC<{ inputValue: boolean; overrideValue: boolean }> = (props) => (
   <Component
     data={{
       input_value: props.inputValue,
@@ -38,17 +38,17 @@ export const Override: Story<{ inputValue: boolean; overrideValue: boolean }> = 
         value: props.overrideValue,
       },
     }}
-    onModeSet={() => ({})}
-    onModeCyclePassThrough={() => ({})}
-    onModeCycleNoPassThrough={() => ({})}
+    onModeSet={async () => {}}
+    onModeCyclePassThrough={async () => {}}
+    onModeCycleNoPassThrough={async () => {}}
   />
 );
 
-export const Empty: Story<{}> = (props) => (
+export const Empty: React.FC = () => (
   <Component
     data={undefined}
-    onModeSet={() => ({})}
-    onModeCyclePassThrough={() => ({})}
-    onModeCycleNoPassThrough={() => ({})}
+    onModeSet={async () => {}}
+    onModeCyclePassThrough={async () => {}}
+    onModeCycleNoPassThrough={async () => {}}
   />
 );

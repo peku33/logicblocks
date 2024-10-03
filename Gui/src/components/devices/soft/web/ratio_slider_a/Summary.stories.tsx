@@ -1,4 +1,4 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import Component from "./Summary";
 
 export default {
@@ -13,16 +13,21 @@ export default {
       action: "onValueChanged",
     },
   },
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{
+export const Basic: React.FC<{
   value: number;
   onValueChanged: (newValue: number | null) => void;
 }> = (props) => {
   const { value, onValueChanged } = props;
   return (
     <>
-      <Component data={value} onValueChanged={onValueChanged} />
+      <Component
+        data={value}
+        onValueChanged={async (newValue: number | null) => {
+          onValueChanged(newValue);
+        }}
+      />
     </>
   );
 };

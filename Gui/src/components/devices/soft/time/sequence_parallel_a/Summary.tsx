@@ -1,6 +1,6 @@
-import { Button, ButtonGroup } from "components/common/Button";
-import { Chip, ChipType } from "components/common/Chips";
-import Colors from "components/common/Colors";
+import { ButtonActionAsync, ButtonGroup } from "@/components/common/Button";
+import { Chip, ChipType } from "@/components/common/Chips";
+import Colors from "@/components/common/Colors";
 import styled from "styled-components";
 
 export interface Data {
@@ -155,18 +155,18 @@ export function dataDeviceStateEnabledChannelStateIsEnabledActive(
 
 const Component: React.FC<{
   data: Data | undefined;
-  onDeviceDisable: () => void;
-  onDevicePause: () => void;
-  onDeviceEnable: () => void;
-  onChannelsAllClear: () => void;
-  onChannelsAllAdd: (multiplier: number) => void;
-  onChannelDisable: (channelId: number) => void;
-  onChannelPause: (channelId: number) => void;
-  onChannelEnable: (channelId: number) => void;
-  onChannelClear: (channelId: number) => void;
-  onChannelAdd: (channelId: number, multiplier: number) => void;
-  onChannelMoveFront: (channelId: number) => void;
-  onChannelMoveBack: (channelId: number) => void;
+  onDeviceDisable: () => Promise<void>;
+  onDevicePause: () => Promise<void>;
+  onDeviceEnable: () => Promise<void>;
+  onChannelsAllClear: () => Promise<void>;
+  onChannelsAllAdd: (multiplier: number) => Promise<void>;
+  onChannelDisable: (channelId: number) => Promise<void>;
+  onChannelPause: (channelId: number) => Promise<void>;
+  onChannelEnable: (channelId: number) => Promise<void>;
+  onChannelClear: (channelId: number) => Promise<void>;
+  onChannelAdd: (channelId: number, multiplier: number) => Promise<void>;
+  onChannelMoveFront: (channelId: number) => Promise<void>;
+  onChannelMoveBack: (channelId: number) => Promise<void>;
 }> = (props) => {
   const {
     data,
@@ -192,23 +192,41 @@ const Component: React.FC<{
     <Wrapper>
       <Section>
         <ButtonGroup>
-          <Button active={dataStateIsDisabled(data.state)} onClick={onDeviceDisable}>
+          <ButtonActionAsync active={dataStateIsDisabled(data.state)} onClick={onDeviceDisable}>
             Disable
-          </Button>
-          <Button active={dataStateIsPaused(data.state)} onClick={onDevicePause}>
+          </ButtonActionAsync>
+          <ButtonActionAsync active={dataStateIsPaused(data.state)} onClick={onDevicePause}>
             Pause
-          </Button>
-          <Button active={dataStateIsEnabled(data.state)} onClick={onDeviceEnable}>
+          </ButtonActionAsync>
+          <ButtonActionAsync active={dataStateIsEnabled(data.state)} onClick={onDeviceEnable}>
             Enable
-          </Button>
+          </ButtonActionAsync>
         </ButtonGroup>
 
         {dataStateIsPaused(data.state) || dataStateIsEnabled(data.state) ? (
           <ButtonGroup>
-            <Button onClick={onChannelsAllClear}>Clear</Button>
-            <Button onClick={() => onChannelsAllAdd(0.25)}>+1/4</Button>
-            <Button onClick={() => onChannelsAllAdd(0.5)}>+1/2</Button>
-            <Button onClick={() => onChannelsAllAdd(1.0)}>+1</Button>
+            <ButtonActionAsync onClick={onChannelsAllClear}>Clear</ButtonActionAsync>
+            <ButtonActionAsync
+              onClick={async () => {
+                await onChannelsAllAdd(0.25);
+              }}
+            >
+              +1/4
+            </ButtonActionAsync>
+            <ButtonActionAsync
+              onClick={async () => {
+                await onChannelsAllAdd(0.5);
+              }}
+            >
+              +1/2
+            </ButtonActionAsync>
+            <ButtonActionAsync
+              onClick={async () => {
+                await onChannelsAllAdd(1.0);
+              }}
+            >
+              +1
+            </ButtonActionAsync>
           </ButtonGroup>
         ) : null}
 
@@ -231,7 +249,7 @@ const Component: React.FC<{
               <Section>
                 {/* Enable/Disable */}
                 <ButtonGroup>
-                  <Button
+                  <ButtonActionAsync
                     active={
                       (dataStateIsDisabled(data.state) &&
                         dataDeviceStateDisabledChannelStateIsDisabled(
@@ -246,11 +264,13 @@ const Component: React.FC<{
                           channelState as DataDeviceStateEnabledChannelState,
                         ))
                     }
-                    onClick={() => onChannelDisable(channelId)}
+                    onClick={async () => {
+                      await onChannelDisable(channelId);
+                    }}
                   >
                     Disable
-                  </Button>
-                  <Button
+                  </ButtonActionAsync>
+                  <ButtonActionAsync
                     active={
                       (dataStateIsDisabled(data.state) &&
                         dataDeviceStateDisabledChannelStateIsPaused(
@@ -261,11 +281,13 @@ const Component: React.FC<{
                       (dataStateIsEnabled(data.state) &&
                         dataDeviceStateEnabledChannelStateIsPaused(channelState as DataDeviceStateEnabledChannelState))
                     }
-                    onClick={() => onChannelPause(channelId)}
+                    onClick={async () => {
+                      await onChannelPause(channelId);
+                    }}
                   >
                     Pause
-                  </Button>
-                  <Button
+                  </ButtonActionAsync>
+                  <ButtonActionAsync
                     active={
                       (dataStateIsDisabled(data.state) &&
                         dataDeviceStateDisabledChannelStateIsEnabled(
@@ -283,10 +305,12 @@ const Component: React.FC<{
                             channelState as DataDeviceStateEnabledChannelState,
                           )))
                     }
-                    onClick={() => onChannelEnable(channelId)}
+                    onClick={async () => {
+                      await onChannelEnable(channelId);
+                    }}
                   >
                     Enable
-                  </Button>
+                  </ButtonActionAsync>
                 </ButtonGroup>
 
                 {/* Add time / clear */}
@@ -303,10 +327,34 @@ const Component: React.FC<{
                         channelState as DataDeviceStateEnabledChannelState,
                       ))) ? (
                     <ButtonGroup>
-                      <Button onClick={() => onChannelClear(channelId)}>Clear</Button>
-                      <Button onClick={() => onChannelAdd(channelId, 0.25)}>+1/4</Button>
-                      <Button onClick={() => onChannelAdd(channelId, 0.5)}>+1/2</Button>
-                      <Button onClick={() => onChannelAdd(channelId, 1.0)}>+1</Button>
+                      <ButtonActionAsync
+                        onClick={async () => {
+                          await onChannelClear(channelId);
+                        }}
+                      >
+                        Clear
+                      </ButtonActionAsync>
+                      <ButtonActionAsync
+                        onClick={async () => {
+                          await onChannelAdd(channelId, 0.25);
+                        }}
+                      >
+                        +1/4
+                      </ButtonActionAsync>
+                      <ButtonActionAsync
+                        onClick={async () => {
+                          await onChannelAdd(channelId, 0.5);
+                        }}
+                      >
+                        +1/2
+                      </ButtonActionAsync>
+                      <ButtonActionAsync
+                        onClick={async () => {
+                          await onChannelAdd(channelId, 1.0);
+                        }}
+                      >
+                        +1
+                      </ButtonActionAsync>
                     </ButtonGroup>
                   ) : null}
                 </>
@@ -322,8 +370,20 @@ const Component: React.FC<{
                     )) ? (
                     <ButtonGroup>
                       <ButtonGroup>
-                        <Button onClick={() => onChannelMoveBack(channelId)}>Move back</Button>
-                        <Button onClick={() => onChannelMoveFront(channelId)}>Move front</Button>
+                        <ButtonActionAsync
+                          onClick={async () => {
+                            await onChannelMoveBack(channelId);
+                          }}
+                        >
+                          Move back
+                        </ButtonActionAsync>
+                        <ButtonActionAsync
+                          onClick={async () => {
+                            await onChannelMoveFront(channelId);
+                          }}
+                        >
+                          Move front
+                        </ButtonActionAsync>
                       </ButtonGroup>
                     </ButtonGroup>
                   ) : null}
@@ -378,11 +438,11 @@ const Component: React.FC<{
                           dataDeviceStateEnabledChannelStateIsEnabledActive(
                             channelState as DataDeviceStateEnabledChannelState,
                           )) &&
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
                         ((channelState as any).queue_seconds as number) >= channelConfiguration.round_min_seconds
                       }
                     >
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {/* eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */}
                       Queue time: {(channelState as any).queue_seconds as number}
                     </Chip>
                   ) : null}

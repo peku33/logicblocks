@@ -1,6 +1,8 @@
 import * as Number from "./Number";
 
-it.each([
+import { expect, test } from "vitest";
+
+test.each([
   [3.5e12, 3, "3.500T"],
   [2e9, 2, "2.00G"],
   [1e6, 1, "1.0M"],
@@ -27,6 +29,6 @@ it.each([
   [999e-9, 1, "999.0n"],
   [1e-12, 0, "1p"],
   [1e-15, 5, "0.00100p"],
-])("formats %p with %p as %p", (value: number, fractionDigits: number, expected: string) => {
+])("formats %f with %f as %s", (value: number, fractionDigits: number, expected: string) => {
   expect(Number.formatSI(value, fractionDigits, undefined)).toEqual(expected);
 });

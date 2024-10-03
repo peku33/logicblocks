@@ -1,27 +1,27 @@
-import { Button, ButtonGroup } from "components/common/Button";
+import { Button, ButtonActionAsync } from "@/components/common/Button";
 import styled from "styled-components";
 
 export type Data = boolean;
 
 const Component: React.FC<{
   data: Data | undefined;
-  onR: () => void;
-  onS: () => void;
-  onT: () => void;
+  onR: () => Promise<void>;
+  onS: () => Promise<void>;
+  onT: () => Promise<void>;
 }> = (props) => {
   const { data, onR, onS, onT } = props;
 
   return (
     <Wrapper>
-      <ButtonGroup>
-        <Button active={data !== undefined ? !data : undefined} onClick={onR}>
+      <Button>
+        <ButtonActionAsync active={data !== undefined ? !data : undefined} onClick={onR}>
           Off
-        </Button>
-        <Button onClick={onT}>Toggle</Button>
-        <Button active={data !== undefined ? data : undefined} onClick={onS}>
+        </ButtonActionAsync>
+        <ButtonActionAsync onClick={onT}>Toggle</ButtonActionAsync>
+        <ButtonActionAsync active={data !== undefined ? data : undefined} onClick={onS}>
           On
-        </Button>
-      </ButtonGroup>
+        </ButtonActionAsync>
+      </Button>
     </Wrapper>
   );
 };

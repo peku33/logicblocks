@@ -1,4 +1,4 @@
-import { Button, ButtonGroup } from "components/common/Button";
+import { ButtonActionAsync, ButtonGroup } from "@/components/common/Button";
 import styled from "styled-components";
 
 export interface Data {
@@ -23,26 +23,30 @@ export function dataModeIsOverride(dataMode: DataMode): dataMode is DataModeOver
 
 const Component: React.FC<{
   data: Data | undefined;
-  onModeSet: (mode: boolean | null) => void; // true/false = Override, null = PassThrough
-  onModeCyclePassThrough: () => void;
-  onModeCycleNoPassThrough: () => void;
+  onModeSet: (mode: boolean | null) => Promise<void>; // true/false = Override, null = PassThrough
+  onModeCyclePassThrough: () => Promise<void>;
+  onModeCycleNoPassThrough: () => Promise<void>;
 }> = (props) => {
   const { data, onModeSet, onModeCyclePassThrough, onModeCycleNoPassThrough } = props;
 
   return (
     <Wrapper>
       <ButtonGroup>
-        <Button
+        <ButtonActionAsync
           active={data !== undefined ? (dataModeIsOverride(data.mode) ? !data.mode.value : false) : undefined}
-          onClick={() => onModeSet(false)}
+          onClick={async () => {
+            await onModeSet(false);
+          }}
         >
           <ButtonContent>
             <ButtonContentPrimary>Off</ButtonContentPrimary>
           </ButtonContent>
-        </Button>
-        <Button
+        </ButtonActionAsync>
+        <ButtonActionAsync
           active={data !== undefined ? dataModeIsPassThrough(data.mode) : undefined}
-          onClick={() => onModeSet(null)}
+          onClick={async () => {
+            await onModeSet(null);
+          }}
         >
           <ButtonContent>
             <ButtonContentPrimary>Auto</ButtonContentPrimary>
@@ -52,29 +56,39 @@ const Component: React.FC<{
               ) : null}
             </ButtonContentSecondary>
           </ButtonContent>
-        </Button>
-        <Button
+        </ButtonActionAsync>
+        <ButtonActionAsync
           active={data !== undefined ? (dataModeIsOverride(data.mode) ? data.mode.value : false) : undefined}
-          onClick={() => onModeSet(true)}
+          onClick={async () => {
+            await onModeSet(true);
+          }}
         >
           <ButtonContent>
             <ButtonContentPrimary>On</ButtonContentPrimary>
           </ButtonContent>
-        </Button>
+        </ButtonActionAsync>
       </ButtonGroup>
       <ButtonGroup>
-        <Button onClick={() => onModeCyclePassThrough()}>
+        <ButtonActionAsync
+          onClick={async () => {
+            await onModeCyclePassThrough();
+          }}
+        >
           <ButtonContent>
             <ButtonContentPrimary>Cycle</ButtonContentPrimary>
             <ButtonContentSecondary>(With Auto)</ButtonContentSecondary>
           </ButtonContent>
-        </Button>
-        <Button onClick={() => onModeCycleNoPassThrough()}>
+        </ButtonActionAsync>
+        <ButtonActionAsync
+          onClick={async () => {
+            await onModeCycleNoPassThrough();
+          }}
+        >
           <ButtonContent>
             <ButtonContentPrimary>Cycle</ButtonContentPrimary>
             <ButtonContentSecondary>(Skip Auto)</ButtonContentSecondary>
           </ButtonContent>
-        </Button>
+        </ButtonActionAsync>
       </ButtonGroup>
     </Wrapper>
   );

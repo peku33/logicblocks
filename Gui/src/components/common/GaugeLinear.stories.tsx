@@ -1,4 +1,5 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
+
 import GaugeLinear from "./GaugeLinear";
 
 function valueSerializer(value: number): string {
@@ -14,9 +15,9 @@ export default {
       control: { type: "range", min: 0, max: 1, step: 0.01 },
     },
   },
-} as Meta;
+} satisfies Meta;
 
-export const Primary: Story<{
+export const Primary: React.FC<{
   value: number;
 }> = (props) => (
   <GaugeLinear valueMin={0.0} valueMax={1.0} valueSerializer={valueSerializer} {...props}>

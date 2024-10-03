@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import Colors from "./Colors";
 
-export const Line: React.FC<{}> = () => {
+export const Line: React.FC = () => {
   return <LineInner />;
 };
 const LineInner = styled.div`

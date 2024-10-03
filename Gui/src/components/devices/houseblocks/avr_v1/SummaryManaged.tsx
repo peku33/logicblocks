@@ -1,5 +1,5 @@
-import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
-import { useDeviceSummary } from "components/devices/DeviceSummaryService";
+import { DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
+import { useDeviceSummary } from "@/components/devices/DeviceSummaryService";
 import { Data } from "./Summary";
 
 export function makeAvrV1SummaryManaged<D extends object>(

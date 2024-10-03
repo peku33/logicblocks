@@ -1,5 +1,5 @@
+import { urlBuild } from "@/lib/Api";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { urlBuild } from "lib/Api";
 import { useMemo } from "react";
 import styled from "styled-components";
 
@@ -27,7 +27,7 @@ const SnapshotDeviceInnerImage = styled.img`
   max-height: 100%;
 `;
 
-export const SnapshotDeviceInnerNone: React.FC<{}> = () => {
+export const SnapshotDeviceInnerNone: React.FC = () => {
   return (
     <SnapshotDeviceInnerNoneInner>
       <FontAwesomeIcon icon={["fas", "circle-notch"]} spin />

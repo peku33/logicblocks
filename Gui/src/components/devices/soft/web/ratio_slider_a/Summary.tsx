@@ -1,6 +1,6 @@
-import { Button } from "components/common/Button";
-import { Chip, ChipType } from "components/common/Chips";
-import { Line } from "components/common/Line";
+import { ButtonActionAsync } from "@/components/common/Button";
+import { Chip, ChipType } from "@/components/common/Chips";
+import { Line } from "@/components/common/Line";
 import styled from "styled-components";
 
 export type Data = number | null;
@@ -10,7 +10,7 @@ const ButtonOffsets = [0.01, 0.05, 0.1];
 
 const Summary: React.FC<{
   data: Data | undefined; // 0.0 - 1.0
-  onValueChanged: (newValue: number | null) => void;
+  onValueChanged: (newValue: number | null) => Promise<void>;
 }> = (props) => {
   const { data, onValueChanged } = props;
 
@@ -18,9 +18,15 @@ const Summary: React.FC<{
     <Wrapper>
       <SetpointsLayout>
         {ButtonValues.map((buttonValue) => (
-          <Button key={buttonValue} onClick={() => onValueChanged(buttonValue)} active={buttonValue === data}>
+          <ButtonActionAsync
+            key={buttonValue}
+            onClick={async () => {
+              await onValueChanged(buttonValue);
+            }}
+            active={buttonValue === data}
+          >
             {stringifyValue(buttonValue)}
-          </Button>
+          </ButtonActionAsync>
         ))}
       </SetpointsLayout>
       <Line />
@@ -29,9 +35,18 @@ const Summary: React.FC<{
           {ButtonOffsets.slice()
             .reverse()
             .map((offset) => (
-              <Button key={offset} onClick={data != null ? () => onValueChanged(fixValue(data - offset)) : () => ({})}>
+              <ButtonActionAsync
+                key={offset}
+                onClick={async () => {
+                  if (data == null) {
+                    return;
+                  }
+
+                  await onValueChanged(fixValue(data - offset));
+                }}
+              >
                 -{stringifyValue(offset)}
-              </Button>
+              </ButtonActionAsync>
             ))}
         </OffsetsLayoutItem>
         <OffsetsLayoutItem>
@@ -41,9 +56,18 @@ const Summary: React.FC<{
         </OffsetsLayoutItem>
         <OffsetsLayoutItem>
           {ButtonOffsets.map((offset) => (
-            <Button key={offset} onClick={data != null ? () => onValueChanged(fixValue(data + offset)) : () => ({})}>
+            <ButtonActionAsync
+              key={offset}
+              onClick={async () => {
+                if (data == null) {
+                  return;
+                }
+
+                await onValueChanged(fixValue(data + offset));
+              }}
+            >
               +{stringifyValue(offset)}
-            </Button>
+            </ButtonActionAsync>
           ))}
         </OffsetsLayoutItem>
       </OffsetsLayout>

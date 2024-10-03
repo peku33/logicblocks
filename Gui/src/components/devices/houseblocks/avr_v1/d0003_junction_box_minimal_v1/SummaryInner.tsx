@@ -1,7 +1,7 @@
 import Temperature, {
   formatTemperatureCelsiusOrUnknown,
   formatTemperatureFahrenheitOrUnknown,
-} from "datatypes/Temperature";
+} from "@/datatypes/Temperature";
 import styled from "styled-components";
 
 export interface Data {

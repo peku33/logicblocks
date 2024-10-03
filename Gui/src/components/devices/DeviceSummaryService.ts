@@ -1,5 +1,5 @@
-import assert from "assert";
-import * as SSETopic from "lib/SSETopic";
+import * as SSETopic from "@/lib/SSETopic";
+import assert from "assert-ts";
 import { useEffect, useState } from "react";
 import { DeviceId, endpointBuild } from "./Device";
 import { fetchDeviceSummary } from "./DeviceSummary";
@@ -11,7 +11,10 @@ export class AggregatorSubscriptionToken {
   public constructor(public readonly device: AggregatorSubscriptionDevice) {}
 }
 export class AggregatorSubscriptionDevice {
-  public constructor(public readonly aggregator: Aggregator, public readonly deviceId: DeviceId) {}
+  public constructor(
+    public readonly aggregator: Aggregator,
+    public readonly deviceId: DeviceId,
+  ) {}
   public close() {
     assert(this.subscriptionsEmpty());
   }
@@ -43,9 +46,12 @@ export class AggregatorSubscriptionDevice {
     return this.subscriptionExecutors.size === 0;
   }
   public subscriptionsPropagate() {
-    this.subscriptionExecutors.forEach((executor) => executor(this.deviceSummary));
+    this.subscriptionExecutors.forEach((executor) => {
+      executor(this.deviceSummary);
+    });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   private deviceSummary: unknown | undefined = undefined;
   private deviceSummaryReloadPending = false;
   private deviceSummaryReloadRunning = false;
@@ -136,8 +142,12 @@ export class Aggregator {
     if (!sseTopicPaths.empty()) {
       const eventsClient = new SSETopic.Client(aggregatorEventsClientUrl, sseTopicPaths);
       const token = eventsClient.subscriptionAdd({
-        opened: () => this.eventsClientOpened(),
-        message: (topicPath) => this.eventsClientMessage(topicPath),
+        opened: () => {
+          this.eventsClientOpened();
+        },
+        message: (topicPath) => {
+          this.eventsClientMessage(topicPath);
+        },
       });
       this.eventsClient = [eventsClient, token];
     }
@@ -166,9 +176,13 @@ export class Aggregator {
   public deviceSummaryReloadSchedule() {
     if (this.deviceSummaryReloadScheduleImmediate !== undefined) return;
 
-    this.deviceSummaryReloadScheduleImmediate = setImmediate(async () => {
-      await this.deviceSummaryReload();
-      this.deviceSummaryReloadScheduleImmediate = undefined;
+    this.deviceSummaryReloadScheduleImmediate = setImmediate(() => {
+      (async () => {
+        await this.deviceSummaryReload();
+        this.deviceSummaryReloadScheduleImmediate = undefined;
+      })().catch((reason: unknown) => {
+        console.error("DeviceSummaryService::deviceSummaryReload()", reason);
+      });
     });
   }
   public async deviceSummaryReload() {
@@ -193,14 +207,15 @@ export class Aggregator {
       );
 
       // execute callbacks sequentially
-      subscriptionDevicesReloadRequired.forEach((subscriptionDeviceReloadRequired) =>
-        subscriptionDeviceReloadRequired.subscriptionsPropagate(),
-      );
+      subscriptionDevicesReloadRequired.forEach((subscriptionDeviceReloadRequired) => {
+        subscriptionDeviceReloadRequired.subscriptionsPropagate();
+      });
     }
   }
 }
 export const aggregator = new Aggregator();
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function useDeviceSummary<T>(deviceId: DeviceId): T | undefined {
   const [deviceSummary, setDeviceSummary] = useState<T | undefined>(undefined);
 

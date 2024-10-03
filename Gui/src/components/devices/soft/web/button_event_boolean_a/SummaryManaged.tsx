@@ -1,6 +1,6 @@
-import { deviceClassPostJsonEmpty } from "components/devices/Device";
-import { DeviceSummaryManaged } from "components/devices/DeviceSummaryManaged";
-import { useDeviceSummary } from "components/devices/DeviceSummaryService";
+import { deviceClassPostJsonEmpty } from "@/components/devices/Device";
+import { DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
+import { useDeviceSummary } from "@/components/devices/DeviceSummaryService";
 import { useCallback } from "react";
 import Component, { Data } from "./Summary";
 
@@ -10,8 +10,8 @@ const ManagedComponent: DeviceSummaryManaged = (props) => {
   const data = useDeviceSummary<Data>(deviceId);
 
   const onPush = useCallback(
-    (value: boolean): void => {
-      deviceClassPostJsonEmpty(deviceId, "", value);
+    async (value: boolean) => {
+      await deviceClassPostJsonEmpty(deviceId, "", value);
     },
     [deviceId],
   );

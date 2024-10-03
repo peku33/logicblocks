@@ -1,4 +1,4 @@
-import { formatSI } from "util/Number";
+import { formatSI } from "@/util/Number";
 
 type Temperature = number; // as kelvin
 export default Temperature;

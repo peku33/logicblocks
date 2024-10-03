@@ -1,11 +1,12 @@
-import { Meta, Story } from "@storybook/react";
+import { Meta } from "@storybook/react";
+
 import { makeAvrV1Summary } from "./Summary";
 
 export default {
   title: "components/devices/houseblocks/avr_v1/Summary",
-} as Meta;
+} satisfies Meta;
 
-export const Basic: Story<{}> = () => (
+export const Basic: React.FC = () => (
   <>
     <DeviceComponentAvrV1
       data={{
@@ -16,7 +17,7 @@ export const Basic: Story<{}> = () => (
   </>
 );
 
-export const Empty: Story<{}> = () => (
+export const Empty: React.FC = () => (
   <>
     <DeviceComponentAvrV1 data={undefined} />
   </>

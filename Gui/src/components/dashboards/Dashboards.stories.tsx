@@ -1,5 +1,6 @@
-import { Meta, Story } from "@storybook/react";
-import { DeviceId } from "components/devices/Device";
+import { DeviceId } from "@/components/devices/Device";
+import { Meta } from "@storybook/react";
+
 import {
   DashboardLinkComponent,
   DashboardLinkComponentResolver,
@@ -10,12 +11,11 @@ import * as Data from "./Data";
 
 export default {
   title: "components/dashboards/Dashboards",
-} as Meta;
+} satisfies Meta;
 
 const navigationLinkComponentResolver: NavigationLinkComponentResolver = (backDepth: number) => {
   const NavigationLinkComponent: DashboardLinkComponent = (props) => {
     return (
-      // eslint-disable-next-line jsx-a11y/anchor-is-valid
       <a href="#" title={JSON.stringify(backDepth)}>
         {props.children}
       </a>
@@ -27,7 +27,6 @@ const navigationLinkComponentResolver: NavigationLinkComponentResolver = (backDe
 const dashboardLinkComponentResolver: DashboardLinkComponentResolver = (childContentPathItem: Data.ContentPathItem) => {
   const DashboardLinkComponent: DashboardLinkComponent = (props) => {
     return (
-      // eslint-disable-next-line jsx-a11y/anchor-is-valid
       <a href="#" title={JSON.stringify(childContentPathItem)}>
         {props.children}
       </a>
@@ -42,7 +41,7 @@ const DeviceListComponent: React.FC<{ deviceIds: DeviceId[] }> = (props) => {
   return <pre>{JSON.stringify(deviceIds)}</pre>;
 };
 
-export const Empty: Story<{}> = () => (
+export const Empty: React.FC = () => (
   <Page
     navigation={undefined}
     navigationLinkComponentResolver={navigationLinkComponentResolver}
@@ -52,7 +51,7 @@ export const Empty: Story<{}> = () => (
   />
 );
 
-export const ContentSectionContent: Story<{}> = () => (
+export const ContentSectionContent: React.FC = () => (
   <Page
     navigation={{
       dashboards: [
@@ -79,7 +78,7 @@ export const ContentSectionContent: Story<{}> = () => (
     deviceListComponent={DeviceListComponent}
   />
 );
-export const ContentSections: Story<{}> = () => (
+export const ContentSections: React.FC = () => (
   <Page
     navigation={{
       dashboards: [{ name: "Home", icon: { prefix: "fas", name: "home" } }],

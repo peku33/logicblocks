@@ -1,4 +1,4 @@
-import { getJson } from "lib/Api";
+import { getJson } from "@/lib/Api";
 import { deviceEndpointBuild, DeviceId } from "./Device";
 
 export async function fetchDeviceSummary<T>(deviceId: DeviceId): Promise<T> {

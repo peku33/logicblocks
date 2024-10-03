@@ -1,5 +1,5 @@
-import Colors from "components/common/Colors";
-import Resistance, { formatResistanceOrUnknown } from "datatypes/Resistance";
+import Colors from "@/components/common/Colors";
+import Resistance, { formatResistanceOrUnknown } from "@/datatypes/Resistance";
 import styled from "styled-components";
 
 export const INPUT_COUNT = 40;

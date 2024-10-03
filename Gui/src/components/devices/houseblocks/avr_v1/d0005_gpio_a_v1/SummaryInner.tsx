@@ -1,8 +1,9 @@
+import ColorRgbBoolean from "@/datatypes/ColorRgbBoolean";
+import Ds18x20State from "@/datatypes/Ds18x20";
+import { formatTemperatureCelsiusOrUnknown, formatTemperatureFahrenheitOrUnknown } from "@/datatypes/Temperature";
+import Voltage, { formatVoltageOrUnknown } from "@/datatypes/Voltage";
 import { Property } from "csstype";
-import ColorRgbBoolean from "datatypes/ColorRgbBoolean";
-import Ds18x20State from "datatypes/Ds18x20";
-import { formatTemperatureCelsiusOrUnknown, formatTemperatureFahrenheitOrUnknown } from "datatypes/Temperature";
-import Voltage, { formatVoltageOrUnknown } from "datatypes/Voltage";
+import { rgb } from "polished";
 import styled from "styled-components";
 
 export interface Data {
@@ -135,46 +136,46 @@ const Component: React.FC<{
 
   return (
     <Layout>
-      <LayoutItem column={6} row={1}>
+      <LayoutItem $column={6} $row={1}>
         <LayoutItemStatusLed value={data?.status_led} />
       </LayoutItem>
-      <LayoutItem column={1} row={1}>
+      <LayoutItem $column={1} $row={1}>
         <LayoutItemBlock1 pin={1} value={data?.block_1_values[0]} />
       </LayoutItem>
-      <LayoutItem column={2} row={1}>
+      <LayoutItem $column={2} $row={1}>
         <LayoutItemBlock1 pin={2} value={data?.block_1_values[1]} />
       </LayoutItem>
-      <LayoutItem column={3} row={1}>
+      <LayoutItem $column={3} $row={1}>
         <LayoutItemBlock1 pin={3} value={data?.block_1_values[2]} />
       </LayoutItem>
-      <LayoutItem column={4} row={1}>
+      <LayoutItem $column={4} $row={1}>
         <LayoutItemBlock1 pin={4} value={data?.block_1_values[3]} />
       </LayoutItem>
-      <LayoutItem column={8} row={1}>
+      <LayoutItem $column={8} $row={1}>
         <LayoutItemBlock2 pin={1} value={data?.block_2_values[0]} />
       </LayoutItem>
-      <LayoutItem column={9} row={1}>
+      <LayoutItem $column={9} $row={1}>
         <LayoutItemBlock2 pin={2} value={data?.block_2_values[1]} />
       </LayoutItem>
-      <LayoutItem column={10} row={1}>
+      <LayoutItem $column={10} $row={1}>
         <LayoutItemBlock2 pin={3} value={data?.block_2_values[2]} />
       </LayoutItem>
-      <LayoutItem column={11} row={1}>
+      <LayoutItem $column={11} $row={1}>
         <LayoutItemBlock2 pin={4} value={data?.block_2_values[3]} />
       </LayoutItem>
-      <LayoutItem column={1} row={3}>
+      <LayoutItem $column={1} $row={3}>
         <LayoutItemBlock3 pin={1} value={data?.block_3_values[0]} />
       </LayoutItem>
-      <LayoutItem column={2} row={3}>
+      <LayoutItem $column={2} $row={3}>
         <LayoutItemBlock3 pin={2} value={data?.block_3_values[1]} />
       </LayoutItem>
-      <LayoutItem column={9} row={3}>
+      <LayoutItem $column={9} $row={3}>
         <LayoutItemBlock4 pin={1} value={data?.block_4_values[0]} />
       </LayoutItem>
-      <LayoutItem column={10} row={3}>
+      <LayoutItem $column={10} $row={3}>
         <LayoutItemBlock4 pin={2} value={data?.block_4_values[1]} />
       </LayoutItem>
-      <LayoutItem column={11} row={3}>
+      <LayoutItem $column={11} $row={3}>
         <LayoutItemBlock4 pin={3} value={data?.block_4_values[2]} />
       </LayoutItem>
     </Layout>
@@ -190,8 +191,8 @@ const Layout = styled.div`
   grid-gap: 0.125rem;
 `;
 const LayoutItem = styled.div<{
-  column: number;
-  row: number;
+  $column: number;
+  $row: number;
 }>`
   display: flex;
   align-items: center;
@@ -204,17 +205,17 @@ const LayoutItemStatusLed: React.FC<{
 }> = (props) => {
   const { value } = props;
 
-  return <LayoutItemStatusLedInner r={value?.r || false} g={value?.g || false} b={value?.b || false} />;
+  return <LayoutItemStatusLedInner $r={value?.r || false} $g={value?.g || false} $b={value?.b || false} />;
 };
 const LayoutItemStatusLedInner = styled.div<{
-  r: boolean;
-  g: boolean;
-  b: boolean;
+  $r: boolean;
+  $g: boolean;
+  $b: boolean;
 }>`
   width: 100%;
   height: 100%;
 
-  background-color: ${({ r, g, b }) => `rgb(${r ? 255 : 0}, ${g ? 255 : 0}, ${b ? 255 : 0})`};
+  background-color: ${({ $r, $g, $b }) => rgb($r ? 255 : 0, $g ? 255 : 0, $b ? 255 : 0)};
 `;
 
 const LayoutItemBlock1: React.FC<{
@@ -289,7 +290,7 @@ const LayoutItemUnused: React.FC<{
   const { block, pin } = props;
 
   return (
-    <LayoutItemInner backgroundColor="lightgrey">
+    <LayoutItemInner $backgroundColor="lightgrey">
       <LayoutItemInnerBlockPinLabel block={block} pin={pin} />
       <LayoutItemInnerLabel>Unused</LayoutItemInnerLabel>
     </LayoutItemInner>
@@ -303,7 +304,7 @@ const LayoutItemAnalogIn: React.FC<{
   const { block, pin, voltage } = props;
 
   return (
-    <LayoutItemInner backgroundColor="#FDCEB9">
+    <LayoutItemInner $backgroundColor="#FDCEB9">
       <LayoutItemInnerBlockPinLabel block={block} pin={pin} />
       <LayoutItemInnerLabel>Analog Input</LayoutItemInnerLabel>
       <LayoutItemInnerValue>{formatVoltageOrUnknown(voltage, 4)}</LayoutItemInnerValue>
@@ -318,7 +319,7 @@ const LayoutItemDigitalIn: React.FC<{
   const { block, pin, value } = props;
 
   return (
-    <LayoutItemInner backgroundColor="#655D8A">
+    <LayoutItemInner $backgroundColor="#655D8A">
       <LayoutItemInnerBlockPinLabel block={block} pin={pin} />
       <LayoutItemInnerLabel>Digital Input</LayoutItemInnerLabel>
       <LayoutItemInnerValue>{value !== null ? (value ? "On" : "Off") : "Unknown"}</LayoutItemInnerValue>
@@ -333,7 +334,7 @@ const LayoutItemDigitalOut: React.FC<{
   const { block, pin, value } = props;
 
   return (
-    <LayoutItemInner backgroundColor="#7897AB">
+    <LayoutItemInner $backgroundColor="#7897AB">
       <LayoutItemInnerBlockPinLabel block={block} pin={pin} />
       <LayoutItemInnerLabel>Digital Output</LayoutItemInnerLabel>
       <LayoutItemInnerValue>{value ? "On" : "Off"}</LayoutItemInnerValue>
@@ -348,13 +349,13 @@ const LayoutItemDs18x20: React.FC<{
   const { block, pin, state } = props;
 
   return (
-    <LayoutItemInner backgroundColor="#D885A3">
+    <LayoutItemInner $backgroundColor="#D885A3">
       <LayoutItemInnerBlockPinLabel block={block} pin={pin} />
       <LayoutItemInnerLabel>DS18x20</LayoutItemInnerLabel>
       {state !== null ? (
         <>
-          <LayoutItemInnerValue>{formatTemperatureCelsiusOrUnknown(state?.temperature, 2)}</LayoutItemInnerValue>
-          <LayoutItemInnerValue>{formatTemperatureFahrenheitOrUnknown(state?.temperature, 2)}</LayoutItemInnerValue>
+          <LayoutItemInnerValue>{formatTemperatureCelsiusOrUnknown(state.temperature, 2)}</LayoutItemInnerValue>
+          <LayoutItemInnerValue>{formatTemperatureFahrenheitOrUnknown(state.temperature, 2)}</LayoutItemInnerValue>
 
           <LayoutItemInnerValue>
             {state.sensor_type} ({state.reset_count})
@@ -368,7 +369,7 @@ const LayoutItemDs18x20: React.FC<{
 };
 
 const LayoutItemInner = styled.div<{
-  backgroundColor: Property.Color;
+  $backgroundColor: Property.Color;
 }>`
   width: 100%;
   height: 100%;
@@ -380,7 +381,7 @@ const LayoutItemInner = styled.div<{
   justify-content: center;
   text-align: center;
 
-  background-color: ${({ backgroundColor }) => backgroundColor};
+  background-color: ${({ $backgroundColor: backgroundColor }) => backgroundColor};
 `;
 const LayoutItemInnerLabel = styled.div`
   font-size: x-small;

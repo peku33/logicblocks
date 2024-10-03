@@ -1,4 +1,4 @@
-import { formatSI } from "util/Number";
+import { formatSI } from "@/util/Number";
 
 type Resistance = number; // ohms
 export default Resistance;

@@ -1,4 +1,4 @@
-import DeviceSummaryManagedWrapperManagedList from "components/devices/DeviceSummaryManagedWrapperManagedList";
+import DeviceSummaryManagedWrapperManagedList from "@/components/devices/DeviceSummaryManagedWrapperManagedList";
 import { DashboardLinkComponentResolver, NavigationLinkComponentResolver, Page } from "./Dashboards";
 import * as Data from "./Data";
 

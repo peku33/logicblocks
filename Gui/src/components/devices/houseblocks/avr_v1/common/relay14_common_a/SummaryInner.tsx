@@ -1,4 +1,4 @@
-import { Chip, ChipType } from "components/common/Chips";
+import { Chip, ChipType } from "@/components/common/Chips";
 import styled from "styled-components";
 
 export const OUTPUT_COUNT = 14;

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import styled from "styled-components";
 import Colors from "./Colors";
 
@@ -13,13 +14,13 @@ export const Button: React.FC<{
   const { active, onClick, onMouseDown, onMouseUp, children } = props;
 
   return (
-    <ButtonInner active={active} onClick={onClick} onMouseDown={onMouseDown} onMouseUp={onMouseUp}>
+    <ButtonInner $active={active} onClick={onClick} onMouseDown={onMouseDown} onMouseUp={onMouseUp}>
       {children}
     </ButtonInner>
   );
 };
 const ButtonInner = styled.div<{
-  active?: boolean;
+  $active?: boolean;
 }>`
   display: flex;
   flex-wrap: wrap;
@@ -30,15 +31,42 @@ const ButtonInner = styled.div<{
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
 
-  background-color: ${(props) => (props.active ? Colors.GREEN : Colors.GREY)};
+  background-color: ${(props) => (props.$active ? Colors.GREEN : Colors.GREY)};
   color: ${Colors.WHITE};
   font-weight: bold;
   cursor: pointer;
 
   :hover {
-    background-color: ${(props) => (props.active ? Colors.GREEN : Colors.GREY_DARK)};
+    background-color: ${(props) => (props.$active ? Colors.GREEN : Colors.GREY_DARK)};
   }
 `;
+
+export const ButtonActionAsync: React.FC<{
+  active?: boolean;
+  onClick: () => Promise<void>;
+  children?: React.ReactNode;
+}> = (props) => {
+  const { active, onClick, children } = props;
+
+  const [pending, setPending] = useState(false);
+
+  function onClickWrapper() {
+    if (pending) return;
+    setPending(true);
+
+    onClick().catch((reason: unknown) => {
+      console.error(reason);
+    });
+
+    setPending(false);
+  }
+
+  return (
+    <Button active={active && !pending} onClick={onClickWrapper}>
+      {children}
+    </Button>
+  );
+};
 
 export const ButtonLink: React.FC<{
   href: string | undefined;

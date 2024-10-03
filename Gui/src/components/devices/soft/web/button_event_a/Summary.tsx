@@ -1,14 +1,14 @@
-import { Button } from "components/common/Button";
+import { ButtonActionAsync } from "@/components/common/Button";
 import styled from "styled-components";
 
 const Component: React.FC<{
-  onSignal: () => void;
+  onSignal: () => Promise<void>;
 }> = (props) => {
   const { onSignal } = props;
 
   return (
     <Wrapper>
-      <Button onClick={onSignal}>Signal</Button>
+      <ButtonActionAsync onClick={onSignal}>Signal</ButtonActionAsync>
     </Wrapper>
   );
 };

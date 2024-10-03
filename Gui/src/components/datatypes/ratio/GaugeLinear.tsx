@@ -1,4 +1,4 @@
-import GaugeLinearParent from "components/common/GaugeLinear";
+import GaugeLinearParent from "@/components/common/GaugeLinear";
 
 const GaugeLinear: React.FC<{
   value: number;
