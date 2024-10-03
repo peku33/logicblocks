@@ -14,7 +14,7 @@ where
     T: Eq + Clone + Send + Sync + 'static,
 {
     pub fn new(initial: T) -> Self {
-        State {
+        Self {
             value: initial,
             device_pending: true,
         }

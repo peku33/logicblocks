@@ -83,7 +83,7 @@ impl Response {
     pub fn ok_empty() -> Self {
         let http_response = HttpResponse::builder().body(Empty::new().boxed()).unwrap();
 
-        Response { http_response }
+        Self { http_response }
     }
     pub fn ok_content_type_body(
         content_type: &str,
@@ -94,7 +94,7 @@ impl Response {
             .body(Full::new(body_payload).boxed())
             .unwrap();
 
-        Response { http_response }
+        Self { http_response }
     }
     pub fn ok_json<T: Serialize>(value: T) -> Self {
         let body_payload = Bytes::from(serde_json::to_vec(&value).unwrap());
@@ -104,13 +104,14 @@ impl Response {
             .body(Full::new(body_payload).boxed())
             .unwrap();
 
-        Response { http_response }
+        Self { http_response }
     }
     pub fn ok_sse_stream<S: Stream<Item = sse::Event> + Send + Sync + 'static>(
         sse_stream: S
     ) -> Self {
         // FIXME: webkit based browsers (firefox, safari) won't see the stream opened
         // until something is written
+        // FIXME: break stream on app exit
         let ping_event = ":\r\n".to_owned();
         let body_payload_frame_stream = once(async move { ping_event })
             .chain(sse_stream.map(|event| event.to_payload()))
@@ -122,7 +123,7 @@ impl Response {
                 body_payload_frame_stream.map(Ok),
             )))
             .unwrap();
-        Response { http_response }
+        Self { http_response }
     }
 
     pub fn redirect_302(target: &str) -> Self {
@@ -131,7 +132,7 @@ impl Response {
             .header(header::LOCATION, target)
             .body(Empty::new().boxed())
             .unwrap();
-        Response { http_response }
+        Self { http_response }
     }
 
     pub fn error(status_code: StatusCode) -> Self {
@@ -140,7 +141,7 @@ impl Response {
             .body(Empty::new().boxed())
             .unwrap();
 
-        Response { http_response }
+        Self { http_response }
     }
     pub fn error_400_from_error<T: Into<Error>>(error: T) -> Self {
         let body_payload = Bytes::from(error.into().to_string());
@@ -148,7 +149,7 @@ impl Response {
             .status(StatusCode::BAD_REQUEST)
             .body(Full::new(body_payload).boxed())
             .unwrap();
-        Response { http_response }
+        Self { http_response }
     }
     pub fn error_404() -> Self {
         Self::error(StatusCode::NOT_FOUND)

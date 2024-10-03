@@ -174,9 +174,10 @@ where
 }
 
 // Setter
-/// Setter object - read-write part od [`Value`]. Creating and keeping this
-/// object has no cost, it's just a proxy around read-write methods of
-/// [`Value`].
+/// Setter object - read-write part od [`Value`].
+///
+/// Creating and keeping this object has no cost, it's just a proxy around
+/// read-write methods of [`Value`].
 #[derive(Debug)]
 pub struct Setter<'v, T>
 where
@@ -230,9 +231,11 @@ where
 }
 
 // Observer
-/// Observer object. This internally keeps the copy of "last seen" or "last
-/// processed" value. Calling its method will compare this value against global
-/// (from [`Value`]) value and tell whether it was changed.
+/// Observer object.
+///
+/// This internally keeps the copy of "last seen" or "last processed" value.
+/// Calling its method will compare this value against global (from [`Value`])
+/// value and tell whether it was changed.
 #[derive(Debug)]
 pub struct Observer<'v, T>
 where
@@ -314,6 +317,8 @@ where
     }
 }
 
+/// Committing Observer.
+///
 /// This object allows to first freeze the value and then mark it (or not) as
 /// "last seen" or "last processed". This is useful if processing of the value
 /// may fail and we may want to retry later, keeping pending state.
@@ -442,10 +447,12 @@ where
 }
 
 // ChangedStream
-/// Stream yielding () when value is changed. Remembers value from previous
-/// yield and yields only if value differs. If value went A -> B -> A quickly,
-/// it is possible it won't yield. Use this when you don't need value returned
-/// from stream, as this is a bit faster then [`ValueStream`].
+/// Stream yielding () when value is changed.
+///
+/// Remembers value from previous yield and yields only if value differs. If
+/// value went A -> B -> A quickly, it is possible it won't yield. Use this when
+/// you don't need value returned from stream, as this is a bit faster then
+/// [`ValueStream`].
 #[derive(Debug)]
 pub struct ChangedStream<'v, T>
 where
@@ -539,11 +546,12 @@ where
 }
 
 // ValueStream
-/// Stream yielding value when it is changed. Remembers value from previous
-/// yield and yields only if value differs. If value went A -> B -> A quickly,
-/// it is possible it won't yield. A bit slower then [`ChangedStream`], because
-/// of additional clone, so use it only when you actually need value from
-/// stream, not just information it was changed.
+/// Stream yielding value when it is changed.
+///
+/// Remembers value from previous yield and yields only if value differs. If
+/// value went A -> B -> A quickly, it is possible it won't yield. A bit slower
+/// then [`ChangedStream`], because of additional clone, so use it only when you
+/// actually need value from stream, not just information it was changed.
 #[derive(Debug)]
 pub struct ValueStream<'v, T>
 where

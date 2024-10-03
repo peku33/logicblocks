@@ -100,7 +100,7 @@ impl<'h> Server<'h> {
                     let (stream, remote_address) = match connection.context("connection") {
                         Ok(connection) => connection,
                         Err(error) => {
-                            log::error!("{self}: connection error: {error}");
+                            log::error!("{self}: connection error: {error:?}");
                             continue;
                         }
                     };
@@ -121,7 +121,7 @@ impl<'h> Server<'h> {
                         match connection_watch.await {
                             Ok(()) => {}
                             Err(error) => {
-                                log::error!("{self_static}: connection error: {error}");
+                                log::error!("{self_static}: connection error: {error:?}");
                             }
                         };
                     });

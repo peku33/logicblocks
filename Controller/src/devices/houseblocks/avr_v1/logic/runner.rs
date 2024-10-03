@@ -93,12 +93,12 @@ where
     }
 
     #[allow(clippy::needless_lifetimes)]
-    fn device<'s>(&'s self) -> &<DF as DeviceFactory>::Device<'s> {
+    fn device(&self) -> &<DF as DeviceFactory>::Device<'_> {
         // this should be safe, as we narrow down the lifetime
         self.inner.with_device(|device| unsafe {
             mem::transmute::<
                 &'_ <DF as DeviceFactory>::Device<'_>,
-                &'s <DF as DeviceFactory>::Device<'s>,
+                &'_ <DF as DeviceFactory>::Device<'_>,
             >(device)
         })
     }
