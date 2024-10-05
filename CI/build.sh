@@ -27,9 +27,9 @@ function web_static_pack_gui_ensure {
     cd $ROOT_DIR/Gui
     
     HASH_CURRENT="HASH_CURRENT:NULL"
-    if [ -d ./build ]
+    if [ -d ./dist ]
     then
-        HASH_CURRENT=$(find . -not -path './node_modules/*' -not -path './build/*' -type f | sort | xargs cat | sha256sum | awk '{ print $1 }')
+        HASH_CURRENT=$(find . -not -path './node_modules/*' -not -path './dist/*' -type f | sort | xargs cat | sha256sum | awk '{ print $1 }')
     fi
 
     cd $WORKSPACE_DIR
@@ -47,11 +47,11 @@ function web_static_pack_gui_ensure {
         export NPM_CONFIG_PROGRESS=false
         export NPM_CONFIG_SPIN=false
         npm install # using `ci` reinstalls everything, which is really slow
-        npm run-script build
+        npm run build
 
         echo "web_static_pack_gui: packing"
         cd $WORKSPACE_DIR
-        web-static-pack-packer $ROOT_DIR/Gui/build ./web_static_pack_gui.bin
+        web-static-pack-packer directory-single $ROOT_DIR/Gui/dist ./web_static_pack_gui.bin
         echo $HASH_CURRENT > ./web_static_pack_gui.bin.sha256
     else
         echo "web_static_pack_gui: matches, skipping"
