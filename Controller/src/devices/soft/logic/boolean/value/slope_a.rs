@@ -19,6 +19,7 @@ pub struct Device {
     signal_input: signal::state_target_queued::Signal<bool>,
     signal_output_raising: signal::event_source::Signal<()>,
     signal_output_falling: signal::event_source::Signal<()>,
+    signal_output_raising_or_falling: signal::event_source::Signal<()>,
 }
 impl Device {
     pub fn new() -> Self {
@@ -28,6 +29,7 @@ impl Device {
             signal_input: signal::state_target_queued::Signal::<bool>::new(),
             signal_output_raising: signal::event_source::Signal::<()>::new(),
             signal_output_falling: signal::event_source::Signal::<()>::new(),
+            signal_output_raising_or_falling: signal::event_source::Signal::<()>::new(),
         }
     }
 
@@ -58,6 +60,11 @@ impl Device {
         }
         for _ in 0..falling {
             if self.signal_output_falling.push_one(()) {
+                signal_sources_changed = true;
+            }
+        }
+        for _ in 0..(raising + falling) {
+            if self.signal_output_raising_or_falling.push_one(()) {
                 signal_sources_changed = true;
             }
         }
@@ -111,6 +118,7 @@ pub enum SignalIdentifier {
     Input,
     OutputRaising,
     OutputFalling,
+    OutputRaisingOrFalling,
 }
 impl signals::Identifier for SignalIdentifier {}
 impl signals::Device for Device {
@@ -127,6 +135,7 @@ impl signals::Device for Device {
             SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
             SignalIdentifier::OutputRaising => &self.signal_output_raising as &dyn signal::Base,
             SignalIdentifier::OutputFalling => &self.signal_output_falling as &dyn signal::Base,
+            SignalIdentifier::OutputRaisingOrFalling => &self.signal_output_raising_or_falling as &dyn signal::Base,
         }
     }
 }
