@@ -33,7 +33,7 @@ impl<'a> TargetsChangedWakerStream<'a> {
         Self { inner }
     }
 }
-impl<'a> Stream for TargetsChangedWakerStream<'a> {
+impl Stream for TargetsChangedWakerStream<'_> {
     type Item = ();
 
     fn poll_next(
@@ -43,7 +43,7 @@ impl<'a> Stream for TargetsChangedWakerStream<'a> {
         unsafe { Pin::new_unchecked(&mut self.get_unchecked_mut().inner) }.poll_next(cx)
     }
 }
-impl<'a> FusedStream for TargetsChangedWakerStream<'a> {
+impl FusedStream for TargetsChangedWakerStream<'_> {
     fn is_terminated(&self) -> bool {
         self.inner.is_terminated()
     }
@@ -102,7 +102,7 @@ impl<'a> SourcesChangedWakerRemoteStream<'a> {
         Self { inner }
     }
 }
-impl<'a> Stream for SourcesChangedWakerRemoteStream<'a> {
+impl Stream for SourcesChangedWakerRemoteStream<'_> {
     type Item = ();
 
     fn poll_next(
@@ -112,7 +112,7 @@ impl<'a> Stream for SourcesChangedWakerRemoteStream<'a> {
         unsafe { Pin::new_unchecked(&mut self.get_unchecked_mut().inner) }.poll_next(cx)
     }
 }
-impl<'a> FusedStream for SourcesChangedWakerRemoteStream<'a> {
+impl FusedStream for SourcesChangedWakerRemoteStream<'_> {
     fn is_terminated(&self) -> bool {
         self.inner.is_terminated()
     }

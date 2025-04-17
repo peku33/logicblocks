@@ -130,7 +130,7 @@ impl Device {
         &self,
         operation: RecalculateOperation,
     ) {
-        let mut signal_sources_changed = false;
+        let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
         let mut mode_lock = self.mode.write();
@@ -169,10 +169,10 @@ impl Device {
             (Mode::Override(override_value), _) => Some(override_value),
         };
         if self.signal_output.set_one(output_value) {
-            signal_sources_changed = true;
+            signals_sources_changed = true;
         }
 
-        if signal_sources_changed {
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
@@ -301,7 +301,7 @@ impl uri_cursor::Handler for Device {
                                 Ok(value) => value,
                                 Err(error) => {
                                     return async { web::Response::error_400_from_error(error) }
-                                        .boxed()
+                                        .boxed();
                                 }
                             };
 

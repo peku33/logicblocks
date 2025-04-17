@@ -10,10 +10,9 @@ use crate::{
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use maplit::hashmap;
-use serde::{Deserialize, Serialize};
 use std::{any::type_name, borrow::Cow};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Configuration {
     pub name: String,
 }

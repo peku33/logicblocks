@@ -1,10 +1,10 @@
 use super::{
-    super::types::{event::Value, Base as ValueBase},
+    super::types::{Base as ValueBase, event::Value},
     Base, EventTargetRemoteBase, RemoteBase, RemoteBaseVariant,
 };
 use parking_lot::RwLock;
 use std::{
-    any::{type_name, TypeId},
+    any::{TypeId, type_name},
     mem::replace,
 };
 

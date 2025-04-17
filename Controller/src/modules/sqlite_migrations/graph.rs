@@ -5,7 +5,7 @@ use phf::Map;
 pub type Graph = Map<Version, Map<Version, Option<Migration>>>; // {target => {source => migration}}
 
 pub struct GraphResolver<'g>(pub &'g Graph);
-impl<'g> Resolver for GraphResolver<'g> {
+impl Resolver for GraphResolver<'_> {
     fn resolve(
         &self,
         current: Version,

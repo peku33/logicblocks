@@ -42,7 +42,6 @@ where
 
         self.signal_input
             .take_pending()
-            .into_vec()
             .into_iter()
             .for_each(|value| {
                 self.sink.push(now, value);
@@ -65,7 +64,7 @@ where
     }
 }
 
-impl<'a, V> devices::Device for Device<'a, V>
+impl<V> devices::Device for Device<'_, V>
 where
     V: Value + Type + Clone,
 {
@@ -82,7 +81,7 @@ where
 }
 
 #[async_trait]
-impl<'a, V> Runnable for Device<'a, V>
+impl<V> Runnable for Device<'_, V>
 where
     V: Value + Type + Clone,
 {
@@ -99,7 +98,7 @@ pub enum SignalIdentifier {
     Input,
 }
 impl signals::Identifier for SignalIdentifier {}
-impl<'a, V> signals::Device for Device<'a, V>
+impl<V> signals::Device for Device<'_, V>
 where
     V: Value + Type + Clone,
 {

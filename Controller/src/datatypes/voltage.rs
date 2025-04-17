@@ -1,9 +1,10 @@
-use anyhow::{ensure, Error};
+use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
-#[serde(into = "f64")]
+#[serde(try_from = "VoltageSerde")]
+#[serde(into = "VoltageSerde")]
 pub struct Voltage {
     volts: f64,
 }
@@ -26,8 +27,19 @@ impl Ord for Voltage {
         self.partial_cmp(other).unwrap()
     }
 }
-impl Into<f64> for Voltage {
-    fn into(self) -> f64 {
-        self.to_volts()
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+struct VoltageSerde(f64);
+impl TryFrom<VoltageSerde> for Voltage {
+    type Error = Error;
+
+    fn try_from(value: VoltageSerde) -> Result<Self, Self::Error> {
+        Voltage::from_volts(value.0)
+    }
+}
+impl From<Voltage> for VoltageSerde {
+    fn from(value: Voltage) -> Self {
+        Self(value.to_volts())
     }
 }

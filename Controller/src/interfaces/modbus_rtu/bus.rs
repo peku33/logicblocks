@@ -3,8 +3,8 @@ use crate::{
     interfaces::serial::{self, ftdi},
     modules::module_path::{ModulePath, ModulePathName},
 };
-use anyhow::{ensure, Context, Error};
-use crc::{Crc, CRC_16_MODBUS};
+use anyhow::{Context, Error, ensure};
+use crc::{CRC_16_MODBUS, Crc};
 use crossbeam::channel;
 use futures::channel::oneshot;
 use once_cell::sync::Lazy;
@@ -237,11 +237,11 @@ mod tests_bus {
     #[test]
     fn serialize_1() {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
-        let serialized = Bus::serialize(0x11, &request).unwrap().into_vec();
+        let serialized = Bus::serialize(0x11, &request).unwrap();
 
-        let serialized_expected = vec![0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84];
+        let serialized_expected = [0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84];
 
-        assert_eq!(serialized, serialized_expected);
+        assert_eq!(serialized.as_ref(), serialized_expected);
     }
 
     #[test]
@@ -520,11 +520,11 @@ mod tests_erased_wrappers {
         let request = ReadCoilsRequest::new(20, 37).unwrap();
         let request_erased = RequestErasedWrapper::from_original(request);
 
-        let serialized = Bus::serialize(0x11, &request_erased).unwrap().into_vec();
+        let serialized = Bus::serialize(0x11, &request_erased).unwrap();
 
-        let serialized_expected = vec![0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84];
+        let serialized_expected = [0x11, 0x01, 0x00, 0x13, 0x00, 0x25, 0x0e, 0x84];
 
-        assert_eq!(serialized, serialized_expected);
+        assert_eq!(serialized.as_ref(), serialized_expected);
 
         let parsed_erased: ResponseErasedWrapper = Bus::parse(
             0x11,

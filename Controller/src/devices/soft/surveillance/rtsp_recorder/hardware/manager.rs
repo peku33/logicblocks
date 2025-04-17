@@ -171,7 +171,6 @@ impl<'f> Manager<'f> {
             )
             .await
             .context("query")?
-            .into_vec()
             .into_iter()
             .map(|(channel_id, name, detection_threshold)| {
                 (
@@ -509,7 +508,7 @@ impl<'f> Manager<'f> {
     }
 }
 #[async_trait]
-impl<'f> Runnable for Manager<'f> {
+impl Runnable for Manager<'_> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -517,7 +516,7 @@ impl<'f> Runnable for Manager<'f> {
         self.run(exit_flag).await
     }
 }
-impl<'f> fmt::Display for Manager<'f> {
+impl fmt::Display for Manager<'_> {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,

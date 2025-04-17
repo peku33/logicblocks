@@ -52,7 +52,6 @@ where
         let values = self
             .signal_trigger
             .take_pending()
-            .into_vec()
             .into_iter()
             .map(|()| self.configuration.value.clone())
             .collect::<Box<[_]>>();

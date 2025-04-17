@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use derive_more::Error as ErrorFactory;
 use std::fmt;
 

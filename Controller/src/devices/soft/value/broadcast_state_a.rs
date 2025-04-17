@@ -36,14 +36,9 @@ where
     }
 
     fn signals_targets_changed(&self) {
-        let mut signal_sources_changed = false;
-
         let values = self.signal_input.take_pending();
-        if self.signal_output.set_many(values) {
-            signal_sources_changed = true;
-        }
 
-        if signal_sources_changed {
+        if self.signal_output.set_many(values) {
             self.signals_sources_changed_waker.wake();
         }
     }

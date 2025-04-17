@@ -25,7 +25,7 @@ use ouroboros::self_referencing;
 use std::{
     collections::HashMap,
     mem,
-    mem::{transmute, ManuallyDrop},
+    mem::{ManuallyDrop, transmute},
 };
 use tokio::sync::{RwLock, RwLockReadGuard};
 

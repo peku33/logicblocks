@@ -61,7 +61,7 @@ impl<'c> Device<'c> {
     }
 }
 
-impl<'c> devices::Device for Device<'c> {
+impl devices::Device for Device<'_> {
     fn class(&self) -> Cow<'static, str> {
         Cow::from("soft/surveillance/rtsp_recorder/channel")
     }
@@ -75,7 +75,7 @@ impl<'c> devices::Device for Device<'c> {
 }
 
 #[async_trait]
-impl<'c> Runnable for Device<'c> {
+impl Runnable for Device<'_> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -90,7 +90,7 @@ pub enum SignalIdentifier {
     DetectionLevel,
 }
 impl signals::Identifier for SignalIdentifier {}
-impl<'c> signals::Device for Device<'c> {
+impl signals::Device for Device<'_> {
     fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
         Some(&self.signals_targets_changed_waker)
     }

@@ -1,7 +1,7 @@
 use super::common::execute_on_tokio;
 use anyhow::Error;
 use futures::{
-    future::{join, FutureExt},
+    future::{FutureExt, join},
     pin_mut, select,
     stream::StreamExt,
 };

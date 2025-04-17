@@ -1,7 +1,7 @@
 use super::{Device, DeviceWrapper, Id as DeviceId};
 use crate::signals::{
-    exchanger::{ConnectionRequested, DeviceIdSignalIdentifierBaseWrapper},
     Device as SignalsDevice, IdentifierBaseWrapper as SignalIdentifierBaseWrapper,
+    exchanger::{ConnectionRequested, DeviceIdSignalIdentifierBaseWrapper},
 };
 use std::{collections::HashMap, marker::PhantomData};
 
@@ -183,7 +183,7 @@ pub struct DeviceHandleErased<'d> {
 
     phantom_data: PhantomData<&'d ()>,
 }
-impl<'d> DeviceHandleErased<'d> {
+impl DeviceHandleErased<'_> {
     fn new(device_id: DeviceId) -> Self {
         Self {
             device_id,
@@ -195,12 +195,12 @@ impl<'d> DeviceHandleErased<'d> {
         self.device_id
     }
 }
-impl<'d> Clone for DeviceHandleErased<'d> {
+impl Clone for DeviceHandleErased<'_> {
     fn clone(&self) -> Self {
         *self
     }
 }
-impl<'d> Copy for DeviceHandleErased<'d> {}
+impl Copy for DeviceHandleErased<'_> {}
 
 #[derive(Clone, Debug)]
 pub struct DeviceSignalHandleErased<'d> {

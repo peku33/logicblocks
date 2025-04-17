@@ -1,15 +1,15 @@
 use super::common::{Address, AddressDeviceType, AddressSerial, Frame, Payload};
 use crate::{
     interfaces::serial::{
+        Bits, Configuration as SerialConfiguration, Parity, StopBits,
         ftdi::{
             Descriptor as FtdiDescriptor, DeviceConfiguration as FtdiDeviceConfiguration,
             DeviceFailSafe as FtdiDeviceFailSafe,
         },
-        Bits, Configuration as SerialConfiguration, Parity, StopBits,
     },
     modules::module_path::{ModulePath, ModulePathName},
 };
-use anyhow::{bail, ensure, Context, Error};
+use anyhow::{Context, Error, bail, ensure};
 use crossbeam::channel;
 use futures::channel::oneshot;
 use once_cell::sync::Lazy;

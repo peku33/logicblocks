@@ -76,8 +76,6 @@ where
     }
 
     fn signals_targets_changed(&self) {
-        let mut signal_sources_changed = false;
-
         let a = self.signal_a.take_last();
         let b = self.signal_b.take_last();
         if a.pending || b.pending {
@@ -86,12 +84,8 @@ where
                 _ => None,
             };
             if self.signal_output.set_one(output) {
-                signal_sources_changed = true;
+                self.signals_sources_changed_waker.wake();
             }
-        }
-
-        if signal_sources_changed {
-            self.signals_sources_changed_waker.wake();
         }
     }
 

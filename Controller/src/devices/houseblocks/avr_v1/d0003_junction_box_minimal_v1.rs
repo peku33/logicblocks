@@ -107,7 +107,7 @@ pub mod logic {
                 if let Some(key_values) = key_values {
                     // Calculate total number of key ticks
                     let mut key_changes_count_merged = [0usize; hardware::KEY_COUNT];
-                    for key_changes_count in key_changes_count_queue.into_vec().into_iter() {
+                    for key_changes_count in key_changes_count_queue.into_iter() {
                         for (key_index, key_changes_count) in key_changes_count.iter().enumerate() {
                             key_changes_count_merged[key_index] += *key_changes_count as usize;
                         }
@@ -193,7 +193,7 @@ pub mod logic {
         }
     }
 
-    impl<'h> runner::Device for Device<'h> {
+    impl runner::Device for Device<'_> {
         type HardwareDevice = hardware::Device;
 
         fn class() -> &'static str {
@@ -216,7 +216,7 @@ pub mod logic {
         Temperature,
     }
     impl signals::Identifier for SignalIdentifier {}
-    impl<'h> signals::Device for Device<'h> {
+    impl signals::Device for Device<'_> {
         fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
             Some(&self.signals_targets_changed_waker)
         }
@@ -264,7 +264,7 @@ pub mod logic {
     }
 
     #[async_trait]
-    impl<'h> Runnable for Device<'h> {
+    impl Runnable for Device<'_> {
         async fn run(
             &self,
             exit_flag: async_flag::Receiver,
@@ -277,7 +277,7 @@ pub mod logic {
     pub struct GuiSummary {
         temperature: Option<Temperature>,
     }
-    impl<'h> devices::gui_summary::Device for Device<'h> {
+    impl devices::gui_summary::Device for Device<'_> {
         fn waker(&self) -> &devices::gui_summary::Waker {
             &self.gui_summary_waker
         }
@@ -310,7 +310,7 @@ pub mod hardware {
         async_flag, async_waker,
         runnable::{Exited, Runnable},
     };
-    use anyhow::{bail, ensure, Context, Error};
+    use anyhow::{Context, Error, bail, ensure};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
     use futures::{future::FutureExt, join, stream::StreamExt};

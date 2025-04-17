@@ -9,7 +9,7 @@ use crate::{
         runnable::{Exited, Runnable},
     },
 };
-use anyhow::{bail, ensure, Context, Error};
+use anyhow::{Context, Error, bail, ensure};
 use async_trait::async_trait;
 use futures::{future::FutureExt, pin_mut, select};
 use itertools::Itertools;
@@ -139,7 +139,6 @@ impl<'m> Device<'m> {
             .modbus_read(2111, 1)
             .await
             .context("modbus_read")?
-            .into_vec()
             .into_iter()
             .exactly_one()
             .unwrap();
@@ -197,7 +196,6 @@ impl<'m> Device<'m> {
             .modbus_read(2101, 11)
             .await
             .context("modbus_read")?
-            .into_vec()
             .into_iter()
             .collect_tuple()
             .unwrap();
@@ -206,7 +204,6 @@ impl<'m> Device<'m> {
             .modbus_read(101, 2)
             .await
             .context("modbus_read")?
-            .into_vec()
             .into_iter()
             .collect_tuple()
             .unwrap();
@@ -215,7 +212,6 @@ impl<'m> Device<'m> {
             .modbus_read(107, 1)
             .await
             .context("modbus_read")?
-            .into_vec()
             .into_iter()
             .collect_tuple()
             .unwrap();
@@ -229,7 +225,6 @@ impl<'m> Device<'m> {
             .modbus_read(110, 4)
             .await
             .context("modbus_read")?
-            .into_vec()
             .into_iter()
             .collect_tuple()
             .unwrap();
@@ -371,7 +366,6 @@ impl<'m> Device<'m> {
             .modbus_read(837, 2)
             .await
             .context("modbus_read")?
-            .into_vec()
             .into_iter()
             .collect_tuple()
             .unwrap();
@@ -487,7 +481,7 @@ impl<'m> Device<'m> {
     }
 }
 #[async_trait]
-impl<'m> Runnable for Device<'m> {
+impl Runnable for Device<'_> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,

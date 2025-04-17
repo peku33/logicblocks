@@ -73,13 +73,7 @@ impl<'m> Device<'m> {
             hardware::Output::Initializing | hardware::Output::Error => false,
         };
 
-        let mut signal_sources_changed = false;
-
         if self.signal_output_ok.set_one(Some(output_ok)) {
-            signal_sources_changed = true;
-        }
-
-        if signal_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
     }
@@ -117,7 +111,7 @@ impl<'m> Device<'m> {
     }
 }
 
-impl<'m> devices::Device for Device<'m> {
+impl devices::Device for Device<'_> {
     fn class(&self) -> Cow<'static, str> {
         Cow::from("eaton/mmax_a")
     }
@@ -134,7 +128,7 @@ impl<'m> devices::Device for Device<'m> {
 }
 
 #[async_trait]
-impl<'m> Runnable for Device<'m> {
+impl Runnable for Device<'_> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -150,7 +144,7 @@ pub enum SignalIdentifier {
     OutputOk,
 }
 impl signals::Identifier for SignalIdentifier {}
-impl<'m> signals::Device for Device<'m> {
+impl signals::Device for Device<'_> {
     fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
         Some(&self.signals_targets_changed_waker)
     }
@@ -203,7 +197,7 @@ pub enum GuiSummary {
     },
     Error,
 }
-impl<'m> devices::gui_summary::Device for Device<'m> {
+impl devices::gui_summary::Device for Device<'_> {
     fn waker(&self) -> &devices::gui_summary::Waker {
         &self.gui_summary_waker
     }

@@ -6,7 +6,7 @@ pub use super::ftdi_stub::*;
 
 use super::Configuration;
 use crate::util::anyhow_multiple_error::AnyhowMultipleError;
-use anyhow::{anyhow, bail, Context, Error};
+use anyhow::{Context, Error, anyhow, bail};
 use itertools::Itertools;
 use std::{ffi, fmt, thread, time::Duration};
 

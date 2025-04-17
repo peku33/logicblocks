@@ -1,4 +1,4 @@
-use anyhow::{ensure, Error};
+use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
 
@@ -67,22 +67,6 @@ impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> Ord
         self.partial_cmp(other).unwrap()
     }
 }
-impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> TryFrom<AngleNormalizedBaseSerde>
-    for AngleNormalizedBase<MIN_PI_DIV2, MAX_PI_DIV2>
-{
-    type Error = Error;
-
-    fn try_from(value: AngleNormalizedBaseSerde) -> Result<Self, Self::Error> {
-        Self::from_radians(value.0)
-    }
-}
-impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> Into<AngleNormalizedBaseSerde>
-    for AngleNormalizedBase<MIN_PI_DIV2, MAX_PI_DIV2>
-{
-    fn into(self) -> AngleNormalizedBaseSerde {
-        AngleNormalizedBaseSerde(self.to_radians())
-    }
-}
 impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> fmt::Display
     for AngleNormalizedBase<MIN_PI_DIV2, MAX_PI_DIV2>
 {
@@ -96,3 +80,19 @@ impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> fmt::Display
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct AngleNormalizedBaseSerde(f64);
+impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> TryFrom<AngleNormalizedBaseSerde>
+    for AngleNormalizedBase<MIN_PI_DIV2, MAX_PI_DIV2>
+{
+    type Error = Error;
+
+    fn try_from(value: AngleNormalizedBaseSerde) -> Result<Self, Self::Error> {
+        Self::from_radians(value.0)
+    }
+}
+impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8>
+    From<AngleNormalizedBase<MIN_PI_DIV2, MAX_PI_DIV2>> for AngleNormalizedBaseSerde
+{
+    fn from(value: AngleNormalizedBase<MIN_PI_DIV2, MAX_PI_DIV2>) -> Self {
+        AngleNormalizedBaseSerde(value.to_radians())
+    }
+}

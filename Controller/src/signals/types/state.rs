@@ -8,6 +8,7 @@ use crate::datatypes::{
     color_rgb_boolean::ColorRgbBoolean,
     ipc_rtsp_url::IpcRtspUrl,
     multiplier::Multiplier,
+    pressure::Pressure,
     range::Range,
     ratio::Ratio,
     real::Real,
@@ -30,6 +31,7 @@ impl Value for AngleNormalizedZeroCentered {}
 impl Value for ColorRgbBoolean {}
 impl Value for IpcRtspUrl {}
 impl Value for Multiplier {}
+impl Value for Pressure {}
 impl Value for Ratio {}
 impl Value for Real {}
 impl Value for Resistance {}

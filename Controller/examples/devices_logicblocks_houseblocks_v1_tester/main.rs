@@ -1,5 +1,3 @@
-#![feature(async_closure)]
-
 pub mod common;
 pub mod d0002_reed_switch_v1;
 pub mod d0003_junction_box_minimal_v1;

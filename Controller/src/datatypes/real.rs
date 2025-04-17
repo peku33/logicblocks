@@ -1,4 +1,4 @@
-use anyhow::{ensure, Error};
+use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -25,6 +25,10 @@ impl Ord for Real {
         self.partial_cmp(other).unwrap()
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+struct RealSerde(f64);
 impl TryFrom<RealSerde> for Real {
     type Error = Error;
 
@@ -32,11 +36,8 @@ impl TryFrom<RealSerde> for Real {
         Self::from_f64(value.0)
     }
 }
-impl Into<RealSerde> for Real {
-    fn into(self) -> RealSerde {
-        RealSerde(self.to_f64())
+impl From<Real> for RealSerde {
+    fn from(value: Real) -> Self {
+        RealSerde(value.to_f64())
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct RealSerde(f64);

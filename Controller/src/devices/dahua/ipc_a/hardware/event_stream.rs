@@ -3,7 +3,7 @@
 /// will issue start for region 1 and stop for region 2 Even sometimes there
 /// are two ending regions, which makes it even more useless.
 use super::api::Api;
-use anyhow::{anyhow, bail, Context, Error};
+use anyhow::{Context, Error, anyhow, bail};
 use atomic_refcell::AtomicRefCell;
 use futures::{
     future::FutureExt,

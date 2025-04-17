@@ -48,13 +48,7 @@ impl Device {
     }
 
     fn signals_targets_changed(&self) {
-        let mut gui_summary_changed = false;
-
-        if let Some(_value) = self.signal_input.take_pending() {
-            gui_summary_changed = true;
-        }
-
-        if gui_summary_changed {
+        if self.signal_input.take_pending().is_some() {
             self.gui_summary_waker.wake();
         }
     }
@@ -157,7 +151,7 @@ impl uri_cursor::Handler for Device {
                     let value = match request.body_parse_json::<bool>() {
                         Ok(value) => value,
                         Err(error) => {
-                            return async { web::Response::error_400_from_error(error) }.boxed()
+                            return async { web::Response::error_400_from_error(error) }.boxed();
                         }
                     };
 

@@ -17,7 +17,7 @@ use futures::{
     join,
     stream::StreamExt,
 };
-use itertools::{izip, zip_eq, Itertools};
+use itertools::{Itertools, izip, zip_eq};
 use parking_lot::RwLock;
 use serde::Serialize;
 use std::{borrow::Cow, cmp::min, collections::HashMap, iter, time::Duration};
@@ -113,11 +113,13 @@ impl Device {
         let channels_count = configuration.channels.len();
 
         let state_device = StateDevice::Enabled {
-            channels: iter::repeat(StateDeviceEnabledChannel::EnabledQueued {
-                queue: Duration::ZERO,
-                order_index: 0,
-            })
-            .take(channels_count)
+            channels: iter::repeat_n(
+                StateDeviceEnabledChannel::EnabledQueued {
+                    queue: Duration::ZERO,
+                    order_index: 0,
+                },
+                channels_count,
+            )
             .collect::<Box<[_]>>(),
             order_index_last: 0,
         };
@@ -146,12 +148,12 @@ impl Device {
     pub fn device_disable(&self) {
         let mut state = self.state.write();
 
-        let mut signal_sources_changed = false;
+        let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
+        match &mut state.device {
             StateDevice::Disabled { .. } => {}
-            StateDevice::Paused { ref channels } => {
+            StateDevice::Paused { channels } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
@@ -169,7 +171,7 @@ impl Device {
 
                 gui_summary_changed = true;
             }
-            StateDevice::Enabled { ref channels, .. } => {
+            StateDevice::Enabled { channels, .. } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
@@ -195,15 +197,15 @@ impl Device {
 
         // disable all channels
         if self.signal_power.set_one(Some(Multiplier::zero())) {
-            signal_sources_changed = true;
+            signals_sources_changed = true;
         }
         for signal_output in self.signal_outputs.iter() {
             if signal_output.set_one(Some(false)) {
-                signal_sources_changed = true;
+                signals_sources_changed = true;
             }
         }
 
-        if signal_sources_changed {
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
@@ -213,11 +215,11 @@ impl Device {
     pub fn device_pause(&self) {
         let mut state = self.state.write();
 
-        let mut signal_sources_changed = false;
+        let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
-            StateDevice::Disabled { ref channels } => {
+        match &mut state.device {
+            StateDevice::Disabled { channels } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
@@ -236,7 +238,7 @@ impl Device {
                 gui_summary_changed = true;
             }
             StateDevice::Paused { .. } => {}
-            StateDevice::Enabled { ref channels, .. } => {
+            StateDevice::Enabled { channels, .. } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
@@ -264,15 +266,15 @@ impl Device {
 
         // disable all channels
         if self.signal_power.set_one(Some(Multiplier::zero())) {
-            signal_sources_changed = true;
+            signals_sources_changed = true;
         }
         for signal_output in self.signal_outputs.iter() {
             if signal_output.set_one(Some(false)) {
-                signal_sources_changed = true;
+                signals_sources_changed = true;
             }
         }
 
-        if signal_sources_changed {
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
@@ -282,11 +284,11 @@ impl Device {
     pub fn device_enable(&self) {
         let mut state = self.state.write();
 
-        // let mut signal_sources_changed = false;
+        // let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
-            StateDevice::Disabled { ref channels } => {
+        match &mut state.device {
+            StateDevice::Disabled { channels } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
@@ -309,7 +311,7 @@ impl Device {
 
                 gui_summary_changed = true;
             }
-            StateDevice::Paused { ref channels } => {
+            StateDevice::Paused { channels } => {
                 let channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
@@ -335,7 +337,7 @@ impl Device {
             StateDevice::Enabled { .. } => {}
         }
 
-        // if signal_sources_changed {
+        // if signals_sources_changed {
         //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
@@ -349,11 +351,11 @@ impl Device {
     ) {
         let mut state = self.state.write();
 
-        let mut signal_sources_changed = false;
+        let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
-            StateDevice::Disabled { ref mut channels } => {
+        match &mut state.device {
+            StateDevice::Disabled { channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDeviceDisabledChannel::Disabled => {}
@@ -364,7 +366,7 @@ impl Device {
                     }
                 }
             }
-            StateDevice::Paused { ref mut channels } => {
+            StateDevice::Paused { channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDevicePausedChannel::Disabled => {}
@@ -376,9 +378,7 @@ impl Device {
                     }
                 }
             }
-            StateDevice::Enabled {
-                ref mut channels, ..
-            } => {
+            StateDevice::Enabled { channels, .. } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDeviceEnabledChannel::Disabled => {}
@@ -392,13 +392,13 @@ impl Device {
                         *channel_state = StateDeviceEnabledChannel::Disabled;
 
                         if self.signal_outputs[channel_id].set_one(Some(false)) {
-                            signal_sources_changed = true;
+                            signals_sources_changed = true;
                         }
                         if self
                             .signal_power
                             .set_one(Some(self.power_calculate(channels)))
                         {
-                            signal_sources_changed = true;
+                            signals_sources_changed = true;
                         }
 
                         gui_summary_changed = true;
@@ -407,7 +407,7 @@ impl Device {
             }
         }
 
-        if signal_sources_changed {
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
@@ -420,11 +420,11 @@ impl Device {
     ) {
         let mut state = self.state.write();
 
-        let mut signal_sources_changed = false;
+        let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
-            StateDevice::Disabled { ref mut channels } => {
+        match &mut state.device {
+            StateDevice::Disabled { channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDeviceDisabledChannel::Disabled | StateDeviceDisabledChannel::Enabled => {
@@ -434,7 +434,7 @@ impl Device {
                     StateDeviceDisabledChannel::Paused => {}
                 }
             }
-            StateDevice::Paused { ref mut channels } => {
+            StateDevice::Paused { channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDevicePausedChannel::Disabled => {
@@ -450,9 +450,7 @@ impl Device {
                     StateDevicePausedChannel::Paused { .. } => {}
                 }
             }
-            StateDevice::Enabled {
-                ref mut channels, ..
-            } => {
+            StateDevice::Enabled { channels, .. } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDeviceEnabledChannel::Disabled => {
@@ -472,13 +470,13 @@ impl Device {
                         };
 
                         if self.signal_outputs[channel_id].set_one(Some(false)) {
-                            signal_sources_changed = true;
+                            signals_sources_changed = true;
                         }
                         if self
                             .signal_power
                             .set_one(Some(self.power_calculate(channels)))
                         {
-                            signal_sources_changed = true;
+                            signals_sources_changed = true;
                         }
 
                         gui_summary_changed = true;
@@ -487,7 +485,7 @@ impl Device {
             }
         }
 
-        if signal_sources_changed {
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
@@ -500,11 +498,11 @@ impl Device {
     ) {
         let mut state = self.state.write();
 
-        // let mut signal_sources_changed = false;
+        // let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
-            StateDevice::Disabled { ref mut channels } => {
+        match &mut state.device {
+            StateDevice::Disabled { channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDeviceDisabledChannel::Disabled | StateDeviceDisabledChannel::Paused => {
@@ -514,7 +512,7 @@ impl Device {
                     StateDeviceDisabledChannel::Enabled => {}
                 }
             }
-            StateDevice::Paused { ref mut channels } => {
+            StateDevice::Paused { channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDevicePausedChannel::Disabled => {
@@ -531,8 +529,8 @@ impl Device {
                 }
             }
             StateDevice::Enabled {
-                ref mut channels,
-                ref mut order_index_last,
+                channels,
+                order_index_last,
             } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
@@ -560,7 +558,7 @@ impl Device {
             }
         }
 
-        // if signal_sources_changed {
+        // if signals_sources_changed {
         //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
@@ -573,31 +571,29 @@ impl Device {
     ) {
         let mut state = self.state.write();
 
-        // let mut signal_sources_changed = false;
+        // let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
+        match &mut state.device {
             StateDevice::Disabled { .. } => {}
-            StateDevice::Paused { ref mut channels } => {
+            StateDevice::Paused { channels } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDevicePausedChannel::Disabled => {}
-                    StateDevicePausedChannel::Paused { ref mut queue }
-                    | StateDevicePausedChannel::Enabled { ref mut queue } => {
+                    StateDevicePausedChannel::Paused { queue }
+                    | StateDevicePausedChannel::Enabled { queue } => {
                         *queue = Duration::ZERO;
                         gui_summary_changed = true;
                     }
                 }
             }
-            StateDevice::Enabled {
-                ref mut channels, ..
-            } => {
+            StateDevice::Enabled { channels, .. } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDeviceEnabledChannel::Disabled => {}
-                    StateDeviceEnabledChannel::Paused { ref mut queue }
-                    | StateDeviceEnabledChannel::EnabledQueued { ref mut queue, .. }
-                    | StateDeviceEnabledChannel::EnabledActive { ref mut queue, .. } => {
+                    StateDeviceEnabledChannel::Paused { queue }
+                    | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
+                    | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
                         *queue = Duration::ZERO;
                         gui_summary_changed = true;
                     }
@@ -605,7 +601,7 @@ impl Device {
             }
         }
 
-        // if signal_sources_changed {
+        // if signals_sources_changed {
         //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
@@ -619,33 +615,31 @@ impl Device {
     ) {
         let mut state = self.state.write();
 
-        // let mut signal_sources_changed = false;
+        // let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
+        match &mut state.device {
             StateDevice::Disabled { .. } => {}
-            StateDevice::Paused { ref mut channels } => {
+            StateDevice::Paused { channels } => {
                 let channel_configuration = &self.configuration.channels[channel_id];
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDevicePausedChannel::Disabled => {}
-                    StateDevicePausedChannel::Paused { ref mut queue }
-                    | StateDevicePausedChannel::Enabled { ref mut queue } => {
+                    StateDevicePausedChannel::Paused { queue }
+                    | StateDevicePausedChannel::Enabled { queue } => {
                         *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                         gui_summary_changed = true;
                     }
                 }
             }
-            StateDevice::Enabled {
-                ref mut channels, ..
-            } => {
+            StateDevice::Enabled { channels, .. } => {
                 let channel_configuration = &self.configuration.channels[channel_id];
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDeviceEnabledChannel::Disabled => {}
-                    StateDeviceEnabledChannel::Paused { ref mut queue }
-                    | StateDeviceEnabledChannel::EnabledQueued { ref mut queue, .. }
-                    | StateDeviceEnabledChannel::EnabledActive { ref mut queue, .. } => {
+                    StateDeviceEnabledChannel::Paused { queue }
+                    | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
+                    | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
                         *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                         gui_summary_changed = true;
                     }
@@ -653,7 +647,7 @@ impl Device {
             }
         }
 
-        // if signal_sources_changed {
+        // if signals_sources_changed {
         //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
@@ -666,25 +660,22 @@ impl Device {
     ) {
         let mut state = self.state.write();
 
-        // let mut signal_sources_changed = false;
+        // let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
+        match &mut state.device {
             StateDevice::Disabled { .. } => {}
             StateDevice::Paused { .. } => {}
             StateDevice::Enabled {
-                ref mut channels,
-                ref mut order_index_last,
+                channels,
+                order_index_last,
             } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDeviceEnabledChannel::Disabled
                     | StateDeviceEnabledChannel::Paused { .. }
                     | StateDeviceEnabledChannel::EnabledActive { .. } => {}
-                    StateDeviceEnabledChannel::EnabledQueued {
-                        ref mut order_index,
-                        ..
-                    } => {
+                    StateDeviceEnabledChannel::EnabledQueued { order_index, .. } => {
                         *order_index_last += 1;
                         *order_index = -(*order_index_last as i64);
 
@@ -694,7 +685,7 @@ impl Device {
             }
         }
 
-        // if signal_sources_changed {
+        // if signals_sources_changed {
         //     self.signals_sources_changed_waker.wake();
         // }
         if gui_summary_changed {
@@ -707,24 +698,21 @@ impl Device {
     ) {
         let mut state = self.state.write();
 
-        let mut signal_sources_changed = false;
+        let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
-        match state.device {
+        match &mut state.device {
             StateDevice::Disabled { .. } => {}
             StateDevice::Paused { .. } => {}
             StateDevice::Enabled {
-                ref mut channels,
-                ref mut order_index_last,
+                channels,
+                order_index_last,
             } => {
                 let channel_state = &mut channels[channel_id];
                 match channel_state {
                     StateDeviceEnabledChannel::Disabled
                     | StateDeviceEnabledChannel::Paused { .. } => {}
-                    StateDeviceEnabledChannel::EnabledQueued {
-                        ref mut order_index,
-                        ..
-                    } => {
+                    StateDeviceEnabledChannel::EnabledQueued { order_index, .. } => {
                         *order_index_last += 1;
                         *order_index = *order_index_last as i64;
 
@@ -739,13 +727,13 @@ impl Device {
                         };
 
                         if self.signal_outputs[channel_id].set_one(Some(false)) {
-                            signal_sources_changed = true;
+                            signals_sources_changed = true;
                         }
                         if self
                             .signal_power
                             .set_one(Some(self.power_calculate(channels)))
                         {
-                            signal_sources_changed = true;
+                            signals_sources_changed = true;
                         }
 
                         gui_summary_changed = true;
@@ -754,7 +742,7 @@ impl Device {
             }
         }
 
-        if signal_sources_changed {
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
@@ -767,31 +755,27 @@ impl Device {
 
         let mut gui_summary_changed = false;
 
-        match state.device {
+        match &mut state.device {
             StateDevice::Disabled { .. } => {}
-            StateDevice::Paused {
-                ref mut channels, ..
-            } => {
+            StateDevice::Paused { channels, .. } => {
                 for channel_state in channels.iter_mut() {
                     match channel_state {
                         StateDevicePausedChannel::Disabled => {}
-                        StateDevicePausedChannel::Paused { ref mut queue }
-                        | StateDevicePausedChannel::Enabled { ref mut queue, .. } => {
+                        StateDevicePausedChannel::Paused { queue }
+                        | StateDevicePausedChannel::Enabled { queue, .. } => {
                             *queue = Duration::ZERO;
                             gui_summary_changed = true;
                         }
                     }
                 }
             }
-            StateDevice::Enabled {
-                ref mut channels, ..
-            } => {
+            StateDevice::Enabled { channels, .. } => {
                 for channel_state in channels.iter_mut() {
                     match channel_state {
                         StateDeviceEnabledChannel::Disabled => {}
-                        StateDeviceEnabledChannel::Paused { ref mut queue, .. }
-                        | StateDeviceEnabledChannel::EnabledQueued { ref mut queue, .. }
-                        | StateDeviceEnabledChannel::EnabledActive { ref mut queue, .. } => {
+                        StateDeviceEnabledChannel::Paused { queue, .. }
+                        | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
+                        | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
                             *queue = Duration::ZERO;
                             gui_summary_changed = true;
                         }
@@ -812,35 +796,31 @@ impl Device {
 
         let mut gui_summary_changed = false;
 
-        match state.device {
+        match &mut state.device {
             StateDevice::Disabled { .. } => {}
-            StateDevice::Paused {
-                ref mut channels, ..
-            } => {
+            StateDevice::Paused { channels, .. } => {
                 for (channel_configuration, channel_state) in
                     zip_eq(self.configuration.channels.iter(), channels.iter_mut())
                 {
                     match channel_state {
                         StateDevicePausedChannel::Disabled => {}
-                        StateDevicePausedChannel::Paused { ref mut queue }
-                        | StateDevicePausedChannel::Enabled { ref mut queue, .. } => {
+                        StateDevicePausedChannel::Paused { queue }
+                        | StateDevicePausedChannel::Enabled { queue, .. } => {
                             *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
                     }
                 }
             }
-            StateDevice::Enabled {
-                ref mut channels, ..
-            } => {
+            StateDevice::Enabled { channels, .. } => {
                 for (channel_configuration, channel_state) in
                     zip_eq(self.configuration.channels.iter(), channels.iter_mut())
                 {
                     match channel_state {
                         StateDeviceEnabledChannel::Disabled => {}
-                        StateDeviceEnabledChannel::Paused { ref mut queue, .. }
-                        | StateDeviceEnabledChannel::EnabledQueued { ref mut queue, .. }
-                        | StateDeviceEnabledChannel::EnabledActive { ref mut queue, .. } => {
+                        StateDeviceEnabledChannel::Paused { queue, .. }
+                        | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
+                        | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
                             *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
@@ -859,15 +839,15 @@ impl Device {
         let mut state = self.state.write();
 
         // we do ticks only when device is in running state
-        let (channels, order_index_last) = match state.device {
+        let (channels, order_index_last) = match &mut state.device {
             StateDevice::Enabled {
-                ref mut channels,
-                ref mut order_index_last,
+                channels,
+                order_index_last,
             } => (channels, order_index_last),
             _ => return,
         };
 
-        let mut signal_sources_changed = false;
+        let mut signals_sources_changed = false;
         let mut gui_summary_changed = false;
 
         let mut power_left = self.configuration.power_max;
@@ -882,11 +862,7 @@ impl Device {
                 StateDeviceEnabledChannel::Disabled
                 | StateDeviceEnabledChannel::Paused { .. }
                 | StateDeviceEnabledChannel::EnabledQueued { .. } => {}
-                StateDeviceEnabledChannel::EnabledActive {
-                    queue,
-                    ref mut round,
-                    ..
-                } => {
+                StateDeviceEnabledChannel::EnabledActive { queue, round, .. } => {
                     *round = round.saturating_sub(Self::CHANNELS_TICK_INTERVAL);
 
                     if !round.is_zero() {
@@ -902,7 +878,7 @@ impl Device {
                         };
 
                         if signal_output.set_one(Some(false)) {
-                            signal_sources_changed = true;
+                            signals_sources_changed = true;
                         }
                     }
 
@@ -960,7 +936,7 @@ impl Device {
                         power_left -= channel_configuration.power_required;
 
                         if signal_output.set_one(Some(true)) {
-                            signal_sources_changed = true;
+                            signals_sources_changed = true;
                         }
                         gui_summary_changed = true;
                     } else {
@@ -975,10 +951,10 @@ impl Device {
 
         let power = self.configuration.power_max - power_left;
         if self.signal_power.set_one(Some(power)) {
-            signal_sources_changed = true;
+            signals_sources_changed = true;
         }
 
-        if signal_sources_changed {
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
@@ -1002,7 +978,6 @@ impl Device {
         let value = self
             .signal_add_all
             .take_pending()
-            .into_vec()
             .into_iter()
             .sum::<Multiplier>();
 
@@ -1207,8 +1182,8 @@ impl devices::gui_summary::Device for Device {
             power_max: self.configuration.power_max.to_f64(),
         };
 
-        let gui_summary_state = match state.device {
-            StateDevice::Disabled { ref channels } => {
+        let gui_summary_state = match &state.device {
+            StateDevice::Disabled { channels } => {
                 let gui_channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
@@ -1228,7 +1203,7 @@ impl devices::gui_summary::Device for Device {
                     channels: gui_channels,
                 }
             }
-            StateDevice::Paused { ref channels, .. } => {
+            StateDevice::Paused { channels, .. } => {
                 let gui_channels = channels
                     .iter()
                     .map(|channel_state| match channel_state {
@@ -1252,7 +1227,7 @@ impl devices::gui_summary::Device for Device {
                     channels: gui_channels,
                 }
             }
-            StateDevice::Enabled { ref channels, .. } => {
+            StateDevice::Enabled { channels, .. } => {
                 // channel_id -> 0-based queue position (ascending)
                 let queued_positions = zip_eq(self.configuration.channels.iter(), channels.iter())
                     .enumerate()
@@ -1374,7 +1349,7 @@ impl uri_cursor::Handler for Device {
                                 Ok(handler_channel_add) => handler_channel_add,
                                 Err(error) => {
                                     return async { web::Response::error_400_from_error(error) }
-                                        .boxed()
+                                        .boxed();
                                 }
                             };
 
@@ -1389,7 +1364,7 @@ impl uri_cursor::Handler for Device {
                     let channel_id: usize = match channel_id_string.parse().context("channel_id") {
                         Ok(channel_id) => channel_id,
                         Err(error) => {
-                            return async { web::Response::error_400_from_error(error) }.boxed()
+                            return async { web::Response::error_400_from_error(error) }.boxed();
                         }
                     };
                     if !(0..self.configuration.channels.len()).contains(&channel_id) {
@@ -1430,8 +1405,10 @@ impl uri_cursor::Handler for Device {
                                 let multiplier = match request.body_parse_json::<Multiplier>() {
                                     Ok(handler_channel_add) => handler_channel_add,
                                     Err(error) => {
-                                        return async { web::Response::error_400_from_error(error) }
-                                            .boxed()
+                                        return async {
+                                            web::Response::error_400_from_error(error)
+                                        }
+                                        .boxed();
                                     }
                                 };
 

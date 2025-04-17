@@ -1,5 +1,5 @@
 use super::super::super::houseblocks_v1::common::Payload;
-use anyhow::{bail, ensure, Context, Error};
+use anyhow::{Context, Error, bail, ensure};
 use arrayvec::ArrayVec;
 use std::slice;
 

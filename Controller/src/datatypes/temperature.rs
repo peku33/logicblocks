@@ -1,4 +1,4 @@
-use anyhow::{ensure, Error};
+use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
 
@@ -47,18 +47,6 @@ impl Temperature {
         }
     }
 }
-impl TryFrom<TemperatureSerde> for Temperature {
-    type Error = Error;
-
-    fn try_from(value: TemperatureSerde) -> Result<Self, Self::Error> {
-        Self::from_kelvins(value.0)
-    }
-}
-impl Into<TemperatureSerde> for Temperature {
-    fn into(self) -> TemperatureSerde {
-        TemperatureSerde(self.to_kelvins())
-    }
-}
 impl Eq for Temperature {}
 #[allow(clippy::derive_ord_xor_partial_ord)]
 impl Ord for Temperature {
@@ -87,3 +75,15 @@ impl fmt::Display for Temperature {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct TemperatureSerde(f64);
+impl TryFrom<TemperatureSerde> for Temperature {
+    type Error = Error;
+
+    fn try_from(value: TemperatureSerde) -> Result<Self, Self::Error> {
+        Self::from_kelvins(value.0)
+    }
+}
+impl From<Temperature> for TemperatureSerde {
+    fn from(value: Temperature) -> Self {
+        TemperatureSerde(value.to_kelvins())
+    }
+}

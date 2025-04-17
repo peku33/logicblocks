@@ -10,7 +10,7 @@ use crate::{
 use async_trait::async_trait;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use maplit::hashmap;
-use rand::{thread_rng, Rng};
+use rand::{Rng, rng};
 use std::{
     borrow::Cow,
     ops::Rem,
@@ -58,7 +58,7 @@ impl Device {
         let cycle_phase_shift_ratio = self
             .configuration
             .cycle_phase_shift
-            .unwrap_or_else(|| thread_rng().gen::<Ratio>())
+            .unwrap_or_else(|| rng().random::<Ratio>())
             .to_f64();
 
         let signal_input_changed_stream = self.signals_targets_changed_waker.stream();

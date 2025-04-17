@@ -222,7 +222,7 @@ impl<'m, D: Device> Runner<'m, D> {
 }
 
 #[async_trait]
-impl<'m, D: Device> Runnable for Runner<'m, D> {
+impl<D: Device> Runnable for Runner<'_, D> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -235,7 +235,7 @@ impl<'m, D: Device> Runnable for Runner<'m, D> {
 pub struct GuiSummary {
     device_state: DeviceState,
 }
-impl<'m, D: Device> devices::gui_summary::Device for Runner<'m, D> {
+impl<D: Device> devices::gui_summary::Device for Runner<'_, D> {
     fn waker(&self) -> &devices::gui_summary::Waker {
         &self.gui_summary_waker
     }

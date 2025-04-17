@@ -111,7 +111,7 @@ pub mod logic {
         }
     }
 
-    impl<'h, S: Specification> runner::Device for Device<'h, S> {
+    impl<S: Specification> runner::Device for Device<'_, S> {
         type HardwareDevice = hardware::Device<S::HardwareSpecification>;
 
         fn class() -> &'static str {
@@ -131,7 +131,7 @@ pub mod logic {
         Output(usize),
     }
     impl signals::Identifier for SignalIdentifier {}
-    impl<'h, S: Specification> signals::Device for Device<'h, S> {
+    impl<S: Specification> signals::Device for Device<'_, S> {
         fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
             Some(&self.signals_targets_changed_waker)
         }
@@ -155,7 +155,7 @@ pub mod logic {
     }
 
     #[async_trait]
-    impl<'h, S: Specification> Runnable for Device<'h, S> {
+    impl<S: Specification> Runnable for Device<'_, S> {
         async fn run(
             &self,
             exit_flag: async_flag::Receiver,
@@ -168,7 +168,7 @@ pub mod logic {
     pub struct GuiSummary {
         values: [bool; hardware::OUTPUT_COUNT],
     }
-    impl<'h, S: Specification> devices::gui_summary::Device for Device<'h, S> {
+    impl<S: Specification> devices::gui_summary::Device for Device<'_, S> {
         fn waker(&self) -> &devices::gui_summary::Waker {
             &self.gui_summary_waker
         }
@@ -192,7 +192,7 @@ pub mod hardware {
         async_flag, async_waker,
         runnable::{Exited, Runnable},
     };
-    use anyhow::{ensure, Context, Error};
+    use anyhow::{Context, Error, ensure};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
     use futures::{future::FutureExt, join, stream::StreamExt};

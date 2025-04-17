@@ -1,7 +1,7 @@
-use anyhow::{ensure, Error};
+use anyhow::{Error, ensure};
 use rand::{
-    distributions::{Distribution, Standard},
     Rng,
+    distr::{Distribution, StandardUniform},
 };
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -43,6 +43,18 @@ impl Ord for Ratio {
         self.partial_cmp(other).unwrap()
     }
 }
+
+impl Distribution<Ratio> for StandardUniform {
+    fn sample<R: Rng + ?Sized>(
+        &self,
+        rng: &mut R,
+    ) -> Ratio {
+        Ratio::from_f64(rng.random_range(0.0..=1.0)).unwrap()
+    }
+}
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+struct RatioSerde(f64);
 impl TryFrom<RatioSerde> for Ratio {
     type Error = Error;
 
@@ -50,19 +62,8 @@ impl TryFrom<RatioSerde> for Ratio {
         Self::from_f64(value.0)
     }
 }
-impl Into<RatioSerde> for Ratio {
-    fn into(self) -> RatioSerde {
-        RatioSerde(self.to_f64())
+impl From<Ratio> for RatioSerde {
+    fn from(value: Ratio) -> Self {
+        RatioSerde(value.to_f64())
     }
 }
-impl Distribution<Ratio> for Standard {
-    fn sample<R: Rng + ?Sized>(
-        &self,
-        rng: &mut R,
-    ) -> Ratio {
-        Ratio::from_f64(rng.gen_range(0.0..=1.0)).unwrap()
-    }
-}
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct RatioSerde(f64);

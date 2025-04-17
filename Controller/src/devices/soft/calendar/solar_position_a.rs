@@ -64,21 +64,21 @@ impl Device {
         let elevation = spa2.topocentric_elevation_angle_without_refraction();
         let asimuth = spa2.topocentric_asimuth();
 
-        let mut signal_sources_changed = false;
+        let mut signals_sources_changed = false;
         #[allow(unused_assignments)]
         let mut gui_summary_changed = false;
 
         if self.signal_elevation.set_one(Some(elevation)) {
-            signal_sources_changed = true;
+            signals_sources_changed = true;
         }
         if self.signal_asimuth.set_one(Some(asimuth)) {
-            signal_sources_changed = true;
+            signals_sources_changed = true;
         }
 
         self.spa.write().replace(spa2);
         gui_summary_changed = true; // jd will always change for example
 
-        if signal_sources_changed {
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
         if gui_summary_changed {
@@ -205,8 +205,8 @@ pub mod spa {
     };
     use arrayvec::ArrayVec;
     use chrono::{DateTime, Datelike, Timelike, Utc};
-    use itertools::{zip_eq, Itertools};
-    use std::time::Duration;
+    use itertools::{Itertools, zip_eq};
+    use std::{f64, time::Duration};
 
     pub const DELTA_T_DEFAULT: Duration = Duration::from_millis(32_184);
 
@@ -300,7 +300,7 @@ pub mod spa {
             );
 
             // eq. 13 - 3.3.1 + 3.3.2
-            let theta_cap = l_cap + std::f64::consts::PI;
+            let theta_cap = l_cap + f64::consts::PI;
             let theta_cap = normalize_angle_in_radians(theta_cap);
 
             // eq. 14
@@ -560,7 +560,7 @@ pub mod spa {
             let gamma_cap = normalize_angle_in_radians(gamma_cap);
 
             // eq. 46
-            let phi_cap = gamma_cap + std::f64::consts::PI;
+            let phi_cap = gamma_cap + f64::consts::PI;
             let phi_cap = normalize_angle_in_radians(phi_cap);
 
             Self {
@@ -643,7 +643,7 @@ pub mod spa {
             let e = e0 + delta_e;
 
             // eq. 44
-            let theta = std::f64::consts::PI / 2.0 - e;
+            let theta = f64::consts::PI / 2.0 - e;
 
             Self {
                 spa2,
@@ -961,7 +961,7 @@ pub mod spa {
         (input % DIVISOR + DIVISOR) % DIVISOR
     }
     fn normalize_angle_in_radians(input: f64) -> f64 {
-        const DIVISOR: f64 = 2.0 * std::f64::consts::PI;
+        const DIVISOR: f64 = 2.0 * f64::consts::PI;
         (input % DIVISOR + DIVISOR) % DIVISOR
     }
 

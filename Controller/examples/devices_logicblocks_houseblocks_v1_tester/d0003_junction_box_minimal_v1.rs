@@ -1,14 +1,14 @@
 use super::common::execute_on_tokio;
 use anyhow::Error;
 use futures::{
-    future::{join, FutureExt},
+    future::{FutureExt, join},
     pin_mut, select,
     stream::StreamExt,
 };
 use logicblocks_controller::{
     devices::houseblocks::{
         avr_v1::{
-            d0003_junction_box_minimal_v1::hardware::{Device, PropertiesRemote, LED_COUNT},
+            d0003_junction_box_minimal_v1::hardware::{Device, LED_COUNT, PropertiesRemote},
             hardware::runner::Runner,
         },
         houseblocks_v1::{common::AddressSerial, master::Master},

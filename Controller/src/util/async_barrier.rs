@@ -1,4 +1,4 @@
-use futures::{future::FusedFuture, task::AtomicWaker, Future};
+use futures::{Future, future::FusedFuture, task::AtomicWaker};
 use parking_lot::Mutex;
 use std::{
     collections::HashSet,
@@ -80,7 +80,7 @@ impl<'p> Waiter<'p> {
         Self { parent, inner }
     }
 }
-impl<'p> Future for Waiter<'p> {
+impl Future for Waiter<'_> {
     type Output = ();
 
     fn poll(
@@ -89,9 +89,9 @@ impl<'p> Future for Waiter<'p> {
     ) -> Poll<Self::Output> {
         let self_ = unsafe { self.get_unchecked_mut() };
 
-        match self_.inner {
+        match &mut self_.inner {
             WaiterInner::Released => Poll::Ready(()),
-            WaiterInner::Waiting { ref inner } => {
+            WaiterInner::Waiting { inner } => {
                 if self_.parent.released.load(Ordering::Relaxed) {
                     Poll::Ready(())
                 } else {
@@ -102,7 +102,7 @@ impl<'p> Future for Waiter<'p> {
         }
     }
 }
-impl<'p> FusedFuture for Waiter<'p> {
+impl FusedFuture for Waiter<'_> {
     fn is_terminated(&self) -> bool {
         match self.inner {
             WaiterInner::Released => true,
@@ -110,9 +110,9 @@ impl<'p> FusedFuture for Waiter<'p> {
         }
     }
 }
-impl<'p> Drop for Waiter<'p> {
+impl Drop for Waiter<'_> {
     fn drop(&mut self) {
-        if let WaiterInner::Waiting { ref inner } = self.inner {
+        if let WaiterInner::Waiting { inner } = &mut self.inner {
             let mut children = self.parent.children.lock();
             assert!(children.remove(&(&**inner as *const WaiterInnerWaiting)));
             drop(children);

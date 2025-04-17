@@ -1,4 +1,4 @@
-use anyhow::{ensure, Error};
+use anyhow::{Error, ensure};
 use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -48,6 +48,10 @@ impl Ord for Multiplier {
         self.partial_cmp(other).unwrap()
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+struct MultiplierSerde(f64);
 impl TryFrom<MultiplierSerde> for Multiplier {
     type Error = Error;
 
@@ -55,11 +59,8 @@ impl TryFrom<MultiplierSerde> for Multiplier {
         Self::from_f64(value.0)
     }
 }
-impl Into<MultiplierSerde> for Multiplier {
-    fn into(self) -> MultiplierSerde {
-        MultiplierSerde(self.to_f64())
+impl From<Multiplier> for MultiplierSerde {
+    fn from(value: Multiplier) -> Self {
+        MultiplierSerde(value.to_f64())
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct MultiplierSerde(f64);

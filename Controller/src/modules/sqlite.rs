@@ -5,7 +5,7 @@ use futures::{
     channel::oneshot,
     future::{Future, FutureExt},
 };
-use rusqlite::{vtab, Connection, Transaction};
+use rusqlite::{Connection, Transaction, vtab};
 use std::{any::type_name, fmt, mem::ManuallyDrop, path::PathBuf, thread};
 
 type Operation = Box<dyn FnOnce(&mut Connection) + Send + 'static>;
@@ -133,7 +133,7 @@ impl<'f> SQLite<'f> {
         result_receiver.map(|r| r.unwrap())
     }
 }
-impl<'f> fmt::Display for SQLite<'f> {
+impl fmt::Display for SQLite<'_> {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,
@@ -141,7 +141,7 @@ impl<'f> fmt::Display for SQLite<'f> {
         write!(f, "{}({})", type_name::<Self>(), self.name)
     }
 }
-impl<'f> Drop for SQLite<'f> {
+impl Drop for SQLite<'_> {
     fn drop(&mut self) {
         unsafe { ManuallyDrop::drop(&mut self.operation_sender) }; // closes channel and exits thread
         unsafe { ManuallyDrop::take(&mut self.sqlite_thread) }

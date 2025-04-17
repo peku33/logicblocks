@@ -1,5 +1,5 @@
-use anyhow::{ensure, Context, Error};
-use crc::{Crc, CRC_16_MODBUS};
+use anyhow::{Context, Error, ensure};
+use crc::{CRC_16_MODBUS, Crc};
 use std::{fmt, slice, str};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]

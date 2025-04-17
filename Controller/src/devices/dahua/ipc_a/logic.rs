@@ -183,26 +183,26 @@ impl Device {
         }
         self.gui_summary_waker.wake();
 
-        let mut signals_changed = false;
-        signals_changed |= self
+        let mut signals_sources_changed = false;
+        signals_sources_changed |= self
             .signal_event_video_blind
             .set_one(Some(events.video_blind));
-        signals_changed |= self
+        signals_sources_changed |= self
             .signal_event_scene_change
             .set_one(Some(events.scene_change));
-        signals_changed |= self
+        signals_sources_changed |= self
             .signal_event_video_motion
             .set_one(Some(events.video_motion));
-        signals_changed |= self
+        signals_sources_changed |= self
             .signal_event_audio_mutation
             .set_one(Some(events.audio_mutation));
-        signals_changed |= self
+        signals_sources_changed |= self
             .signal_event_smart_motion_human
             .set_one(Some(events.smart_motion_human));
-        signals_changed |= self
+        signals_sources_changed |= self
             .signal_event_smart_motion_vehicle
             .set_one(Some(events.smart_motion_vehicle));
-        if signals_changed {
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
     }

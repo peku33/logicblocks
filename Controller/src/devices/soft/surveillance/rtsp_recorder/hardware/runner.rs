@@ -24,7 +24,7 @@ use once_cell::sync::Lazy;
 use ouroboros::self_referencing;
 use std::{
     collections::HashMap,
-    mem::{transmute, ManuallyDrop},
+    mem::{ManuallyDrop, transmute},
     time::Duration,
 };
 use tokio::sync::{RwLock, RwLockReadGuard};

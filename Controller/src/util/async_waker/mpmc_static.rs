@@ -1,11 +1,11 @@
-use futures::{stream::FusedStream, task::AtomicWaker, Stream};
+use futures::{Stream, stream::FusedStream, task::AtomicWaker};
 use parking_lot::RwLock;
 use std::{
     collections::HashSet,
     pin::Pin,
     sync::{
-        atomic::{AtomicU8, Ordering},
         Arc,
+        atomic::{AtomicU8, Ordering},
     },
     task::{Context, Poll},
 };

@@ -9,7 +9,7 @@ use crate::{
         runnable::{Exited, Runnable},
     },
 };
-use anyhow::{ensure, Context, Error};
+use anyhow::{Context, Error, ensure};
 use async_trait::async_trait;
 use atomic_refcell::AtomicRefCell;
 use chrono::{DateTime, Utc};
@@ -167,7 +167,6 @@ impl<'f> Manager<'f> {
             .context("query")?;
 
         let sink_data = rows
-            .into_vec()
             .into_iter()
             .map(|(sink_id, name, class)| (sink_id, SinkDataDetails { name, class }))
             .collect::<HashMap<_, _>>();
@@ -377,7 +376,6 @@ impl<'f> Manager<'f> {
             .context("query")?;
 
         let sinks_data = sinks_data
-            .into_vec()
             .into_iter()
             .map(|(sink_id, name, class, timestamp_divisor, enabled)| {
                 let sink_data = SinkData {
@@ -819,7 +817,7 @@ impl<'f> Manager<'f> {
     }
 }
 #[async_trait]
-impl<'f> Runnable for Manager<'f> {
+impl Runnable for Manager<'_> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -827,7 +825,7 @@ impl<'f> Runnable for Manager<'f> {
         self.run(exit_flag).await
     }
 }
-impl<'f> fmt::Display for Manager<'f> {
+impl fmt::Display for Manager<'_> {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,

@@ -43,15 +43,9 @@ where
     }
 
     fn signals_targets_changed(&self) {
-        let mut gui_summary_changed = false;
-
         if self.signal_input.take_pending().is_some() {
             // we don't really care about the value, as it's going to be read by gui summary
             // value
-            gui_summary_changed = true;
-        }
-
-        if gui_summary_changed {
             self.gui_summary_waker.wake();
         }
     }

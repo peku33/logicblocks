@@ -1,7 +1,7 @@
 use super::execute_on_tokio;
-use anyhow::{bail, Error};
+use anyhow::{Error, bail};
 use futures::{
-    future::{join, FutureExt},
+    future::{FutureExt, join},
     pin_mut, select,
     stream::StreamExt,
 };
@@ -12,7 +12,7 @@ use logicblocks_controller::{
             d0005_gpio_a_v1::hardware::{
                 Block1Function, Block1Functions, Block2Function, Block2Functions, Block3Function,
                 Block3Functions, Block4Function, Block4Functions, BlockFunctions, Configuration,
-                Device, PropertiesRemote, StatusLedValue, DIGITAL_OUT_COUNT,
+                DIGITAL_OUT_COUNT, Device, PropertiesRemote, StatusLedValue,
             },
             hardware::runner::Runner,
         },

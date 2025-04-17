@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use futures::stream::StreamExt;
 use std::{borrow::Cow, iter};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Debug)]
 pub struct Configuration {
     pub inputs_count: usize,
 }
@@ -27,12 +27,14 @@ pub struct Device {
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
+        let inputs_count = configuration.inputs_count;
+
         Self {
             configuration,
 
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-            signal_inputs: (0..configuration.inputs_count)
+            signal_inputs: (0..inputs_count)
                 .map(|_input_index| signal::state_target_last::Signal::<bool>::new())
                 .collect::<Box<[_]>>(),
             signal_output: signal::state_source::Signal::<bool>::new(None),

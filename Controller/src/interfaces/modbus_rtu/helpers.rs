@@ -1,4 +1,4 @@
-use anyhow::{ensure, Error};
+use anyhow::{Error, ensure};
 use array_init::array_init;
 use arrayvec::ArrayVec;
 use itertools::Itertools;

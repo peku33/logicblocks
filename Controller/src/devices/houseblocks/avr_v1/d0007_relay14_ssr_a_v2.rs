@@ -16,7 +16,7 @@ pub mod logic {
     pub type SignalIdentifier = logic::SignalIdentifier;
 }
 pub mod hardware {
-    pub use super::super::common::relay14_common_a::hardware::{PropertiesRemote, OUTPUT_COUNT};
+    pub use super::super::common::relay14_common_a::hardware::{OUTPUT_COUNT, PropertiesRemote};
     use super::super::{
         super::houseblocks_v1::common::AddressDeviceType, common::relay14_common_a::hardware,
     };

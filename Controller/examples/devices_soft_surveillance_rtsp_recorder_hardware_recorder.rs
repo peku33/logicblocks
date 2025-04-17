@@ -1,4 +1,3 @@
-#![feature(async_closure)]
 #![allow(clippy::unused_unit)]
 
 use anyhow::Error;

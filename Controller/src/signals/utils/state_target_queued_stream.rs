@@ -3,7 +3,7 @@ use super::super::{
     types::state::Value,
     waker::{TargetsChangedWaker, TargetsChangedWakerStream},
 };
-use futures::{stream::FusedStream, Stream};
+use futures::{Stream, stream::FusedStream};
 use std::{
     collections::VecDeque,
     pin::Pin,
@@ -38,7 +38,7 @@ where
         }
     }
 }
-impl<'w, 's, T> Stream for StateTargetQueuedStream<'w, 's, T>
+impl<T> Stream for StateTargetQueuedStream<'_, '_, T>
 where
     T: Value + Clone,
 {
@@ -55,7 +55,7 @@ where
             Poll::Ready(Some(())) => {
                 // something was possibly added to the buffer
                 // move all items from signal to internal buffer
-                let values = self_.signal.take_pending().into_vec().into_iter();
+                let values = self_.signal.take_pending().into_iter();
                 self_.buffer.extend(values);
             }
             Poll::Ready(None) => {
@@ -77,7 +77,7 @@ where
         }
     }
 }
-impl<'w, 's, T> FusedStream for StateTargetQueuedStream<'w, 's, T>
+impl<T> FusedStream for StateTargetQueuedStream<'_, '_, T>
 where
     T: Value + Clone,
 {

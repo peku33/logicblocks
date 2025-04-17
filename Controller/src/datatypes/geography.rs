@@ -1,4 +1,4 @@
-use anyhow::{ensure, Error, Ok};
+use anyhow::{Error, Ok, ensure};
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
 
@@ -57,18 +57,6 @@ impl Ord for Latitude {
         self.partial_cmp(other).unwrap()
     }
 }
-impl TryFrom<LatitudeSerde> for Latitude {
-    type Error = Error;
-
-    fn try_from(value: LatitudeSerde) -> Result<Self, Self::Error> {
-        Self::from_radians(value.0)
-    }
-}
-impl Into<LatitudeSerde> for Latitude {
-    fn into(self) -> LatitudeSerde {
-        LatitudeSerde(self.to_radians())
-    }
-}
 impl fmt::Display for Latitude {
     fn fmt(
         &self,
@@ -85,6 +73,18 @@ impl fmt::Display for Latitude {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct LatitudeSerde(f64);
+impl TryFrom<LatitudeSerde> for Latitude {
+    type Error = Error;
+
+    fn try_from(value: LatitudeSerde) -> Result<Self, Self::Error> {
+        Self::from_radians(value.0)
+    }
+}
+impl From<Latitude> for LatitudeSerde {
+    fn from(value: Latitude) -> Self {
+        LatitudeSerde(value.to_radians())
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 #[serde(try_from = "LongitudeSerde")]
@@ -142,18 +142,7 @@ impl Ord for Longitude {
         self.partial_cmp(other).unwrap()
     }
 }
-impl TryFrom<LongitudeSerde> for Longitude {
-    type Error = Error;
 
-    fn try_from(value: LongitudeSerde) -> Result<Self, Self::Error> {
-        Self::from_radians(value.0)
-    }
-}
-impl Into<LongitudeSerde> for Longitude {
-    fn into(self) -> LongitudeSerde {
-        LongitudeSerde(self.to_radians())
-    }
-}
 impl fmt::Display for Longitude {
     fn fmt(
         &self,
@@ -170,6 +159,18 @@ impl fmt::Display for Longitude {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct LongitudeSerde(f64);
+impl TryFrom<LongitudeSerde> for Longitude {
+    type Error = Error;
+
+    fn try_from(value: LongitudeSerde) -> Result<Self, Self::Error> {
+        Self::from_radians(value.0)
+    }
+}
+impl From<Longitude> for LongitudeSerde {
+    fn from(value: Longitude) -> Self {
+        LongitudeSerde(value.to_radians())
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 #[serde(try_from = "ElevationSerde")]
@@ -197,18 +198,6 @@ impl Ord for Elevation {
         self.partial_cmp(other).unwrap()
     }
 }
-impl TryFrom<ElevationSerde> for Elevation {
-    type Error = Error;
-
-    fn try_from(value: ElevationSerde) -> Result<Self, Self::Error> {
-        Self::from_meters(value.0)
-    }
-}
-impl Into<ElevationSerde> for Elevation {
-    fn into(self) -> ElevationSerde {
-        ElevationSerde(self.to_meters())
-    }
-}
 impl fmt::Display for Elevation {
     fn fmt(
         &self,
@@ -220,6 +209,18 @@ impl fmt::Display for Elevation {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct ElevationSerde(f64);
+impl TryFrom<ElevationSerde> for Elevation {
+    type Error = Error;
+
+    fn try_from(value: ElevationSerde) -> Result<Self, Self::Error> {
+        Self::from_meters(value.0)
+    }
+}
+impl From<Elevation> for ElevationSerde {
+    fn from(value: Elevation) -> Self {
+        ElevationSerde(value.to_meters())
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
 pub struct Coordinates2d {

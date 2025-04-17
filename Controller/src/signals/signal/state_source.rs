@@ -1,10 +1,10 @@
 use super::{
-    super::types::{state::Value, Base as ValueBase},
+    super::types::{Base as ValueBase, state::Value},
     Base, RemoteBase, RemoteBaseVariant, StateSourceRemoteBase,
 };
 use parking_lot::RwLock;
 use std::{
-    any::{type_name, TypeId},
+    any::{TypeId, type_name},
     mem::replace,
 };
 
@@ -64,7 +64,7 @@ impl<V: Value + Clone> Signal<V> {
 
         let mut lock = self.inner.write();
 
-        for value in values.into_vec().into_iter() {
+        for value in values.into_iter() {
             if lock.last == value {
                 continue;
             }

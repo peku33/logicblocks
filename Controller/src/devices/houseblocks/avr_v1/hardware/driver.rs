@@ -5,7 +5,7 @@ use super::{
     },
     parser::Parser,
 };
-use anyhow::{ensure, Context, Error};
+use anyhow::{Context, Error, ensure};
 use std::time::Duration;
 
 #[derive(Debug)]

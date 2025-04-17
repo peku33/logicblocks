@@ -1,5 +1,5 @@
 use super::api::{Api, BasicDeviceInfo, WebVersion};
-use anyhow::{anyhow, bail, ensure, Context, Error};
+use anyhow::{Context, Error, anyhow, bail, ensure};
 use arrayvec::ArrayVec;
 use maplit::hashmap;
 use md5::{Digest, Md5};
@@ -342,7 +342,9 @@ mod tests_grid22x18 {
         let grid = Grid22x18::new(grid);
         assert_eq!(
             grid.as_rows_ltr(),
-            [2097155, 2097152, 2097152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 3932161]
+            [
+                2097155, 2097152, 2097152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 3932161
+            ]
         );
         assert_eq!(
             grid.as_rows_rtl(),
@@ -374,11 +376,15 @@ mod tests_grid22x18 {
         let grid = Grid22x18::new(grid);
         assert_eq!(
             grid.as_rows_ltr(),
-            [0, 0, 2, 0, 262144, 0, 0, 0, 0, 0, 256, 0, 32768, 0, 0, 0, 0, 0]
+            [
+                0, 0, 2, 0, 262144, 0, 0, 0, 0, 0, 256, 0, 32768, 0, 0, 0, 0, 0
+            ]
         );
         assert_eq!(
             grid.as_rows_rtl(),
-            [0, 0, 1048576, 0, 8, 0, 0, 0, 0, 0, 8192, 0, 64, 0, 0, 0, 0, 0]
+            [
+                0, 0, 1048576, 0, 8, 0, 0, 0, 0, 0, 8192, 0, 64, 0, 0, 0, 0, 0
+            ]
         );
         assert_eq!(
             grid.as_region(),

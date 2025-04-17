@@ -14,7 +14,7 @@ impl<'h> MapRouter<'h> {
         Self { handlers }
     }
 }
-impl<'h> Handler for MapRouter<'h> {
+impl Handler for MapRouter<'_> {
     fn handle(
         &self,
         request: Request,

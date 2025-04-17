@@ -157,7 +157,7 @@ where
     }
 }
 
-impl<'m, DF> devices::Device for Runner<'m, DF>
+impl<DF> devices::Device for Runner<'_, DF>
 where
     DF: DeviceFactory,
 {
@@ -181,7 +181,7 @@ where
 }
 
 #[async_trait]
-impl<'m, DF> Runnable for Runner<'m, DF>
+impl<DF> Runnable for Runner<'_, DF>
 where
     DF: DeviceFactory,
 {
@@ -193,7 +193,7 @@ where
     }
 }
 
-impl<'m, DF> signals::Device for Runner<'m, DF>
+impl<DF> signals::Device for Runner<'_, DF>
 where
     DF: DeviceFactory,
 {
@@ -225,7 +225,7 @@ pub struct GuiSummary {
     device: Option<Box<dyn erased_serde::Serialize + Send + Sync + 'static>>,
     hardware_runner: runner::GuiSummary,
 }
-impl<'m, DF> devices::gui_summary::Device for Runner<'m, DF>
+impl<DF> devices::gui_summary::Device for Runner<'_, DF>
 where
     DF: DeviceFactory,
 {

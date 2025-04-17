@@ -1,6 +1,6 @@
 use super::{
-    ftdi::{Descriptor, Descriptors, DeviceConfiguration},
     Configuration,
+    ftdi::{Descriptor, Descriptors, DeviceConfiguration},
 };
 use anyhow::Error;
 

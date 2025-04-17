@@ -106,7 +106,7 @@ pub struct Pending<'p, T: Clone + Send + Sync + 'static> {
     value: T,
     version: usize,
 }
-impl<'p, T: Clone + Send + Sync + 'static> Pending<'p, T> {
+impl<T: Clone + Send + Sync + 'static> Pending<'_, T> {
     pub fn commit(self) {
         let mut state = self.property.state.lock();
 
@@ -115,7 +115,7 @@ impl<'p, T: Clone + Send + Sync + 'static> Pending<'p, T> {
         drop(state);
     }
 }
-impl<'p, T> Deref for Pending<'p, T>
+impl<T> Deref for Pending<'_, T>
 where
     T: Clone + Send + Sync + 'static,
 {

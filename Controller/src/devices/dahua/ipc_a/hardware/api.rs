@@ -1,5 +1,5 @@
 use super::boundary_stream;
-use anyhow::{anyhow, bail, ensure, Context, Error};
+use anyhow::{Context, Error, anyhow, bail, ensure};
 use bytes::Bytes;
 use digest_auth::{AuthContext, WwwAuthenticateHeader};
 use futures::{
@@ -7,8 +7,8 @@ use futures::{
     stream::{BoxStream, Stream, StreamExt},
 };
 use http::{
-    uri::{self, Authority, PathAndQuery, Scheme},
     Uri,
+    uri::{self, Authority, PathAndQuery, Scheme},
 };
 use image::DynamicImage;
 use itertools::Itertools;
@@ -754,7 +754,7 @@ impl Api {
         let mut retries_left = retries_max;
         loop {
             let result = self.snapshot().await.context("snapshot");
-            if let Err(error) = result.as_ref() {
+            if let Err(error) = &result {
                 log::warn!("error while getting snapshot: {:?}", error);
             }
             if result.is_ok() || retries_left == 0 {

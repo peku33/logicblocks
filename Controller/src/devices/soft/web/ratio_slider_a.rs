@@ -134,7 +134,7 @@ impl uri_cursor::Handler for Device {
                     let value = match request.body_parse_json::<Option<Ratio>>() {
                         Ok(value) => value,
                         Err(error) => {
-                            return async { web::Response::error_400_from_error(error) }.boxed()
+                            return async { web::Response::error_400_from_error(error) }.boxed();
                         }
                     };
                     self.set(value);

@@ -1,5 +1,5 @@
 use super::api::{Api, BasicDeviceInfo};
-use anyhow::{bail, ensure, Context, Error};
+use anyhow::{Context, Error, bail, ensure};
 use std::{fmt, marker::PhantomData, time::Duration};
 use xmltree::{Element, XMLNode};
 
@@ -1264,7 +1264,6 @@ fn element_build_children(
 ) -> Element {
     let mut element = Element::new(name);
     element.children = children
-        .into_vec()
         .into_iter()
         .map(XMLNode::Element)
         .collect::<Vec<_>>();

@@ -1,14 +1,14 @@
 use super::execute_on_tokio;
 use anyhow::Error;
 use futures::{
-    future::{join, FutureExt},
+    future::{FutureExt, join},
     pin_mut, select,
 };
 use logicblocks_controller::{
     devices::houseblocks::{
         avr_v1::{
             common::relay14_common_a::hardware::{
-                Device, PropertiesRemote, Specification, OUTPUT_COUNT,
+                Device, OUTPUT_COUNT, PropertiesRemote, Specification,
             },
             hardware::runner::Runner,
         },

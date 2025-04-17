@@ -12,11 +12,11 @@ use anyhow::{Context, Error};
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::{
-    future::{select, Either, FutureExt},
+    future::{Either, FutureExt, select},
     pin_mut, select,
 };
 use http::{request::Request as HttpRequest, response::Response as HttpResponse};
-use http_body_util::{combinators::BoxBody, BodyExt};
+use http_body_util::{BodyExt, combinators::BoxBody};
 use hyper::{body::Incoming, service::service_fn};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
@@ -27,7 +27,7 @@ use ouroboros::self_referencing;
 use std::{
     convert::Infallible,
     fmt,
-    mem::{transmute, ManuallyDrop},
+    mem::{ManuallyDrop, transmute},
     net::SocketAddr,
     time::Duration,
 };
@@ -167,7 +167,7 @@ impl<'h> Server<'h> {
     }
 }
 #[async_trait]
-impl<'h> Runnable for Server<'h> {
+impl Runnable for Server<'_> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -175,7 +175,7 @@ impl<'h> Runnable for Server<'h> {
         self.run(exit_flag).await
     }
 }
-impl<'h> fmt::Display for Server<'h> {
+impl fmt::Display for Server<'_> {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,

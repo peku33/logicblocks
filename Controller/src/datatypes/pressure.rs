@@ -1,4 +1,4 @@
-use anyhow::{ensure, Error};
+use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -50,6 +50,10 @@ impl Ord for Pressure {
         self.partial_cmp(other).unwrap()
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+struct PressureSerde(f64);
 impl TryFrom<PressureSerde> for Pressure {
     type Error = Error;
 
@@ -57,11 +61,8 @@ impl TryFrom<PressureSerde> for Pressure {
         Self::from_pascals(value.0)
     }
 }
-impl Into<PressureSerde> for Pressure {
-    fn into(self) -> PressureSerde {
-        PressureSerde(self.to_pascals())
+impl From<Pressure> for PressureSerde {
+    fn from(value: Pressure) -> Self {
+        PressureSerde(value.to_pascals())
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct PressureSerde(f64);

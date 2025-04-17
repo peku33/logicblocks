@@ -1,7 +1,6 @@
-#![feature(async_closure)]
 #![allow(clippy::unused_unit)]
 
-use anyhow::{bail, Context, Error};
+use anyhow::{Context, Error, bail};
 use clap::{ArgAction, Parser};
 use futures::{future::TryFutureExt, join, stream::StreamExt};
 use logicblocks_controller::{

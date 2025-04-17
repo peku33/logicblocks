@@ -5,7 +5,7 @@ pub mod utils;
 pub mod waker;
 
 use std::{
-    any::{type_name, Any, TypeId},
+    any::{Any, TypeId, type_name},
     collections::HashMap,
     fmt, hash,
 };
@@ -196,7 +196,7 @@ impl<'d> DeviceBaseRef<'d> {
         self.inner.type_name()
     }
 }
-impl<'d> fmt::Debug for DeviceBaseRef<'d> {
+impl fmt::Debug for DeviceBaseRef<'_> {
     fn fmt(
         &self,
         f: &mut fmt::Formatter<'_>,

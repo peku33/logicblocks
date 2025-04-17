@@ -101,7 +101,7 @@ pub mod logic {
         }
     }
 
-    impl<'h> runner::Device for Device<'h> {
+    impl runner::Device for Device<'_> {
         type HardwareDevice = hardware::Device;
 
         fn class() -> &'static str {
@@ -121,7 +121,7 @@ pub mod logic {
         Input(usize),
     }
     impl signals::Identifier for SignalIdentifier {}
-    impl<'h> signals::Device for Device<'h> {
+    impl signals::Device for Device<'_> {
         fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
             None
         }
@@ -145,7 +145,7 @@ pub mod logic {
     }
 
     #[async_trait]
-    impl<'h> Runnable for Device<'h> {
+    impl Runnable for Device<'_> {
         async fn run(
             &self,
             exit_flag: async_flag::Receiver,
@@ -164,7 +164,7 @@ pub mod logic {
     pub struct GuiSummary {
         inputs: Option<GuiSummaryInputs>,
     }
-    impl<'h> devices::gui_summary::Device for Device<'h> {
+    impl devices::gui_summary::Device for Device<'_> {
         fn waker(&self) -> &devices::gui_summary::Waker {
             &self.gui_summary_waker
         }
@@ -195,7 +195,7 @@ pub mod hardware {
             runnable::{Exited, Runnable},
         },
     };
-    use anyhow::{bail, Context, Error};
+    use anyhow::{Context, Error, bail};
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
     use std::time::Duration;

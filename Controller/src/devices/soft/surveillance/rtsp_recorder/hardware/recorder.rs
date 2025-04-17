@@ -6,7 +6,7 @@ use crate::{
         runnable::{Exited, Runnable},
     },
 };
-use anyhow::{anyhow, ensure, Context, Error};
+use anyhow::{Context, Error, anyhow, ensure};
 use async_trait::async_trait;
 use bytes::BytesMut;
 use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
@@ -288,7 +288,7 @@ impl Recorder {
                 async_flag::pair();
 
             // either use a recorder or empty exit flag future
-            let ffmpeg_or_nop_runner = match rtsp_url.as_ref() {
+            let ffmpeg_or_nop_runner = match &rtsp_url {
                 Some(rtsp_url) => {
                     // recorder is set, so wait until it exits correctly
                     Either::Left(self.ffmpeg_run(rtsp_url, ffmpeg_or_nop_run_exit_flag_receiver))
@@ -346,9 +346,10 @@ impl Recorder {
         &self,
         mut exit_flag: async_flag::Receiver,
     ) -> Result<Exited, Error> {
-        let mut inotify_instance = Inotify::init().context("inotify_instance")?;
+        let inotify_instance = Inotify::init().context("inotify_instance")?;
         inotify_instance
-            .add_watch(&self.temporary_storage_directory, WatchMask::CLOSE_WRITE)
+            .watches()
+            .add(&self.temporary_storage_directory, WatchMask::CLOSE_WRITE)
             .context("add_watch")?;
 
         const INOTIFY_BUFFER_SIZE: usize = 1024;
@@ -356,17 +357,13 @@ impl Recorder {
         unsafe { buffer.set_len(INOTIFY_BUFFER_SIZE) };
 
         let error_stream = inotify_instance
-            .event_stream(buffer)
+            .into_event_stream(buffer)
             .context("event_stream")?
             .filter_map(async |event| {
-                match self
-                    .inotify_handle_event(event)
+                self.inotify_handle_event(event)
                     .await
                     .context("inotify_handle_event")
-                {
-                    Ok(()) => None,
-                    Err(error) => Some(error),
-                }
+                    .err()
             });
         pin_mut!(error_stream);
 

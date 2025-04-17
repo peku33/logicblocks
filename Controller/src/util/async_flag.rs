@@ -7,8 +7,8 @@ use std::{
     collections::HashSet,
     pin::Pin,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     task::{Context, Poll},
 };
@@ -89,11 +89,13 @@ impl Receiver {
             waker: AtomicWaker::new(),
         });
 
-        assert!(receiver_inner
-            .inner
-            .receivers
-            .lock()
-            .insert(&*receiver_inner as *const ReceiverInner));
+        assert!(
+            receiver_inner
+                .inner
+                .receivers
+                .lock()
+                .insert(&*receiver_inner as *const ReceiverInner)
+        );
 
         Self {
             completed: false,
@@ -131,12 +133,13 @@ impl FusedFuture for Receiver {
 }
 impl Drop for Receiver {
     fn drop(&mut self) {
-        assert!(self
-            .receiver_inner
-            .inner
-            .receivers
-            .lock()
-            .remove(&(&*self.receiver_inner as *const ReceiverInner)));
+        assert!(
+            self.receiver_inner
+                .inner
+                .receivers
+                .lock()
+                .remove(&(&*self.receiver_inner as *const ReceiverInner))
+        );
     }
 }
 
@@ -211,10 +214,12 @@ impl<'s> LocalReceiver<'s> {
     pub fn new(sender: &'s LocalSender) -> Self {
         let receiver_inner = Box::pin(LocalReceiverInner::new());
 
-        assert!(sender
-            .receivers
-            .lock()
-            .insert(&*receiver_inner as *const LocalReceiverInner));
+        assert!(
+            sender
+                .receivers
+                .lock()
+                .insert(&*receiver_inner as *const LocalReceiverInner)
+        );
 
         Self {
             sender,
@@ -222,7 +227,7 @@ impl<'s> LocalReceiver<'s> {
         }
     }
 }
-impl<'s> Future for LocalReceiver<'s> {
+impl Future for LocalReceiver<'_> {
     type Output = ();
 
     fn poll(
@@ -239,17 +244,18 @@ impl<'s> Future for LocalReceiver<'s> {
         }
     }
 }
-impl<'s> FusedFuture for LocalReceiver<'s> {
+impl FusedFuture for LocalReceiver<'_> {
     fn is_terminated(&self) -> bool {
         self.sender.signaled.load(Ordering::Relaxed)
     }
 }
-impl<'s> Drop for LocalReceiver<'s> {
+impl Drop for LocalReceiver<'_> {
     fn drop(&mut self) {
-        assert!(self
-            .sender
-            .receivers
-            .lock()
-            .remove(&(&*self.receiver_inner as *const LocalReceiverInner)));
+        assert!(
+            self.sender
+                .receivers
+                .lock()
+                .remove(&(&*self.receiver_inner as *const LocalReceiverInner))
+        );
     }
 }

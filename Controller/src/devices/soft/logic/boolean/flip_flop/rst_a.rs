@@ -14,10 +14,10 @@ use futures::{
     stream::StreamExt,
 };
 use maplit::hashmap;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::borrow::Cow;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Configuration {
     pub initial_value: bool,
 }

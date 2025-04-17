@@ -2,7 +2,7 @@
 name = "logicblocks-controller"
 version = "0.1.0"
 authors = ["Paweł Kubrak <peku33@gmail.com>"]
-edition = "2021"
+edition = "2024"
 publish = false
 default-run = "logicblocks-controller"
 
@@ -18,7 +18,7 @@ chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.8", features = ["derive"] }
 crc = "3.2.1"
 crossbeam = "0.8.4"
-derive_more = { version = "1.0.0", features = ["full"] }
+derive_more = { version = "2.0.1", features = ["full"] }
 dialoguer = "0.11.0"
 digest_auth = "0.3.1"
 env_logger = "0.11.3"
@@ -33,8 +33,8 @@ hyper-util = { version = "0.1.6", features = ["full"] }
 image = { version = "0.25.1", default-features = false, features = ["jpeg"] }
 include_bytes_aligned = "0.1.3"
 indoc = "2.0.5"
-itertools = "0.13.0"
-log = { version = "0.4.22", features = ["release_max_level_debug"] }
+itertools = "0.14.0"
+log = { version = "0.4.22", features = ["release_max_level_info"] }
 maplit = "1.0.2"
 md-5 = "0.10.6"
 once_cell = { version = "1.19.0", features = ["parking_lot"] }
@@ -42,10 +42,10 @@ ouroboros = "0.18.4"
 parking_lot = { version = "0.12.3", features = ["send_guard"] }
 percent-encoding = "2.3.1"
 phf = { version = "0.11.2", features = ["macros"] }
-rand = "0.8.5"
+rand = "0.9.1"
 regex = "1.10.5"
 reqwest = { version = "0.12.5", features = ["json", "stream"] }
-rusqlite = { version = "0.32.1", features = ["bundled", "array"] }
+rusqlite = { version = "0.34.0", features = ["bundled", "array"] }
 scopeguard = "1.2.0"
 semver = "1.0.23"
 serde = { version = "1.0.203", features = ["derive"] }
@@ -60,7 +60,7 @@ tokio-stream = { version = "0.1.15", features = [
     "sync",
 ] }
 tokio-util = "0.7.11"
-web-static-pack = "0.5.0-beta.2"
+web-static-pack = "0.5.0"
 xmltree = "0.11.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]

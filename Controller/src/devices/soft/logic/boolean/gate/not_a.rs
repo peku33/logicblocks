@@ -33,7 +33,6 @@ impl Device {
         let values = self.signal_input.take_pending();
 
         let values = values
-            .into_vec()
             .into_iter()
             .map(|value| value.map(|value| !value))
             .collect::<Box<[_]>>();

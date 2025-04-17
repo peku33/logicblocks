@@ -1,6 +1,6 @@
 pub mod graph;
 
-use anyhow::{bail, Context, Error};
+use anyhow::{Context, Error, bail};
 
 pub type Version = u32;
 pub type Migration = &'static str;
@@ -29,7 +29,7 @@ pub fn execute(
     };
 
     // apply migrations
-    for migration in migrations.into_vec().into_iter() {
+    for migration in migrations.into_iter() {
         transaction
             .execute_batch(migration)
             .context("execute_batch")?;

@@ -1,10 +1,10 @@
 use super::{
-    super::types::{state::Value, Base as ValueBase},
+    super::types::{Base as ValueBase, state::Value},
     Base, RemoteBase, RemoteBaseVariant, StateTargetRemoteBase,
 };
 use parking_lot::RwLock;
 use std::{
-    any::{type_name, TypeId},
+    any::{TypeId, type_name},
     mem::replace,
 };
 
@@ -80,7 +80,7 @@ impl<V: Value + Clone> Base for Signal<V> {
     }
 }
 impl<V: Value + Clone> StateTargetRemoteBase for Signal<V> {
-    #[must_use = "use this value to wake signals change notifier"]
+    // #[must_use = "use this value to wake signals change notifier"]
     fn set(
         &self,
         values: &[Option<Box<dyn ValueBase>>],

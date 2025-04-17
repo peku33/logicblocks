@@ -392,7 +392,7 @@ where
         }
     }
 }
-impl<'r, 'v, T> Future for ObserverChanged<'r, 'v, T>
+impl<T> Future for ObserverChanged<'_, '_, T>
 where
     T: Clone + Eq + Send + Sync,
 {
@@ -422,7 +422,7 @@ where
         poll
     }
 }
-impl<'r, 'v, T> FusedFuture for ObserverChanged<'r, 'v, T>
+impl<T> FusedFuture for ObserverChanged<'_, '_, T>
 where
     T: Clone + Eq + Send + Sync,
 {
@@ -430,7 +430,7 @@ where
         self.competed
     }
 }
-impl<'r, 'v, T> Drop for ObserverChanged<'r, 'v, T>
+impl<T> Drop for ObserverChanged<'_, '_, T>
 where
     T: Clone + Eq + Send + Sync,
 {
@@ -495,7 +495,7 @@ where
         }
     }
 }
-impl<'v, T> Stream for ChangedStream<'v, T>
+impl<T> Stream for ChangedStream<'_, T>
 where
     T: Clone + Eq + Send + Sync,
 {
@@ -522,7 +522,7 @@ where
         poll
     }
 }
-impl<'v, T> FusedStream for ChangedStream<'v, T>
+impl<T> FusedStream for ChangedStream<'_, T>
 where
     T: Clone + Eq + Send + Sync,
 {
@@ -530,7 +530,7 @@ where
         false
     }
 }
-impl<'v, T> Drop for ChangedStream<'v, T>
+impl<T> Drop for ChangedStream<'_, T>
 where
     T: Clone + Eq + Send + Sync,
 {
@@ -594,7 +594,7 @@ where
         }
     }
 }
-impl<'v, T> Stream for ValueStream<'v, T>
+impl<T> Stream for ValueStream<'_, T>
 where
     T: Clone + Eq + Send + Sync,
 {
@@ -621,7 +621,7 @@ where
         poll
     }
 }
-impl<'v, T> FusedStream for ValueStream<'v, T>
+impl<T> FusedStream for ValueStream<'_, T>
 where
     T: Clone + Eq + Send + Sync,
 {
@@ -629,7 +629,7 @@ where
         false
     }
 }
-impl<'v, T> Drop for ValueStream<'v, T>
+impl<T> Drop for ValueStream<'_, T>
 where
     T: Clone + Eq + Send + Sync,
 {

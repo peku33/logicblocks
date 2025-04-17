@@ -31,8 +31,6 @@ impl Device {
     }
 
     fn signals_targets_changed(&self) {
-        let mut signal_sources_changed = false;
-
         if let Some(signal_input) = self.signal_input.take_pending() {
             let value = match signal_input {
                 Some(value) => {
@@ -45,12 +43,8 @@ impl Device {
             };
 
             if self.signal_output.set_one(value) {
-                signal_sources_changed = true;
+                self.signals_sources_changed_waker.wake();
             }
-        }
-
-        if signal_sources_changed {
-            self.signals_sources_changed_waker.wake();
         }
     }
 

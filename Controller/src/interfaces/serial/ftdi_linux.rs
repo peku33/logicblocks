@@ -1,10 +1,10 @@
 #![cfg(target_os = "linux")]
 
 use super::{
-    ftdi::{Descriptor, Descriptors, DeviceConfiguration},
     Bits, Configuration, Parity, StopBits,
+    ftdi::{Descriptor, Descriptors, DeviceConfiguration},
 };
-use anyhow::{bail, ensure, Context, Error};
+use anyhow::{Context, Error, bail, ensure};
 use libftdi1_sys::*;
 use scopeguard::defer;
 use std::{cell::RefCell, ffi, mem::MaybeUninit, ptr};

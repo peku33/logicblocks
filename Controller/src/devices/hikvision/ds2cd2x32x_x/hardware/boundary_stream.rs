@@ -63,7 +63,7 @@ impl Extractor {
         }
 
         let element =
-            match Element::parse(buffer[header_end..header_end + content_length].as_bytes())
+            match Element::parse(&buffer.as_bytes()[header_end..header_end + content_length])
                 .context("parse")
             {
                 Ok(element) => element,

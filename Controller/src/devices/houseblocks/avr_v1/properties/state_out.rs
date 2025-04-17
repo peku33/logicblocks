@@ -123,7 +123,7 @@ where
     property: &'p Property<T>,
     value: T,
 }
-impl<'p, T> Pending<'p, T>
+impl<T> Pending<'_, T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {
@@ -135,7 +135,7 @@ where
         }
     }
 }
-impl<'p, T> Deref for Pending<'p, T>
+impl<T> Deref for Pending<'_, T>
 where
     T: Eq + Clone + Send + Sync + 'static,
 {

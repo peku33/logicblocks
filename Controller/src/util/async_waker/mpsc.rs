@@ -74,7 +74,7 @@ impl<'s> Receiver<'s> {
         Self { parent }
     }
 }
-impl<'s> Stream for Receiver<'s> {
+impl Stream for Receiver<'_> {
     type Item = ();
 
     fn poll_next(
@@ -94,12 +94,12 @@ impl<'s> Stream for Receiver<'s> {
         }
     }
 }
-impl<'s> FusedStream for Receiver<'s> {
+impl FusedStream for Receiver<'_> {
     fn is_terminated(&self) -> bool {
         false
     }
 }
-impl<'s> Drop for Receiver<'s> {
+impl Drop for Receiver<'_> {
     fn drop(&mut self) {
         assert!(
             self.parent.receiver_taken.swap(false, Ordering::SeqCst),

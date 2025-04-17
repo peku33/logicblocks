@@ -1,6 +1,6 @@
 use super::{
-    uri_cursor::{Handler as UriCursorHandler, UriCursor},
     Handler, Request, Response,
+    uri_cursor::{Handler as UriCursorHandler, UriCursor},
 };
 use futures::future::{BoxFuture, FutureExt};
 
@@ -19,7 +19,7 @@ impl<'a> RootService<'a> {
         }
     }
 }
-impl<'a> Handler for RootService<'a> {
+impl Handler for RootService<'_> {
     fn handle(
         &self,
         request: Request,
@@ -46,7 +46,7 @@ mod gui_responder {
     use super::super::Response;
     use bytes::Bytes;
     use http::{HeaderMap, Method, Response as HttpResponse};
-    use http_body_util::{combinators::BoxBody, BodyExt};
+    use http_body_util::{BodyExt, combinators::BoxBody};
     use include_bytes_aligned::include_bytes_aligned;
     use std::env;
     use web_static_pack::{

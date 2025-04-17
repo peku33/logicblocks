@@ -1,10 +1,10 @@
 use super::boundary_stream;
-use anyhow::{anyhow, bail, ensure, Context, Error};
+use anyhow::{Context, Error, anyhow, bail, ensure};
 use bytes::Bytes;
 use futures::stream::{BoxStream, Stream, StreamExt};
 use http::{
-    uri::{self, Authority, PathAndQuery, Scheme},
     Method, Uri,
+    uri::{self, Authority, PathAndQuery, Scheme},
 };
 use image::DynamicImage;
 use semver::{Version, VersionReq};

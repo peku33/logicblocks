@@ -4,7 +4,7 @@ use super::{
     frame::{Request, Response},
     helpers::{bits_byte_to_array, bits_bytes_to_slice_checked, bits_slice_to_bytes},
 };
-use anyhow::{bail, ensure, Context, Error};
+use anyhow::{Context, Error, bail, ensure};
 use std::{cmp::Ordering, iter};
 
 // Generics for 0x01 and 0x02

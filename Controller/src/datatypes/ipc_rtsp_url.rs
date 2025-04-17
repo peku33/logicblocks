@@ -30,8 +30,8 @@ impl TryFrom<String> for IpcRtspUrl {
         value.parse()
     }
 }
-impl Into<String> for IpcRtspUrl {
-    fn into(self) -> String {
-        self.to_string()
+impl From<IpcRtspUrl> for String {
+    fn from(value: IpcRtspUrl) -> Self {
+        value.to_string()
     }
 }

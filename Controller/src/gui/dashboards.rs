@@ -193,7 +193,7 @@ impl uri_cursor::Handler for Dashboard {
                         let dashboards = match &section_content.section_content {
                             SectionContent::Dashboards(dashboards) => dashboards,
                             SectionContent::Devices(_) => {
-                                return async { web::Response::error_404() }.boxed()
+                                return async { web::Response::error_404() }.boxed();
                             }
                         };
                         let dashboard = match dashboards.dashboards.get(dashboard_index) {
@@ -230,7 +230,7 @@ impl uri_cursor::Handler for Dashboard {
                         let dashboards = match &section.content {
                             SectionContent::Dashboards(dashboards) => dashboards,
                             SectionContent::Devices(_) => {
-                                return async { web::Response::error_404() }.boxed()
+                                return async { web::Response::error_404() }.boxed();
                             }
                         };
                         let dashboard = match dashboards.dashboards.get(dashboard_index) {

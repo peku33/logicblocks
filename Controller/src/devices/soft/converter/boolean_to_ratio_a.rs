@@ -94,7 +94,7 @@ impl Device {
 
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/logic/encoders_decoders/boolean_to_ratio_a")
+        Cow::from("soft/converter/boolean_to_ratio_a")
     }
 
     fn as_runnable(&self) -> &dyn Runnable {

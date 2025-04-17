@@ -17,7 +17,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::future::{BoxFuture, FutureExt};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use std::{borrow::Cow, fmt};
 
 pub type Id = u32;
@@ -70,7 +70,7 @@ impl<'d> DeviceWrapper<'d> {
     }
 }
 #[async_trait]
-impl<'d> Runnable for DeviceWrapper<'d> {
+impl Runnable for DeviceWrapper<'_> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -78,7 +78,7 @@ impl<'d> Runnable for DeviceWrapper<'d> {
         self.run(exit_flag).await
     }
 }
-impl<'d> uri_cursor::Handler for DeviceWrapper<'d> {
+impl uri_cursor::Handler for DeviceWrapper<'_> {
     fn handle(
         &self,
         request: web::Request,

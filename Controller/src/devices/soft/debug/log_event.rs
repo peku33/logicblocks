@@ -10,10 +10,9 @@ use crate::{
 use async_trait::async_trait;
 use futures::stream::StreamExt;
 use maplit::hashmap;
-use serde::{Deserialize, Serialize};
 use std::{any::type_name, borrow::Cow};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Configuration {
     pub name: String,
 }
@@ -43,7 +42,7 @@ where
 
     fn signals_targets_changed(&self) {
         let values = self.signal_input.take_pending();
-        for value in values.into_vec().into_iter() {
+        for value in values.into_iter() {
             log::info!("{}: {:?}", self.configuration.name, value);
         }
     }

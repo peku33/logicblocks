@@ -1,11 +1,11 @@
 #![allow(clippy::type_complexity)]
 use super::{
+    DeviceBaseRef, IdentifierBaseWrapper,
     signal::{
         Base, EventSourceRemoteBase, EventTargetRemoteBase, RemoteBase, RemoteBaseVariant,
         StateSourceRemoteBase, StateTargetRemoteBase,
     },
     waker::{SourcesChangedWakerRemote, TargetsChangedWakerRemote},
-    DeviceBaseRef, IdentifierBaseWrapper,
 };
 use crate::{
     devices::Id as DeviceId,
@@ -19,7 +19,7 @@ use crate::{
         runnable::{Exited, Runnable},
     },
 };
-use anyhow::{anyhow, bail, ensure, Context, Error};
+use anyhow::{Context, Error, anyhow, bail, ensure};
 use async_trait::async_trait;
 use by_address::ByAddress;
 use futures::stream::StreamExt;
@@ -200,8 +200,7 @@ impl<'d> Exchanger<'d> {
 
                     sources_changed_waker_remote_stream
                         .map(move |()| sources_changed_waker_remote)
-                        .boxed() // FIXME: boxed is required because of some
-                                 // problems with unpin
+                        .boxed() // FIXME: boxed is required because of some problems with unpin
                 },
             )
             .collect::<StreamSelectAllOrPending<_>>()
@@ -209,7 +208,6 @@ impl<'d> Exchanger<'d> {
             .ready_chunks_dynamic()
             .map(|sources_changed_waker_remotes| {
                 sources_changed_waker_remotes
-                    .into_vec()
                     .into_iter()
                     .collect::<HashSet<_>>()
             })
@@ -278,7 +276,7 @@ impl<'d> Exchanger<'d> {
     }
 }
 #[async_trait]
-impl<'d> Runnable for Exchanger<'d> {
+impl Runnable for Exchanger<'_> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -409,7 +407,7 @@ fn new_inner_child<'p, 'd>(
             match remote_base_variant {
                 RemoteBaseVariant::StateSource(_) | RemoteBaseVariant::EventSource(_) => {
                     let sources_changed_waker_remote = match sources_changed_waker_remote {
-                        Some(ref sources_changed_waker_remote) => sources_changed_waker_remote,
+                        Some(sources_changed_waker_remote) => sources_changed_waker_remote,
                         None => panic!(
                             "missing source waker for device #{} ({}) with sources",
                             device_id,
@@ -440,7 +438,7 @@ fn new_inner_child<'p, 'd>(
                 }
                 RemoteBaseVariant::StateTarget(_) | RemoteBaseVariant::EventTarget(_) => {
                     let _targets_changed_waker_remote = match targets_changed_waker_remote {
-                        Some(ref targets_changed_waker_remote) => targets_changed_waker_remote,
+                        Some(targets_changed_waker_remote) => targets_changed_waker_remote,
                         None => panic!(
                             "missing target waker for device #{} ({}) with targets",
                             device_id,

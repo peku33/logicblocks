@@ -1,9 +1,10 @@
-use anyhow::{ensure, Error};
+use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
-#[serde(into = "f64")]
+#[serde(try_from = "ResistanceSerde")]
+#[serde(into = "ResistanceSerde")]
 pub struct Resistance {
     ohms: f64,
 }
@@ -38,8 +39,19 @@ impl Ord for Resistance {
         self.partial_cmp(other).unwrap()
     }
 }
-impl Into<f64> for Resistance {
-    fn into(self) -> f64 {
-        self.to_ohms()
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+struct ResistanceSerde(f64);
+impl TryFrom<ResistanceSerde> for Resistance {
+    type Error = Error;
+
+    fn try_from(value: ResistanceSerde) -> Result<Self, Self::Error> {
+        Resistance::from_ohms(value.0)
+    }
+}
+impl From<Resistance> for ResistanceSerde {
+    fn from(value: Resistance) -> Self {
+        Self(value.to_ohms())
     }
 }

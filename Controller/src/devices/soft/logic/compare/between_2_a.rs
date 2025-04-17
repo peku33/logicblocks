@@ -77,8 +77,6 @@ where
     }
 
     fn signals_targets_changed(&self) {
-        let mut signal_sources_changed = false;
-
         let value = Self::calculate_optional(
             &self.signal_input.take_last().value,
             &self.signal_range_false.take_last().value,
@@ -86,10 +84,6 @@ where
         );
 
         if self.signal_output.set_one(value) {
-            signal_sources_changed = true;
-        }
-
-        if signal_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
     }

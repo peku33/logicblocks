@@ -4,14 +4,14 @@ pub mod sse;
 pub mod sse_topic;
 pub mod uri_cursor;
 
-use anyhow::{ensure, Context, Error};
+use anyhow::{Context, Error, ensure};
 use bytes::Bytes;
 use futures::{
     future::BoxFuture,
-    stream::{once, Stream, StreamExt},
+    stream::{Stream, StreamExt, once},
 };
-use http::{header, request::Parts, HeaderMap, Method, Response as HttpResponse, StatusCode, Uri};
-use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full, StreamBody};
+use http::{HeaderMap, Method, Response as HttpResponse, StatusCode, Uri, header, request::Parts};
+use http_body_util::{BodyExt, Empty, Full, StreamBody, combinators::BoxBody};
 use hyper::body::Frame;
 use serde::{Deserialize, Serialize};
 use std::{convert::Infallible, net::SocketAddr};

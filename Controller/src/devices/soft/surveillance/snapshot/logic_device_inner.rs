@@ -5,7 +5,7 @@ use futures::{
     future::{BoxFuture, Future, FutureExt},
     join,
 };
-use image::{codecs::jpeg::JpegEncoder, imageops::FilterType, DynamicImage};
+use image::{DynamicImage, codecs::jpeg::JpegEncoder, imageops::FilterType};
 use parking_lot::RwLock;
 use std::time::Duration;
 

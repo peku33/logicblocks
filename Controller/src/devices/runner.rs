@@ -5,8 +5,8 @@ use super::{DeviceWrapper, Id as DeviceId};
 use crate::{
     modules::module_path::ModulePath,
     signals::{
-        exchanger::{ConnectionRequested, Exchanger},
         DeviceBaseRef as SignalsDeviceBaseRef,
+        exchanger::{ConnectionRequested, Exchanger},
     },
     util::{
         drop_guard::DropGuard,
@@ -175,7 +175,6 @@ impl<'d> Runner<'d> {
                 },
             );
         devices_wrapper_runtime_scope_runnable
-            .into_vec()
             .into_iter()
             .map(|device_wrapper_runtime_scope_runnable| {
                 device_wrapper_runtime_scope_runnable.finalize()
@@ -189,7 +188,7 @@ impl<'d> Runner<'d> {
         inner_heads.device_wrappers_by_id
     }
 }
-impl<'d> uri_cursor::Handler for Runner<'d> {
+impl uri_cursor::Handler for Runner<'_> {
     fn handle(
         &self,
         request: web::Request,
@@ -220,7 +219,7 @@ impl<'d> uri_cursor::Handler for Runner<'d> {
                     let device_id: DeviceId = match device_id_str.parse().context("device_id") {
                         Ok(device_id) => device_id,
                         Err(error) => {
-                            return async { web::Response::error_400_from_error(error) }.boxed()
+                            return async { web::Response::error_400_from_error(error) }.boxed();
                         }
                     };
                     let device_wrapper =

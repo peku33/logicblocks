@@ -1,4 +1,4 @@
-use super::{sse, uri_cursor, Request, Response};
+use super::{Request, Response, sse, uri_cursor};
 use crate::util::{
     async_ext::select_all_or_pending::{FutureSelectAllOrPending, StreamSelectAllOrPending},
     async_flag,
@@ -8,10 +8,10 @@ use crate::util::{
 use anyhow::anyhow;
 use async_trait::async_trait;
 use futures::{
+    Stream,
     future::{BoxFuture, FutureExt},
     pin_mut, select,
     stream::StreamExt,
-    Stream,
 };
 use std::{
     borrow::Cow,
@@ -225,7 +225,7 @@ impl<'a> Responder<'a> {
     }
 }
 #[async_trait]
-impl<'a> Runnable for Responder<'a> {
+impl Runnable for Responder<'_> {
     async fn run(
         &self,
         exit_flag: async_flag::Receiver,
@@ -233,7 +233,7 @@ impl<'a> Runnable for Responder<'a> {
         self.run(exit_flag).await
     }
 }
-impl<'a> uri_cursor::Handler for Responder<'a> {
+impl uri_cursor::Handler for Responder<'_> {
     fn handle(
         &self,
         request: Request,
@@ -256,7 +256,7 @@ impl<'a> uri_cursor::Handler for Responder<'a> {
                     {
                         Ok(filter_param) => filter_param,
                         Err(error) => {
-                            return async { Response::error_400_from_error(error) }.boxed()
+                            return async { Response::error_400_from_error(error) }.boxed();
                         }
                     };
 
@@ -265,7 +265,7 @@ impl<'a> uri_cursor::Handler for Responder<'a> {
                     {
                         Ok(topic_paths) => topic_paths,
                         Err(error) => {
-                            return async { Response::error_400_from_error(error) }.boxed()
+                            return async { Response::error_400_from_error(error) }.boxed();
                         }
                     };
 
@@ -283,7 +283,7 @@ impl<'a> uri_cursor::Handler for Responder<'a> {
                     {
                         Ok(topic_paths) => topic_paths,
                         Err(error) => {
-                            return async { Response::error_400_from_error(error) }.boxed()
+                            return async { Response::error_400_from_error(error) }.boxed();
                         }
                     };
 

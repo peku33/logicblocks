@@ -6,7 +6,7 @@ use super::{
     web::{
         root_service::RootService,
         server,
-        uri_cursor::{map_router::MapRouter, Handler},
+        uri_cursor::{Handler, map_router::MapRouter},
     },
 };
 use crate::gui::dashboards;
