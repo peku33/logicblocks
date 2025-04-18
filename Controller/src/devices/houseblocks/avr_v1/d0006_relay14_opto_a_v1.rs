@@ -2,7 +2,7 @@ pub mod logic {
     use super::{super::common::relay14_common_a::logic, hardware};
 
     #[derive(Debug)]
-    pub struct Specification {}
+    pub struct Specification;
     impl logic::Specification for Specification {
         type HardwareSpecification = hardware::Specification;
 
@@ -22,7 +22,7 @@ pub mod hardware {
     };
 
     #[derive(Debug)]
-    pub struct Specification {}
+    pub struct Specification;
     impl hardware::Specification for Specification {
         fn device_type_name() -> &'static str {
             "Relay14_Opto_A_v1"

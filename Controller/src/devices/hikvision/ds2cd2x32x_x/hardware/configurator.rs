@@ -30,7 +30,7 @@ pub trait CoordinateSystem: Copy + Clone + fmt::Debug {
     fn y_max() -> usize;
 }
 #[derive(Clone, Copy, Debug)]
-pub struct CoordinateSystem704x576 {}
+pub struct CoordinateSystem704x576;
 impl CoordinateSystem for CoordinateSystem704x576 {
     fn x_min() -> usize {
         0
@@ -46,7 +46,7 @@ impl CoordinateSystem for CoordinateSystem704x576 {
     }
 }
 #[derive(Clone, Copy, Debug)]
-pub struct CoordinateSystem1000x1000 {}
+pub struct CoordinateSystem1000x1000;
 impl CoordinateSystem for CoordinateSystem1000x1000 {
     fn x_min() -> usize {
         0

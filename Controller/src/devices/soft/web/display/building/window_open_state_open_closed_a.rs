@@ -3,7 +3,7 @@ use crate::datatypes::building::window::WindowOpenStateOpenClosed;
 use std::borrow::Cow;
 
 #[derive(Debug)]
-pub struct Specification {}
+pub struct Specification;
 impl state_a::Specification for Specification {
     type Type = WindowOpenStateOpenClosed;
 

@@ -36,7 +36,7 @@ pub struct WatchDescriptor {}
 #[derive(Debug)]
 pub struct WatchMask {}
 impl WatchMask {
-    pub const CLOSE_WRITE: Self = unimplemented!();
+    pub const CLOSE_WRITE: Self = Self {};
 }
 
 #[derive(Debug)]
