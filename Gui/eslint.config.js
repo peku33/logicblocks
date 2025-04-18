@@ -56,7 +56,7 @@ export default tseslint.config(
   // storybook overrides
   {
     files: ["**/*.stories.{tsx,jsx}"],
-    extends: [storybook.recommended],
+    extends: [storybook.configs["flat/recommended"]],
     rules: {
       "@typescript-eslint/no-empty-function": "off",
       "@typescript-eslint/require-await": "off",

@@ -1,8 +1,7 @@
 import { Icon } from "@/components/common/FontAwesome";
 import { DeviceId } from "@/components/devices/Device";
 import { getJson } from "@/lib/Api";
-import { useState } from "react";
-import useAsyncEffect from "use-async-effect";
+import { useEffect, useState } from "react";
 import * as Data from "./Data";
 
 export interface Navigation {
@@ -91,14 +90,15 @@ function urlBuild(contentPath: ContentPath, endpoint: string): string {
 export function useNavigation(contentPath: Data.ContentPath): Data.Navigation | undefined {
   const [navigation, setNavigation] = useState<Data.Navigation | undefined>(undefined);
 
-  useAsyncEffect(
-    async (isMounted) => {
+  useEffect(() => {
+    (async () => {
       const navigation = await fetchNavigation(contentPath);
-      if (!isMounted()) return;
       setNavigation(navigation);
-    },
-    [...contentPath],
-  );
+    })().catch((reason: unknown) => {
+      console.error(reason);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...contentPath]);
 
   return navigation;
 }
@@ -119,14 +119,15 @@ export async function fetchDashboardSummary(contentPath: Data.ContentPath): Prom
 export function useDashboardContent(contentPath: Data.ContentPath): Data.DashboardContent | undefined {
   const [dashboardContent, setDashboardContent] = useState<Data.DashboardContent | undefined>(undefined);
 
-  useAsyncEffect(
-    async (isMounted) => {
+  useEffect(() => {
+    (async () => {
       const dashboardContent = await fetchDashboardContent(contentPath);
-      if (!isMounted()) return;
       setDashboardContent(dashboardContent);
-    },
-    [...contentPath],
-  );
+    })().catch((reason: unknown) => {
+      console.error(reason);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...contentPath]);
 
   return dashboardContent;
 }

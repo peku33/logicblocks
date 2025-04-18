@@ -1,5 +1,5 @@
 import Colors from "@/components/common/Colors";
-import { Navigate, NavLink, Route, Routes, To } from "react-router-dom";
+import { Navigate, NavLink, Route, Routes, To } from "react-router";
 import styled from "styled-components";
 import Dashboards from "./Dashboards";
 import DevicesSummary from "./DevicesSummary";

@@ -7,7 +7,7 @@ import {
 import { PageManaged } from "@/components/dashboards/DashboardsManaged";
 import * as Data from "@/components/dashboards/Data";
 import { useCallback } from "react";
-import { Link, Route, Routes, useParams } from "react-router-dom";
+import { Link, Route, Routes, useParams } from "react-router";
 import Error404 from "./Error404";
 
 const Root: React.FC = () => {
