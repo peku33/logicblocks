@@ -18,6 +18,7 @@ import softWebButtonStateMonostableA from "./soft/web/button_state_monostable_a/
 import softWebDisplayBooleanA from "./soft/web/display/boolean_a/SummaryManaged";
 import softWebDisplayBuildingWindowOpenStateOpenClosedA from "./soft/web/display/building/window_open_state_open_closed_a/SummaryManaged";
 import softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA from "./soft/web/display/building/window_open_state_open_tilted_closed_a/SummaryManaged";
+import softWebDisplayPressureA from "./soft/web/display/pressure_a/SummaryManaged";
 import softWebRatioSliderA from "./soft/web/ratio_slider_a/SummaryManaged";
 import UnknownDevice from "./UnknownDeviceSummaryManaged";
 
@@ -25,9 +26,9 @@ const BY_CLASS: Record<string, DeviceSummaryManaged> = {
   "dahua/ipc_a": dahuaIpcA,
   "eaton/mmax_a": eatonMmaxA,
   "hikvision/ds2cd2x32x_x": hikvisionDs2cd2x32xX,
-  "houseblocks/avr_v1/reed_switch_v1": houseblocksAvrV1D0002ReedSwitchV1,
-  "houseblocks/avr_v1/junction_box_minimal_v1": houseblocksAvrV1D0003JunctionBoxMinimalV1,
   "houseblocks/avr_v1/gpio_a_v1": houseblocksAvrV1D0005GpioAV1,
+  "houseblocks/avr_v1/junction_box_minimal_v1": houseblocksAvrV1D0003JunctionBoxMinimalV1,
+  "houseblocks/avr_v1/reed_switch_v1": houseblocksAvrV1D0002ReedSwitchV1,
   "houseblocks/avr_v1/relay14_opto_a_v1": houseblocksAvrV1D0006Relay14OptoAV1,
   "houseblocks/avr_v1/relay14_ssr_a_v2": houseblocksAvrV1D0007Relay14SSRAV2,
   "soft/calendar/solar_position_a": softCalendarSolarPositionA,
@@ -41,6 +42,7 @@ const BY_CLASS: Record<string, DeviceSummaryManaged> = {
   "soft/web/display/building/window_open_state_open_closed_a": softWebDisplayBuildingWindowOpenStateOpenClosedA,
   "soft/web/display/building/window_open_state_open_tilted_closed_a":
     softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA,
+  "soft/web/display/pressure_a": softWebDisplayPressureA,
   "soft/web/ratio_slider_a": softWebRatioSliderA,
 };
 
