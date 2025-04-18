@@ -38,4 +38,22 @@ where
 
         true
     }
+
+    pub fn clamp<'s, 'v: 's>(
+        &'s self,
+        value: &'v T,
+    ) -> &'s T {
+        // TODO: what is self.lower > self.upper?
+        if let Some(lower) = &self.lower
+            && value < &lower.value
+        {
+            return &lower.value;
+        }
+        if let Some(upper) = &self.upper
+            && value > &upper.value
+        {
+            return &upper.value;
+        }
+        value
+    }
 }
