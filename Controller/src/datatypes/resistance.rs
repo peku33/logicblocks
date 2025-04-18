@@ -1,3 +1,4 @@
+use super::real::Real;
 use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -37,6 +38,21 @@ impl Ord for Resistance {
         other: &Self,
     ) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+
+impl TryFrom<Real> for Resistance {
+    type Error = Error;
+
+    fn try_from(value: Real) -> Result<Self, Self::Error> {
+        Self::from_ohms(value.to_f64())
+    }
+}
+impl TryFrom<Resistance> for Real {
+    type Error = Error;
+
+    fn try_from(value: Resistance) -> Result<Self, Self::Error> {
+        Self::from_f64(value.to_ohms())
     }
 }
 

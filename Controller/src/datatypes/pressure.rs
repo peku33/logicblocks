@@ -1,3 +1,4 @@
+use super::real::Real;
 use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -48,6 +49,19 @@ impl Ord for Pressure {
         other: &Self,
     ) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+
+impl TryFrom<Real> for Pressure {
+    type Error = Error;
+
+    fn try_from(value: Real) -> Result<Self, Self::Error> {
+        Self::from_pascals(value.to_f64())
+    }
+}
+impl From<Pressure> for Real {
+    fn from(value: Pressure) -> Self {
+        Self::from_f64(value.to_pascals()).unwrap()
     }
 }
 

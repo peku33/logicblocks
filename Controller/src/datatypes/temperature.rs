@@ -1,7 +1,7 @@
+use super::real::Real;
 use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
-
 #[derive(Debug)]
 pub enum Unit {
     Kelvin,
@@ -69,6 +69,19 @@ impl fmt::Display for Temperature {
             self.to_unit(Unit::Celsius),
             self.to_unit(Unit::Fahrenheit)
         )
+    }
+}
+
+impl TryFrom<Real> for Temperature {
+    type Error = Error;
+
+    fn try_from(value: Real) -> Result<Self, Self::Error> {
+        Self::from_kelvins(value.to_f64())
+    }
+}
+impl From<Temperature> for Real {
+    fn from(value: Temperature) -> Self {
+        Self::from_f64(value.to_kelvins()).unwrap()
     }
 }
 

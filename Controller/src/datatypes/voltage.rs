@@ -1,7 +1,7 @@
+use super::real::Real;
 use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 #[serde(try_from = "VoltageSerde")]
 #[serde(into = "VoltageSerde")]
@@ -25,6 +25,19 @@ impl Ord for Voltage {
         other: &Self,
     ) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+
+impl TryFrom<Real> for Voltage {
+    type Error = Error;
+
+    fn try_from(value: Real) -> Result<Self, Self::Error> {
+        Self::from_volts(value.to_f64())
+    }
+}
+impl From<Voltage> for Real {
+    fn from(value: Voltage) -> Self {
+        Self::from_f64(value.to_volts()).unwrap()
     }
 }
 
