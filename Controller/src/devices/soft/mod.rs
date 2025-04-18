@@ -4,6 +4,7 @@ pub mod converter;
 pub mod debug;
 pub mod logger;
 pub mod logic;
+pub mod math;
 pub mod surveillance;
 pub mod time;
 pub mod value;
