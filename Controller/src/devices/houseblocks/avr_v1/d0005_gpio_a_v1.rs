@@ -956,8 +956,7 @@ pub mod hardware {
                     || self.block_functions_reversed.analog_in_any
                     || self.block_functions_reversed.ds18x20_any,
                 analog_ins_request: false,
-                digital_ins_request: self.block_functions_reversed.digital_in_any
-                    && self.properties.digital_ins.device_must_read(),
+                digital_ins_request: self.block_functions_reversed.digital_in_any,
                 digital_outs: digital_outs_request.as_ref().map(|digital_outs_request| {
                     BusRequestDigitalOut {
                         values: **digital_outs_request,
