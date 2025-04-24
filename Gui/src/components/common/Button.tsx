@@ -112,12 +112,12 @@ const ButtonGroupInner = styled.div`
   /* grid-auto-columns: auto; */
 
   & > ${ButtonInner}, & > ${ButtonLinkInner} {
-    :not(:first-child) {
+    &:not(:first-child) {
       border-top-left-radius: 0;
       border-bottom-left-radius: 0;
     }
 
-    :not(:last-child) {
+    &:not(:last-child) {
       border-top-right-radius: 0;
       border-bottom-right-radius: 0;
     }

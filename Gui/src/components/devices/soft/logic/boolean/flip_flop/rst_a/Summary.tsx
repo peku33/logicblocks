@@ -1,4 +1,4 @@
-import { Button, ButtonActionAsync } from "@/components/common/Button";
+import { ButtonActionAsync, ButtonGroup } from "@/components/common/Button";
 import styled from "styled-components";
 
 export type Data = boolean;
@@ -13,7 +13,7 @@ const Component: React.FC<{
 
   return (
     <Wrapper>
-      <Button>
+      <ButtonGroup>
         <ButtonActionAsync active={data !== undefined ? !data : undefined} onClick={onR}>
           Off
         </ButtonActionAsync>
@@ -21,7 +21,7 @@ const Component: React.FC<{
         <ButtonActionAsync active={data !== undefined ? data : undefined} onClick={onS}>
           On
         </ButtonActionAsync>
-      </Button>
+      </ButtonGroup>
     </Wrapper>
   );
 };
