@@ -92,14 +92,14 @@ impl<'f> Manager<'f> {
                     CREATE TABLE IF NOT EXISTS channels (
                         channel_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
-                        storage_group_id REFERENCES storage_groups(storage_group_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+                        storage_group_id INTEGER REFERENCES storage_groups(storage_group_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
                         enabled INTEGER NOT NULL,
                         detection_threshold REAL NOT NULL
                     ) STRICT;
 
                     CREATE TABLE IF NOT EXISTS recordings (
                         recording_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        channel_id REFERENCES channels(channel_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+                        channel_id INTEGER REFERENCES channels(channel_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
                         timestamp_start INTEGER NOT NULL,
                         timestamp_end INTEGER NOT NULL,
                         detection_level REAL NOT NULL,
