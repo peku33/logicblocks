@@ -222,8 +222,8 @@ impl<'f> Manager<'f> {
                     "))?
                     .execute(rusqlite::params![
                         channel_id as i64,
-                        channel_segment.segment.time_start_utc.timestamp(),
-                        channel_segment.segment.time_end_utc.timestamp(),
+                        channel_segment.segment.time_start.timestamp(),
+                        channel_segment.segment.time_end.timestamp(),
                         channel_segment.detection_level.to_f64(),
                         segment_path_storage_relative.to_str().unwrap(),
                         channel_segment.segment.metadata.len() as i64,
@@ -466,23 +466,17 @@ impl<'f> Manager<'f> {
 
         let mut path_buf = PathBuf::new();
         path_buf.push(format!("{:0>3}", channel_id));
+        path_buf.push(format!("{:0>2}", channel_segment.segment.time_start.year()));
         path_buf.push(format!(
             "{:0>2}",
-            channel_segment.segment.time_start_utc.year()
+            channel_segment.segment.time_start.month()
         ));
-        path_buf.push(format!(
-            "{:0>2}",
-            channel_segment.segment.time_start_utc.month()
-        ));
-        path_buf.push(format!(
-            "{:0>2}",
-            channel_segment.segment.time_start_utc.day()
-        ));
+        path_buf.push(format!("{:0>2}", channel_segment.segment.time_start.day()));
         path_buf.push(format!(
             "{:0>2}_{:0>2}_{:0>2}",
-            channel_segment.segment.time_start_utc.hour(),
-            channel_segment.segment.time_start_utc.minute(),
-            channel_segment.segment.time_start_utc.second(),
+            channel_segment.segment.time_start.hour(),
+            channel_segment.segment.time_start.minute(),
+            channel_segment.segment.time_start.second(),
         ));
         if let Some(extension) = channel_segment.segment.path.extension() {
             path_buf.set_extension(extension);

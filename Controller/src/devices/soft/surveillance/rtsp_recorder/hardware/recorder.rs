@@ -9,7 +9,7 @@ use crate::{
 use anyhow::{Context, Error, anyhow, ensure};
 use async_trait::async_trait;
 use bytes::BytesMut;
-use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
+use chrono::{DateTime, Utc};
 use futures::{
     channel::mpsc,
     future::{Either, FutureExt},
@@ -41,8 +41,8 @@ use inotify::{EventOwned, Inotify, WatchMask};
 pub struct Segment {
     pub path: PathBuf,
     pub metadata: Metadata,
-    pub time_start_utc: NaiveDateTime,
-    pub time_end_utc: NaiveDateTime,
+    pub time_start: DateTime<Utc>,
+    pub time_end: DateTime<Utc>,
 }
 
 #[derive(Debug)]
@@ -109,20 +109,16 @@ impl Recorder {
             .context("file_stem_int")?
             .parse()
             .context("file_stem_int")?;
-        let time_start_utc =
-            NaiveDateTime::from_timestamp_opt(file_stem_int, 0).context("from_timestamp_opt")?;
+        let time_start = DateTime::from_timestamp(file_stem_int, 0).context("from_timestamp")?;
 
         let metadata = fs::metadata(&path).await.context("metadata")?;
-        let time_end_utc = DateTime::<Utc>::from(metadata.modified().context("modified")?)
-            .naive_utc()
-            .with_nanosecond(0)
-            .unwrap();
+        let time_end = DateTime::<Utc>::from(metadata.modified().context("modified")?);
 
         let segment = Segment {
             path,
             metadata,
-            time_start_utc,
-            time_end_utc,
+            time_start,
+            time_end,
         };
 
         self.handle_segment(segment).context("handle_segment")?;
