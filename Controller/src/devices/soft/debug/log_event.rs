@@ -42,9 +42,10 @@ where
 
     fn signals_targets_changed(&self) {
         let values = self.signal_input.take_pending();
-        for value in values.into_iter() {
+
+        values.into_iter().for_each(|value| {
             log::info!("{}: {:?}", self.configuration.name, value);
-        }
+        });
     }
 
     async fn run(

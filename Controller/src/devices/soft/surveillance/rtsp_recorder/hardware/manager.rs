@@ -344,7 +344,7 @@ impl<'f> Manager<'f> {
         // remove
         let storage_directory_root_path = self.storage_directory_root_path_build();
         let storage_directory_root_path = &storage_directory_root_path;
-        for (recording_id, path_storage_relative) in recordings_to_remove.iter() {
+        for (recording_id, path_storage_relative) in &recordings_to_remove {
             let result: Result<(), Error> = try {
                 // remove file
                 let path_storage = storage_directory_root_path.join(path_storage_relative);

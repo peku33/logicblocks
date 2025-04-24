@@ -507,7 +507,7 @@ impl<'a> Configurator<'a> {
             .await
             .context("get_xml")?
             .children
-            .iter()
+            .into_iter()
             .filter_map(|user_entry| {
                 let user_id: usize = user_entry
                     .as_element()?
@@ -527,7 +527,7 @@ impl<'a> Configurator<'a> {
             .collect::<Box<[_]>>();
 
         // If so - delete
-        for user_id in user_ids.iter() {
+        for user_id in user_ids {
             let reboot_required = self
                 .api
                 .delete_xml(
@@ -880,7 +880,7 @@ impl<'a> Configurator<'a> {
                             "PrivacyMaskRegionList",
                             privacy_mask
                                 .regions
-                                .iter()
+                                .into_iter()
                                 .enumerate()
                                 .map(|(id, region)| {
                                     element_build_children(
@@ -888,7 +888,7 @@ impl<'a> Configurator<'a> {
                                         vec![
                                             element_build_text("id", (id + 1).to_string()),
                                             element_build_bool("enabled", true),
-                                            serialize_coordinates_list(region),
+                                            serialize_coordinates_list(&region),
                                         ]
                                         .into_boxed_slice(),
                                     )
@@ -952,7 +952,7 @@ impl<'a> Configurator<'a> {
                             "MotionDetectionRegionList",
                             motion_detection
                                 .regions
-                                .iter()
+                                .into_iter()
                                 .enumerate()
                                 .map(|(id, region)| {
                                     element_build_children(
@@ -1277,7 +1277,7 @@ fn serialize_coordinates_list<CS: CoordinateSystem, C: CoordinateList<CS>>(
         C::list_name(),
         coordinates_list
             .coordinates_list()
-            .iter()
+            .into_iter()
             .map(|coordinate| {
                 element_build_children(
                     C::element_name(),

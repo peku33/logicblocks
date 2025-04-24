@@ -738,20 +738,21 @@ impl Device {
         match &mut state.device {
             StateDevice::Disabled { .. } => {}
             StateDevice::Paused { channels, .. } => {
-                for channel_state in channels.iter_mut() {
-                    match channel_state {
+                channels
+                    .iter_mut()
+                    .for_each(|channel_state| match channel_state {
                         StateDevicePausedChannel::Disabled => {}
                         StateDevicePausedChannel::Paused { queue }
                         | StateDevicePausedChannel::Enabled { queue, .. } => {
                             *queue = Duration::ZERO;
                             gui_summary_changed = true;
                         }
-                    }
-                }
+                    });
             }
             StateDevice::Enabled { channels, .. } => {
-                for channel_state in channels.iter_mut() {
-                    match channel_state {
+                channels
+                    .iter_mut()
+                    .for_each(|channel_state| match channel_state {
                         StateDeviceEnabledChannel::Disabled => {}
                         StateDeviceEnabledChannel::Paused { queue, .. }
                         | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
@@ -759,8 +760,7 @@ impl Device {
                             *queue = Duration::ZERO;
                             gui_summary_changed = true;
                         }
-                    }
-                }
+                    });
             }
         }
 
@@ -779,24 +779,20 @@ impl Device {
         match &mut state.device {
             StateDevice::Disabled { .. } => {}
             StateDevice::Paused { channels, .. } => {
-                for (channel_configuration, channel_state) in
-                    zip_eq(self.configuration.channels.iter(), channels.iter_mut())
-                {
-                    match channel_state {
+                zip_eq(self.configuration.channels.iter(), channels.iter_mut()).for_each(
+                    |(channel_configuration, channel_state)| match channel_state {
                         StateDevicePausedChannel::Disabled => {}
                         StateDevicePausedChannel::Paused { queue }
                         | StateDevicePausedChannel::Enabled { queue, .. } => {
                             *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
-                    }
-                }
+                    },
+                );
             }
             StateDevice::Enabled { channels, .. } => {
-                for (channel_configuration, channel_state) in
-                    zip_eq(self.configuration.channels.iter(), channels.iter_mut())
-                {
-                    match channel_state {
+                zip_eq(self.configuration.channels.iter(), channels.iter_mut()).for_each(
+                    |(channel_configuration, channel_state)| match channel_state {
                         StateDeviceEnabledChannel::Disabled => {}
                         StateDeviceEnabledChannel::Paused { queue, .. }
                         | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
@@ -804,8 +800,8 @@ impl Device {
                             *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
-                    }
-                }
+                    },
+                );
             }
         }
 
@@ -833,11 +829,12 @@ impl Device {
         let mut power_left = self.configuration.power_max;
 
         // in first iteration we remove channels that went to the end of their time
-        for (channel_configuration, channel_state, signal_output) in izip!(
+        izip!(
             self.configuration.channels.iter(),
             channels.iter_mut(),
             self.signal_outputs.iter()
-        ) {
+        )
+        .for_each(|(channel_configuration, channel_state, signal_output)| {
             match channel_state {
                 StateDeviceEnabledChannel::Disabled
                 | StateDeviceEnabledChannel::Paused { .. }
@@ -862,7 +859,7 @@ impl Device {
                     gui_summary_changed = true;
                 }
             }
-        }
+        });
 
         // in the second iteration we add new channels if they are ready to be run
         // we process and try to enable them processed by order, until first failure, to
@@ -886,9 +883,7 @@ impl Device {
             .map(|(channel_id, _order_index)| channel_id)
             .collect::<Box<[_]>>();
 
-        for channel_id in channel_ids.iter() {
-            let channel_id = *channel_id;
-
+        for channel_id in channel_ids {
             let channel_configuration = &self.configuration.channels[channel_id];
             let channel_state = &mut channels[channel_id];
             let signal_output = &self.signal_outputs[channel_id];

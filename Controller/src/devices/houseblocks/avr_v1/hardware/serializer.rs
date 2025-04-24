@@ -31,9 +31,9 @@ impl Serializer {
     ) {
         let mut buffer_hex = [0u8; 2];
         hex::encode_to_slice(value.to_be_bytes(), &mut buffer_hex).unwrap();
-        for item_hex in buffer_hex.iter_mut() {
+        buffer_hex.iter_mut().for_each(|item_hex| {
             *item_hex = item_hex.to_ascii_uppercase();
-        }
+        });
         self.container.extend(buffer_hex.iter());
     }
     pub fn push_u16(
@@ -42,9 +42,9 @@ impl Serializer {
     ) {
         let mut buffer_hex = [0u8; 4];
         hex::encode_to_slice(value.to_be_bytes(), &mut buffer_hex).unwrap();
-        for item_hex in buffer_hex.iter_mut() {
+        buffer_hex.iter_mut().for_each(|item_hex| {
             *item_hex = item_hex.to_ascii_uppercase();
-        }
+        });
         self.container.extend(buffer_hex.iter());
     }
     pub fn push_bool_array_8(
@@ -52,11 +52,11 @@ impl Serializer {
         value: [bool; 8],
     ) {
         let mut bits = 0u8;
-        for (index, item) in value.into_iter().enumerate() {
+        value.into_iter().enumerate().for_each(|(index, item)| {
             if item {
                 bits |= 1 << index;
             }
-        }
+        });
         self.push_u8(bits);
     }
     pub fn push_bool_array_16(
@@ -64,11 +64,11 @@ impl Serializer {
         value: [bool; 16],
     ) {
         let mut bits = 0u16;
-        for (index, item) in value.into_iter().enumerate() {
+        value.into_iter().enumerate().for_each(|(index, item)| {
             if item {
                 bits |= 1 << index;
             }
-        }
+        });
         self.push_u16(bits);
     }
 }

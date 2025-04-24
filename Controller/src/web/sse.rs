@@ -13,21 +13,21 @@ impl Event {
             if id.is_empty() {
                 buffer.push_str("id: \r\n");
             } else {
-                for line in id.lines() {
+                id.lines().for_each(|line| {
                     buffer.push_str("id: ");
                     buffer.push_str(line);
                     buffer.push_str("\r\n");
-                }
+                });
             }
         }
         if self.data.is_empty() {
             buffer.push_str("data: \r\n");
         } else {
-            for line in self.data.lines() {
+            self.data.lines().for_each(|line| {
                 buffer.push_str("data: ");
                 buffer.push_str(line);
                 buffer.push_str("\r\n");
-            }
+            });
         }
         buffer.push_str("\r\n");
 

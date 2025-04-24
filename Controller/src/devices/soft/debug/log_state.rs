@@ -42,6 +42,7 @@ where
 
     fn signals_targets_changed(&self) {
         let values = self.signal_input.take_pending();
+
         log::info!("{}: {:?}", self.configuration.name, values);
     }
 

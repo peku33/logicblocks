@@ -64,7 +64,7 @@ impl<V: Value + Clone> Signal<V> {
 
         let mut lock = self.inner.write();
 
-        for value in values.into_iter() {
+        for value in values {
             if lock.last == value {
                 continue;
             }

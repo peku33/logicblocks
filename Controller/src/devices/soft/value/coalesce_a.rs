@@ -56,9 +56,8 @@ where
 
         // get first non-None value
         let value = inputs_values
-            .iter()
-            .find_map(|value| value.value.as_ref())
-            .cloned();
+            .into_iter()
+            .find_map(|value| value.value);
 
         if self.signal_output.set_one(value) {
             self.signals_sources_changed_waker.wake();

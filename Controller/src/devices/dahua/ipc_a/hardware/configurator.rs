@@ -2453,7 +2453,7 @@ fn patch_object(
     object: &mut serde_json::Map<String, serde_json::Value>,
     patch: HashMap<&str, serde_json::Value>,
 ) -> Result<(), Error> {
-    for (key, value_new) in patch.into_iter() {
+    for (key, value_new) in patch {
         *object
             .get_mut(key)
             .ok_or_else(|| anyhow!("value {} is missing in object", key))? = value_new;

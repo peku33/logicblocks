@@ -325,7 +325,7 @@ impl Master {
     ) {
         let mut driver = Driver::new(ftdi_descriptor);
 
-        for transaction in transaction_receiver.iter() {
+        transaction_receiver.iter().for_each(|transaction| {
             let _ = match transaction {
                 Transaction::FrameOut {
                     service_mode,
@@ -355,7 +355,7 @@ impl Master {
                     .send(driver.transaction_device_discovery(&Duration::from_millis(250)))
                     .map_err(|e| e.map(|_| ())),
             };
-        }
+        });
     }
 }
 impl Drop for Master {

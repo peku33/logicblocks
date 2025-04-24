@@ -27,10 +27,10 @@ impl Barrier {
         self.released.store(true, Ordering::Relaxed);
 
         let children = self.children.lock();
-        for child in children.iter() {
+        children.iter().for_each(|child| {
             let child = unsafe { &**child };
             child.waker.wake();
-        }
+        });
     }
 
     pub async fn waiter(&self) -> Waiter<'_> {

@@ -123,7 +123,7 @@ impl<'d> Exchanger<'d> {
         // push none to all disconnected state targets
         let values_state_disconnected = vec![None].into_boxed_slice();
         for (state_target_remote_base, targets_changed_waker_remote) in
-            self.inner.borrow_child().state_targets_disconnected.iter()
+            &self.inner.borrow_child().state_targets_disconnected
         {
             if state_target_remote_base.set(&values_state_disconnected) {
                 targets_changed_waker_remotes.insert(*targets_changed_waker_remote);
@@ -134,7 +134,7 @@ impl<'d> Exchanger<'d> {
         for (connections_state, connections_event) in self.inner.borrow_child().connections.values()
         {
             // state signals
-            for (state_source_remote_base, connection_targets) in connections_state.iter() {
+            for (state_source_remote_base, connection_targets) in connections_state {
                 // forward pending values (including last)
                 // if there is no pending value, use just the last value
                 let mut values = state_source_remote_base.take_pending();
@@ -142,9 +142,7 @@ impl<'d> Exchanger<'d> {
                     values = vec![state_source_remote_base.peek_last()].into_boxed_slice();
                 }
 
-                for (state_target_remote_base, targets_changed_waker_remote) in
-                    connection_targets.iter()
-                {
+                for (state_target_remote_base, targets_changed_waker_remote) in connection_targets {
                     if state_target_remote_base.set(&values) {
                         targets_changed_waker_remotes.insert(*targets_changed_waker_remote);
                     }
@@ -152,15 +150,13 @@ impl<'d> Exchanger<'d> {
             }
 
             // event signals
-            for (event_source_remote_base, connection_targets) in connections_event.iter() {
+            for (event_source_remote_base, connection_targets) in connections_event {
                 let values = event_source_remote_base.take_pending();
                 if values.is_empty() {
                     continue;
                 }
 
-                for (event_target_remote_base, targets_changed_waker_remote) in
-                    connection_targets.iter()
-                {
+                for (event_target_remote_base, targets_changed_waker_remote) in connection_targets {
                     if event_target_remote_base.push(&values) {
                         targets_changed_waker_remotes.insert(*targets_changed_waker_remote);
                     }
@@ -168,9 +164,11 @@ impl<'d> Exchanger<'d> {
             }
         }
 
-        for targets_changed_waker_remote in targets_changed_waker_remotes {
-            targets_changed_waker_remote.wake();
-        }
+        targets_changed_waker_remotes
+            .into_iter()
+            .for_each(|targets_changed_waker_remote| {
+                targets_changed_waker_remote.wake();
+            });
     }
 
     async fn sources_to_targets_wakers_run(
@@ -224,14 +222,14 @@ impl<'d> Exchanger<'d> {
                         .unwrap();
 
                     // state signals
-                    for (state_source_remote_base, connection_targets) in connections_state.iter() {
+                    for (state_source_remote_base, connection_targets) in connections_state {
                         let values = state_source_remote_base.take_pending();
                         if values.is_empty() {
                             continue;
                         }
 
                         for (state_target_remote_base, targets_changed_waker_remote) in
-                            connection_targets.iter()
+                            connection_targets
                         {
                             if state_target_remote_base.set(&values) {
                                 targets_changed_waker_remotes.insert(*targets_changed_waker_remote);
@@ -240,14 +238,14 @@ impl<'d> Exchanger<'d> {
                     }
 
                     // event connections
-                    for (event_source_remote_base, connection_targets) in connections_event.iter() {
+                    for (event_source_remote_base, connection_targets) in connections_event {
                         let values = event_source_remote_base.take_pending();
                         if values.is_empty() {
                             continue;
                         }
 
                         for (event_target_remote_base, targets_changed_waker_remote) in
-                            connection_targets.iter()
+                            connection_targets
                         {
                             if event_target_remote_base.push(&values) {
                                 targets_changed_waker_remotes.insert(*targets_changed_waker_remote);
@@ -256,9 +254,11 @@ impl<'d> Exchanger<'d> {
                     }
                 }
 
-                for targets_changed_waker_remote in targets_changed_waker_remotes {
-                    targets_changed_waker_remote.wake();
-                }
+                targets_changed_waker_remotes.into_iter().for_each(
+                    |targets_changed_waker_remote| {
+                        targets_changed_waker_remote.wake();
+                    },
+                );
             })
             .await;
 
@@ -330,16 +330,18 @@ fn new_inner_parent<'d>(
                 .map(|sources_changed_waker| sources_changed_waker.remote());
 
             let signals_by_identifier = device.by_identifier();
-            for (signal_identifier, signal) in signals_by_identifier.iter() {
-                if !signals.insert(ByAddress(*signal)) {
-                    panic!(
-                        "signal {:?} of device #{} ({}) is returned twice",
-                        signal_identifier,
-                        device_id,
-                        device.type_name()
-                    );
-                }
-            }
+            signals_by_identifier
+                .iter()
+                .for_each(|(signal_identifier, signal)| {
+                    if !signals.insert(ByAddress(*signal)) {
+                        panic!(
+                            "signal {:?} of device #{} ({}) is returned twice",
+                            signal_identifier,
+                            device_id,
+                            device.type_name()
+                        );
+                    }
+                });
             let signals_remote_base_by_identifier = signals_by_identifier
                 .into_iter()
                 .map(|(signal_identifier, signal)| (signal_identifier, signal.as_remote_base()))
@@ -398,7 +400,7 @@ fn new_inner_child<'p, 'd>(
     for (
         device_id,
         (device, targets_changed_waker_remote, sources_changed_waker_remote, signals_by_identifier),
-    ) in parent.device_contexts.iter()
+    ) in &parent.device_contexts
     {
         for remote_base in signals_by_identifier.values() {
             let remote_base_variant = remote_base.as_remote_base_variant();

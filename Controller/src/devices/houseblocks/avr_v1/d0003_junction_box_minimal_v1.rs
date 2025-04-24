@@ -107,11 +107,13 @@ pub mod logic {
                 if let Some(key_values) = key_values {
                     // Calculate total number of key ticks
                     let mut key_changes_count_merged = [0usize; hardware::KEY_COUNT];
-                    for key_changes_count in key_changes_count_queue.into_iter() {
-                        for (key_index, key_changes_count) in key_changes_count.iter().enumerate() {
-                            key_changes_count_merged[key_index] += *key_changes_count as usize;
-                        }
-                    }
+                    key_changes_count_queue
+                        .into_iter()
+                        .flatten()
+                        .enumerate()
+                        .for_each(|(key_index, key_changes_count)| {
+                            key_changes_count_merged[key_index] += key_changes_count as usize;
+                        });
 
                     // Set total number of key ticks
                     self.signal_keys

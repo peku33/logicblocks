@@ -29,7 +29,7 @@ pub fn execute(
     };
 
     // apply migrations
-    for migration in migrations.into_iter() {
+    for migration in migrations {
         transaction
             .execute_batch(migration)
             .context("execute_batch")?;

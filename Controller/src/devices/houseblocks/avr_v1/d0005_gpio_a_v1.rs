@@ -1126,24 +1126,30 @@ pub mod hardware {
             &self,
             serializer: &mut Serializer,
         ) {
-            for block_1_function in self.block_functions.block_1_functions.iter() {
-                let byte = match block_1_function {
-                    Block1Function::Unused => b'A',
-                    Block1Function::AnalogIn => b'A',
-                    Block1Function::DigitalIn => b'I',
-                    Block1Function::DigitalOut => b'O',
-                };
-                serializer.push_byte(byte);
-            }
-            for block_2_function in self.block_functions.block_2_functions.iter() {
-                let byte = match block_2_function {
-                    Block2Function::Unused => b'I',
-                    Block2Function::DigitalIn => b'I',
-                    Block2Function::DigitalOut => b'O',
-                    Block2Function::Ds18x20 => b'T',
-                };
-                serializer.push_byte(byte);
-            }
+            self.block_functions
+                .block_1_functions
+                .iter()
+                .for_each(|block_1_function| {
+                    let byte = match block_1_function {
+                        Block1Function::Unused => b'A',
+                        Block1Function::AnalogIn => b'A',
+                        Block1Function::DigitalIn => b'I',
+                        Block1Function::DigitalOut => b'O',
+                    };
+                    serializer.push_byte(byte);
+                });
+            self.block_functions
+                .block_2_functions
+                .iter()
+                .for_each(|block_2_function| {
+                    let byte = match block_2_function {
+                        Block2Function::Unused => b'I',
+                        Block2Function::DigitalIn => b'I',
+                        Block2Function::DigitalOut => b'O',
+                        Block2Function::Ds18x20 => b'T',
+                    };
+                    serializer.push_byte(byte);
+                });
         }
     }
 

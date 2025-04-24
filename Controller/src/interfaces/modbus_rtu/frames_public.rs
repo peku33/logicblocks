@@ -773,7 +773,7 @@ impl Request for WriteMultipleCoilsRequest {
             .chain(((self.starting_address - 1) as u16).to_be_bytes())
             .chain((self.values.len() as u16).to_be_bytes())
             .chain((values_bytes.len() as u8).to_be_bytes())
-            .chain(values_bytes.iter().copied())
+            .chain(values_bytes)
             .collect::<Box<[_]>>()
     }
 }

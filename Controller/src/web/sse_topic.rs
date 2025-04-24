@@ -173,12 +173,12 @@ impl<'a> Responder<'a> {
             debug_assert!(inserted);
         }
 
-        for (topic, child) in node.children.iter() {
+        node.children.iter().for_each(|(topic, child)| {
             let mut path = path.clone();
             path.push(topic.clone());
 
             Self::traverse_node(topic_paths, path, child);
-        }
+        });
     }
 
     fn make_topic_paths_stream_skip_missing(

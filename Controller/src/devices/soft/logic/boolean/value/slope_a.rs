@@ -37,25 +37,29 @@ impl Device {
         let mut raising = 0;
         let mut falling = 0;
 
-        for value in self.signal_input.take_pending().into_iter().flatten() {
-            if value {
-                raising += 1;
-            } else {
-                falling += 1;
-            }
-        }
+        self.signal_input
+            .take_pending()
+            .into_iter()
+            .flatten()
+            .for_each(|value| {
+                if value {
+                    raising += 1;
+                } else {
+                    falling += 1;
+                }
+            });
 
         let mut signals_sources_changed = false;
 
-        for _ in 0..raising {
+        (0..raising).for_each(|_| {
             signals_sources_changed |= self.signal_output_raising.push_one(());
-        }
-        for _ in 0..falling {
+        });
+        (0..falling).for_each(|_| {
             signals_sources_changed |= self.signal_output_falling.push_one(());
-        }
-        for _ in 0..(raising + falling) {
+        });
+        (0..(raising + falling)).for_each(|_| {
             signals_sources_changed |= self.signal_output_raising_or_falling.push_one(());
-        }
+        });
 
         if signals_sources_changed {
             self.signals_sources_changed_waker.wake();

@@ -45,7 +45,7 @@ impl Device {
         let mut any_set = false;
         let mut any_true = false;
 
-        for signal_input in self.signal_inputs.iter() {
+        self.signal_inputs.iter().for_each(|signal_input| {
             let value = signal_input.take_last().value;
 
             if let Some(value) = value {
@@ -55,7 +55,7 @@ impl Device {
                     any_true = true;
                 }
             }
-        }
+        });
 
         let value = match (any_set, any_true) {
             (true, value) => Some(value),

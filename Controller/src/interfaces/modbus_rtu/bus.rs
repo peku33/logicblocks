@@ -385,7 +385,7 @@ impl AsyncBus {
     ) {
         let mut bus = Bus::new(descriptor, baud_rate, parity);
 
-        for transaction in transaction_receiver.iter() {
+        transaction_receiver.into_iter().for_each(|transaction| {
             let AsyncBusTransaction {
                 address,
                 request,
@@ -396,7 +396,7 @@ impl AsyncBus {
             let result = bus.transaction(address, &request, timeout);
 
             let _ = result_sender.send(result);
-        }
+        });
     }
 }
 impl Drop for AsyncBus {

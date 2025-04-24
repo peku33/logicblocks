@@ -202,7 +202,7 @@ impl<'f> Manager<'f> {
         });
 
         // check for upsert collisions
-        for (sink_id, sink_data) in sinks_data.iter() {
+        for (sink_id, sink_data) in &sinks_data {
             let sink_data_current = match sinks_data_current.get(sink_id) {
                 Some(sink_data_current) => sink_data_current,
                 None => continue,
@@ -701,7 +701,7 @@ impl<'f> Manager<'f> {
             "))
             .context("prepare")?;
 
-        for (sink_id, sink_data) in sinks_data.iter() {
+        for (sink_id, sink_data) in &sinks_data {
             let params = rusqlite::named_params! {
                 ":sink_id": *sink_id,
                 ":name": sink_data.name,
