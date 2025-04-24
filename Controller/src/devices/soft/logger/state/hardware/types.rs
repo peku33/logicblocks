@@ -1,4 +1,7 @@
-use crate::datatypes::{ratio::Ratio, real::Real, temperature::Temperature, voltage::Voltage};
+use crate::datatypes::{
+    pressure::Pressure, ratio::Ratio, real::Real, resistance::Resistance, temperature::Temperature,
+    voltage::Voltage,
+};
 use chrono::{DateTime, Utc};
 use std::fmt;
 
@@ -7,8 +10,10 @@ use std::fmt;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Class {
     Boolean,
+    Pressure,
     Ratio,
     Real,
+    Resistance,
     Temperature,
     Voltage,
 }
@@ -16,8 +21,10 @@ impl Class {
     pub fn from_string(input: &str) -> Option<Self> {
         match input {
             "Boolean" => Some(Class::Boolean),
+            "Pressure" => Some(Class::Pressure),
             "Ratio" => Some(Class::Ratio),
             "Real" => Some(Class::Real),
+            "Resistance" => Some(Class::Resistance),
             "Temperature" => Some(Class::Temperature),
             "Voltage" => Some(Class::Voltage),
             _ => None,
@@ -26,8 +33,10 @@ impl Class {
     pub fn to_string(&self) -> &'static str {
         match self {
             Class::Boolean => "Boolean",
+            Class::Pressure => "Pressure",
             Class::Ratio => "Ratio",
             Class::Real => "Real",
+            Class::Resistance => "Resistance",
             Class::Temperature => "Temperature",
             Class::Voltage => "Voltage",
         }
@@ -37,8 +46,10 @@ impl Class {
 #[derive(Debug)]
 pub enum Value {
     Boolean(Option<bool>),
+    Pressure(Option<Pressure>),
     Ratio(Option<Ratio>),
     Real(Option<Real>),
+    Resistance(Option<Resistance>),
     Temperature(Option<Temperature>),
     Voltage(Option<Voltage>),
 }
@@ -57,6 +68,16 @@ impl Type for bool {
     }
 }
 
+impl Type for Pressure {
+    fn class() -> Class {
+        Class::Pressure
+    }
+
+    fn into_value(value: Option<Self>) -> Value {
+        Value::Pressure(value)
+    }
+}
+
 impl Type for Ratio {
     fn class() -> Class {
         Class::Ratio
@@ -72,6 +93,16 @@ impl Type for Real {
     }
     fn into_value(value: Option<Self>) -> Value {
         Value::Real(value)
+    }
+}
+
+impl Type for Resistance {
+    fn class() -> Class {
+        Class::Resistance
+    }
+
+    fn into_value(value: Option<Self>) -> Value {
+        Value::Resistance(value)
     }
 }
 

@@ -71,8 +71,10 @@ impl DbClass {
     pub fn from_class(class: Class) -> Self {
         match class {
             Class::Boolean => Self::Boolean,
+            Class::Pressure => Self::Real,
             Class::Ratio => Self::Real,
             Class::Real => Self::Real,
+            Class::Resistance => Self::Real,
             Class::Temperature => Self::Real,
             Class::Voltage => Self::Real,
         }
@@ -88,8 +90,12 @@ impl DbValue {
     pub fn from_value(value: Value) -> Self {
         match value {
             Value::Boolean(value) => Self::Boolean(value),
+            Value::Pressure(pressure) => Self::Real(pressure.map(|pressure| pressure.to_pascals())),
             Value::Ratio(value) => Self::Real(value.map(|value| value.to_f64())),
             Value::Real(value) => Self::Real(value.map(|value| value.to_f64())),
+            Value::Resistance(resistance) => {
+                Self::Real(resistance.map(|resistance| resistance.to_ohms()))
+            }
             Value::Temperature(value) => {
                 Self::Real(value.map(|value| value.to_unit(temperature::Unit::Kelvin)))
             }
