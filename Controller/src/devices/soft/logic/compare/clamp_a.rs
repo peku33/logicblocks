@@ -73,16 +73,9 @@ where
 
         let (clamped, checked, status) =
             Self::calculate_optional(&input_last.value, &range_last.value);
-
-        if self.signal_clamped.set_one(clamped.cloned()) {
-            signals_sources_changed = true;
-        }
-        if self.signal_checked.set_one(checked.cloned()) {
-            signals_sources_changed = true;
-        }
-        if self.signal_status.set_one(status) {
-            signals_sources_changed = true;
-        }
+        signals_sources_changed |= self.signal_clamped.set_one(clamped.cloned());
+        signals_sources_changed |= self.signal_checked.set_one(checked.cloned());
+        signals_sources_changed |= self.signal_status.set_one(status);
 
         if signals_sources_changed {
             self.signals_sources_changed_waker.wake();

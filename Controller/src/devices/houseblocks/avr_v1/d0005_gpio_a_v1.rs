@@ -194,18 +194,15 @@ pub mod logic {
                                 .map(|signal_analog_in| (signal_analog_in, analog_in_value))
                         })
                         .for_each(|(signal_analog_in, analog_in_value)| {
-                            if signal_analog_in.set_one(Some(analog_in_value)) {
-                                signals_sources_changed = true;
-                            }
+                            signals_sources_changed |=
+                                signal_analog_in.set_one(Some(analog_in_value));
                         });
                 } else {
                     self.signal_analog_ins
                         .iter()
                         .filter_map(|signal_analog_in| signal_analog_in.as_ref())
                         .for_each(|signal_analog_in| {
-                            if signal_analog_in.set_one(None) {
-                                signals_sources_changed = true;
-                            }
+                            signals_sources_changed |= signal_analog_in.set_one(None);
                         });
                 }
 
@@ -223,18 +220,15 @@ pub mod logic {
                                 .map(|signal_digital_in| (signal_digital_in, digital_in_value))
                         })
                         .for_each(|(signal_digital_in, digital_in_value)| {
-                            if signal_digital_in.set_one(Some(digital_in_value)) {
-                                signals_sources_changed = true;
-                            }
+                            signals_sources_changed |=
+                                signal_digital_in.set_one(Some(digital_in_value));
                         });
                 } else {
                     self.signal_digital_ins
                         .iter()
                         .filter_map(|signal_digital_in| signal_digital_in.as_ref())
                         .for_each(|signal_digital_in| {
-                            if signal_digital_in.set_one(None) {
-                                signals_sources_changed = true;
-                            }
+                            signals_sources_changed |= signal_digital_in.set_one(None);
                         });
                 }
 
@@ -252,18 +246,14 @@ pub mod logic {
                                 .map(|signal_ds18x20| (signal_ds18x20, ds18x20_value))
                         })
                         .for_each(|(signal_ds18x20, ds18x20_value)| {
-                            if signal_ds18x20.set_one(Some(ds18x20_value)) {
-                                signals_sources_changed = true;
-                            }
+                            signals_sources_changed |= signal_ds18x20.set_one(Some(ds18x20_value));
                         });
                 } else {
                     self.signal_ds18x20s
                         .iter()
                         .filter_map(|signal_ds18x20| signal_ds18x20.as_ref())
                         .for_each(|signal_ds18x20| {
-                            if signal_ds18x20.set_one(None) {
-                                signals_sources_changed = true;
-                            }
+                            signals_sources_changed |= signal_ds18x20.set_one(None);
                         });
                 }
 

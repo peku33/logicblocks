@@ -57,10 +57,7 @@ impl Device {
     pub fn new(configuration: Configuration) -> Self {
         let mode = configuration.initial_mode;
 
-        let initial_value = match mode {
-            Mode::Override(value) => Some(value),
-            Mode::PassThrough => None,
-        };
+        let initial_value = Self::initial_value(mode);
 
         Self {
             configuration,
@@ -76,6 +73,13 @@ impl Device {
             signal_output: signal::state_source::Signal::<bool>::new(initial_value),
 
             gui_summary_waker: devices::gui_summary::Waker::new(),
+        }
+    }
+
+    fn initial_value(initial_mode: Mode) -> Option<bool> {
+        match initial_mode {
+            Mode::Override(value) => Some(value),
+            Mode::PassThrough => None,
         }
     }
 
@@ -168,9 +172,7 @@ impl Device {
             (Mode::PassThrough, input_value) => input_value,
             (Mode::Override(override_value), _) => Some(override_value),
         };
-        if self.signal_output.set_one(output_value) {
-            signals_sources_changed = true;
-        }
+        signals_sources_changed |= self.signal_output.set_one(output_value);
 
         if signals_sources_changed {
             self.signals_sources_changed_waker.wake();

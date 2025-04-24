@@ -196,14 +196,10 @@ impl Device {
         }
 
         // disable all channels
-        if self.signal_power.set_one(Some(Multiplier::zero())) {
-            signals_sources_changed = true;
-        }
-        for signal_output in self.signal_outputs.iter() {
-            if signal_output.set_one(Some(false)) {
-                signals_sources_changed = true;
-            }
-        }
+        signals_sources_changed |= self.signal_power.set_one(Some(Multiplier::zero()));
+        self.signal_outputs.iter().for_each(|signal_output| {
+            signals_sources_changed |= signal_output.set_one(Some(false));
+        });
 
         if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
@@ -265,14 +261,10 @@ impl Device {
         }
 
         // disable all channels
-        if self.signal_power.set_one(Some(Multiplier::zero())) {
-            signals_sources_changed = true;
-        }
-        for signal_output in self.signal_outputs.iter() {
-            if signal_output.set_one(Some(false)) {
-                signals_sources_changed = true;
-            }
-        }
+        signals_sources_changed |= self.signal_power.set_one(Some(Multiplier::zero()));
+        self.signal_outputs.iter().for_each(|signal_output| {
+            signals_sources_changed |= signal_output.set_one(Some(false));
+        });
 
         if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
@@ -390,16 +382,12 @@ impl Device {
                     }
                     StateDeviceEnabledChannel::EnabledActive { .. } => {
                         *channel_state = StateDeviceEnabledChannel::Disabled;
+                        signals_sources_changed |=
+                            self.signal_outputs[channel_id].set_one(Some(false));
 
-                        if self.signal_outputs[channel_id].set_one(Some(false)) {
-                            signals_sources_changed = true;
-                        }
-                        if self
+                        signals_sources_changed |= self
                             .signal_power
-                            .set_one(Some(self.power_calculate(channels)))
-                        {
-                            signals_sources_changed = true;
-                        }
+                            .set_one(Some(self.power_calculate(channels)));
 
                         gui_summary_changed = true;
                     }
@@ -468,16 +456,12 @@ impl Device {
                         *channel_state = StateDeviceEnabledChannel::Paused {
                             queue: *queue + *round,
                         };
+                        signals_sources_changed |=
+                            self.signal_outputs[channel_id].set_one(Some(false));
 
-                        if self.signal_outputs[channel_id].set_one(Some(false)) {
-                            signals_sources_changed = true;
-                        }
-                        if self
+                        signals_sources_changed |= self
                             .signal_power
-                            .set_one(Some(self.power_calculate(channels)))
-                        {
-                            signals_sources_changed = true;
-                        }
+                            .set_one(Some(self.power_calculate(channels)));
 
                         gui_summary_changed = true;
                     }
@@ -725,16 +709,12 @@ impl Device {
                             order_index: *order_index_last as i64,
                             queue: *queue + *round,
                         };
+                        signals_sources_changed |=
+                            self.signal_outputs[channel_id].set_one(Some(false));
 
-                        if self.signal_outputs[channel_id].set_one(Some(false)) {
-                            signals_sources_changed = true;
-                        }
-                        if self
+                        signals_sources_changed |= self
                             .signal_power
-                            .set_one(Some(self.power_calculate(channels)))
-                        {
-                            signals_sources_changed = true;
-                        }
+                            .set_one(Some(self.power_calculate(channels)));
 
                         gui_summary_changed = true;
                     }
@@ -876,10 +856,7 @@ impl Device {
                             queue: *queue,
                             order_index: *order_index_last as i64,
                         };
-
-                        if signal_output.set_one(Some(false)) {
-                            signals_sources_changed = true;
-                        }
+                        signals_sources_changed |= signal_output.set_one(Some(false));
                     }
 
                     gui_summary_changed = true;
@@ -934,10 +911,8 @@ impl Device {
 
                         // enough power and time to start!
                         power_left -= channel_configuration.power_required;
+                        signals_sources_changed |= signal_output.set_one(Some(true));
 
-                        if signal_output.set_one(Some(true)) {
-                            signals_sources_changed = true;
-                        }
                         gui_summary_changed = true;
                     } else {
                         // to prevent starvation we end iterating when first channel does not meet
@@ -950,9 +925,7 @@ impl Device {
         }
 
         let power = self.configuration.power_max - power_left;
-        if self.signal_power.set_one(Some(power)) {
-            signals_sources_changed = true;
-        }
+        signals_sources_changed |= self.signal_power.set_one(Some(power));
 
         if signals_sources_changed {
             self.signals_sources_changed_waker.wake();

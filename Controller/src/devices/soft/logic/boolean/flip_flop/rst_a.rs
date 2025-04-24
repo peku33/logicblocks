@@ -24,6 +24,8 @@ pub struct Configuration {
 
 #[derive(Debug)]
 pub struct Device {
+    configuration: Configuration,
+
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input: signal::event_target_last::Signal<bool>,
@@ -39,6 +41,8 @@ impl Device {
         let initial_value = configuration.initial_value;
 
         Self {
+            configuration,
+
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input: signal::event_target_last::Signal::<bool>::new(),

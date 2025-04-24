@@ -33,7 +33,7 @@ impl Device {
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input: signal::event_target_last::Signal::<()>::new(),
-            signal_output: signal::state_source::Signal::<bool>::new(Some(false)),
+            signal_output: signal::state_source::Signal::<bool>::new(None),
         }
     }
 

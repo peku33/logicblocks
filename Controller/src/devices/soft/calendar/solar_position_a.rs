@@ -65,27 +65,18 @@ impl Device {
         let asimuth = spa2.topocentric_asimuth();
 
         let mut signals_sources_changed = false;
-        #[allow(unused_assignments)]
-        let mut gui_summary_changed = false;
-
-        if self.signal_elevation.set_one(Some(elevation)) {
-            signals_sources_changed = true;
-        }
-        if self.signal_asimuth.set_one(Some(asimuth)) {
-            signals_sources_changed = true;
-        }
+        signals_sources_changed |= self.signal_elevation.set_one(Some(elevation));
+        signals_sources_changed |= self.signal_asimuth.set_one(Some(asimuth));
 
         self.spa.write().replace(spa2);
-        gui_summary_changed = true; // jd will always change for example
 
         if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
-        if gui_summary_changed {
-            self.gui_summary_waker.wake();
-        }
+        self.gui_summary_waker.wake(); // jd will always change for example
     }
-    async fn calculate_interval_run(
+
+    async fn run(
         &self,
         mut exit_flag: async_flag::Receiver,
     ) -> Exited {
@@ -99,13 +90,6 @@ impl Device {
         }
 
         Exited
-    }
-
-    async fn run(
-        &self,
-        exit_flag: async_flag::Receiver,
-    ) -> Exited {
-        self.calculate_interval_run(exit_flag).await
     }
 }
 

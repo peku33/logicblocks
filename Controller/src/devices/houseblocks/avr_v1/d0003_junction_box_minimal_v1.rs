@@ -126,16 +126,12 @@ pub mod logic {
                                     Some(key_value)
                                 })
                                 .collect::<Box<[_]>>();
-                            if signal_key.set_many(key_values) {
-                                signals_sources_changed = true;
-                            }
+                            signals_sources_changed |= signal_key.set_many(key_values);
                         });
                 } else {
                     // Keys are broken
                     self.signal_keys.iter().for_each(|signal_key| {
-                        if signal_key.set_one(None) {
-                            signals_sources_changed = true;
-                        }
+                        signals_sources_changed |= signal_key.set_one(None);
                     });
                 }
             }
@@ -144,9 +140,7 @@ pub mod logic {
             if let Some(ds18x20) = self.properties_remote.ds18x20.take_pending() {
                 let temperature = ds18x20.and_then(|ds18x20| ds18x20.temperature);
 
-                if self.signal_temperature.set_one(temperature) {
-                    signals_sources_changed = true;
-                }
+                signals_sources_changed |= self.signal_temperature.set_one(temperature);
 
                 gui_summary_changed = true;
             }

@@ -61,15 +61,11 @@ pub mod logic {
                         .iter()
                         .zip_eq(inputs)
                         .for_each(|(signal_input, input)| {
-                            if signal_input.set_one(Some(input)) {
-                                signals_sources_changed = true;
-                            }
+                            signals_sources_changed |= signal_input.set_one(Some(input));
                         })
                 } else {
                     self.signal_inputs.iter().for_each(|signal_input| {
-                        if signal_input.set_one(None) {
-                            signals_sources_changed = true;
-                        }
+                        signals_sources_changed |= signal_input.set_one(None);
                     });
                 }
 

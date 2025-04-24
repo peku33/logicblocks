@@ -48,19 +48,13 @@ impl Device {
         let mut signals_sources_changed = false;
 
         for _ in 0..raising {
-            if self.signal_output_raising.push_one(()) {
-                signals_sources_changed = true;
-            }
+            signals_sources_changed |= self.signal_output_raising.push_one(());
         }
         for _ in 0..falling {
-            if self.signal_output_falling.push_one(()) {
-                signals_sources_changed = true;
-            }
+            signals_sources_changed |= self.signal_output_falling.push_one(());
         }
         for _ in 0..(raising + falling) {
-            if self.signal_output_raising_or_falling.push_one(()) {
-                signals_sources_changed = true;
-            }
+            signals_sources_changed |= self.signal_output_raising_or_falling.push_one(());
         }
 
         if signals_sources_changed {
