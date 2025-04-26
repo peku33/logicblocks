@@ -122,7 +122,19 @@ impl<'h> Server<'h> {
                         match connection_watch.await {
                             Ok(()) => {}
                             Err(error) => {
-                                log::error!("{self_static}: connection error: {error:?}");
+                                // don't log hyper::Error(IncompleteMessage) which originates from
+                                // ex. infinite sse streams
+                                let mut log_ = true;
+
+                                if let Some(error) = error.downcast_ref::<hyper::Error>() {
+                                    if error.is_incomplete_message() || error.is_canceled() {
+                                        log_ = false;
+                                    }
+                                }
+
+                                if log_ {
+                                    log::error!("{self_static}: connection error: {error:?}");
+                                }
                             }
                         };
                     });
