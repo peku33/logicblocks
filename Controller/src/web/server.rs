@@ -33,9 +33,10 @@ use std::{
 };
 use tokio::net::TcpListener;
 
-// #[derive(Debug)] // Debug not possible
+#[derive(derive_more::Debug)]
 pub struct Server<'h> {
     bind: SocketAddr,
+    #[debug(skip)]
     handler: &'h (dyn Handler + Sync),
 }
 impl<'h> Server<'h> {
@@ -185,7 +186,7 @@ impl fmt::Display for Server<'_> {
 }
 
 #[self_referencing]
-// #[derive(Debug)] // Debug not possible
+#[derive(Debug)]
 struct RunnerInner<'r, 'h: 'r> {
     server: Server<'h>,
 
@@ -194,6 +195,7 @@ struct RunnerInner<'r, 'h: 'r> {
     runtime_scope_runnable: ManuallyDrop<RuntimeScopeRunnable<'r, 'this, Server<'h>>>,
 }
 
+#[derive(Debug)]
 pub struct Runner<'r, 'h> {
     inner: RunnerInner<'r, 'h>,
 
@@ -235,7 +237,7 @@ impl<'r, 'h> Runner<'r, 'h> {
 }
 
 #[self_referencing]
-// #[derive(Debug)] // Debug not possible
+#[derive(Debug)]
 struct RunnerOwnedInner<'h> {
     runtime: Runtime,
 
@@ -244,7 +246,7 @@ struct RunnerOwnedInner<'h> {
     runner: ManuallyDrop<Runner<'this, 'h>>,
 }
 
-// #[derive(Debug)] // Debug not possible
+#[derive(Debug)]
 pub struct RunnerOwned<'h> {
     inner: RunnerOwnedInner<'h>,
 

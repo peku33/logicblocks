@@ -4,8 +4,9 @@ use super::{
 };
 use futures::future::{BoxFuture, FutureExt};
 
-// #[derive(Debug)] // Debug not possible
+#[derive(derive_more::Debug)]
 pub struct RootService<'a> {
+    #[debug(skip)]
     api_handler: &'a (dyn UriCursorHandler + Sync),
     gui_responder: gui_responder::GuiResponder,
 }

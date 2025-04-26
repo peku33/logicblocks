@@ -403,8 +403,9 @@ impl Api {
     }
 }
 
-// #[derive(Debug)] // Debug not possible
+#[derive(derive_more::Debug)]
 pub struct BoundaryStreamExtractor {
+    #[debug(skip)]
     data_stream: BoxStream<'static, reqwest::Result<Bytes>>,
     data_stream_terminated: bool,
     extractor: boundary_stream::Extractor,

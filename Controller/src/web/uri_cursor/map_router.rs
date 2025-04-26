@@ -5,8 +5,9 @@ use super::{
 use futures::future::{BoxFuture, FutureExt};
 use std::collections::HashMap;
 
-// #[derive(Debug)] // Debug not possible
+#[derive(derive_more::Debug)]
 pub struct MapRouter<'h> {
+    #[debug(skip)]
     handlers: HashMap<String, &'h (dyn Handler + Sync)>,
 }
 impl<'h> MapRouter<'h> {
