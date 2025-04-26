@@ -47,9 +47,9 @@ mod gui_responder {
     use super::super::Response;
     use bytes::Bytes;
     use http::{HeaderMap, Method, Response as HttpResponse};
-    use http_body_util::{BodyExt, combinators::BoxBody};
+    use http_body_util::{BodyExt, combinators::UnsyncBoxBody};
     use include_bytes_aligned::include_bytes_aligned;
-    use std::env;
+    use std::{borrow::Cow, env};
     use web_static_pack::{
         common::pack::PackArchived,
         loader::load,
@@ -83,7 +83,7 @@ mod gui_responder {
             match self.inner.respond(method, path, headers) {
                 Ok(response) => Self::convert_response(response),
                 Err(error) => match error {
-                    ResponderRespondError::PackPathNotFound => Response::redirect_302("/"),
+                    ResponderRespondError::PackPathNotFound => Response::redirect(Cow::from("/")),
                     error => Self::convert_response(error.into_response()),
                 },
             }
@@ -93,14 +93,14 @@ mod gui_responder {
             let (parts, body) = responder_response.into_parts();
             // impl Body<&[u8]> -> impl Body<Bytes>
             let body = body.map_frame(|frame| frame.map_data(Bytes::from_static));
-            // impl Body<Bytes> -> BoxBody<Bytes>
-            let body = BoxBody::new(body);
+            // impl Body<Bytes> -> UnsyncBoxBody<Bytes>
+            let body = UnsyncBoxBody::new(body);
 
-            // make HttpResponse<BoxBody<Bytes>, _>
+            // make HttpResponse<UnsyncBoxBody<Bytes>, _>
             let http_response = HttpResponse::from_parts(parts, body);
 
             // make Response
-            let response = Response::from_http_response(http_response);
+            let response = Response::from(http_response);
 
             response
         }

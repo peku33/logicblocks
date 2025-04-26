@@ -1,4 +1,4 @@
-use super::{Handler, Request, Response};
+use super::{Handler, Request, ResponseFull};
 use crate::{
     modules::module_path::ModulePath,
     util::{
@@ -16,7 +16,7 @@ use futures::{
     pin_mut, select,
 };
 use http::{request::Request as HttpRequest, response::Response as HttpResponse};
-use http_body_util::{BodyExt, combinators::BoxBody};
+use http_body_util::{BodyExt, combinators::UnsyncBoxBody};
 use hyper::{body::Incoming, service::service_fn};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
@@ -51,20 +51,26 @@ impl<'h> Server<'h> {
         &self,
         remote_address: SocketAddr,
         http_request: HttpRequest<Incoming>,
-    ) -> HttpResponse<BoxBody<Bytes, Infallible>> {
+        exit_flag_template: &async_flag::Receiver,
+    ) -> HttpResponse<UnsyncBoxBody<Bytes, Infallible>> {
         let (parts, body) = http_request.into_parts();
         // TODO: we probably want to limit incoming body size here?
-        let body_payload = match body.collect().await.context("collect") {
-            Ok(body_payload) => body_payload.to_bytes(),
-            Err(error) => return Response::error_400_from_error(error).into_http_response(),
+        let body = match body.collect().await.context("collect") {
+            Ok(body) => body.to_bytes(),
+            Err(error) => {
+                return ResponseFull::error_400_from_error(error)
+                    .into_http_response()
+                    .map(|body| body.boxed_unsync());
+            }
         };
 
-        let request = Request::from_http_request(remote_address, parts, body_payload);
+        let request = Request::from_http_request(remote_address, parts, body);
         let log_method = request.method().clone();
         let log_uri = request.uri().clone();
 
         let response = self.handler.handle(request).await;
-        let log_status_code = response.status_code();
+        let http_response = response.into_http_response(exit_flag_template);
+        let log_status_code = http_response.status();
 
         log::debug!(
             "{}: {:?} {} {} {}",
@@ -75,12 +81,12 @@ impl<'h> Server<'h> {
             log_status_code,
         );
 
-        response.into_http_response()
+        http_response
     }
 
     async fn run_once(
         &self,
-        mut exit_flag: async_flag::Receiver,
+        exit_flag: async_flag::Receiver,
     ) -> Result<Exited, Error> {
         let listener = TcpListener::bind(self.bind).await.context("bind")?;
         log::trace!("{self}: server listening");
@@ -91,12 +97,16 @@ impl<'h> Server<'h> {
         // SAFETY: we guarantee that all connections are closed before leaving
         // this function, so '_ will outlive the hyper server
         let self_static = unsafe { transmute::<&'_ Server<'_>, &'static Server<'static>>(self) };
+        let exit_flag_static = unsafe {
+            transmute::<&'_ async_flag::Receiver, &'static async_flag::Receiver>(&exit_flag)
+        };
 
+        let mut server_exit_flag = exit_flag.clone();
         loop {
             let listener_accept = listener.accept();
             pin_mut!(listener_accept);
 
-            match select(listener_accept, &mut exit_flag).await {
+            match select(listener_accept, &mut server_exit_flag).await {
                 Either::Left((connection, _)) => {
                     let (stream, remote_address) = match connection.context("connection") {
                         Ok(connection) => connection,
@@ -111,7 +121,9 @@ impl<'h> Server<'h> {
                     let connection = server.serve_connection(
                         io,
                         service_fn(move |http_request| async move {
-                            let response = self_static.respond(remote_address, http_request).await;
+                            let response = self_static
+                                .respond(remote_address, http_request, exit_flag_static)
+                                .await;
                             Ok::<_, Infallible>(response)
                         }),
                     );

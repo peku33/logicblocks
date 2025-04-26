@@ -7,7 +7,7 @@ use futures::{
 };
 use image::{DynamicImage, codecs::jpeg::JpegEncoder, imageops::FilterType};
 use parking_lot::RwLock;
-use std::time::Duration;
+use std::{borrow::Cow, time::Duration};
 
 #[derive(Debug)]
 struct ManagerSize {
@@ -73,9 +73,10 @@ impl uri_cursor::Handler for ManagerSize {
 
                     async {
                         match jpeg_bytes {
-                            Some(jpeg_bytes) => {
-                                web::Response::ok_content_type_body("image/jpeg", jpeg_bytes)
-                            }
+                            Some(jpeg_bytes) => web::Response::ok_content_type_body(
+                                Cow::from("image/jpeg"),
+                                jpeg_bytes,
+                            ),
                             None => web::Response::error_404(),
                         }
                     }
