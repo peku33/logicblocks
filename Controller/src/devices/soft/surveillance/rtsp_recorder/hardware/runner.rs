@@ -12,8 +12,9 @@ use crate::{
         runtime::{Runtime, RuntimeScope, RuntimeScopeRunnable},
     },
 };
-use anyhow::{Context, Error};
+use anyhow::{Context, Error, anyhow};
 use async_trait::async_trait;
+use atomic_refcell::{AtomicRef, AtomicRefCell};
 use futures::{
     channel::mpsc::UnboundedSender,
     future::{FutureExt, JoinAll},
@@ -27,16 +28,15 @@ use std::{
     mem::{ManuallyDrop, transmute},
     time::Duration,
 };
-use tokio::sync::{RwLock, RwLockReadGuard};
 
 type RunnerChannelRunners<'r> = HashMap<ChannelId, RunnerChannelRunner<'r>>;
 
 #[derive(Debug)]
 pub struct RunnerChannelsLock<'a, 'r> {
-    inner: RwLockReadGuard<'a, RunnerChannelRunners<'r>>,
+    inner: AtomicRef<'a, RunnerChannelRunners<'r>>,
 }
 impl<'a, 'r> RunnerChannelsLock<'a, 'r> {
-    fn new(inner: RwLockReadGuard<'a, RunnerChannelRunners<'r>>) -> Self {
+    fn new(inner: AtomicRef<'a, RunnerChannelRunners<'r>>) -> Self {
         Self { inner }
     }
 
@@ -278,7 +278,7 @@ pub struct Runner<'r, 'f> {
     runtime: &'r Runtime,
 
     manager_runner: ManagerRunner<'r, 'f>,
-    runner_channel_runners: RwLock<RunnerChannelRunners<'r>>,
+    runner_channel_runners: AtomicRefCell<RunnerChannelRunners<'r>>,
 }
 impl<'r, 'f> Runner<'r, 'f> {
     pub const SEGMENT_TIME: Duration = Duration::from_secs(60);
@@ -292,7 +292,7 @@ impl<'r, 'f> Runner<'r, 'f> {
         let manager_runner = ManagerRunner::new(runtime, manager);
 
         let runner_channel_runners = RunnerChannelRunners::default();
-        let runner_channel_runners = RwLock::new(runner_channel_runners);
+        let runner_channel_runners = AtomicRefCell::new(runner_channel_runners);
 
         Self {
             runtime,
@@ -306,8 +306,8 @@ impl<'r, 'f> Runner<'r, 'f> {
         // lock channels
         let mut runner_channel_runners = self
             .runner_channel_runners
-            .try_write()
-            .context("runner_channel_runners lock")?;
+            .try_borrow_mut()
+            .map_err(|_| anyhow!("runner_channel_runners lock"))?;
 
         // finalize current channels
         runner_channel_runners
@@ -356,7 +356,7 @@ impl<'r, 'f> Runner<'r, 'f> {
         Ok(())
     }
     pub fn channels_lock(&self) -> Option<RunnerChannelsLock<'_, 'r>> {
-        let runner_channel_runners_lock = self.runner_channel_runners.try_read().ok()?;
+        let runner_channel_runners_lock = self.runner_channel_runners.try_borrow().ok()?;
         let runner_channels_lock = RunnerChannelsLock::new(runner_channel_runners_lock);
         Some(runner_channels_lock)
     }

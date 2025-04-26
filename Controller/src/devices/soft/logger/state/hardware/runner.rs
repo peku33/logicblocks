@@ -12,8 +12,9 @@ use crate::{
         runtime::{Runtime, RuntimeScope, RuntimeScopeRunnable},
     },
 };
-use anyhow::{Context, Error};
+use anyhow::{Context, Error, anyhow};
 use async_trait::async_trait;
+use atomic_refcell::{AtomicRef, AtomicRefCell};
 use crossbeam::channel;
 use futures::{
     future::{FutureExt, JoinAll},
@@ -27,7 +28,6 @@ use std::{
     mem,
     mem::{ManuallyDrop, transmute},
 };
-use tokio::sync::{RwLock, RwLockReadGuard};
 
 #[derive(Debug)]
 pub struct RunnerSink {
@@ -187,10 +187,10 @@ impl<'r> RunnerSinksRunner<'r> {
 
 #[derive(Debug)]
 pub struct RunnerSinksLock<'a, 'r> {
-    inner: RwLockReadGuard<'a, RunnerSinksRunner<'r>>,
+    inner: AtomicRef<'a, RunnerSinksRunner<'r>>,
 }
 impl<'a, 'r> RunnerSinksLock<'a, 'r> {
-    fn new(inner: RwLockReadGuard<'a, RunnerSinksRunner<'r>>) -> Self {
+    fn new(inner: AtomicRef<'a, RunnerSinksRunner<'r>>) -> Self {
         Self { inner }
     }
     pub fn runner_sinks(&self) -> HashMap<SinkId, &RunnerSink> {
@@ -263,7 +263,7 @@ pub struct Runner<'f: 'r, 'r> {
     runtime: &'r Runtime,
 
     manager_runner: ManagerRunner<'f, 'r>,
-    runner_sinks_runner: RwLock<RunnerSinksRunner<'r>>,
+    runner_sinks_runner: AtomicRefCell<RunnerSinksRunner<'r>>,
 }
 impl<'f: 'r, 'r> Runner<'f, 'r> {
     pub fn new(
@@ -275,7 +275,7 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
         let manager_runner = ManagerRunner::new(manager, runtime);
 
         let runner_sinks_runner = RunnerSinksRunner::empty();
-        let runner_sinks_runner = RwLock::new(runner_sinks_runner);
+        let runner_sinks_runner = AtomicRefCell::new(runner_sinks_runner);
 
         Self {
             runtime,
@@ -292,8 +292,8 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
         // unload currently running channels
         let mut runner_sinks_runner_lock = self
             .runner_sinks_runner
-            .try_write()
-            .context("runner_sinks_runner lock")?;
+            .try_borrow_mut()
+            .map_err(|_| anyhow!("runner_sinks_runner lock"))?;
 
         let runner_sinks_runner =
             mem::replace(&mut *runner_sinks_runner_lock, RunnerSinksRunner::empty());
@@ -312,8 +312,8 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
     pub async fn sinks_reload(&self) -> Result<(), Error> {
         let mut runner_sinks_runner_lock = self
             .runner_sinks_runner
-            .try_write()
-            .context("runner_sinks_runner lock")?;
+            .try_borrow_mut()
+            .map_err(|_| anyhow!("runner_sinks_runner lock"))?;
 
         // create new channels
 
@@ -360,7 +360,7 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
         Ok(())
     }
     pub fn sinks_lock(&self) -> Option<RunnerSinksLock<'f, '_>> {
-        let runner_sinks_runner_lock = self.runner_sinks_runner.try_read().ok()?;
+        let runner_sinks_runner_lock = self.runner_sinks_runner.try_borrow().ok()?;
         let runner_sinks_lock = RunnerSinksLock::new(runner_sinks_runner_lock);
         Some(runner_sinks_lock)
     }
