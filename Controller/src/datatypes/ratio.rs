@@ -1,3 +1,4 @@
+use super::real::Real;
 use anyhow::{Error, ensure};
 use rand::{
     Rng,
@@ -41,6 +42,19 @@ impl Ord for Ratio {
         other: &Self,
     ) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+
+impl TryFrom<Real> for Ratio {
+    type Error = Error;
+
+    fn try_from(value: Real) -> Result<Self, Self::Error> {
+        Self::from_f64(value.to_f64())
+    }
+}
+impl From<Ratio> for Real {
+    fn from(value: Ratio) -> Self {
+        Self::from_f64(value.to_f64()).unwrap()
     }
 }
 

@@ -1,3 +1,4 @@
+use super::real::Real;
 use anyhow::{Error, ensure};
 use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
 use serde::{Deserialize, Serialize};
@@ -46,6 +47,19 @@ impl Ord for Multiplier {
         other: &Self,
     ) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+
+impl TryFrom<Real> for Multiplier {
+    type Error = Error;
+
+    fn try_from(value: Real) -> Result<Self, Self::Error> {
+        Self::from_f64(value.to_f64())
+    }
+}
+impl From<Multiplier> for Real {
+    fn from(value: Multiplier) -> Self {
+        Self::from_f64(value.to_f64()).unwrap()
     }
 }
 
