@@ -20,7 +20,7 @@ use futures::{
     join, select,
     stream::StreamExt,
 };
-use parking_lot::Mutex;
+use parking_lot::RwLock;
 use serde::Serialize;
 use std::{cmp::min, fmt, time::Duration};
 
@@ -67,7 +67,7 @@ pub struct Runner<'m, D: Device> {
     driver: Driver<'m>,
     device: D,
 
-    device_state: Mutex<DeviceState>,
+    device_state: RwLock<DeviceState>,
 
     gui_summary_waker: devices::gui_summary::Waker,
 }
@@ -87,7 +87,7 @@ impl<'m, D: Device> Runner<'m, D> {
                 serial: address_serial,
             },
         );
-        let device_state = Mutex::new(DeviceState::Initializing);
+        let device_state = RwLock::new(DeviceState::Initializing);
 
         Self {
             driver,
@@ -107,7 +107,7 @@ impl<'m, D: Device> Runner<'m, D> {
         &self,
         mut exit_flag: async_flag::Receiver,
     ) -> Result<Exited, Error> {
-        *self.device_state.lock() = DeviceState::Initializing;
+        *self.device_state.write() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
 
         self.device.reset();
@@ -125,7 +125,7 @@ impl<'m, D: Device> Runner<'m, D> {
             .context("initialize")?;
 
         // Device is fully initialized
-        *self.device_state.lock() = DeviceState::Running;
+        *self.device_state.write() = DeviceState::Running;
         self.gui_summary_waker.wake();
 
         // Main loop
@@ -164,7 +164,7 @@ impl<'m, D: Device> Runner<'m, D> {
 
         self.device.reset();
 
-        *self.device_state.lock() = DeviceState::Initializing;
+        *self.device_state.write() = DeviceState::Initializing;
         self.gui_summary_waker.wake();
 
         Ok(Exited)
@@ -186,7 +186,7 @@ impl<'m, D: Device> Runner<'m, D> {
 
             self.device.reset();
 
-            *self.device_state.lock() = DeviceState::Error;
+            *self.device_state.write() = DeviceState::Error;
             self.gui_summary_waker.wake();
 
             select! {
@@ -242,7 +242,7 @@ impl<D: Device> devices::gui_summary::Device for Runner<'_, D> {
 
     type Value = GuiSummary;
     fn value(&self) -> Self::Value {
-        let device_state = *self.device_state.lock();
+        let device_state = *self.device_state.read();
 
         Self::Value { device_state }
     }
