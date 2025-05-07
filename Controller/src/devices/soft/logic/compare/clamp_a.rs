@@ -10,18 +10,26 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::StreamExt;
-use maplit::hashmap;
-use std::{any::type_name, borrow::Cow};
+use std::{any::type_name, borrow::Cow, iter};
 
+#[derive(Debug)]
+pub struct Configuration<V>
+where
+    V: Value + Ord + Clone,
+{
+    pub range_fixed: Option<Range<V>>,
+}
 #[derive(Debug)]
 pub struct Device<V>
 where
     V: Value + Ord + Clone,
 {
+    configuration: Configuration<V>,
+
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input: signal::state_target_last::Signal<V>,
-    signal_range: signal::state_target_last::Signal<Range<V>>,
+    signal_range: Option<signal::state_target_last::Signal<Range<V>>>,
     signal_clamped: signal::state_source::Signal<V>, // clamped to range
     signal_checked: signal::state_source::Signal<V>, // = input if in range, none if outside range
     signal_status: signal::state_source::Signal<bool>, // true if inside range
@@ -30,32 +38,40 @@ impl<V> Device<V>
 where
     V: Value + Ord + Clone,
 {
-    pub fn new() -> Self {
+    pub fn new(configuration: Configuration<V>) -> Self {
+        let range_fixed = configuration.range_fixed.is_some();
+
         Self {
+            configuration,
+
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input: signal::state_target_last::Signal::<V>::new(),
-            signal_range: signal::state_target_last::Signal::<Range<V>>::new(),
+            signal_range: if !range_fixed {
+                Some(signal::state_target_last::Signal::<Range<V>>::new())
+            } else {
+                None
+            },
             signal_clamped: signal::state_source::Signal::<V>::new(None),
             signal_checked: signal::state_source::Signal::<V>::new(None),
             signal_status: signal::state_source::Signal::<bool>::new(None),
         }
     }
 
-    fn calculate<'a>(
-        input: &'a V,
-        range: &'a Range<V>,
-    ) -> (&'a V, Option<&'a V>, bool) {
-        let clamped = range.clamp(input);
+    fn calculate(
+        input: V,
+        range: &Range<V>,
+    ) -> (V, Option<V>, bool) {
+        let clamped = range.clamp_to(input.clone());
         let status = input == clamped;
         let checked = if status { Some(input) } else { None };
 
         (clamped, checked, status)
     }
-    fn calculate_optional<'a>(
-        input: &'a Option<V>,
-        range: &'a Option<Range<V>>,
-    ) -> (Option<&'a V>, Option<&'a V>, Option<bool>) {
+    fn calculate_optional(
+        input: Option<V>,
+        range: Option<&Range<V>>,
+    ) -> (Option<V>, Option<V>, Option<bool>) {
         match (input, range) {
             (Some(input), Some(range)) => {
                 let (clamped, checked, status) = Self::calculate(input, range);
@@ -68,13 +84,21 @@ where
     fn signals_targets_changed(&self) {
         let mut signals_sources_changed = false;
 
-        let input_last = self.signal_input.take_last();
-        let range_last = self.signal_range.take_last();
+        let input = self.signal_input.take_last().value;
 
-        let (clamped, checked, status) =
-            Self::calculate_optional(&input_last.value, &range_last.value);
-        signals_sources_changed |= self.signal_clamped.set_one(clamped.cloned());
-        signals_sources_changed |= self.signal_checked.set_one(checked.cloned());
+        let range = self
+            .signal_range
+            .as_ref()
+            .and_then(|signal_range| signal_range.take_last().value);
+        let range = match &self.configuration.range_fixed {
+            Some(range_fixed) => Some(range_fixed),
+            None => range.as_ref(),
+        };
+
+        let (clamped, checked, status) = Self::calculate_optional(input, range);
+
+        signals_sources_changed |= self.signal_clamped.set_one(clamped);
+        signals_sources_changed |= self.signal_checked.set_one(checked);
         signals_sources_changed |= self.signal_status.set_one(status);
 
         if signals_sources_changed {
@@ -149,12 +173,29 @@ where
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-        hashmap! {
-            SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
-            SignalIdentifier::Range => &self.signal_range as &dyn signal::Base,
-            SignalIdentifier::Clamped => &self.signal_clamped as &dyn signal::Base,
-            SignalIdentifier::Checked => &self.signal_checked as &dyn signal::Base,
-            SignalIdentifier::Status => &self.signal_status as &dyn signal::Base,
-        }
+        iter::empty()
+            .chain(iter::once((
+                SignalIdentifier::Input,
+                &self.signal_input as &dyn signal::Base,
+            )))
+            .chain(self.signal_range.as_ref().map(|signal_range| {
+                (
+                    SignalIdentifier::Range, // line break
+                    signal_range as &dyn signal::Base,
+                )
+            }))
+            .chain(iter::once((
+                SignalIdentifier::Clamped,
+                &self.signal_clamped as &dyn signal::Base,
+            )))
+            .chain(iter::once((
+                SignalIdentifier::Checked,
+                &self.signal_checked as &dyn signal::Base,
+            )))
+            .chain(iter::once((
+                SignalIdentifier::Status,
+                &self.signal_status as &dyn signal::Base,
+            )))
+            .collect::<signals::ByIdentifier<_>>()
     }
 }

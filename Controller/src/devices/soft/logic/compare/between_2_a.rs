@@ -10,57 +10,59 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::StreamExt;
-use maplit::hashmap;
-use std::{any::type_name, borrow::Cow};
+use std::{any::type_name, borrow::Cow, iter};
+
+#[derive(Debug)]
+pub struct Configuration<V>
+where
+    V: Value + Ord + Clone,
+{
+    pub range_false_fixed: Option<Range<V>>,
+    pub range_true_fixed: Option<Range<V>>,
+}
 
 #[derive(Debug)]
 pub struct Device<V>
 where
     V: Value + Ord + Clone,
 {
+    configuration: Configuration<V>,
+
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input: signal::state_target_last::Signal<V>,
-    signal_range_false: signal::state_target_last::Signal<Range<V>>,
-    signal_range_true: signal::state_target_last::Signal<Range<V>>,
+    signal_range_false: Option<signal::state_target_last::Signal<Range<V>>>,
+    signal_range_true: Option<signal::state_target_last::Signal<Range<V>>>,
     signal_output: signal::state_source::Signal<bool>,
 }
 impl<V> Device<V>
 where
     V: Value + Ord + Clone,
 {
-    pub fn new() -> Self {
+    pub fn new(configuration: Configuration<V>) -> Self {
+        let range_false_fixed = configuration.range_false_fixed.is_some();
+        let range_true_fixed = configuration.range_true_fixed.is_some();
+
         Self {
+            configuration,
+
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input: signal::state_target_last::Signal::<V>::new(),
-            signal_range_false: signal::state_target_last::Signal::<Range<V>>::new(),
-            signal_range_true: signal::state_target_last::Signal::<Range<V>>::new(),
+            signal_range_false: if !range_false_fixed {
+                Some(signal::state_target_last::Signal::<Range<V>>::new())
+            } else {
+                None
+            },
+            signal_range_true: if !range_true_fixed {
+                Some(signal::state_target_last::Signal::<Range<V>>::new())
+            } else {
+                None
+            },
             signal_output: signal::state_source::Signal::<bool>::new(None),
         }
     }
 
-    fn calculate_optional(
-        input: &Option<V>,
-        range_false: &Option<Range<V>>,
-        range_true: &Option<Range<V>>,
-    ) -> Option<bool> {
-        let input = match input {
-            Some(input) => input,
-            None => return None,
-        };
-
-        let range_false = match range_false {
-            Some(range_false) => range_false,
-            None => return None,
-        };
-        let range_true = match range_true {
-            Some(range_true) => range_true,
-            None => return None,
-        };
-
-        Self::calculate(input, range_false, range_true)
-    }
     fn calculate(
         input: &V,
         range_false: &Range<V>,
@@ -75,15 +77,39 @@ where
             _ => None,
         }
     }
+    fn calculate_optional(
+        input: Option<&V>,
+        range_false: Option<&Range<V>>,
+        range_true: Option<&Range<V>>,
+    ) -> Option<bool> {
+        Self::calculate(input?, range_false?, range_true?)
+    }
 
     fn signals_targets_changed(&self) {
-        let value = Self::calculate_optional(
-            &self.signal_input.take_last().value,
-            &self.signal_range_false.take_last().value,
-            &self.signal_range_true.take_last().value,
-        );
+        let input = self.signal_input.take_last().value;
+        let input = input.as_ref();
 
-        if self.signal_output.set_one(value) {
+        let range_false = self
+            .signal_range_false
+            .as_ref()
+            .and_then(|signal_range_false| signal_range_false.take_last().value);
+        let range_false = match &self.configuration.range_false_fixed {
+            Some(range_false_fixed) => Some(range_false_fixed),
+            None => range_false.as_ref(),
+        };
+
+        let range_true = self
+            .signal_range_true
+            .as_ref()
+            .and_then(|signal_range_true| signal_range_true.take_last().value);
+        let range_true = match &self.configuration.range_true_fixed {
+            Some(range_true_fixed) => Some(range_true_fixed),
+            None => range_true.as_ref(),
+        };
+
+        let output = Self::calculate_optional(input, range_false, range_true);
+
+        if self.signal_output.set_one(output) {
             self.signals_sources_changed_waker.wake();
         }
     }
@@ -157,11 +183,27 @@ where
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-        hashmap! {
-            SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
-            SignalIdentifier::RangeFalse => &self.signal_range_false as &dyn signal::Base,
-            SignalIdentifier::RangeTrue => &self.signal_range_true as &dyn signal::Base,
-            SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
-        }
+        iter::empty()
+            .chain(iter::once((
+                SignalIdentifier::Input,
+                &self.signal_input as &dyn signal::Base,
+            )))
+            .chain(self.signal_range_false.as_ref().map(|signal_range_false| {
+                (
+                    SignalIdentifier::RangeFalse,
+                    signal_range_false as &dyn signal::Base,
+                )
+            }))
+            .chain(self.signal_range_true.as_ref().map(|signal_range_true| {
+                (
+                    SignalIdentifier::RangeTrue,
+                    signal_range_true as &dyn signal::Base,
+                )
+            }))
+            .chain(iter::once((
+                SignalIdentifier::Output,
+                &self.signal_output as &dyn signal::Base,
+            )))
+            .collect::<signals::ByIdentifier<_>>()
     }
 }

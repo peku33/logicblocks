@@ -10,66 +10,80 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::StreamExt;
-use maplit::hashmap;
-use std::{any::type_name, borrow::Cow};
+use std::{any::type_name, borrow::Cow, iter};
+
+#[derive(Debug)]
+pub struct Configuration<V>
+where
+    V: Value + Ord + Clone,
+{
+    pub range_fixed: Option<Range<V>>,
+}
 
 #[derive(Debug)]
 pub struct Device<V>
 where
     V: Value + Ord + Clone,
 {
+    configuration: Configuration<V>,
+
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input: signal::state_target_last::Signal<V>,
-    signal_range: signal::state_target_last::Signal<Range<V>>,
+    signal_range: Option<signal::state_target_last::Signal<Range<V>>>,
     signal_output: signal::state_source::Signal<bool>,
 }
 impl<V> Device<V>
 where
     V: Value + Ord + Clone,
 {
-    pub fn new() -> Self {
+    pub fn new(configuration: Configuration<V>) -> Self {
+        let range_fixed = configuration.range_fixed.is_some();
+
         Self {
+            configuration,
+
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input: signal::state_target_last::Signal::<V>::new(),
-            signal_range: signal::state_target_last::Signal::<Range<V>>::new(),
+            signal_range: if !range_fixed {
+                Some(signal::state_target_last::Signal::<Range<V>>::new())
+            } else {
+                None
+            },
             signal_output: signal::state_source::Signal::<bool>::new(None),
         }
     }
 
-    fn calculate_optional(
-        input: &Option<V>,
-        range: &Option<Range<V>>,
-    ) -> Option<bool> {
-        let input = match input {
-            Some(input) => input,
-            None => return None,
-        };
-
-        let range = match range {
-            Some(range) => range,
-            None => return None,
-        };
-
-        let value = Self::calculate(input, range);
-
-        Some(value)
-    }
     fn calculate(
         input: &V,
         range: &Range<V>,
     ) -> bool {
         range.contains(input)
     }
+    fn calculate_optional(
+        input: Option<&V>,
+        range: Option<&Range<V>>,
+    ) -> Option<bool> {
+        Some(Self::calculate(input?, range?))
+    }
 
     fn signals_targets_changed(&self) {
-        let value = Self::calculate_optional(
-            &self.signal_input.take_last().value,
-            &self.signal_range.take_last().value,
-        );
+        let input = self.signal_input.take_last().value;
+        let input = input.as_ref();
 
-        if self.signal_output.set_one(value) {
+        let range = self
+            .signal_range
+            .as_ref()
+            .and_then(|signal_range| signal_range.take_last().value);
+        let range = match &self.configuration.range_fixed {
+            Some(range_fixed) => Some(range_fixed),
+            None => range.as_ref(),
+        };
+
+        let output = Self::calculate_optional(input, range);
+
+        if self.signal_output.set_one(output) {
             self.signals_sources_changed_waker.wake();
         }
     }
@@ -142,10 +156,21 @@ where
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-        hashmap! {
-            SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
-            SignalIdentifier::Range => &self.signal_range as &dyn signal::Base,
-            SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
-        }
+        iter::empty()
+            .chain(iter::once((
+                SignalIdentifier::Input,
+                &self.signal_input as &dyn signal::Base,
+            )))
+            .chain(self.signal_range.as_ref().map(|signal_range| {
+                (
+                    SignalIdentifier::Range, // line break
+                    signal_range as &dyn signal::Base,
+                )
+            }))
+            .chain(iter::once((
+                SignalIdentifier::Output,
+                &self.signal_output as &dyn signal::Base,
+            )))
+            .collect::<signals::ByIdentifier<_>>()
     }
 }
