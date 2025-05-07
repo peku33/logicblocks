@@ -1,5 +1,6 @@
 pub mod building;
 pub mod calendar;
+pub mod controller;
 pub mod converter;
 pub mod debug;
 pub mod logger;
