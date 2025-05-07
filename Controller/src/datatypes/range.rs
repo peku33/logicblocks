@@ -38,22 +38,27 @@ where
 
         true
     }
-
-    pub fn clamp<'s, 'v: 's>(
-        &'s self,
-        value: &'v T,
-    ) -> &'s T {
-        // TODO: what is self.lower > self.upper?
+}
+impl<T> Range<T>
+where
+    T: Clone + Ord,
+{
+    pub fn clamp_to(
+        &self,
+        value: T,
+    ) -> T {
+        // TODO: what if self.lower > self.upper?
         if let Some(lower) = &self.lower
-            && value < &lower.value
+            && value < lower.value
         {
-            return &lower.value;
+            return lower.value.clone();
         }
         if let Some(upper) = &self.upper
-            && value > &upper.value
+            && value > upper.value
         {
-            return &upper.value;
+            return upper.value.clone();
         }
+
         value
     }
 }
