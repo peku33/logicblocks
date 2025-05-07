@@ -46,23 +46,23 @@ impl Device {
         let mut any_true = false;
 
         self.signal_inputs.iter().for_each(|signal_input| {
-            let value = signal_input.take_last().value;
+            let input = signal_input.take_last().value;
 
-            if let Some(value) = value {
+            if let Some(input) = input {
                 any_set = true;
 
-                if value {
+                if input {
                     any_true = true;
                 }
             }
         });
 
-        let value = match (any_set, any_true) {
+        let output = match (any_set, any_true) {
             (true, value) => Some(value),
             (false, _) => None,
         };
 
-        if self.signal_output.set_one(value) {
+        if self.signal_output.set_one(output) {
             self.signals_sources_changed_waker.wake();
         }
     }

@@ -43,35 +43,35 @@ impl Device {
     }
 
     fn signals_targets_changed(&self) {
-        let inputs_values = self
+        let inputs = self
             .signal_inputs
             .iter()
             .map(|signal_input| signal_input.take_last())
             .collect::<Box<[_]>>();
 
         // if no signal is pending, don't recalculate
-        if !inputs_values.iter().any(|value| value.pending) {
+        if !inputs.iter().any(|input| input.pending) {
             return;
         }
 
-        let counts_known = inputs_values
+        let counts_known = inputs // line break
             .iter()
             .filter(|last| last.value.is_some())
             .count();
-        let counts_one = inputs_values
+        let counts_one = inputs
             .iter()
             .filter(|last| last.value == Some(true))
             .count();
 
-        let ratio = (counts_one as f64) / (counts_known as f64);
-        let ratio: Option<Ratio> = if ratio.is_finite() {
-            Some(Ratio::from_f64(ratio).unwrap())
+        let output = (counts_one as f64) / (counts_known as f64);
+        let output = if output.is_finite() {
+            Some(Ratio::from_f64(output).unwrap())
         } else {
             // eg. division by zero
             None
         };
 
-        if self.signal_output.set_one(ratio) {
+        if self.signal_output.set_one(output) {
             self.signals_sources_changed_waker.wake();
         }
     }

@@ -44,14 +44,18 @@ where
     }
 
     fn signals_targets_changed(&self) {
-        if let Some(()) = self.signal_trigger.take_pending() {
-            let value = self.signal_input.take_last().value;
+        match self.signal_trigger.take_pending() {
+            Some(()) => {}
+            None => return,
+        }
 
-            if let Some(value) = value {
-                if self.signal_output.push_one(value) {
-                    self.signals_sources_changed_waker.wake();
-                }
-            }
+        let output = match self.signal_input.take_last().value {
+            Some(output) => output,
+            None => return,
+        };
+
+        if self.signal_output.push_one(output) {
+            self.signals_sources_changed_waker.wake();
         }
     }
 

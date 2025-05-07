@@ -49,9 +49,9 @@ impl Device {
         pin_mut!(signal_input_changed_stream);
 
         loop {
-            let state_next = self.signal_input.peek_last();
+            let output_next = self.signal_input.peek_last();
 
-            let delay = match state_next {
+            let delay = match output_next {
                 Some(true) => self.configuration.delay_raising,
                 Some(false) => self.configuration.delay_falling,
                 None => Duration::ZERO,
@@ -71,7 +71,7 @@ impl Device {
                 () = exit_flag => break,
             }
 
-            if self.signal_output.set_one(state_next) {
+            if self.signal_output.set_one(output_next) {
                 self.signals_sources_changed_waker.wake();
             }
 

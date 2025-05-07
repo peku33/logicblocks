@@ -41,8 +41,8 @@ impl Device {
             .take_pending()
             .into_iter()
             .flatten()
-            .for_each(|value| {
-                if value {
+            .for_each(|input| {
+                if input {
                     raising += 1;
                 } else {
                     falling += 1;

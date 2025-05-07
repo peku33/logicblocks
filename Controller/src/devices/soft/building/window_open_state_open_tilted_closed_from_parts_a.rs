@@ -47,34 +47,39 @@ impl Device {
     }
 
     fn calculate(
-        &self,
-        input_opened: Option<bool>,
-        input_tilted: Option<bool>,
+        opened: bool,
+        tilted: bool,
+        open_on_opened_not_tilted: bool,
     ) -> Option<WindowOpenStateOpenTiltedClosed> {
-        match (input_opened, input_tilted) {
-            (Some(input_opened), Some(input_tilted)) => match (input_opened, input_tilted) {
-                (false, false) => Some(WindowOpenStateOpenTiltedClosed::Closed),
-                (false, true) => Some(WindowOpenStateOpenTiltedClosed::Tilted),
-                (true, true) => Some(WindowOpenStateOpenTiltedClosed::Open),
-                (true, false) => {
-                    if self.configuration.open_on_opened_not_tilted {
-                        Some(WindowOpenStateOpenTiltedClosed::Open)
-                    } else {
-                        None
-                    }
+        match (opened, tilted) {
+            (false, false) => Some(WindowOpenStateOpenTiltedClosed::Closed),
+            (false, true) => Some(WindowOpenStateOpenTiltedClosed::Tilted),
+            (true, true) => Some(WindowOpenStateOpenTiltedClosed::Open),
+            (true, false) => {
+                if open_on_opened_not_tilted {
+                    Some(WindowOpenStateOpenTiltedClosed::Open)
+                } else {
+                    None
                 }
-            },
-            _ => None,
+            }
         }
+    }
+    fn calculate_optional(
+        opened: Option<bool>,
+        tilted: Option<bool>,
+        open_on_opened_not_tilted: bool,
+    ) -> Option<WindowOpenStateOpenTiltedClosed> {
+        Self::calculate(open_on_opened_not_tilted, opened?, tilted?)
     }
 
     fn signals_targets_changed(&self) {
-        let signal_output = self.calculate(
-            self.signal_input_opened.take_last().value,
-            self.signal_input_tilted.take_last().value,
-        );
+        let opened = self.signal_input_opened.take_last().value;
+        let tilted = self.signal_input_tilted.take_last().value;
 
-        if self.signal_output.set_one(signal_output) {
+        let output =
+            Self::calculate_optional(opened, tilted, self.configuration.open_on_opened_not_tilted);
+
+        if self.signal_output.set_one(output) {
             self.signals_sources_changed_waker.wake();
         }
     }

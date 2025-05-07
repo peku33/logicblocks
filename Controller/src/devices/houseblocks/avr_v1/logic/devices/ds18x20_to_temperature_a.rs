@@ -32,12 +32,15 @@ impl Device {
     }
 
     fn signals_targets_changed(&self) {
-        if let Some(signal_input) = self.signal_input.take_pending() {
-            let temperature = signal_input.and_then(|ds18x20_state| ds18x20_state.temperature);
+        let input = match self.signal_input.take_pending() {
+            Some(input) => input,
+            None => return,
+        };
 
-            if self.signal_output.set_one(temperature) {
-                self.signals_sources_changed_waker.wake();
-            }
+        let output = input.and_then(|input| input.temperature);
+
+        if self.signal_output.set_one(output) {
+            self.signals_sources_changed_waker.wake();
         }
     }
 

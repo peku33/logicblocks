@@ -73,9 +73,9 @@ impl Device {
 
     fn signals_targets_changed(&self) {
         let input = self.signal_input.take_pending();
-        let r = self.signal_r.take_pending().is_some();
-        let s = self.signal_s.take_pending().is_some();
-        let t = self.signal_t.take_pending().is_some();
+        let r = self.signal_r.take_pending() == Some(());
+        let s = self.signal_s.take_pending() == Some(());
+        let t = self.signal_t.take_pending() == Some(());
 
         if let Some(value) = input {
             self.set(value);

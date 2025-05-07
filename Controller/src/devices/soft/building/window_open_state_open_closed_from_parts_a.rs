@@ -31,22 +31,22 @@ impl Device {
     }
 
     fn calculate(input_opened: Option<bool>) -> Option<WindowOpenStateOpenClosed> {
-        match input_opened {
-            Some(value) => match value {
-                true => Some(WindowOpenStateOpenClosed::Open),
-                false => Some(WindowOpenStateOpenClosed::Closed),
-            },
-            None => None,
+        match input_opened? {
+            true => Some(WindowOpenStateOpenClosed::Open),
+            false => Some(WindowOpenStateOpenClosed::Closed),
         }
     }
 
     fn signals_targets_changed(&self) {
-        if let Some(signal_input_opened) = self.signal_input_opened.take_pending() {
-            let signal_output = Self::calculate(signal_input_opened);
+        let input_opened = match self.signal_input_opened.take_pending() {
+            Some(input_opened) => input_opened,
+            None => return,
+        };
 
-            if self.signal_output.set_one(signal_output) {
-                self.signals_sources_changed_waker.wake();
-            }
+        let output = Self::calculate(input_opened);
+
+        if self.signal_output.set_one(output) {
+            self.signals_sources_changed_waker.wake();
         }
     }
 

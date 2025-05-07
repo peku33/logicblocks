@@ -30,21 +30,27 @@ impl Device {
         }
     }
 
-    fn signals_targets_changed(&self) {
-        if let Some(signal_input) = self.signal_input.take_pending() {
-            let value = match signal_input {
-                Some(value) => {
-                    let value = value.to_f64();
-                    let value = value.clamp(0.0, 1.0);
-                    let value = Ratio::from_f64(value).unwrap();
-                    Some(value)
-                }
-                None => None,
-            };
+    fn calculate(value: &Multiplier) -> Ratio {
+        let value = value.to_f64();
+        let value = value.clamp(0.0, 1.0);
+        let value = Ratio::from_f64(value).unwrap();
+        value
+    }
+    fn calculate_optional(input: Option<&Multiplier>) -> Option<Ratio> {
+        Some(Self::calculate(input?))
+    }
 
-            if self.signal_output.set_one(value) {
-                self.signals_sources_changed_waker.wake();
-            }
+    fn signals_targets_changed(&self) {
+        let input = match self.signal_input.take_pending() {
+            Some(input) => input,
+            None => return,
+        };
+        let input = input.as_ref();
+
+        let output = Self::calculate_optional(input);
+
+        if self.signal_output.set_one(output) {
+            self.signals_sources_changed_waker.wake();
         }
     }
 

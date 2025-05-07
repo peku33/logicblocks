@@ -38,12 +38,15 @@ where
     }
 
     fn signals_targets_changed(&self) {
-        if let Some(()) = self.signal_trigger.take_pending() {
-            let value = self.signal_input.take_last().value;
+        match self.signal_trigger.take_pending() {
+            Some(()) => {},
+            None => return,
+        };
 
-            if self.signal_output.set_one(value) {
-                self.signals_sources_changed_waker.wake();
-            }
+        let output = self.signal_input.take_last().value;
+
+        if self.signal_output.set_one(output) {
+            self.signals_sources_changed_waker.wake();
         }
     }
 

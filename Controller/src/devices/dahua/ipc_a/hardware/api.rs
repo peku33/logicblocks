@@ -482,7 +482,7 @@ impl Api {
         Ok(())
     }
 
-    fn error_is_invalid_session(error: &Option<serde_json::Value>) -> bool {
+    fn error_is_invalid_session(error: Option<&serde_json::Value>) -> bool {
         let error = match error {
             Some(error) => error,
             None => return false,
@@ -532,7 +532,7 @@ impl Api {
                 .context("rpc2_request")?;
 
             // if error means invalid session, retry
-            if retry_id < RETRY_COUNT && Self::error_is_invalid_session(&response.error) {
+            if retry_id < RETRY_COUNT && Self::error_is_invalid_session(response.error.as_ref()) {
                 self.rpc2_session_clear()
                     .await
                     .context("rpc2_session_clear")?;

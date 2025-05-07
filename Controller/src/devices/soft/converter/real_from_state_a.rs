@@ -39,14 +39,14 @@ where
     }
 
     fn signals_targets_changed(&self) {
-        let values = self
+        let outputs = self
             .signal_input
             .take_pending()
             .into_iter()
-            .map(|value| value.and_then(|value| V::try_from(value).ok()))
+            .map(|input| input.and_then(|input| V::try_from(input).ok()))
             .collect::<Box<[Option<V>]>>();
 
-        if self.signal_output.set_many(values) {
+        if self.signal_output.set_many(outputs) {
             self.signals_sources_changed_waker.wake();
         }
     }

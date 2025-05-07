@@ -47,10 +47,10 @@ where
     }
 
     fn signals_targets_changed(&self) {
-        let output = Self::calculate(
-            self.signal_input.take_last().value,
-            self.signal_gate.take_last().value,
-        );
+        let input = self.signal_input.take_last().value;
+        let gate = self.signal_gate.take_last().value;
+
+        let output = Self::calculate(input, gate);
 
         if self.signal_output.set_one(output) {
             self.signals_sources_changed_waker.wake();

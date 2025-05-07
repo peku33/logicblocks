@@ -48,18 +48,16 @@ where
     }
 
     fn signals_targets_changed(&self) {
-        let inputs_values = self
+        let inputs = self
             .signal_inputs
             .iter()
             .map(|signal_input| signal_input.take_last())
             .collect::<Box<[_]>>();
 
         // get first non-None value
-        let value = inputs_values
-            .into_iter()
-            .find_map(|value| value.value);
+        let output = inputs.into_iter().find_map(|input| input.value);
 
-        if self.signal_output.set_one(value) {
+        if self.signal_output.set_one(output) {
             self.signals_sources_changed_waker.wake();
         }
     }

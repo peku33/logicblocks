@@ -30,14 +30,12 @@ impl Device {
     }
 
     fn signals_targets_changed(&self) {
-        let values = self.signal_input.take_pending();
-
-        let values = values
+        let outputs = self.signal_input.take_pending()
             .into_iter()
-            .map(|value| value.map(|value| !value))
+            .map(|input| input.map(|input| !input))
             .collect::<Box<[_]>>();
 
-        if self.signal_output.set_many(values) {
+        if self.signal_output.set_many(outputs) {
             self.signals_sources_changed_waker.wake();
         }
     }

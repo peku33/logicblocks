@@ -43,8 +43,8 @@ where
         self.signal_input
             .take_pending()
             .into_iter()
-            .for_each(|value| {
-                self.sink.push(now, value);
+            .for_each(|input| {
+                self.sink.push(now, input);
             });
     }
 

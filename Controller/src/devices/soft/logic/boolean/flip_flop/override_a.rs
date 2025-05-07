@@ -112,18 +112,25 @@ impl Device {
     }
 
     fn signals_targets_changed(&self) {
+        let mode_set_pass_through = self.signal_mode_set_pass_through.take_pending() == Some(());
+        let mode_set_override = self.signal_mode_set_override.take_pending();
+        let mode_cycle_pass_through =
+            self.signal_mode_cycle_pass_through.take_pending() == Some(());
+        let mode_cycle_no_pass_through =
+            self.signal_mode_cycle_no_pass_through.take_pending() == Some(());
+
         let recalculate_operation = match (
-            self.signal_mode_set_pass_through.take_pending(),
-            self.signal_mode_set_override.take_pending(),
-            self.signal_mode_cycle_pass_through.take_pending(),
-            self.signal_mode_cycle_no_pass_through.take_pending(),
+            mode_set_pass_through,
+            mode_set_override,
+            mode_cycle_pass_through,
+            mode_cycle_no_pass_through,
         ) {
-            (Some(()), None, None, None) => RecalculateOperation::ModeSet(Mode::PassThrough),
-            (None, Some(override_value), None, None) => {
+            (true, None, false, false) => RecalculateOperation::ModeSet(Mode::PassThrough),
+            (false, Some(override_value), false, false) => {
                 RecalculateOperation::ModeSet(Mode::Override(override_value))
             }
-            (None, None, Some(()), None) => RecalculateOperation::ModeCyclePassThrough,
-            (None, None, None, Some(())) => RecalculateOperation::ModeCycleNoPassThrough,
+            (false, None, true, false) => RecalculateOperation::ModeCyclePassThrough,
+            (false, None, false, true) => RecalculateOperation::ModeCycleNoPassThrough,
             _ => RecalculateOperation::None, // input could have been changed
         };
 
@@ -168,11 +175,12 @@ impl Device {
         let mode = *mode_lock;
         drop(mode_lock);
 
-        let output_value = match (mode, input_value) {
+        let output = match (mode, input_value) {
             (Mode::PassThrough, input_value) => input_value,
             (Mode::Override(override_value), _) => Some(override_value),
         };
-        signals_sources_changed |= self.signal_output.set_one(output_value);
+
+        signals_sources_changed |= self.signal_output.set_one(output);
 
         if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
