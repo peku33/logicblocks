@@ -324,10 +324,8 @@ impl<'a> Configurator<'a> {
 
         let system_capabilities = device_capabilities.get_child("SysCap");
 
-        let audio_capabilities = match system_capabilities {
-            Some(system_capabilities) => system_capabilities.get_child("AudioCap"),
-            None => None,
-        };
+        let audio_capabilities = system_capabilities
+            .and_then(|system_capabilities| system_capabilities.get_child("AudioCap"));
         let audio = audio_capabilities.is_some();
 
         let capabilities = Capabilities { audio };
