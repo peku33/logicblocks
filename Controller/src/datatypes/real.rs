@@ -1,12 +1,32 @@
 use anyhow::{Error, ensure};
+use derive_more::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    PartialOrd,
+    Add,
+    AddAssign,
+    Sub,
+    SubAssign,
+    Mul,
+    MulAssign,
+    Debug,
+    Serialize,
+    Deserialize,
+)]
+#[mul(forward)]
 #[serde(try_from = "RealSerde")]
 #[serde(into = "RealSerde")]
 pub struct Real(f64);
 impl Real {
+    pub const fn zero() -> Self {
+        Self(0.0)
+    }
+
     pub fn from_f64(value: f64) -> Result<Self, Error> {
         ensure!(value.is_finite(), "value must be finite");
         Ok(Self(value))
