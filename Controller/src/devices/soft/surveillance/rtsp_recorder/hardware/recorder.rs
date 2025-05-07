@@ -166,6 +166,10 @@ impl Recorder {
             .args(["-reset_timestamps", "1"])
             .args(["-avoid_negative_ts", "1"])
             .arg(self.temporary_storage_directory.join("%s.mkv").as_os_str());
+
+        #[cfg(unix)]
+        command.process_group(0);
+
         command
     }
     async fn ffmpeg_run_once(
