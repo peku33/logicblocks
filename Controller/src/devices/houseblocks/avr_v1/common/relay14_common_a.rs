@@ -376,8 +376,10 @@ pub mod hardware {
             &self,
             serializer: &mut Serializer,
         ) {
-            let values = iter::empty()
-                .chain(self.values.iter().copied())
+            let values = self
+                .values
+                .iter()
+                .copied()
                 .chain(iter::repeat(false))
                 .take(16)
                 .collect::<ArrayVec<_, 16>>()

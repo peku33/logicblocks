@@ -13,7 +13,7 @@ pub mod logic {
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
     use futures::{future::FutureExt, join, stream::StreamExt};
-    use itertools::Itertools;
+    use itertools::{Itertools, chain};
     use serde::Serialize;
     use std::iter;
 
@@ -336,12 +336,12 @@ pub mod logic {
 
         type Identifier = SignalIdentifier;
         fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-            iter::empty()
-                .chain([(
+            chain!(
+                iter::once((
                     SignalIdentifier::StatusLed,
                     &self.signal_status_led as &dyn signal::Base,
-                )])
-                .chain(self.signal_analog_ins.iter().enumerate().filter_map(
+                )),
+                self.signal_analog_ins.iter().enumerate().filter_map(
                     |(analog_in_index, signal_analog_in)| {
                         signal_analog_in.as_ref().map(|signal_analog_in| {
                             (
@@ -350,8 +350,8 @@ pub mod logic {
                             )
                         })
                     },
-                ))
-                .chain(self.signal_digital_ins.iter().enumerate().filter_map(
+                ),
+                self.signal_digital_ins.iter().enumerate().filter_map(
                     |(digital_in_index, signal_digital_in)| {
                         signal_digital_in.as_ref().map(|signal_digital_in| {
                             (
@@ -360,8 +360,8 @@ pub mod logic {
                             )
                         })
                     },
-                ))
-                .chain(self.signal_digital_outs.iter().enumerate().filter_map(
+                ),
+                self.signal_digital_outs.iter().enumerate().filter_map(
                     |(digital_out_index, signal_digital_out)| {
                         signal_digital_out.as_ref().map(|signal_digital_out| {
                             (
@@ -370,8 +370,8 @@ pub mod logic {
                             )
                         })
                     },
-                ))
-                .chain(self.signal_ds18x20s.iter().enumerate().filter_map(
+                ),
+                self.signal_ds18x20s.iter().enumerate().filter_map(
                     |(ds18x20_index, signal_ds18x20)| {
                         signal_ds18x20.as_ref().map(|signal_ds18x20| {
                             (
@@ -380,8 +380,9 @@ pub mod logic {
                             )
                         })
                     },
-                ))
-                .collect::<signals::ByIdentifier<_>>()
+                ),
+            )
+            .collect::<signals::ByIdentifier<_>>()
         }
     }
 
@@ -549,6 +550,7 @@ pub mod hardware {
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
     use futures::{future::FutureExt, join, stream::StreamExt};
+    use itertools::chain;
     use std::{iter, time::Duration};
 
     // block configuration
@@ -631,82 +633,70 @@ pub mod hardware {
     }
     impl BlockFunctionsReversed {
         pub fn new(block_functions: &BlockFunctions) -> Self {
-            let analog_in_mask = iter::empty()
-                .chain(
-                    block_functions
-                        .block_1_functions
-                        .iter()
-                        .map(|block_1_function| *block_1_function == Block1Function::AnalogIn),
-                )
-                .chain(
-                    block_functions
-                        .block_3_functions
-                        .iter()
-                        .map(|block_3_function| *block_3_function == Block3Function::AnalogIn),
-                )
-                .collect::<ArrayVec<_, { ANALOG_IN_COUNT }>>()
-                .into_inner()
-                .unwrap();
+            let analog_in_mask = chain!(
+                block_functions
+                    .block_1_functions
+                    .iter()
+                    .map(|block_1_function| *block_1_function == Block1Function::AnalogIn),
+                block_functions
+                    .block_3_functions
+                    .iter()
+                    .map(|block_3_function| *block_3_function == Block3Function::AnalogIn),
+            )
+            .collect::<ArrayVec<_, { ANALOG_IN_COUNT }>>()
+            .into_inner()
+            .unwrap();
             let analog_in_any = analog_in_mask
                 .iter()
                 .any(|analog_in_enabled| *analog_in_enabled);
 
-            let digital_in_mask = iter::empty()
-                .chain(
-                    block_functions
-                        .block_1_functions
-                        .iter()
-                        .map(|block_1_function| *block_1_function == Block1Function::DigitalIn),
-                )
-                .chain(
-                    block_functions
-                        .block_2_functions
-                        .iter()
-                        .map(|block_2_function| *block_2_function == Block2Function::DigitalIn),
-                )
-                .collect::<ArrayVec<_, { DIGITAL_IN_COUNT }>>()
-                .into_inner()
-                .unwrap();
+            let digital_in_mask = chain!(
+                block_functions
+                    .block_1_functions
+                    .iter()
+                    .map(|block_1_function| *block_1_function == Block1Function::DigitalIn),
+                block_functions
+                    .block_2_functions
+                    .iter()
+                    .map(|block_2_function| *block_2_function == Block2Function::DigitalIn),
+            )
+            .collect::<ArrayVec<_, { DIGITAL_IN_COUNT }>>()
+            .into_inner()
+            .unwrap();
             let digital_in_any = digital_in_mask
                 .iter()
                 .any(|digital_in_enabled| *digital_in_enabled);
 
-            let digital_out_mask = iter::empty()
-                .chain(
-                    block_functions
-                        .block_1_functions
-                        .iter()
-                        .map(|block_1_function| *block_1_function == Block1Function::DigitalOut),
-                )
-                .chain(
-                    block_functions
-                        .block_2_functions
-                        .iter()
-                        .map(|block_2_function| *block_2_function == Block2Function::DigitalOut),
-                )
-                .chain(
-                    block_functions
-                        .block_4_functions
-                        .iter()
-                        .map(|block_4_function| *block_4_function == Block4Function::DigitalOut),
-                )
-                .collect::<ArrayVec<_, { DIGITAL_OUT_COUNT }>>()
-                .into_inner()
-                .unwrap();
+            let digital_out_mask = chain!(
+                block_functions
+                    .block_1_functions
+                    .iter()
+                    .map(|block_1_function| *block_1_function == Block1Function::DigitalOut),
+                block_functions
+                    .block_2_functions
+                    .iter()
+                    .map(|block_2_function| *block_2_function == Block2Function::DigitalOut),
+                block_functions
+                    .block_4_functions
+                    .iter()
+                    .map(|block_4_function| *block_4_function == Block4Function::DigitalOut),
+            )
+            .collect::<ArrayVec<_, { DIGITAL_OUT_COUNT }>>()
+            .into_inner()
+            .unwrap();
             let digital_out_any = digital_out_mask
                 .iter()
                 .any(|digital_out_enabled| *digital_out_enabled);
 
-            let ds18x20_mask = iter::empty()
-                .chain(
-                    block_functions
-                        .block_2_functions
-                        .iter()
-                        .map(|block_2_function| *block_2_function == Block2Function::Ds18x20),
-                )
-                .collect::<ArrayVec<_, { DS18X20_COUNT }>>()
-                .into_inner()
-                .unwrap();
+            let ds18x20_mask = chain!(
+                block_functions
+                    .block_2_functions
+                    .iter()
+                    .map(|block_2_function| *block_2_function == Block2Function::Ds18x20),
+            )
+            .collect::<ArrayVec<_, { DS18X20_COUNT }>>()
+            .into_inner()
+            .unwrap();
             let ds18x20_any = ds18x20_mask.iter().any(|ds18x20_enabled| *ds18x20_enabled);
 
             Self {
@@ -1177,8 +1167,10 @@ pub mod hardware {
             &self,
             serializer: &mut Serializer,
         ) {
-            let values = iter::empty()
-                .chain(self.values.iter().copied())
+            let values = self
+                .values
+                .iter()
+                .copied()
                 .chain(iter::repeat(false))
                 .take(16)
                 .collect::<ArrayVec<_, 16>>()

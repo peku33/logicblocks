@@ -14,6 +14,7 @@ pub mod logic {
     use arrayvec::ArrayVec;
     use async_trait::async_trait;
     use futures::{future::FutureExt, join, stream::StreamExt};
+    use itertools::chain;
     use serde::Serialize;
     use std::{iter, time::Duration};
 
@@ -222,40 +223,35 @@ pub mod logic {
 
         type Identifier = SignalIdentifier;
         fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-            iter::empty()
-                .chain(
-                    self.signal_keys
-                        .iter()
-                        .enumerate()
-                        .map(|(key_index, signal_key)| {
-                            (
-                                SignalIdentifier::Key(key_index),
-                                signal_key as &dyn signal::Base,
-                            )
-                        }),
-                )
-                .chain(
-                    self.signal_leds
-                        .iter()
-                        .enumerate()
-                        .map(|(led_index, signal_led)| {
-                            (
-                                SignalIdentifier::Led(led_index),
-                                signal_led as &dyn signal::Base,
-                            )
-                        }),
-                )
-                .chain([
-                    (
-                        SignalIdentifier::Buzzer,
-                        &self.signal_buzzer as &dyn signal::Base,
-                    ),
-                    (
-                        SignalIdentifier::Temperature,
-                        &self.signal_temperature as &dyn signal::Base,
-                    ),
-                ])
-                .collect::<signals::ByIdentifier<_>>()
+            chain!(
+                self.signal_keys
+                    .iter()
+                    .enumerate()
+                    .map(|(key_index, signal_key)| {
+                        (
+                            SignalIdentifier::Key(key_index),
+                            signal_key as &dyn signal::Base,
+                        )
+                    }),
+                self.signal_leds
+                    .iter()
+                    .enumerate()
+                    .map(|(led_index, signal_led)| {
+                        (
+                            SignalIdentifier::Led(led_index),
+                            signal_led as &dyn signal::Base,
+                        )
+                    }),
+                iter::once((
+                    SignalIdentifier::Buzzer,
+                    &self.signal_buzzer as &dyn signal::Base,
+                )),
+                iter::once((
+                    SignalIdentifier::Temperature,
+                    &self.signal_temperature as &dyn signal::Base,
+                )),
+            )
+            .collect::<signals::ByIdentifier<_>>()
         }
     }
 
@@ -601,8 +597,10 @@ pub mod hardware {
             &self,
             serializer: &mut Serializer,
         ) {
-            let values = iter::empty()
-                .chain(self.values.iter().copied())
+            let values = self
+                .values
+                .iter()
+                .copied()
                 .chain(iter::repeat(false))
                 .take(8)
                 .collect::<ArrayVec<_, 8>>()

@@ -1,4 +1,4 @@
-use itertools::Itertools;
+use itertools::{Itertools, chain};
 use std::{fmt, iter};
 
 fn item_validate(item: &str) {
@@ -35,7 +35,7 @@ impl ModulePath {
             item_validate(extension);
         }
 
-        self.items.iter().copied().chain(extension).join(".")
+        chain!(self.items.iter().copied(), extension,).join(".")
     }
 }
 impl fmt::Display for ModulePath {
@@ -91,13 +91,12 @@ impl ModulePathName {
             item_validate(extension);
         }
 
-        self.module_path
-            .items
-            .iter()
-            .copied()
-            .chain(iter::once(&*self.name))
-            .chain(extension)
-            .join(".")
+        chain!(
+            self.module_path.items.iter().copied(),
+            iter::once(&*self.name),
+            extension
+        )
+        .join(".")
     }
 }
 impl fmt::Display for ModulePathName {

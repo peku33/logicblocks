@@ -17,7 +17,7 @@ use futures::{
     join,
     stream::StreamExt,
 };
-use itertools::{Itertools, izip, zip_eq};
+use itertools::{Itertools, chain, izip, zip_eq};
 use parking_lot::RwLock;
 use serde::Serialize;
 use std::{borrow::Cow, cmp::min, collections::HashMap, iter, time::Duration};
@@ -1030,29 +1030,26 @@ impl signals::Device for Device {
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-        iter::empty()
-            .chain([
-                (
-                    SignalIdentifier::AddAll,
-                    &self.signal_add_all as &dyn signal::Base,
-                ),
-                (
-                    SignalIdentifier::Power,
-                    &self.signal_power as &dyn signal::Base,
-                ),
-            ])
-            .chain(
-                self.signal_outputs
-                    .iter()
-                    .enumerate()
-                    .map(|(output_index, output_signal)| {
-                        (
-                            SignalIdentifier::Output(output_index),
-                            output_signal as &dyn signal::Base,
-                        )
-                    }),
-            )
-            .collect::<signals::ByIdentifier<_>>()
+        chain!(
+            iter::once((
+                SignalIdentifier::AddAll,
+                &self.signal_add_all as &dyn signal::Base,
+            )),
+            iter::once((
+                SignalIdentifier::Power,
+                &self.signal_power as &dyn signal::Base,
+            )),
+            self.signal_outputs
+                .iter()
+                .enumerate()
+                .map(|(output_index, output_signal)| {
+                    (
+                        SignalIdentifier::Output(output_index),
+                        output_signal as &dyn signal::Base,
+                    )
+                }),
+        )
+        .collect::<signals::ByIdentifier<_>>()
     }
 }
 

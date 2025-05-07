@@ -8,6 +8,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
+use itertools::chain;
 use std::{borrow::Cow, iter, time::Duration};
 
 #[derive(Debug)]
@@ -190,18 +191,16 @@ impl signals::Device for Device {
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-        iter::empty()
-            .chain([
-                (
-                    SignalIdentifier::Input,
-                    &self.signal_input as &dyn signal::Base,
-                ),
-                (
-                    SignalIdentifier::Started,
-                    &self.signal_started as &dyn signal::Base,
-                ),
-            ])
-            .chain(self.signal_breakpoints.iter().enumerate().flat_map(
+        chain!(
+            iter::once((
+                SignalIdentifier::Input,
+                &self.signal_input as &dyn signal::Base,
+            )),
+            iter::once((
+                SignalIdentifier::Started,
+                &self.signal_started as &dyn signal::Base,
+            )),
+            self.signal_breakpoints.iter().enumerate().flat_map(
                 |(breakpoint_index, (signal_released, signal_expired))| {
                     [
                         (
@@ -214,11 +213,12 @@ impl signals::Device for Device {
                         ),
                     ]
                 },
-            ))
-            .chain([(
+            ),
+            iter::once((
                 SignalIdentifier::Finished,
                 &self.signal_finished as &dyn signal::Base,
-            )])
-            .collect::<signals::ByIdentifier<_>>()
+            )),
+        )
+        .collect::<signals::ByIdentifier<_>>()
     }
 }

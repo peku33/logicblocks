@@ -10,6 +10,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::StreamExt;
+use itertools::chain;
 use std::{any::type_name, borrow::Cow, iter};
 
 #[derive(Debug)]
@@ -183,27 +184,28 @@ where
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-        iter::empty()
-            .chain(iter::once((
+        chain!(
+            iter::once((
                 SignalIdentifier::Input,
                 &self.signal_input as &dyn signal::Base,
-            )))
-            .chain(self.signal_range_false.as_ref().map(|signal_range_false| {
+            )),
+            self.signal_range_false.as_ref().map(|signal_range_false| {
                 (
                     SignalIdentifier::RangeFalse,
                     signal_range_false as &dyn signal::Base,
                 )
-            }))
-            .chain(self.signal_range_true.as_ref().map(|signal_range_true| {
+            }),
+            self.signal_range_true.as_ref().map(|signal_range_true| {
                 (
                     SignalIdentifier::RangeTrue,
                     signal_range_true as &dyn signal::Base,
                 )
-            }))
-            .chain(iter::once((
+            }),
+            iter::once((
                 SignalIdentifier::Output,
                 &self.signal_output as &dyn signal::Base,
-            )))
-            .collect::<signals::ByIdentifier<_>>()
+            )),
+        )
+        .collect::<signals::ByIdentifier<_>>()
     }
 }

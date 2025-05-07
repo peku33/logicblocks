@@ -9,6 +9,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::StreamExt;
+use itertools::chain;
 use std::{any::type_name, borrow::Cow, iter};
 
 #[derive(Debug)]
@@ -199,23 +200,24 @@ where
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
-        iter::empty()
-            .chain(self.signal_a.as_ref().map(|signal_a| {
+        chain!(
+            self.signal_a.as_ref().map(|signal_a| {
                 (
                     SignalIdentifier::A, // line break
                     signal_a as &dyn signal::Base,
                 )
-            }))
-            .chain(self.signal_b.as_ref().map(|signal_b| {
+            }),
+            self.signal_b.as_ref().map(|signal_b| {
                 (
                     SignalIdentifier::B, // line break
                     signal_b as &dyn signal::Base,
                 )
-            }))
-            .chain(iter::once((
+            }),
+            iter::once((
                 SignalIdentifier::Output,
                 &self.signal_output as &dyn signal::Base,
-            )))
-            .collect::<signals::ByIdentifier<_>>()
+            )),
+        )
+        .collect::<signals::ByIdentifier<_>>()
     }
 }
