@@ -16,14 +16,14 @@ use std::{any::type_name, borrow::Cow, iter};
 #[derive(Debug)]
 pub struct Configuration<V>
 where
-    V: Value + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     pub range_fixed: Option<Range<V>>,
 }
 #[derive(Debug)]
 pub struct Device<V>
 where
-    V: Value + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     configuration: Configuration<V>,
 
@@ -37,7 +37,7 @@ where
 }
 impl<V> Device<V>
 where
-    V: Value + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     pub fn new(configuration: Configuration<V>) -> Self {
         let range_fixed = configuration.range_fixed.is_some();
@@ -125,7 +125,7 @@ where
 
 impl<V> devices::Device for Device<V>
 where
-    V: Value + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     fn class(&self) -> Cow<'static, str> {
         Cow::from(format!("soft/logic/compare/clamp_a<{}>", type_name::<V>()))
@@ -142,7 +142,7 @@ where
 #[async_trait]
 impl<V> Runnable for Device<V>
 where
-    V: Value + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     async fn run(
         &self,
@@ -163,7 +163,7 @@ pub enum SignalIdentifier {
 impl signals::Identifier for SignalIdentifier {}
 impl<V> signals::Device for Device<V>
 where
-    V: Value + Ord + Clone,
+    V: Value + PartialOrd + Clone,
 {
     fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
         Some(&self.signals_targets_changed_waker)

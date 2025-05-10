@@ -13,7 +13,7 @@ pub struct Range<T> {
 }
 impl<T> Range<T>
 where
-    T: Ord,
+    T: PartialOrd,
 {
     pub fn contains(
         &self,
@@ -41,7 +41,7 @@ where
 }
 impl<T> Range<T>
 where
-    T: Clone + Ord,
+    T: Clone + PartialOrd,
 {
     pub fn clamp_to(
         &self,
