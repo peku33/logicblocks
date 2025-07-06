@@ -56,7 +56,7 @@ impl<'f> Manager<'f> {
         name: String,
         fs: &'f Fs,
     ) -> Self {
-        let sqlite = SQLite::new(format!("rtsp_recorder.manager.{}", name), fs);
+        let sqlite = SQLite::new(format!("rtsp_recorder.manager.{name}"), fs);
 
         let initialized = Barrier::new();
 
@@ -127,7 +127,7 @@ impl<'f> Manager<'f> {
                 Ok(()) => break Ok(()),
                 Err(error) => error,
             };
-            log::error!("{}: {:?}", self, error);
+            log::error!("{self}: {error:?}");
 
             select! {
                 () = tokio::time::sleep(ERROR_DELAY).fuse() => {},
@@ -271,7 +271,7 @@ impl<'f> Manager<'f> {
                 Ok(Exited) => break,
                 Err(error) => error,
             };
-            log::error!("{}: {:?}", self, error);
+            log::error!("{self}: {error:?}");
 
             select! {
                 () = tokio::time::sleep(ERROR_DELAY).fuse() => {},
@@ -364,7 +364,7 @@ impl<'f> Manager<'f> {
             match result {
                 Ok(()) => {}
                 Err(error) => {
-                    log::error!("{}: cleanup: {:?} (#{})", self, error, recording_id);
+                    log::error!("{self}: cleanup: {error:?} (#{recording_id})");
                 }
             }
         }
@@ -429,7 +429,7 @@ impl<'f> Manager<'f> {
                 Ok(Exited) => break,
                 Err(error) => error,
             };
-            log::error!("{}: {:?}", self, error);
+            log::error!("{self}: {error:?}");
 
             select! {
                 () = tokio::time::sleep(ERROR_DELAY).fuse() => {},
@@ -465,7 +465,7 @@ impl<'f> Manager<'f> {
         // <channel_id>/<year (2020)>/<month (01)>/<day (01)>/<hh>_<mm>_<ss>.<ext>
 
         let mut path_buf = PathBuf::new();
-        path_buf.push(format!("{:0>3}", channel_id));
+        path_buf.push(format!("{channel_id:0>3}"));
         path_buf.push(format!("{:0>2}", channel_segment.segment.time_start.year()));
         path_buf.push(format!(
             "{:0>2}",

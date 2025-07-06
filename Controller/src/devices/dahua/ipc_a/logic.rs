@@ -409,7 +409,7 @@ impl signals::Device for Device {
     }
 
     type Identifier = SignalIdentifier;
-    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+    fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
         hashmap! {
             SignalIdentifier::RtspUrlMain => &self.signal_rtsp_url_main as &dyn signal::Base,
             SignalIdentifier::RtspUrlSub1 => &self.signal_rtsp_url_sub1 as &dyn signal::Base,

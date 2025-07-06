@@ -22,7 +22,7 @@ pub mod logic {
     impl runner::DeviceFactory for DeviceFactory {
         type Device<'h> = Device<'h>;
 
-        fn new(hardware_device: &hardware::Device) -> Device {
+        fn new(hardware_device: &hardware::Device) -> Device<'_> {
             Device::new(hardware_device)
         }
     }
@@ -126,15 +126,14 @@ pub mod logic {
             let mut properties_outs_changed = false;
             let mut gui_summary_changed = false;
 
-            if let Some(status_led_value) = self.signal_status_led.take_pending() {
-                if self
+            if let Some(status_led_value) = self.signal_status_led.take_pending()
+                && self
                     .properties_remote
                     .status_led
                     .set(status_led_value.unwrap_or(ColorRgbBoolean::off()))
-                {
-                    properties_outs_changed = true;
-                    gui_summary_changed = true;
-                }
+            {
+                properties_outs_changed = true;
+                gui_summary_changed = true;
             }
 
             let digital_outs_last = self
@@ -335,7 +334,7 @@ pub mod logic {
         }
 
         type Identifier = SignalIdentifier;
-        fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+        fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
             chain!(
                 iter::once((
                     SignalIdentifier::StatusLed,
@@ -764,7 +763,7 @@ pub mod hardware {
                 || self.ds18x20s.device_reset()
         }
 
-        pub fn remote(&self) -> PropertiesRemote {
+        pub fn remote(&self) -> PropertiesRemote<'_> {
             PropertiesRemote {
                 ins_changed_waker_remote: self.ins_changed_waker.remote(),
                 outs_changed_waker_remote: self.outs_changed_waker.remote(),
@@ -814,7 +813,7 @@ pub mod hardware {
         pub fn block_functions_reversed(&self) -> &BlockFunctionsReversed {
             &self.block_functions_reversed
         }
-        pub fn properties_remote(&self) -> PropertiesRemote {
+        pub fn properties_remote(&self) -> PropertiesRemote<'_> {
             self.properties.remote()
         }
 
@@ -983,14 +982,13 @@ pub mod hardware {
             };
             ensure!(stage_1_response_ds18x20s.is_none());
 
-            if let Some(stage_1_response_digital_ins) = stage_1_response_digital_ins {
-                if self
+            if let Some(stage_1_response_digital_ins) = stage_1_response_digital_ins
+                && self
                     .properties
                     .digital_ins
                     .device_set(stage_1_response_digital_ins.values)
-                {
-                    stage_1_properties_ins_changed = true;
-                }
+            {
+                stage_1_properties_ins_changed = true;
             }
 
             if stage_1_properties_ins_changed {
@@ -1056,23 +1054,21 @@ pub mod hardware {
                     _ => bail!("ds18x20s mismatch"),
                 };
 
-            if let Some(stage_2_response_analog_ins) = stage_2_response_analog_ins {
-                if self
+            if let Some(stage_2_response_analog_ins) = stage_2_response_analog_ins
+                && self
                     .properties
                     .analog_ins
                     .device_set(stage_2_response_analog_ins.values)
-                {
-                    stage_2_properties_ins_changed = true;
-                }
+            {
+                stage_2_properties_ins_changed = true;
             }
-            if let Some(stage_2_response_ds18x20s) = stage_2_response_ds18x20s {
-                if self
+            if let Some(stage_2_response_ds18x20s) = stage_2_response_ds18x20s
+                && self
                     .properties
                     .ds18x20s
                     .device_set(stage_2_response_ds18x20s.values)
-                {
-                    stage_2_properties_ins_changed = true;
-                }
+            {
+                stage_2_properties_ins_changed = true;
             }
 
             if stage_2_properties_ins_changed {

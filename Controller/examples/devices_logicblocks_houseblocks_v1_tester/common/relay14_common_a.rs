@@ -56,7 +56,7 @@ async fn run_inner<S: Specification>(
             let mut output_values = [false; OUTPUT_COUNT];
             output_values[output_index] = true;
 
-            log::info!("outputs: {:?}", output_values);
+            log::info!("outputs: {output_values:?}");
             if outputs.set(output_values) {
                 outs_changed_waker_remote.wake();
             }

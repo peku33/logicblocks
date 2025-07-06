@@ -116,7 +116,7 @@ async fn run_inner(
             let b = (index & (1 << 2)) != 0;
             let status_led_value = StatusLedValue { r, g, b };
 
-            log::info!("status_led: {:?}", status_led_value);
+            log::info!("status_led: {status_led_value:?}");
             if status_led.set(status_led_value) {
                 outs_changed_waker_remote.wake();
             }
@@ -135,7 +135,7 @@ async fn run_inner(
             Some(analog_ins) => analog_ins,
             None => return,
         };
-        log::info!("analog_ins: {:?}", analog_ins);
+        log::info!("analog_ins: {analog_ins:?}");
     };
 
     let digital_ins_changed = || {
@@ -143,7 +143,7 @@ async fn run_inner(
             Some(digital_ins) => digital_ins,
             None => return,
         };
-        log::info!("digital_ins: {:?}", digital_ins);
+        log::info!("digital_ins: {digital_ins:?}");
     };
 
     let digital_out_runner = async {
@@ -153,7 +153,7 @@ async fn run_inner(
             let mut digital_out_values = [false; DIGITAL_OUT_COUNT];
             digital_out_values[index] = true;
 
-            log::info!("digital_out: {:?}", digital_out_values);
+            log::info!("digital_out: {digital_out_values:?}");
             if digital_outs.set(digital_out_values) {
                 outs_changed_waker_remote.wake();
             }
@@ -172,7 +172,7 @@ async fn run_inner(
             Some(ds18x20) => ds18x20,
             None => return,
         };
-        log::info!("ds18x20: {:?}", ds18x20);
+        log::info!("ds18x20: {ds18x20:?}");
     };
 
     let ins_changed_waker_remote_runner = async {
@@ -296,7 +296,7 @@ fn menu_block_1_function(pin_index: usize) -> Result<Block1Function, Error> {
     ];
 
     let option_index = dialoguer::Select::new()
-        .with_prompt(format!("Select function for block #1 pin #{}", pin_index))
+        .with_prompt(format!("Select function for block #1 pin #{pin_index}"))
         .default(0)
         .items(
             options
@@ -354,7 +354,7 @@ fn menu_block_2_function(pin_index: usize) -> Result<Block2Function, Error> {
     ];
 
     let option_index = dialoguer::Select::new()
-        .with_prompt(format!("Select function for block #2 pin #{}", pin_index))
+        .with_prompt(format!("Select function for block #2 pin #{pin_index}"))
         .default(0)
         .items(
             options
@@ -407,7 +407,7 @@ fn menu_block_3_function(pin_index: usize) -> Result<Block3Function, Error> {
     let options = [Block3Function::Unused, Block3Function::AnalogIn];
 
     let option_index = dialoguer::Select::new()
-        .with_prompt(format!("Select function for block #3 pin #{}", pin_index))
+        .with_prompt(format!("Select function for block #3 pin #{pin_index}"))
         .default(0)
         .items(
             options
@@ -458,7 +458,7 @@ fn menu_block_4_function(pin_index: usize) -> Result<Block4Function, Error> {
     let options = [Block4Function::Unused, Block4Function::DigitalOut];
 
     let option_index = dialoguer::Select::new()
-        .with_prompt(format!("Select function for block #4 pin #{}", pin_index))
+        .with_prompt(format!("Select function for block #4 pin #{pin_index}"))
         .default(0)
         .items(
             options

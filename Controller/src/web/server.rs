@@ -73,12 +73,7 @@ impl<'h> Server<'h> {
         let log_status_code = http_response.status();
 
         log::debug!(
-            "{}: {:?} {} {} {}",
-            self,
-            remote_address,
-            log_method,
-            log_uri,
-            log_status_code,
+            "{self}: {remote_address:?} {log_method} {log_uri} {log_status_code}",
         );
 
         http_response
@@ -138,11 +133,10 @@ impl<'h> Server<'h> {
                                 // ex. infinite sse streams
                                 let mut log_ = true;
 
-                                if let Some(error) = error.downcast_ref::<hyper::Error>() {
-                                    if error.is_incomplete_message() || error.is_canceled() {
+                                if let Some(error) = error.downcast_ref::<hyper::Error>()
+                                    && (error.is_incomplete_message() || error.is_canceled()) {
                                         log_ = false;
                                     }
-                                }
 
                                 if log_ {
                                     log::error!("{self_static}: connection error: {error:?}");

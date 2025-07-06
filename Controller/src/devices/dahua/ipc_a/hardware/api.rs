@@ -755,7 +755,7 @@ impl Api {
         loop {
             let result = self.snapshot().await.context("snapshot");
             if let Err(error) = &result {
-                log::warn!("error while getting snapshot: {:?}", error);
+                log::warn!("error while getting snapshot: {error:?}");
             }
             if result.is_ok() || retries_left == 0 {
                 return result;

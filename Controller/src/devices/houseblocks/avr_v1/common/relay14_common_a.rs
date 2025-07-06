@@ -29,7 +29,7 @@ pub mod logic {
     impl<S: Specification> runner::DeviceFactory for DeviceFactory<S> {
         type Device<'h> = Device<'h, S>;
 
-        fn new(hardware_device: &hardware::Device<S::HardwareSpecification>) -> Device<S> {
+        fn new(hardware_device: &hardware::Device<S::HardwareSpecification>) -> Device<'_, S> {
             Device::new(hardware_device)
         }
     }
@@ -140,7 +140,7 @@ pub mod logic {
         }
 
         type Identifier = SignalIdentifier;
-        fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+        fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
             self.signal_outputs
                 .iter()
                 .enumerate()
@@ -234,7 +234,7 @@ pub mod hardware {
             self.outputs.device_reset();
         }
 
-        pub fn remote(&self) -> PropertiesRemote {
+        pub fn remote(&self) -> PropertiesRemote<'_> {
             PropertiesRemote {
                 outs_changed_waker_remote: self.outs_changed_waker.remote(),
 
@@ -262,7 +262,7 @@ pub mod hardware {
             }
         }
 
-        pub fn properties_remote(&self) -> PropertiesRemote {
+        pub fn properties_remote(&self) -> PropertiesRemote<'_> {
             self.properties.remote()
         }
 

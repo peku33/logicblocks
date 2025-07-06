@@ -121,7 +121,7 @@ impl<'f> Manager<'f> {
         name: String,
         fs: &'f Fs,
     ) -> Self {
-        let sqlite = SQLite::new(format!("logger.state.manager.{}", name), fs);
+        let sqlite = SQLite::new(format!("logger.state.manager.{name}"), fs);
 
         let initialized = Barrier::new();
 
@@ -247,7 +247,7 @@ impl<'f> Manager<'f> {
             match self.initialize_once().await.context("initialize_once") {
                 Ok(()) => break,
                 Err(error) => {
-                    log::error!("{}: {:?}", self, error);
+                    log::error!("{self}: {error:?}");
                     select! {
                         () = tokio::time::sleep(ERROR_DELAY).fuse() => {},
                         () = exit_flag => return Exited,
@@ -261,7 +261,7 @@ impl<'f> Manager<'f> {
             match self.run_once(exit_flag.clone()).await.context("run_once") {
                 Ok(Exited) => break,
                 Err(error) => {
-                    log::error!("{}: {:?}", self, error);
+                    log::error!("{self}: {error:?}");
                     select! {
                         () = tokio::time::sleep(ERROR_DELAY).fuse() => {},
                         () = exit_flag => return Exited,
@@ -275,7 +275,7 @@ impl<'f> Manager<'f> {
             match self.finalize_once().await.context("finalize_once") {
                 Ok(()) => break,
                 Err(error) => {
-                    log::error!("{}: {:?}", self, error);
+                    log::error!("{self}: {error:?}");
                     select! {
                         () = tokio::time::sleep(ERROR_DELAY).fuse() => {},
                         () = exit_flag => return Exited,

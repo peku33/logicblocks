@@ -4,7 +4,6 @@ use super::super::{
 };
 use crate::datatypes::temperature::{Temperature, Unit};
 use anyhow::{Context, Error};
-use std::mem::transmute;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct SensorState {
@@ -41,7 +40,7 @@ impl SensorState {
                 if temperature & 0b0000_1000_0000_0000 != 0 {
                     temperature |= 0b1111_0000_0000_0000;
                 }
-                let temperature = unsafe { transmute::<u16, i16>(temperature) } as f64 / 16.0;
+                let temperature = u16::cast_signed(temperature) as f64 / 16.0;
                 let temperature = Temperature::from_unit(Unit::Celsius, temperature).unwrap();
                 Some(temperature)
             }

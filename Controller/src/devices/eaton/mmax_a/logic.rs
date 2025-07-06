@@ -153,7 +153,7 @@ impl signals::Device for Device<'_> {
     }
 
     type Identifier = SignalIdentifier;
-    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+    fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
         hashmap! {
             SignalIdentifier::InputSpeed => &self.signal_input_speed as &dyn signal::Base,
             SignalIdentifier::InputReverse => &self.signal_input_reverse as &dyn signal::Base,

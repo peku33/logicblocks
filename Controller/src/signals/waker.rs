@@ -15,11 +15,11 @@ impl TargetsChangedWaker {
         Self { inner }
     }
 
-    pub fn stream(&self) -> TargetsChangedWakerStream {
+    pub fn stream(&self) -> TargetsChangedWakerStream<'_> {
         TargetsChangedWakerStream::new(self)
     }
 
-    pub(super) fn remote(&self) -> TargetsChangedWakerRemote {
+    pub(super) fn remote(&self) -> TargetsChangedWakerRemote<'_> {
         TargetsChangedWakerRemote::new(self)
     }
 }
@@ -76,7 +76,7 @@ impl SourcesChangedWaker {
         self.inner.wake();
     }
 
-    pub(super) fn remote(&self) -> SourcesChangedWakerRemote {
+    pub(super) fn remote(&self) -> SourcesChangedWakerRemote<'_> {
         SourcesChangedWakerRemote::new(self)
     }
 }
@@ -88,7 +88,7 @@ impl<'a> SourcesChangedWakerRemote<'a> {
     fn new(parent: &'a SourcesChangedWaker) -> Self {
         Self { parent }
     }
-    pub fn stream(&self) -> SourcesChangedWakerRemoteStream {
+    pub fn stream(&'_ self) -> SourcesChangedWakerRemoteStream<'_> {
         SourcesChangedWakerRemoteStream::new(self)
     }
 }

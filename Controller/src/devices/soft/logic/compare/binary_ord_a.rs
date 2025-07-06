@@ -199,7 +199,7 @@ where
     }
 
     type Identifier = SignalIdentifier;
-    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+    fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
         chain!(
             self.signal_a.as_ref().map(|signal_a| {
                 (

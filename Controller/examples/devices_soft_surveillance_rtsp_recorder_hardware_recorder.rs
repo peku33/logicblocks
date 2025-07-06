@@ -52,9 +52,7 @@ async fn main() -> Result<(), Error> {
             let target_path = forwarder_runner_persistent_storage_directory
                 .join(segment.path.file_name().unwrap());
             log::info!(
-                "received segment: {:?}, moving to {:?}",
-                segment,
-                target_path
+                "received segment: {segment:?}, moving to {target_path:?}"
             );
             move_file(segment.path, target_path).await.unwrap();
         });
@@ -65,7 +63,7 @@ async fn main() -> Result<(), Error> {
             log::info!("received exit signal, exiting");
             exit_flag_sender.signal();
         })
-        .unwrap_or_else(|error| panic!("ctrl_c error: {:?}", error));
+        .unwrap_or_else(|error| panic!("ctrl_c error: {error:?}"));
 
     // orchestrate all
     let _: (Exited, (), ()) = join!(recorder_runner, forwarder_runner, exit_flag_runner);

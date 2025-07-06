@@ -61,7 +61,7 @@ async fn main() -> Result<(), Error> {
                 .validate_basic_device_info()
                 .await
                 .context("validate_basic_device_info")?;
-            log::info!("basic_device_info: {:?}", basic_device_info);
+            log::info!("basic_device_info: {basic_device_info:?}");
 
             let event_stream_manager = Manager::new(&api);
 
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Error> {
                 event_stream_manager.receiver(),
             )
             .for_each(async |events| {
-                log::info!("events: {:?}", events);
+                log::info!("events: {events:?}");
             });
             pin_mut!(event_stream_manager_receiver_runner);
             let mut event_stream_manager_receiver_runner =

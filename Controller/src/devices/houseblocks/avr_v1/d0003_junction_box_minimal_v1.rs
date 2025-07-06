@@ -23,7 +23,7 @@ pub mod logic {
     impl runner::DeviceFactory for DeviceFactory {
         type Device<'h> = Device<'h>;
 
-        fn new(hardware_device: &hardware::Device) -> Device {
+        fn new(hardware_device: &hardware::Device) -> Device<'_> {
             Device::new(hardware_device)
         }
     }
@@ -87,10 +87,10 @@ pub mod logic {
             }
 
             // buzzer
-            if let Some(buzzer) = self.signal_buzzer.take_pending() {
-                if self.properties_remote.buzzer.push(buzzer) {
-                    properties_outs_changed = true;
-                }
+            if let Some(buzzer) = self.signal_buzzer.take_pending()
+                && self.properties_remote.buzzer.push(buzzer)
+            {
+                properties_outs_changed = true;
             }
 
             if properties_outs_changed {
@@ -125,7 +125,7 @@ pub mod logic {
                                 .rev()
                                 .map(|key_change_index| {
                                     let key_value =
-                                        key_values[key_index] ^ (key_change_index % 2 != 0);
+                                        key_values[key_index] ^ !key_change_index.is_multiple_of(2);
                                     Some(key_value)
                                 })
                                 .collect::<Box<[_]>>();
@@ -222,7 +222,7 @@ pub mod logic {
         }
 
         type Identifier = SignalIdentifier;
-        fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+        fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
             chain!(
                 self.signal_keys
                     .iter()
@@ -361,7 +361,7 @@ pub mod hardware {
                 || self.ds18x20.device_reset()
         }
 
-        pub fn remote(&self) -> PropertiesRemote {
+        pub fn remote(&self) -> PropertiesRemote<'_> {
             PropertiesRemote {
                 ins_changed_waker_remote: self.ins_changed_waker.remote(),
                 outs_changed_waker_remote: self.outs_changed_waker.remote(),
@@ -389,7 +389,7 @@ pub mod hardware {
             }
         }
 
-        pub fn properties_remote(&self) -> PropertiesRemote {
+        pub fn properties_remote(&self) -> PropertiesRemote<'_> {
             self.properties.remote()
         }
 
@@ -538,22 +538,21 @@ pub mod hardware {
                     _ => bail!("ds18x20 mismatch"),
                 };
 
-            if let Some(stage_2_response_keys) = stage_2_response_keys {
-                if self.properties.keys.device_set(
+            if let Some(stage_2_response_keys) = stage_2_response_keys
+                && self.properties.keys.device_set(
                     stage_2_response_keys.values(),
                     stage_2_response_keys.changes_count(),
-                ) {
-                    stage_2_properties_ins_changed = true;
-                }
+                )
+            {
+                stage_2_properties_ins_changed = true;
             }
-            if let Some(stage_2_response_ds18x20) = stage_2_response_ds18x20 {
-                if self
+            if let Some(stage_2_response_ds18x20) = stage_2_response_ds18x20
+                && self
                     .properties
                     .ds18x20
                     .device_set(stage_2_response_ds18x20.state)
-                {
-                    stage_2_properties_ins_changed = true;
-                }
+            {
+                stage_2_properties_ins_changed = true;
             }
 
             if stage_2_properties_ins_changed {

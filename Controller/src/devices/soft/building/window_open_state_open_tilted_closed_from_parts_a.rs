@@ -139,7 +139,7 @@ impl signals::Device for Device {
     }
 
     type Identifier = SignalIdentifier;
-    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+    fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
         hashmap! {
             SignalIdentifier::InputOpened => &self.signal_input_opened as &dyn signal::Base,
             SignalIdentifier::InputTilted => &self.signal_input_tilted as &dyn signal::Base,

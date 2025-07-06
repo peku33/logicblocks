@@ -39,7 +39,7 @@ where
     }
 
     // User
-    pub fn user_remote(&self) -> Remote<T> {
+    pub fn user_remote(&self) -> Remote<'_, T> {
         Remote::new(self)
     }
 

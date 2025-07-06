@@ -529,7 +529,7 @@ impl<'a> Configurator<'a> {
             let reboot_required = self
                 .api
                 .delete_xml(
-                    format!("/ISAPI/Security/users/{}", user_id)
+                    format!("/ISAPI/Security/users/{user_id}")
                         .parse()
                         .unwrap(),
                 )

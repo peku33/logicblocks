@@ -19,7 +19,7 @@ impl InsChangedWaker {
         self.inner.wake();
     }
 
-    pub fn remote(&self) -> InsChangedWakerRemote {
+    pub fn remote(&self) -> InsChangedWakerRemote<'_> {
         InsChangedWakerRemote::new(self)
     }
 }
@@ -31,7 +31,7 @@ impl<'a> InsChangedWakerRemote<'a> {
     fn new(parent: &'a InsChangedWaker) -> Self {
         Self { parent }
     }
-    pub fn stream(&self) -> InsChangedWakerRemoteStream {
+    pub fn stream(&self) -> InsChangedWakerRemoteStream<'_> {
         InsChangedWakerRemoteStream::new(self)
     }
 }
@@ -71,11 +71,11 @@ impl OutsChangedWaker {
         Self { inner }
     }
 
-    pub fn stream(&self) -> OutsChangedWakerStream {
+    pub fn stream(&self) -> OutsChangedWakerStream<'_> {
         OutsChangedWakerStream::new(self)
     }
 
-    pub fn remote(&self) -> OutsChangedWakerRemote {
+    pub fn remote(&self) -> OutsChangedWakerRemote<'_> {
         OutsChangedWakerRemote::new(self)
     }
 }

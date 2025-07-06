@@ -158,7 +158,7 @@ impl signals::Device for Device {
     }
 
     type Identifier = SignalIdentifier;
-    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+    fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
         hashmap! {
             SignalIdentifier::Setpoint => &self.signal_setpoint as &dyn signal::Base,
             SignalIdentifier::Measurement => &self.signal_measurement as &dyn signal::Base,

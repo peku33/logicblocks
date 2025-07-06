@@ -69,7 +69,7 @@ impl<V: Value + Clone> RemoteBase for Signal<V> {
         type_name::<V>()
     }
 
-    fn as_remote_base_variant(&self) -> RemoteBaseVariant {
+    fn as_remote_base_variant(&self) -> RemoteBaseVariant<'_> {
         RemoteBaseVariant::EventTarget(self)
     }
 }

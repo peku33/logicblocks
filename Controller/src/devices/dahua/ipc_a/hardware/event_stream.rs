@@ -82,7 +82,7 @@ impl<'a> Manager<'a> {
             "SmartMotionHuman" => Ok(Some(Event::SmartMotionHuman)),
             "SmartMotionVehicle" => Ok(Some(Event::SmartMotionVehicle)),
             code => {
-                log::debug!("unrecognized event: {}", code);
+                log::debug!("unrecognized event: {code}");
                 Ok(None)
             }
         }
@@ -140,9 +140,7 @@ impl<'a> Manager<'a> {
                 }
                 Some(previous) => {
                     log::warn!(
-                        "adding already added event: {:?} ({:?})",
-                        previous,
-                        events_active
+                        "adding already added event: {previous:?} ({events_active:?})"
                     );
                 }
             }
@@ -173,7 +171,7 @@ impl<'a> Manager<'a> {
             .borrow_mut()
             .extract_if(|event, started| {
                 if *started < fix_before {
-                    log::warn!("removing outdated events: {:?}", event);
+                    log::warn!("removing outdated events: {event:?}");
                     true
                 } else {
                     false
@@ -244,7 +242,7 @@ impl<'a> Manager<'a> {
     pub async fn run(&self) -> ! {
         loop {
             let error = self.run_once().await.context("run_once");
-            log::error!("event stream failed: {:?}", error);
+            log::error!("event stream failed: {error:?}");
             tokio::time::sleep(Self::ERROR_RESTART_DELAY).await;
         }
     }

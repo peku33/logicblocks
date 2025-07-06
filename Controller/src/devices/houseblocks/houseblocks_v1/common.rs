@@ -32,7 +32,7 @@ impl AddressDeviceType {
             (1..=9999).contains(&ordinal),
             "ordinal must be in range 0001-9999"
         );
-        let device_type_string = format!("{:0>4}", ordinal);
+        let device_type_string = format!("{ordinal:0>4}");
         let self_ = Self::new_from_string(&device_type_string).context("new_from_string")?;
         Ok(self_)
     }
@@ -133,7 +133,7 @@ impl AddressSerial {
             (1..=9999_9999).contains(&ordinal),
             "ordinal must be in range 00000001-99999999"
         );
-        let serial = format!("{:0>8}", ordinal);
+        let serial = format!("{ordinal:0>8}");
         let self_ = Self::new_from_string(&serial).context("new_from_string")?;
         Ok(self_)
     }

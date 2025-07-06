@@ -188,9 +188,9 @@ impl Recorder {
             BufReader::new(child.stdout.take().unwrap()).lines(),
         )
         .for_each(async |item| match item.context("stdout") {
-            Ok(line) => log::warn!("{}: ffmpeg stdout: {}", self, line),
+            Ok(line) => log::warn!("{self}: ffmpeg stdout: {line}"),
             Err(error) => {
-                log::error!("{}: error while reading ffmpeg stdout: {:?}", self, error)
+                log::error!("{self}: error while reading ffmpeg stdout: {error:?}")
             }
         });
         pin_mut!(stdout);
@@ -200,9 +200,9 @@ impl Recorder {
             BufReader::new(child.stderr.take().unwrap()).lines(),
         )
         .for_each(async |item| match item.context("stderr") {
-            Ok(line) => log::warn!("{}: ffmpeg stderr: {}", self, line),
+            Ok(line) => log::warn!("{self}: ffmpeg stderr: {line}"),
             Err(error) => {
-                log::error!("{}: error while reading ffmpeg stderr: {:?}", self, error)
+                log::error!("{self}: error while reading ffmpeg stderr: {error:?}")
             }
         });
         pin_mut!(stderr);
@@ -264,7 +264,7 @@ impl Recorder {
                 Ok(Exited) => break,
                 Err(error) => error,
             };
-            log::error!("{}: {:?}", self, error);
+            log::error!("{self}: {error:?}");
 
             select! {
                 () = tokio::time::sleep(ERROR_DELAY).fuse() => {},
@@ -390,7 +390,7 @@ impl Recorder {
                 Ok(Exited) => break,
                 Err(error) => error,
             };
-            log::error!("{}: {:?}", self, error);
+            log::error!("{self}: {error:?}");
 
             select! {
                 () = tokio::time::sleep(ERROR_DELAY).fuse() => {},
@@ -490,7 +490,7 @@ impl Recorder {
             }
 
             if let Err(error) = self.fixer_run_once().await.context("fixer_run_once") {
-                log::error!("{}: {:?}", self, error);
+                log::error!("{self}: {error:?}");
             }
         }
 
@@ -563,7 +563,7 @@ impl Recorder {
                 Ok(()) => break Ok(()),
                 Err(error) => error,
             };
-            log::error!("{}: {:?}", self, error);
+            log::error!("{self}: {error:?}");
 
             select! {
                 () = tokio::time::sleep(ERROR_DELAY).fuse() => {},

@@ -208,7 +208,7 @@ where
     // SAFE: The signal identifier itself is 'static, so there shouldn't be problems
     // in here
     type Identifier = <<DF as DeviceFactory>::Device<'static> as signals::Device>::Identifier;
-    fn by_identifier(&self) -> signals::ByIdentifier<Self::Identifier> {
+    fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
         let device_static = unsafe {
             mem::transmute::<
                 &'_ <DF as DeviceFactory>::Device<'_>,

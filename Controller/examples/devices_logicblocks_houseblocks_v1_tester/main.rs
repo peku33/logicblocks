@@ -57,8 +57,8 @@ fn menu_master_context(master: &Master) -> Result<(), Error> {
     {
         match result {
             0 => match master_device_discovery(master) {
-                Ok(address) => log::info!("address: {}", address),
-                Err(error) => log::error!("error: {:?}", error),
+                Ok(address) => log::info!("address: {address}"),
+                Err(error) => log::error!("error: {error:?}"),
             },
             1 => {
                 let address = match submenu_ask_device_address(master)
@@ -145,12 +145,12 @@ fn submenu_ask_device_address(master: &Master) -> Result<Option<Address>, Error>
         match result {
             0 => match master_device_discovery(master).context("master_device_discovery") {
                 Ok(address) => {
-                    log::info!("detected address: {}", address);
+                    log::info!("detected address: {address}");
 
                     return Ok(Some(address));
                 }
                 Err(error) => {
-                    log::error!("error while detecting serial: {:?}", error);
+                    log::error!("error while detecting serial: {error:?}");
                     continue;
                 }
             },
@@ -160,7 +160,7 @@ fn submenu_ask_device_address(master: &Master) -> Result<Option<Address>, Error>
                 Ok(Some(address)) => return Ok(Some(address)),
                 Ok(None) => continue,
                 Err(error) => {
-                    log::error!("error while detecting serial: {:?}", error);
+                    log::error!("error while detecting serial: {error:?}");
                     continue;
                 }
             },

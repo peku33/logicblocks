@@ -190,7 +190,7 @@ impl<'m> Driver<'m> {
             .service_mode_read_application_checksum()
             .await
             .context("service mode read application checksum")?;
-        log::trace!("application_checksum: {}", application_checksum);
+        log::trace!("application_checksum: {application_checksum}");
 
         // TODO: Push new firmware
 

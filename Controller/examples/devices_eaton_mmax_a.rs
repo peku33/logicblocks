@@ -102,7 +102,7 @@ async fn main() -> Result<(), Error> {
             },
             speed: arguments_set.speed_setpoint.0,
         };
-        log::info!("input_set: {:#?}", input);
+        log::info!("input_set: {input:#?}");
         device.input_setter().set(input);
     }
 
@@ -111,7 +111,7 @@ async fn main() -> Result<(), Error> {
         .value_stream(true)
         .stream_take_until_exhausted(exit_flag_sender.receiver())
         .for_each(async |output_state| {
-            log::info!("output_state: {:#?}", output_state);
+            log::info!("output_state: {output_state:#?}");
         });
 
     let exit_flag_runner = ctrl_c()
@@ -119,7 +119,7 @@ async fn main() -> Result<(), Error> {
             log::info!("received exit signal, exiting");
             exit_flag_sender.signal();
         })
-        .unwrap_or_else(|error| panic!("ctrl_c error: {:?}", error));
+        .unwrap_or_else(|error| panic!("ctrl_c error: {error:?}"));
 
     let _: (Exited, (), ()) = join!(
         device_runner,

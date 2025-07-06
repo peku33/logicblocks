@@ -177,7 +177,7 @@ impl<'a> Manager<'a> {
     pub async fn run(&self) -> ! {
         loop {
             let error = self.run_once().await.context("run_once");
-            log::error!("event stream failed: {:?}", error);
+            log::error!("event stream failed: {error:?}");
             tokio::time::sleep(Self::ERROR_RESTART_DELAY).await;
         }
     }

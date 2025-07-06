@@ -40,12 +40,12 @@ where
     }
 
     // User
-    pub fn user_remote(&self) -> Remote<T> {
+    pub fn user_remote(&self) -> Remote<'_, T> {
         Remote::new(self)
     }
 
     // Device
-    pub fn device_pending(&self) -> Option<Pending<T>> {
+    pub fn device_pending(&self) -> Option<Pending<'_, T>> {
         let state = self.state.lock();
 
         if !state.device_pending {

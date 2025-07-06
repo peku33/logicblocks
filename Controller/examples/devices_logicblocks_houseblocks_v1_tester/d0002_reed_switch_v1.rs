@@ -52,7 +52,7 @@ async fn run_inner(
             Some(inputs) => inputs,
             None => return,
         };
-        log::info!("inputs: {:?}", inputs);
+        log::info!("inputs: {inputs:?}");
     };
 
     let ins_changed_waker_remote_runner = async {

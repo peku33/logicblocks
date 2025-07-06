@@ -32,7 +32,7 @@ impl<'f> SQLite<'f> {
             .persistent_data_directory()
             .join([name.as_str(), ".sqlite"].concat());
 
-        let thread_name = format!("{}.sqlite", name);
+        let thread_name = format!("{name}.sqlite");
 
         let (operation_sender, operation_receiver) = channel::unbounded::<Operation>();
         let operation_sender = ManuallyDrop::new(operation_sender);

@@ -57,7 +57,7 @@ async fn run_inner(
             Some(keys) => keys,
             None => return,
         };
-        log::info!("keys: {:?}", keys);
+        log::info!("keys: {keys:?}");
     };
 
     let leds_runner = async {
@@ -67,7 +67,7 @@ async fn run_inner(
             let mut led_values = [false; LED_COUNT];
             led_values[led_index] = true;
 
-            log::info!("leds: {:?}", led_values);
+            log::info!("leds: {led_values:?}");
             if leds.set(led_values) {
                 outs_changed_waker_remote.wake();
             }
@@ -84,7 +84,7 @@ async fn run_inner(
     let buzzer_runner = async {
         const DURATION: Duration = Duration::from_millis(125);
         loop {
-            log::info!("buzzer: {:?}", DURATION);
+            log::info!("buzzer: {DURATION:?}");
             if buzzer.push(DURATION) {
                 outs_changed_waker_remote.wake();
             }
@@ -102,7 +102,7 @@ async fn run_inner(
         };
 
         match ds18x20 {
-            Some(ds18x20) => log::info!("ds18x20: {:?}", ds18x20),
+            Some(ds18x20) => log::info!("ds18x20: {ds18x20:?}"),
             None => log::warn!("ds18x20: None (Error)"),
         }
     };

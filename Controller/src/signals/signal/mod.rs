@@ -47,5 +47,5 @@ pub trait RemoteBase: Send + Sync + fmt::Debug {
     fn type_id(&self) -> TypeId;
     fn type_name(&self) -> &'static str;
 
-    fn as_remote_base_variant(&self) -> RemoteBaseVariant;
+    fn as_remote_base_variant(&self) -> RemoteBaseVariant<'_>;
 }

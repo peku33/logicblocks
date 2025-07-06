@@ -39,10 +39,10 @@ impl Signal {
         }
     }
 
-    pub fn sender(&self) -> Sender {
+    pub fn sender(&self) -> Sender<'_> {
         Sender::new(self)
     }
-    pub fn receiver(&self) -> Receiver {
+    pub fn receiver(&self) -> Receiver<'_> {
         Receiver::new(self)
     }
 }

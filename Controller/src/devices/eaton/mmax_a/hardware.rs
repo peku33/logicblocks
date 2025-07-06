@@ -100,10 +100,10 @@ impl<'m> Device<'m> {
         }
     }
 
-    pub fn input_setter(&self) -> observable::Setter<Input> {
+    pub fn input_setter(&self) -> observable::Setter<'_, Input> {
         self.input.setter()
     }
-    pub fn output_getter(&self) -> observable::Getter<Output> {
+    pub fn output_getter(&self) -> observable::Getter<'_, Output> {
         self.output.getter()
     }
 
@@ -467,7 +467,7 @@ impl<'m> Device<'m> {
                 Ok(Exited) => break,
                 Err(error) => error,
             };
-            log::error!("device failed: {:?}", error);
+            log::error!("device failed: {error:?}");
 
             self.output.set(Output::Error);
 

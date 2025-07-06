@@ -49,7 +49,7 @@ async fn main() -> Result<(), Error> {
         .by_ref()
         .stream_take_until_exhausted(exit_flag_sender.receiver())
         .for_each(async |channel_segment| {
-            log::info!("received segment: {:?}", channel_segment);
+            log::info!("received segment: {channel_segment:?}");
             fs::remove_file(channel_segment.segment.path).await.unwrap();
         });
 
@@ -69,8 +69,7 @@ async fn main() -> Result<(), Error> {
         };
 
         log::info!(
-            "detection_level_set_runner: setting detection_level = {:?}",
-            detection_level
+            "detection_level_set_runner: setting detection_level = {detection_level:?}"
         );
 
         detection_level_set_runner_channel.detection_level_set(detection_level);
@@ -82,7 +81,7 @@ async fn main() -> Result<(), Error> {
             log::info!("received exit signal, exiting");
             exit_flag_sender.signal();
         })
-        .unwrap_or_else(|error| panic!("ctrl_c error: {:?}", error));
+        .unwrap_or_else(|error| panic!("ctrl_c error: {error:?}"));
 
     // orchestrate all
     let _: (Exited, (), (), ()) = join!(

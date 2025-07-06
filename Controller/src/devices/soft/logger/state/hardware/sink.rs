@@ -57,7 +57,9 @@ impl SinkBase {
         Some(typed_ref)
     }
 
-    pub fn items_receiver_borrow_mut(&self) -> AtomicRefMut<mpsc::UnboundedReceiver<TimeValue>> {
+    pub fn items_receiver_borrow_mut(
+        &self
+    ) -> AtomicRefMut<'_, mpsc::UnboundedReceiver<TimeValue>> {
         self.items_receiver.borrow_mut()
     }
 }

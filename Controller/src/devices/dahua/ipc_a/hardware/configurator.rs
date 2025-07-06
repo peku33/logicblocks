@@ -544,7 +544,7 @@ impl<'a> Configurator<'a> {
             .ok_or_else(|| anyhow!("missing options"))?;
 
         if options == &json!(["NeedReboot"]) {
-            log::trace!("device requested reboot at {}", name);
+            log::trace!("device requested reboot at {name}");
             self.wait_for_power_down_up()
                 .await
                 .context("wait_for_power_down_up")?;

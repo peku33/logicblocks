@@ -131,13 +131,13 @@ pub trait Device: fmt::Debug + Send + Sync {
     fn sources_changed_waker(&self) -> Option<&waker::SourcesChangedWaker>;
 
     type Identifier: Identifier;
-    fn by_identifier(&self) -> ByIdentifier<Self::Identifier>;
+    fn by_identifier(&self) -> ByIdentifier<'_, Self::Identifier>;
 }
 
 pub trait DeviceBase: Send + Sync + fmt::Debug {
     fn targets_changed_waker(&self) -> Option<&waker::TargetsChangedWaker>;
     fn sources_changed_waker(&self) -> Option<&waker::SourcesChangedWaker>;
-    fn by_identifier(&self) -> ByIdentifierBaseWrapper;
+    fn by_identifier(&self) -> ByIdentifierBaseWrapper<'_>;
 
     fn type_name(&self) -> &str; // for debugging
 
@@ -150,7 +150,7 @@ impl<D: Device> DeviceBase for D {
     fn sources_changed_waker(&self) -> Option<&waker::SourcesChangedWaker> {
         self.sources_changed_waker()
     }
-    fn by_identifier(&self) -> ByIdentifierBaseWrapper {
+    fn by_identifier(&self) -> ByIdentifierBaseWrapper<'_> {
         self.by_identifier()
             .into_iter()
             .map(|(identifier, signal)| {

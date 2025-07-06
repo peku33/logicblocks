@@ -151,7 +151,7 @@ impl Channel {
 
     pub fn channel_segment_receiver_borrow_mut(
         &self
-    ) -> AtomicRefMut<mpsc::UnboundedReceiver<ChannelSegment>> {
+    ) -> AtomicRefMut<'_, mpsc::UnboundedReceiver<ChannelSegment>> {
         self.channel_segment_receiver.borrow_mut()
     }
 
@@ -233,7 +233,7 @@ impl Channel {
                 Ok(Exited) => break,
                 Err(error) => error,
             };
-            log::error!("{}: {:?}", self, error);
+            log::error!("{self}: {error:?}");
 
             select! {
                 () = tokio::time::sleep(ERROR_DELAY).fuse() => {},
