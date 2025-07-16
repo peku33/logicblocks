@@ -259,14 +259,11 @@ impl Device {
         .for_each(async |hardware_events| {
             let events = Events::from_event_stream_events(&hardware_events);
             self.events_handle(events);
-        });
+        }).fuse();
         pin_mut!(events_stream_manager_receiver_runner);
-        let mut events_stream_manager_receiver_runner =
-            events_stream_manager_receiver_runner.fuse();
 
-        let events_stream_manager_runner = events_stream_manager.run_once();
+        let events_stream_manager_runner = events_stream_manager.run_once().fuse();
         pin_mut!(events_stream_manager_runner);
-        let mut events_stream_manager_runner = events_stream_manager_runner.fuse();
 
         // Attach snapshot manager
         let snapshot_runner = SnapshotRunner::new(
@@ -275,9 +272,8 @@ impl Device {
             || self.snapshot_updated_handle(),
             Self::SNAPSHOT_INTERVAL,
         );
-        let snapshot_runner_runner = snapshot_runner.run_once();
+        let snapshot_runner_runner = snapshot_runner.run_once().fuse();
         pin_mut!(snapshot_runner_runner);
-        let mut snapshot_runner_runner = snapshot_runner_runner.fuse();
 
         // Mark device as ready
         *self.device_state.write() = DeviceState::Running {
@@ -336,9 +332,8 @@ impl Runnable for Device {
         &self,
         mut exit_flag: async_flag::Receiver,
     ) -> Exited {
-        let runner = self.run();
+        let runner = self.run().fuse();
         pin_mut!(runner);
-        let mut runner = runner.fuse();
 
         select! {
             _ = runner => panic!("runner yielded"),

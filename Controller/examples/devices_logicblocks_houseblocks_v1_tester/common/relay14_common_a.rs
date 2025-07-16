@@ -66,9 +66,9 @@ async fn run_inner<S: Specification>(
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-    };
+    }
+    .fuse();
     pin_mut!(outputs_runner);
-    let mut outputs_runner = outputs_runner.fuse();
 
     select! {
         _ = join(abort_runner, runner_runner).fuse() => {},

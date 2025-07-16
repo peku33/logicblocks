@@ -7,7 +7,7 @@ use crate::{
     },
 };
 use async_trait::async_trait;
-use futures::{FutureExt, pin_mut, select, stream::StreamExt};
+use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use maplit::hashmap;
 use std::{borrow::Cow, time::Duration};
 

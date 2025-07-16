@@ -65,19 +65,16 @@ async fn main() -> Result<(), Error> {
 
             let event_stream_manager = Manager::new(&api);
 
-            let event_stream_manager_runner = event_stream_manager.run();
+            let event_stream_manager_runner = event_stream_manager.run().fuse();
             pin_mut!(event_stream_manager_runner);
-            let mut event_stream_manager_runner = event_stream_manager_runner.fuse();
 
-            let event_stream_manager_receiver_runner = tokio_stream::wrappers::WatchStream::new(
-                event_stream_manager.receiver(),
-            )
-            .for_each(async |events| {
-                log::info!("events: {events:?}");
-            });
+            let event_stream_manager_receiver_runner =
+                tokio_stream::wrappers::WatchStream::new(event_stream_manager.receiver())
+                    .for_each(async |events| {
+                        log::info!("events: {events:?}");
+                    })
+                    .fuse();
             pin_mut!(event_stream_manager_receiver_runner);
-            let mut event_stream_manager_receiver_runner =
-                event_stream_manager_receiver_runner.fuse();
 
             select! {
                 _ = ctrl_c().fuse() => (),

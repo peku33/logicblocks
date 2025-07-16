@@ -439,9 +439,8 @@ impl<'m> Device<'m> {
             output_setter.set(Output::Running(output_running));
 
             // prepare tick timer
-            let poll_timer = tokio::time::sleep(Self::POLL_INTERVAL);
+            let poll_timer = tokio::time::sleep(Self::POLL_INTERVAL).fuse();
             pin_mut!(poll_timer);
-            let mut poll_timer = poll_timer.fuse();
 
             // wait for next tick or input change
             select! {

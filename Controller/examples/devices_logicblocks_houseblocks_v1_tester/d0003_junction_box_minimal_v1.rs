@@ -77,9 +77,9 @@ async fn run_inner(
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-    };
+    }
+    .fuse();
     pin_mut!(leds_runner);
-    let mut leds_runner = leds_runner.fuse();
 
     let buzzer_runner = async {
         const DURATION: Duration = Duration::from_millis(125);
@@ -91,9 +91,8 @@ async fn run_inner(
 
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
-    };
+    }.fuse();
     pin_mut!(buzzer_runner);
-    let mut buzzer_runner = buzzer_runner.fuse();
 
     let ds18x20_changed = || {
         let ds18x20 = match ds18x20.take_pending() {
@@ -115,9 +114,8 @@ async fn run_inner(
                 ds18x20_changed();
             })
             .await;
-    };
+    }.fuse();
     pin_mut!(ins_changed_waker_remote_runner);
-    let mut ins_changed_waker_remote_runner = ins_changed_waker_remote_runner.fuse();
 
     select! {
         _ = join(abort_runner, runner_runner).fuse() => {},

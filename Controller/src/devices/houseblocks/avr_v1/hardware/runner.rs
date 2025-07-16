@@ -129,12 +129,12 @@ impl<'m, D: Device> Runner<'m, D> {
         self.gui_summary_waker.wake();
 
         // Main loop
-        let device_poll_waker = StreamOrPending::new(
+        let mut device_poll_waker = StreamOrPending::new(
             self.device
                 .poll_waker()
                 .map(|poll_waker| poll_waker.receiver()),
-        );
-        let mut device_poll_waker = device_poll_waker.fuse();
+        )
+        .fuse();
 
         loop {
             // Poll

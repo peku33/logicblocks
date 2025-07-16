@@ -212,9 +212,9 @@ impl<'a> Responder<'a> {
 
                 receiver.for_each(async move |_| sender.wake()).boxed()
             })
-            .collect::<FutureSelectAllOrPending<_>>();
+            .collect::<FutureSelectAllOrPending<_>>()
+            .fuse();
         pin_mut!(waker_to_sender_runner);
-        let mut waker_to_sender_runner = waker_to_sender_runner.fuse();
 
         select! {
             _ = waker_to_sender_runner => panic!("waker_to_sender_runner yielded"),

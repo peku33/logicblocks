@@ -126,9 +126,8 @@ async fn run_inner(
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-    };
+    }.fuse();
     pin_mut!(status_led_runner);
-    let mut status_led_runner = status_led_runner.fuse();
 
     let analog_ins_changed = || {
         let analog_ins = match analog_ins.take_pending() {
@@ -163,9 +162,8 @@ async fn run_inner(
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-    };
+    }.fuse();
     pin_mut!(digital_out_runner);
-    let mut digital_out_runner = digital_out_runner.fuse();
 
     let ds18x20_changed = || {
         let ds18x20 = match ds18x20s.take_pending() {
@@ -184,9 +182,8 @@ async fn run_inner(
                 ds18x20_changed();
             })
             .await;
-    };
+    }.fuse();
     pin_mut!(ins_changed_waker_remote_runner);
-    let mut ins_changed_waker_remote_runner = ins_changed_waker_remote_runner.fuse();
 
     select! {
         _ = join(abort_runner, runner_runner).fuse() => {},

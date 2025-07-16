@@ -89,9 +89,8 @@ impl Device {
 
             for (index, breakpoint) in self.configuration.breakpoints.iter().enumerate() {
                 // create timer to wait for breakpoint time
-                let breakpoint_timer = tokio::time::sleep(breakpoint.expires);
+                let breakpoint_timer = tokio::time::sleep(breakpoint.expires).fuse();
                 pin_mut!(breakpoint_timer);
-                let mut breakpoint_timer = breakpoint_timer.fuse();
 
                 // tell whether client released the state or timeout expired
                 let released = 'break_on_released: loop {

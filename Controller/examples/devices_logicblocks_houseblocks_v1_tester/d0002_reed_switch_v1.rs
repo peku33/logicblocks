@@ -62,9 +62,9 @@ async fn run_inner(
                 inputs_changed();
             })
             .await;
-    };
+    }
+    .fuse();
     pin_mut!(ins_changed_waker_remote_runner);
-    let mut ins_changed_waker_remote_runner = ins_changed_waker_remote_runner.fuse();
 
     select! {
         _ = join(abort_runner, runner_runner).fuse() => {},

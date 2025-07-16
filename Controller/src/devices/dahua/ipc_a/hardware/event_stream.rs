@@ -219,9 +219,8 @@ impl<'a> Manager<'a> {
             .map(|result| match result.context("item_stream_runner") {
                 Ok(()) => anyhow!("item_stream completed"),
                 Err(error) => error,
-            });
+            }).fuse();
         pin_mut!(item_stream_runner);
-        let mut item_stream_runner = item_stream_runner.fuse();
 
         let events_fixer_runner = tokio_stream::wrappers::IntervalStream::new(
             tokio::time::interval(Self::EVENT_FIXER_INTERVAL),
@@ -230,9 +229,8 @@ impl<'a> Manager<'a> {
             if self.events_fixer_handle(time_point.into_std()) {
                 self.events_propagate();
             }
-        });
+        }).fuse();
         pin_mut!(events_fixer_runner);
-        let mut events_fixer_runner = events_fixer_runner.fuse();
 
         select! {
             item_stream_runner_error = item_stream_runner => bail!(item_stream_runner_error),

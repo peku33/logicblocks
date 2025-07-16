@@ -192,9 +192,8 @@ impl Recorder {
             Err(error) => {
                 log::error!("{self}: error while reading ffmpeg stdout: {error:?}")
             }
-        });
+        }).fuse();
         pin_mut!(stdout);
-        let mut stdout = stdout.fuse();
 
         let stderr = tokio_stream::wrappers::LinesStream::new(
             BufReader::new(child.stderr.take().unwrap()).lines(),
@@ -204,15 +203,13 @@ impl Recorder {
             Err(error) => {
                 log::error!("{self}: error while reading ffmpeg stderr: {error:?}")
             }
-        });
+        }).fuse();
         pin_mut!(stderr);
-        let mut stderr = stderr.fuse();
 
         let mut pid = Some(child.id().unwrap());
 
-        let child_exit_future = child.wait();
+        let child_exit_future = child.wait().fuse();
         pin_mut!(child_exit_future);
-        let mut child_exit_future = child_exit_future.fuse();
 
         // run until error or exit flag
         let result = select! {
@@ -297,9 +294,8 @@ impl Recorder {
                     // recorder is not set, so just wait for the exit flag
                     Either::Right(ffmpeg_or_nop_run_exit_flag_receiver.map(|()| Exited))
                 }
-            };
+            }.fuse();
             pin_mut!(ffmpeg_or_nop_runner);
-            let mut ffmpeg_or_nop_runner = ffmpeg_or_nop_runner.fuse();
 
             select! {
                 result = rtsp_url_receiver.changed().fuse() => {

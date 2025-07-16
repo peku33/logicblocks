@@ -75,9 +75,8 @@ impl Device {
                     break 'inner_wait_for_down;
                 }
 
-                let timeout = tokio::time::sleep(Self::VALUE_TIMEOUT);
+                let timeout = tokio::time::sleep(Self::VALUE_TIMEOUT).fuse();
                 pin_mut!(timeout);
-                let mut timeout = timeout.fuse();
 
                 select! {
                     () = exit_flag => break 'outer,
