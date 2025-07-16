@@ -2,7 +2,7 @@ import { Meta } from "@storybook/react-vite";
 import Component from "./Summary";
 
 export default {
-  title: "components/devices/soft/web/button_state_monostable_a/Summary",
+  title: "components/devices/soft/web/input/button_state_monostable_a/Summary",
   argTypes: {
     value: {
       type: "boolean",

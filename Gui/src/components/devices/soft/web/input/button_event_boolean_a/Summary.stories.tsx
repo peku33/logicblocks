@@ -3,7 +3,7 @@ import { useState } from "react";
 import Component, { Data } from "./Summary";
 
 export default {
-  title: "components/devices/soft/web/button_event_boolean_a/Summary",
+  title: "components/devices/soft/web/input/button_event_boolean_a/Summary",
   argTypes: {
     value: {
       type: "boolean",

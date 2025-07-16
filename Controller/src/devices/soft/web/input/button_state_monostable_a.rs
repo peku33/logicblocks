@@ -105,7 +105,7 @@ impl Device {
 
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/web/button_state_monostable_a")
+        Cow::from("soft/web/input/button_state_monostable_a")
     }
 
     fn as_runnable(&self) -> &dyn Runnable {

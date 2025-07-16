@@ -34,7 +34,7 @@ impl Device {
 
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/web/button_event_a")
+        Cow::from("soft/web/input/button_event_a")
     }
 
     fn as_runnable(&self) -> &dyn Runnable {

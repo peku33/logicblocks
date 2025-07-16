@@ -12,14 +12,14 @@ import softCalendarSolarPositionA from "./soft/calendar/solar_position_a/Summary
 import softLogicBooleanFlipFlopOverrideA from "./soft/logic/boolean/flip_flop/override_a/SummaryManaged";
 import softLogicBooleanFlipFlopRSTA from "./soft/logic/boolean/flip_flop/rst_a/SummaryManaged";
 import softTimeSequenceParallelA from "./soft/time/sequence_parallel_a/SummaryManaged";
-import softWebButtonEventA from "./soft/web/button_event_a/SummaryManaged";
-import softWebButtonEventBooleanA from "./soft/web/button_event_boolean_a/SummaryManaged";
-import softWebButtonStateMonostableA from "./soft/web/button_state_monostable_a/SummaryManaged";
 import softWebDisplayBooleanA from "./soft/web/display/boolean_a/SummaryManaged";
 import softWebDisplayBuildingWindowOpenStateOpenClosedA from "./soft/web/display/building/window_open_state_open_closed_a/SummaryManaged";
 import softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA from "./soft/web/display/building/window_open_state_open_tilted_closed_a/SummaryManaged";
 import softWebDisplayPressureA from "./soft/web/display/pressure_a/SummaryManaged";
-import softWebRatioSliderA from "./soft/web/ratio_slider_a/SummaryManaged";
+import softWebInputButtonEventA from "./soft/web/input/button_event_a/SummaryManaged";
+import softWebInputButtonEventBooleanA from "./soft/web/input/button_event_boolean_a/SummaryManaged";
+import softWebInputButtonStateMonostableA from "./soft/web/input/button_state_monostable_a/SummaryManaged";
+import softWebInputRatioSliderA from "./soft/web/input/ratio_slider_a/SummaryManaged";
 import UnknownDevice from "./UnknownDeviceSummaryManaged";
 
 const BY_CLASS: Record<string, DeviceSummaryManaged> = {
@@ -35,15 +35,15 @@ const BY_CLASS: Record<string, DeviceSummaryManaged> = {
   "soft/logic/boolean/flip_flop/override_a": softLogicBooleanFlipFlopOverrideA,
   "soft/logic/boolean/flip_flop/rst_a": softLogicBooleanFlipFlopRSTA,
   "soft/time/sequence_parallel_a": softTimeSequenceParallelA,
-  "soft/web/button_event_a": softWebButtonEventA,
-  "soft/web/button_event_boolean_a": softWebButtonEventBooleanA,
-  "soft/web/button_state_monostable_a": softWebButtonStateMonostableA,
   "soft/web/display/boolean_a": softWebDisplayBooleanA,
   "soft/web/display/building/window_open_state_open_closed_a": softWebDisplayBuildingWindowOpenStateOpenClosedA,
   "soft/web/display/building/window_open_state_open_tilted_closed_a":
     softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA,
   "soft/web/display/pressure_a": softWebDisplayPressureA,
-  "soft/web/ratio_slider_a": softWebRatioSliderA,
+  "soft/web/input/button_event_a": softWebInputButtonEventA,
+  "soft/web/input/button_event_boolean_a": softWebInputButtonEventBooleanA,
+  "soft/web/input/button_state_monostable_a": softWebInputButtonStateMonostableA,
+  "soft/web/input/ratio_slider_a": softWebInputRatioSliderA,
 };
 
 export function getByClass(class_: string): DeviceSummaryManaged {

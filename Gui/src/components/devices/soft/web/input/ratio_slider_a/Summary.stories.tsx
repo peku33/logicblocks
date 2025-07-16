@@ -2,7 +2,7 @@ import { Meta } from "@storybook/react-vite";
 import Component from "./Summary";
 
 export default {
-  title: "components/devices/soft/web/ratio_slider_a/Summary",
+  title: "components/devices/soft/web/input/ratio_slider_a/Summary",
   argTypes: {
     value: {
       type: "number",

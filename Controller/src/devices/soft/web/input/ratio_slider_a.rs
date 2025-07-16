@@ -55,7 +55,7 @@ impl Device {
 
 impl devices::Device for Device {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from("soft/web/ratio_slider_a")
+        Cow::from("soft/web/input/ratio_slider_a")
     }
 
     fn as_runnable(&self) -> &dyn Runnable {
