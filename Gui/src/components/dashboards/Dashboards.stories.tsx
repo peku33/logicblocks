@@ -1,5 +1,5 @@
 import { DeviceId } from "@/components/devices/Device";
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-vite";
 
 import {
   DashboardLinkComponent,

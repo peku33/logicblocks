@@ -1,4 +1,4 @@
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-vite";
 import Component, { INPUT_COUNT } from "./SummaryInner";
 
 export default {

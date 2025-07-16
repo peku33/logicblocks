@@ -1,4 +1,4 @@
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-vite";
 
 import styled from "styled-components";
 import { Chip, ChipsGroup, ChipType } from "./Chips";

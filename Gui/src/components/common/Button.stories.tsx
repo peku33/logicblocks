@@ -1,4 +1,4 @@
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-vite";
 import { Button, ButtonActionAsync, ButtonGroup, ButtonLink } from "./Button";
 
 export default {

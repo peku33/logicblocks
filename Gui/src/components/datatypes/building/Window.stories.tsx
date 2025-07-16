@@ -1,5 +1,5 @@
 import { WindowOpenStateOpenClosed, WindowOpenStateOpenTiltedClosed } from "@/datatypes/building/Window";
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-vite";
 import { WindowOpenStateOpenClosedComponent, WindowOpenStateOpenTiltedClosedComponent } from "./Window";
 
 export default {
