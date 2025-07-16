@@ -3,13 +3,16 @@ use crate::{
     devices,
     signals::{self, signal},
     util::{
-        async_ext::optional::FutureOrPending,
         async_flag,
         runnable::{Exited, Runnable},
     },
 };
 use async_trait::async_trait;
-use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
+use futures::{
+    future::{Fuse, FutureExt},
+    pin_mut, select,
+    stream::StreamExt,
+};
 use maplit::hashmap;
 use parking_lot::RwLock;
 use std::{borrow::Cow, time::Duration};
@@ -55,13 +58,13 @@ impl Device {
         let signal_input_changed_stream = self.signals_targets_changed_waker.stream();
         pin_mut!(signal_input_changed_stream);
 
-        let tick_next = FutureOrPending::<tokio::time::Sleep>::pending();
+        let tick_next = Fuse::<tokio::time::Sleep>::terminated();
         pin_mut!(tick_next);
 
         loop {
             let elapsed = select! {
                 () = signal_input_changed_stream.select_next_some() => false,
-                _ = (&mut tick_next).fuse() => true, // .fuse() we will always overwrite tick_next later
+                _ = &mut tick_next => true,
                 () = exit_flag => break,
             };
 
@@ -98,19 +101,17 @@ impl Device {
                     }
 
                     // either timer has elapsed or it wasn't initialized
-                    tick_next.set(FutureOrPending::future(tokio::time::sleep(
-                        self.configuration.tick_duration,
-                    )));
+                    tick_next.set(tokio::time::sleep(self.configuration.tick_duration).fuse());
                 }
                 None => {
                     // input was changed to (or is) none, remove pid, reset signals and timer
                     *pid = None;
-                    
+
                     if self.signal_output.set_one(None) {
                         self.signals_sources_changed_waker.wake();
                     }
-                    
-                    tick_next.set(FutureOrPending::pending());
+
+                    tick_next.set(Fuse::terminated());
                 }
             }
         }

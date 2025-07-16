@@ -1,6 +1,6 @@
-use super::optional::{FutureOrPending, StreamOrPending};
+use super::optional::StreamOrPending;
 use futures::{
-    future::{Future, SelectAll as FutureSelectAll},
+    future::{Fuse, Future, FutureExt, SelectAll as FutureSelectAll},
     stream::{SelectAll as StreamSelectAll, Stream},
 };
 use std::{pin::Pin, task};
@@ -10,7 +10,7 @@ pub struct FutureSelectAllOrPending<F>
 where
     F: Future + Unpin,
 {
-    inner: FutureOrPending<FutureSelectAll<F>>,
+    inner: Fuse<FutureSelectAll<F>>,
 }
 // impl<F> Unpin for FutureSelectAllOrPending<F> where F: Future + Unpin {}
 impl<F> FromIterator<F> for FutureSelectAllOrPending<F>
@@ -21,12 +21,10 @@ where
         let mut iter = iter.into_iter().peekable();
 
         let inner = if iter.peek().is_some() {
-            Some(FutureSelectAll::from_iter(iter))
+            FutureSelectAll::from_iter(iter).fuse()
         } else {
-            None
+            Fuse::terminated()
         };
-
-        let inner = FutureOrPending::new(inner);
 
         Self { inner }
     }
