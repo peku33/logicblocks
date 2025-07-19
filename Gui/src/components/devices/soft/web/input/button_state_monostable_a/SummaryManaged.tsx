@@ -1,7 +1,7 @@
 import { deviceClassPostJsonEmpty } from "@/components/devices/Device";
 import { DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
 import { useDeviceSummary } from "@/components/devices/DeviceSummaryService";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import Component from "./Summary";
 
 const VALUE_TIMEOUT_SECS = 5;
@@ -21,27 +21,42 @@ const ManagedComponent: DeviceSummaryManaged = (props) => {
         console.error(reason);
       });
 
-      // keep refreshing true value
+      // we always want to reset the timer
+      // if value is false - we simply don't want it anymore
+      // if value is true - we have to recreate it, to start counting from now
+      if (beatTimer.current !== null) {
+        clearInterval(beatTimer.current);
+        beatTimer.current = null;
+      }
       if (value) {
-        if (beatTimer.current === null) {
-          beatTimer.current = setInterval(
-            () => {
-              deviceClassPostJsonEmpty(deviceId, "", true).catch((reason: unknown) => {
-                console.error(reason);
-              });
-            },
-            (VALUE_TIMEOUT_SECS - VALUE_TIMEOUT_SKEW_SECS) * 1000,
-          );
-        }
-      } else {
-        if (beatTimer.current !== null) {
-          clearInterval(beatTimer.current);
-          beatTimer.current = null;
-        }
+        beatTimer.current = setInterval(
+          () => {
+            deviceClassPostJsonEmpty(deviceId, "", true).catch((reason: unknown) => {
+              console.error(reason);
+            });
+          },
+          (VALUE_TIMEOUT_SECS - VALUE_TIMEOUT_SKEW_SECS) * 1000,
+        );
       }
     },
     [deviceId],
   );
+
+  // disable on component unmount
+  useEffect(() => {
+    return () => {
+      if (beatTimer.current === null) {
+        return;
+      }
+
+      deviceClassPostJsonEmpty(deviceId, "", false).catch((reason: unknown) => {
+        console.error(reason);
+      });
+
+      clearInterval(beatTimer.current);
+      beatTimer.current = null;
+    };
+  }, [deviceId]);
 
   return <Component data={data} onValueChanged={onValueChanged} />;
 };

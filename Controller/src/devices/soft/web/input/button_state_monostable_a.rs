@@ -52,17 +52,17 @@ impl Device {
 
         'outer: loop {
             // wait for signal to go up
-            'inner_wait_for_up: loop {
+            loop {
                 if *value_beat_receiver.borrow_and_update() {
-                    break 'inner_wait_for_up;
+                    break;
                 }
 
                 select! {
-                    () = exit_flag => break 'outer,
                     result = value_beat_receiver.changed().fuse() => {
                         result.unwrap();
-                        continue 'inner_wait_for_up;
+                        continue;
                     },
+                    () = exit_flag => break 'outer,
                 }
             }
             if self.signal_output.set_one(Some(true)) {
@@ -70,28 +70,28 @@ impl Device {
             }
 
             // wait for signal to go down or timeout expires
-            'inner_wait_for_down: loop {
+            loop {
                 if !*value_beat_receiver.borrow_and_update() {
-                    break 'inner_wait_for_down;
+                    break;
                 }
 
                 let timeout = tokio::time::sleep(Self::VALUE_TIMEOUT).fuse();
                 pin_mut!(timeout);
 
                 select! {
-                    () = exit_flag => break 'outer,
                     result = value_beat_receiver.changed().fuse() => {
                         result.unwrap();
-                        continue 'inner_wait_for_down;
+                        continue;
                     },
                     () = timeout => {},
+                    () = exit_flag => break 'outer,
                 }
 
                 // timeout expired
                 self.value_beat_sender.send(false).unwrap();
                 self.gui_summary_waker.wake();
 
-                break 'inner_wait_for_down;
+                break;
             }
             if self.signal_output.set_one(Some(false)) {
                 self.signals_sources_changed_waker.wake();

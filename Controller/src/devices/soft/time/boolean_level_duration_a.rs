@@ -71,16 +71,16 @@ impl Device {
 
         'outer: loop {
             // wait until signal goes into active state
-            'wait_for_active: loop {
+            loop {
                 select! {
-                    () = exit_flag => break 'outer,
                     signal_input_value = signal_input_stream_filtered.select_next_some() => {
                         // if signal is in active state - exit the waiting loop
                         // if not (this should never happen) - continue waiting
                         if signal_input_value {
-                            break 'wait_for_active;
+                            break;
                         }
                     },
+                    () = exit_flag => break 'outer,
                 }
             }
             if self.signal_started.push_one(()) {
@@ -93,17 +93,17 @@ impl Device {
                 pin_mut!(breakpoint_timer);
 
                 // tell whether client released the state or timeout expired
-                let released = 'break_on_released: loop {
+                let released = loop {
                     select! {
-                        () = exit_flag => break 'outer,
                         signal_input_value = signal_input_stream_filtered.select_next_some() => {
                             // if client deasserted the input - exit the loop, "breaking here"
                             // if not (this should never happen) - continue waiting
                             if !signal_input_value {
-                                break 'break_on_released true;
+                                break true;
                             }
                         },
-                        () = breakpoint_timer => break 'break_on_released false,
+                        () = breakpoint_timer => break false,
+                        () = exit_flag => break 'outer,
                     }
                 };
 
@@ -126,17 +126,17 @@ impl Device {
 
             // no breakpoint was hit, we are still acquired
             // wait for signal to be released and go to the beginning
-            'wait_for_released: loop {
+            loop {
                 // wait for value change
                 select! {
-                    () = exit_flag => break 'outer,
                     signal_input_value = signal_input_stream_filtered.select_next_some() => {
                         // if client released the button - exit the loop
                         // if not (this should never happen) - continue waiting
                         if !signal_input_value {
-                            break 'wait_for_released;
+                            break;
                         }
                     },
+                    () = exit_flag => break 'outer,
                 }
             }
             if self.signal_finished.push_one(()) {
