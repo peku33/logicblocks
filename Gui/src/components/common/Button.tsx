@@ -36,7 +36,7 @@ const ButtonInner = styled.div<{
   font-weight: bold;
   cursor: pointer;
 
-  :hover {
+  &:hover {
     background-color: ${(props) => (props.$active ? Colors.GREEN : Colors.GREY_DARK)};
   }
 `;
@@ -96,7 +96,7 @@ const ButtonLinkInner = styled.a`
   font-weight: bold;
   cursor: pointer;
 
-  :hover {
+  &:hover {
     background-color: ${Colors.GREY_DARK};
   }
 `;
@@ -109,7 +109,7 @@ export const ButtonGroup: React.FC<{
 const ButtonGroupInner = styled.div`
   display: grid;
   grid-auto-flow: column;
-  /* grid-auto-columns: auto; */
+  grid-auto-columns: minmax(0, 1fr);
 
   & > ${ButtonInner}, & > ${ButtonLinkInner} {
     &:not(:first-child) {
