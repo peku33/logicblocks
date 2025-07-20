@@ -205,8 +205,11 @@ const Component: React.FC<{
 
         {dataStateIsPaused(data.state) || dataStateIsEnabled(data.state) ? (
           <ButtonGroup>
-            <ButtonActionAsync onClick={onChannelsAllClear}>Clear</ButtonActionAsync>
+            <ButtonActionAsync active={false} onClick={onChannelsAllClear}>
+              Clear
+            </ButtonActionAsync>
             <ButtonActionAsync
+              active={false}
               onClick={async () => {
                 await onChannelsAllAdd(0.25);
               }}
@@ -214,6 +217,7 @@ const Component: React.FC<{
               +1/4
             </ButtonActionAsync>
             <ButtonActionAsync
+              active={false}
               onClick={async () => {
                 await onChannelsAllAdd(0.5);
               }}
@@ -221,6 +225,7 @@ const Component: React.FC<{
               +1/2
             </ButtonActionAsync>
             <ButtonActionAsync
+              active={false}
               onClick={async () => {
                 await onChannelsAllAdd(1.0);
               }}
@@ -328,6 +333,7 @@ const Component: React.FC<{
                       ))) ? (
                     <ButtonGroup>
                       <ButtonActionAsync
+                        active={false}
                         onClick={async () => {
                           await onChannelClear(channelId);
                         }}
@@ -335,6 +341,7 @@ const Component: React.FC<{
                         Clear
                       </ButtonActionAsync>
                       <ButtonActionAsync
+                        active={false}
                         onClick={async () => {
                           await onChannelAdd(channelId, 0.25);
                         }}
@@ -342,6 +349,7 @@ const Component: React.FC<{
                         +1/4
                       </ButtonActionAsync>
                       <ButtonActionAsync
+                        active={false}
                         onClick={async () => {
                           await onChannelAdd(channelId, 0.5);
                         }}
@@ -349,6 +357,7 @@ const Component: React.FC<{
                         +1/2
                       </ButtonActionAsync>
                       <ButtonActionAsync
+                        active={false}
                         onClick={async () => {
                           await onChannelAdd(channelId, 1.0);
                         }}
@@ -371,6 +380,7 @@ const Component: React.FC<{
                     <ButtonGroup>
                       <ButtonGroup>
                         <ButtonActionAsync
+                          active={false}
                           onClick={async () => {
                             await onChannelMoveBack(channelId);
                           }}
@@ -378,6 +388,7 @@ const Component: React.FC<{
                           Move back
                         </ButtonActionAsync>
                         <ButtonActionAsync
+                          active={false}
                           onClick={async () => {
                             await onChannelMoveFront(channelId);
                           }}

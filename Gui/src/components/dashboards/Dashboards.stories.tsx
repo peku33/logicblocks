@@ -1,10 +1,10 @@
-import { DeviceId } from "@/components/devices/Device";
-import { Meta } from "@storybook/react-vite";
+import { type DeviceId } from "@/components/devices/Device";
+import { type Meta } from "@storybook/react-vite";
 
 import {
-  DashboardLinkComponent,
-  DashboardLinkComponentResolver,
-  NavigationLinkComponentResolver,
+  type DashboardLinkComponent,
+  type DashboardLinkComponentResolver,
+  type NavigationLinkComponentResolver,
   Page,
 } from "./Dashboards";
 import * as Data from "./Data";

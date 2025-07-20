@@ -1,7 +1,7 @@
 import { Line } from "@/components/common/Line";
 import styled from "styled-components";
-import { DeviceId } from "./Device";
-import { DeviceData } from "./DeviceData";
+import { type DeviceId } from "./Device";
+import { type DeviceData } from "./DeviceData";
 import { getByClass } from "./DeviceSummaryManagedFactory";
 
 const DeviceSummaryManagedWrapper: React.FC<{

@@ -1,5 +1,5 @@
 import { buildTextDisplay } from "@/components/datatypes/common/TextDisplay";
-import Pressure, { formatPressureOrUnknown } from "@/datatypes/Pressure";
+import { type Pressure, formatPressureOrUnknown } from "@/datatypes/Pressure";
 
 export type Data = Pressure;
 

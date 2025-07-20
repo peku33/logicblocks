@@ -1,8 +1,8 @@
 import { deviceClassPostJsonEmpty } from "@/components/devices/Device";
-import { DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
+import { type DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
 import { useDeviceSummary } from "@/components/devices/DeviceSummaryService";
 import { useCallback } from "react";
-import Component, { Data } from "./Summary";
+import Component, { type Data } from "./Summary";
 
 const ManagedComponent: DeviceSummaryManaged = (props) => {
   const { deviceId } = props;

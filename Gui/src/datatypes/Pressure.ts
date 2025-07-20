@@ -1,7 +1,6 @@
 import { formatSI } from "@/util/Number";
 
-type Pressure = number; // as pascals
-export default Pressure;
+export type Pressure = number; // as pascals
 
 export function formatPressure(pressure: Pressure, decimalPoints: number) {
   return formatSI(pressure, decimalPoints, "pa");

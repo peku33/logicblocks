@@ -1,34 +1,58 @@
-import { Meta } from "@storybook/react-vite";
-import { Button, ButtonActionAsync, ButtonGroup, ButtonLink } from "./Button";
+import { type Meta } from "@storybook/react-vite";
+import { useState } from "react";
+import { ButtonActionAsync, ButtonGroup, ButtonLink, ButtonPressRelease } from "./Button";
 
 export default {
   title: "components/common/Button",
 } satisfies Meta;
 
-export const Basic: React.FC = () => (
-  <>
-    <Button>Inactive button</Button>
-    <Button active>Active button</Button>
-    <ButtonLink href="">Link button</ButtonLink>
-    <ButtonGroup>
-      <Button>First</Button>
-      <Button>Center</Button>
-      <Button>Last</Button>
-    </ButtonGroup>
-    <ButtonGroup>
-      <Button>First</Button>
-      <Button active>Center very very large</Button>
-      <Button>Last</Button>
-    </ButtonGroup>
-    <ButtonActionAsync
-      active
-      onClick={() =>
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, 1000);
-        })
-      }
-    >
-      Action Button with 1s timeout
-    </ButtonActionAsync>
-  </>
-);
+const onClickNull = () => Promise.resolve();
+
+export const Basic: React.FC = () => {
+  const [buttonPressReleaseState, setButtonPressReleaseState] = useState(false);
+
+  return (
+    <>
+      <ButtonActionAsync active={false} onClick={onClickNull}>
+        ButtonActionAsync inactive
+      </ButtonActionAsync>
+      <ButtonActionAsync active={true} onClick={onClickNull}>
+        ButtonActionAsync Active
+      </ButtonActionAsync>
+
+      <ButtonPressRelease
+        active={buttonPressReleaseState}
+        onPressedChanged={(value) => {
+          setButtonPressReleaseState(value);
+        }}
+      >
+        ButtonPressRelease
+      </ButtonPressRelease>
+
+      <ButtonLink href="" targetBlank>
+        Link button
+      </ButtonLink>
+      <ButtonGroup>
+        <ButtonActionAsync active={false} onClick={onClickNull}>
+          First
+        </ButtonActionAsync>
+        <ButtonActionAsync active={true} onClick={onClickNull}>
+          Middle
+        </ButtonActionAsync>
+        <ButtonActionAsync active={false} onClick={onClickNull}>
+          Last
+        </ButtonActionAsync>
+      </ButtonGroup>
+      <ButtonActionAsync
+        active
+        onClick={() =>
+          new Promise<void>((resolve) => {
+            setTimeout(resolve, 1000);
+          })
+        }
+      >
+        Action Button with 1s timeout
+      </ButtonActionAsync>
+    </>
+  );
+};

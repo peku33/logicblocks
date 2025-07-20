@@ -1,8 +1,8 @@
-import ColorRgbBoolean from "@/datatypes/ColorRgbBoolean";
-import Ds18x20State from "@/datatypes/Ds18x20";
+import { type ColorRgbBoolean } from "@/datatypes/ColorRgbBoolean";
+import { type Ds18x20State } from "@/datatypes/Ds18x20";
 import { formatTemperatureCelsiusOrUnknown, formatTemperatureFahrenheitOrUnknown } from "@/datatypes/Temperature";
-import Voltage, { formatVoltageOrUnknown } from "@/datatypes/Voltage";
-import { Property } from "csstype";
+import { type Voltage, formatVoltageOrUnknown } from "@/datatypes/Voltage";
+import type * as CSS from "csstype";
 import { rgb } from "polished";
 import styled from "styled-components";
 
@@ -369,7 +369,7 @@ const LayoutItemDs18x20: React.FC<{
 };
 
 const LayoutItemInner = styled.div<{
-  $backgroundColor: Property.Color;
+  $backgroundColor: CSS.Property.Color;
 }>`
   width: 100%;
   height: 100%;

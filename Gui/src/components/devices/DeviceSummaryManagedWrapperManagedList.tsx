@@ -1,6 +1,6 @@
 import Colors from "@/components/common/Colors";
 import styled from "styled-components";
-import { DeviceId } from "./Device";
+import { type DeviceId } from "./Device";
 import DeviceSummaryManagedWrapperManaged from "./DeviceSummaryManagedWrapperManaged";
 
 const DeviceSummaryManagedWrapperManagedList: React.FC<{

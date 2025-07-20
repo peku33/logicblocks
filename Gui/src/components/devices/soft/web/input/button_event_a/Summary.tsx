@@ -8,7 +8,9 @@ const Component: React.FC<{
 
   return (
     <Wrapper>
-      <ButtonActionAsync onClick={onSignal}>Signal</ButtonActionAsync>
+      <ButtonActionAsync active={false} onClick={onSignal}>
+        Signal
+      </ButtonActionAsync>
     </Wrapper>
   );
 };

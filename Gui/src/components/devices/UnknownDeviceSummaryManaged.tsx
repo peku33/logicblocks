@@ -1,4 +1,4 @@
-import { DeviceSummaryManaged } from "./DeviceSummaryManaged";
+import { type DeviceSummaryManaged } from "./DeviceSummaryManaged";
 import UnknownDeviceSummary from "./UnknownDeviceSummary";
 
 const ManagedComponent: DeviceSummaryManaged = (props) => {

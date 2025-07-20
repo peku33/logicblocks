@@ -1,4 +1,4 @@
-import { IconName, IconPrefix } from "@fortawesome/fontawesome-svg-core";
+import { type IconName, type IconPrefix } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon as Inner } from "@fortawesome/react-fontawesome";
 
 export interface Icon {

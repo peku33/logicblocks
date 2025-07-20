@@ -1,5 +1,5 @@
 import { deviceClassPostJsonEmpty } from "@/components/devices/Device";
-import { DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
+import { type DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
 import { useDeviceSummary } from "@/components/devices/DeviceSummaryService";
 import { useCallback, useEffect, useRef } from "react";
 import Component from "./Summary";

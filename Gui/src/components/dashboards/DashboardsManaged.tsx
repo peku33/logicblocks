@@ -1,5 +1,5 @@
 import DeviceSummaryManagedWrapperManagedList from "@/components/devices/DeviceSummaryManagedWrapperManagedList";
-import { DashboardLinkComponentResolver, NavigationLinkComponentResolver, Page } from "./Dashboards";
+import { type DashboardLinkComponentResolver, type NavigationLinkComponentResolver, Page } from "./Dashboards";
 import * as Data from "./Data";
 
 export const PageManaged: React.FC<{

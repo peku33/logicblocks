@@ -1,8 +1,8 @@
 import {
-  DashboardLinkComponent,
-  DashboardLinkComponentResolver,
-  NavigationLinkComponent,
-  NavigationLinkComponentResolver,
+  type DashboardLinkComponent,
+  type DashboardLinkComponentResolver,
+  type NavigationLinkComponent,
+  type NavigationLinkComponentResolver,
 } from "@/components/dashboards/Dashboards";
 import { PageManaged } from "@/components/dashboards/DashboardsManaged";
 import * as Data from "@/components/dashboards/Data";

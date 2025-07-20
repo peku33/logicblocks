@@ -1,5 +1,5 @@
 import Loader from "@/components/common/Loader";
-import { DeviceId } from "./Device";
+import { type DeviceId } from "./Device";
 import { useDeviceData } from "./DeviceDataService";
 import DeviceSummaryManagedWrapper from "./DeviceSummaryManagedWrapper";
 

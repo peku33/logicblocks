@@ -1,4 +1,4 @@
-import { Button } from "@/components/common/Button";
+import { ButtonPressRelease } from "@/components/common/Button";
 import styled from "styled-components";
 
 export type Data = boolean;
@@ -11,17 +11,9 @@ const Component: React.FC<{
 
   return (
     <Wrapper>
-      <Button
-        active={data}
-        onMouseDown={() => {
-          onValueChanged(true);
-        }}
-        onMouseUp={() => {
-          onValueChanged(false);
-        }}
-      >
+      <ButtonPressRelease active={data !== undefined ? data : false} onPressedChanged={onValueChanged}>
         Signal
-      </Button>
+      </ButtonPressRelease>
     </Wrapper>
   );
 };

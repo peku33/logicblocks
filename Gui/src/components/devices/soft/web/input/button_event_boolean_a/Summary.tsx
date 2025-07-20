@@ -13,7 +13,7 @@ const Component: React.FC<{
     <Wrapper>
       <ButtonGroup>
         <ButtonActionAsync
-          active={data !== undefined ? !data : undefined}
+          active={data !== undefined ? !data : false}
           onClick={async () => {
             await onPush(false);
           }}
@@ -21,7 +21,7 @@ const Component: React.FC<{
           Off
         </ButtonActionAsync>
         <ButtonActionAsync
-          active={data !== undefined ? data : undefined}
+          active={data !== undefined ? data : false}
           onClick={async () => {
             await onPush(true);
           }}

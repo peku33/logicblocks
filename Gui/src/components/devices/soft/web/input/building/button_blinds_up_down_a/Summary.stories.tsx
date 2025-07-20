@@ -1,4 +1,4 @@
-import { Meta } from "@storybook/react-vite";
+import { type Meta } from "@storybook/react-vite";
 import Component from "./Summary";
 
 export default {

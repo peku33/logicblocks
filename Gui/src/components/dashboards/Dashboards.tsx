@@ -1,8 +1,8 @@
 import Colors from "@/components/common/Colors";
 import FontAwesomeIcon from "@/components/common/FontAwesome";
 import Loader from "@/components/common/Loader";
-import { DeviceId } from "@/components/devices/Device";
-import { PropsWithChildren } from "react";
+import { type DeviceId } from "@/components/devices/Device";
+import { type PropsWithChildren } from "react";
 import styled from "styled-components";
 import * as Data from "./Data";
 

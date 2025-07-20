@@ -14,11 +14,13 @@ const Component: React.FC<{
   return (
     <Wrapper>
       <ButtonGroup>
-        <ButtonActionAsync active={data !== undefined ? !data : undefined} onClick={onR}>
+        <ButtonActionAsync active={data !== undefined ? !data : false} onClick={onR}>
           Off
         </ButtonActionAsync>
-        <ButtonActionAsync onClick={onT}>Toggle</ButtonActionAsync>
-        <ButtonActionAsync active={data !== undefined ? data : undefined} onClick={onS}>
+        <ButtonActionAsync active={false} onClick={onT}>
+          Toggle
+        </ButtonActionAsync>
+        <ButtonActionAsync active={data !== undefined ? data : false} onClick={onS}>
           On
         </ButtonActionAsync>
       </ButtonGroup>

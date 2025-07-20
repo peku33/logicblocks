@@ -1,4 +1,5 @@
-import Temperature, {
+import {
+  type Temperature,
   formatTemperatureCelsiusOrUnknown,
   formatTemperatureFahrenheitOrUnknown,
 } from "@/datatypes/Temperature";

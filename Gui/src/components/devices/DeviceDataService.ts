@@ -1,7 +1,7 @@
 import assert from "assert-ts";
 import { useEffect, useState } from "react";
-import { DeviceId } from "./Device";
-import { DeviceData, fetchDeviceData } from "./DeviceData";
+import { type DeviceId } from "./Device";
+import { type DeviceData, fetchDeviceData } from "./DeviceData";
 
 export type AggregatorSubscriptionExecutor = (deviceData: DeviceData | undefined) => void;
 export class AggregatorSubscriptionToken {

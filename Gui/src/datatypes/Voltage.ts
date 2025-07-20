@@ -1,7 +1,6 @@
 import { formatSI } from "@/util/Number";
 
-type Voltage = number; // as volts
-export default Voltage;
+export type Voltage = number; // as volts
 
 export function formatVoltage(voltage: Voltage, decimalPoints: number): string {
   return formatSI(voltage, decimalPoints, "V");

@@ -1,6 +1,6 @@
-import { DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
+import { type DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
 import { useDeviceSummary } from "@/components/devices/DeviceSummaryService";
-import Component, { Data } from "./Summary";
+import Component, { type Data } from "./Summary";
 
 const ManagedComponent: DeviceSummaryManaged = (props) => {
   const { deviceId } = props;

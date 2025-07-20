@@ -1,6 +1,6 @@
-import { Meta } from "@storybook/react-vite";
+import { type Meta } from "@storybook/react-vite";
 import { useState } from "react";
-import Component, { Data } from "./Summary";
+import Component, { type Data } from "./Summary";
 
 export default {
   title: "components/devices/soft/web/input/button_event_boolean_a/Summary",

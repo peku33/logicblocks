@@ -37,6 +37,7 @@ const Summary: React.FC<{
             .map((offset) => (
               <ButtonActionAsync
                 key={offset}
+                active={false}
                 onClick={async () => {
                   if (data == null) {
                     return;
@@ -58,6 +59,7 @@ const Summary: React.FC<{
           {ButtonOffsets.map((offset) => (
             <ButtonActionAsync
               key={offset}
+              active={false}
               onClick={async () => {
                 if (data == null) {
                   return;

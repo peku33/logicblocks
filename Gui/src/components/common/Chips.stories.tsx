@@ -1,4 +1,4 @@
-import { Meta } from "@storybook/react-vite";
+import { type Meta } from "@storybook/react-vite";
 
 import styled from "styled-components";
 import { Chip, ChipsGroup, ChipType } from "./Chips";
@@ -18,11 +18,15 @@ export const Basic: React.FC = () => (
 export const Group: React.FC = () => (
   <>
     <ChipsGroup>
-      <Chip type={ChipType.ERROR}>ERROR</Chip>
+      <Chip type={ChipType.ERROR} enabled={false}>
+        ERROR
+      </Chip>
       <Chip type={ChipType.WARNING} enabled>
         WARNING
       </Chip>
-      <Chip type={ChipType.INFO}>INFO</Chip>
+      <Chip type={ChipType.INFO} enabled={false}>
+        INFO
+      </Chip>
       <Chip type={ChipType.OK} enabled>
         OK
       </Chip>
@@ -35,7 +39,9 @@ const Line: React.FC<{ type: ChipType }> = (props) => {
 
   return (
     <LineWrapper>
-      <Chip type={type}>{ChipType[type]} Disabled</Chip>
+      <Chip type={type} enabled={false}>
+        {ChipType[type]} Disabled
+      </Chip>
       <Chip type={type} enabled>
         {ChipType[type]} Enabled
       </Chip>

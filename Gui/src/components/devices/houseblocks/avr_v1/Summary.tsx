@@ -1,6 +1,6 @@
 import { Line } from "@/components/common/Line";
 import styled from "styled-components";
-import HardwareRunnerSummary, { Data as HardwareRunnerData } from "./hardware_runner/Summary";
+import HardwareRunnerSummary, { type Data as HardwareRunnerData } from "./hardware_runner/Summary";
 
 export interface Data<D> {
   hardware_runner: HardwareRunnerData;

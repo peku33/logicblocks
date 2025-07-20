@@ -1,7 +1,6 @@
 import { formatSI } from "@/util/Number";
 
-type Temperature = number; // as kelvin
-export default Temperature;
+export type Temperature = number; // as kelvin
 
 export function temperatureToCelsius(temperature: Temperature): number {
   return temperature - 273.15;

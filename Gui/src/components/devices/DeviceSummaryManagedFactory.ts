@@ -1,4 +1,4 @@
-import { DeviceSummaryManaged } from "./DeviceSummaryManaged";
+import { type DeviceSummaryManaged } from "./DeviceSummaryManaged";
 //
 import dahuaIpcA from "./dahua/ipc_a/SummaryManaged";
 import eatonMmaxA from "./eaton/mmax_a/SummaryManaged";

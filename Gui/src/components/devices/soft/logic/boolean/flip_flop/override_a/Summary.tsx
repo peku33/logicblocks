@@ -33,7 +33,7 @@ const Component: React.FC<{
     <Wrapper>
       <ButtonGroup>
         <ButtonActionAsync
-          active={data !== undefined ? (dataModeIsOverride(data.mode) ? !data.mode.value : false) : undefined}
+          active={data !== undefined ? (dataModeIsOverride(data.mode) ? !data.mode.value : false) : false}
           onClick={async () => {
             await onModeSet(false);
           }}
@@ -43,7 +43,7 @@ const Component: React.FC<{
           </ButtonContent>
         </ButtonActionAsync>
         <ButtonActionAsync
-          active={data !== undefined ? dataModeIsPassThrough(data.mode) : undefined}
+          active={data !== undefined ? dataModeIsPassThrough(data.mode) : false}
           onClick={async () => {
             await onModeSet(null);
           }}
@@ -58,7 +58,7 @@ const Component: React.FC<{
           </ButtonContent>
         </ButtonActionAsync>
         <ButtonActionAsync
-          active={data !== undefined ? (dataModeIsOverride(data.mode) ? data.mode.value : false) : undefined}
+          active={data !== undefined ? (dataModeIsOverride(data.mode) ? data.mode.value : false) : false}
           onClick={async () => {
             await onModeSet(true);
           }}
@@ -70,6 +70,7 @@ const Component: React.FC<{
       </ButtonGroup>
       <ButtonGroup>
         <ButtonActionAsync
+          active={false}
           onClick={async () => {
             await onModeCyclePassThrough();
           }}
@@ -80,6 +81,7 @@ const Component: React.FC<{
           </ButtonContent>
         </ButtonActionAsync>
         <ButtonActionAsync
+          active={false}
           onClick={async () => {
             await onModeCycleNoPassThrough();
           }}

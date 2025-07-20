@@ -1,6 +1,6 @@
-import { DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
+import { type DeviceSummaryManaged } from "@/components/devices/DeviceSummaryManaged";
 import { useDeviceSummary } from "@/components/devices/DeviceSummaryService";
-import { Data } from "./Summary";
+import { type Data } from "./Summary";
 
 export function makeAvrV1SummaryManaged<D>(
   Component: React.ComponentType<{ data: Data<D> | undefined }>,

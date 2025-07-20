@@ -1,5 +1,5 @@
-import { Meta } from "@storybook/react-vite";
-import Component, { Data } from "./Summary";
+import { type Meta } from "@storybook/react-vite";
+import Component, { type Data } from "./Summary";
 
 export default {
   title: "components/devices/soft/web/display/boolean_a/Summary",

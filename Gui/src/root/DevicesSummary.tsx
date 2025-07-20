@@ -1,5 +1,5 @@
 import Loader from "@/components/common/Loader";
-import { DeviceId, endpointBuild } from "@/components/devices/Device";
+import { type DeviceId, endpointBuild } from "@/components/devices/Device";
 import DeviceSummaryManagedWrapperManagedList from "@/components/devices/DeviceSummaryManagedWrapperManagedList";
 import { getJson } from "@/lib/Api";
 import { useEffect, useState } from "react";

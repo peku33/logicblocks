@@ -1,7 +1,6 @@
 import { formatSI } from "@/util/Number";
 
-type Resistance = number; // ohms
-export default Resistance;
+export type Resistance = number; // ohms
 
 export function resistanceToOhms(resistance: Resistance): number {
   return resistance;

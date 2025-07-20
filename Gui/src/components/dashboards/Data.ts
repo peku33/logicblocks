@@ -1,5 +1,5 @@
-import { Icon } from "@/components/common/FontAwesome";
-import { DeviceId } from "@/components/devices/Device";
+import { type Icon } from "@/components/common/FontAwesome";
+import { type DeviceId } from "@/components/devices/Device";
 import { getJson } from "@/lib/Api";
 import { useEffect, useState } from "react";
 import * as Data from "./Data";

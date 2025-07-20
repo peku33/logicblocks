@@ -1,7 +1,7 @@
 import * as SSETopic from "@/lib/SSETopic";
 import assert from "assert-ts";
 import { useEffect, useState } from "react";
-import { DeviceId, endpointBuild } from "./Device";
+import { type DeviceId, endpointBuild } from "./Device";
 import { fetchDeviceSummary } from "./DeviceSummary";
 
 const aggregatorEventsClientUrl = endpointBuild("/devices/gui-summary-sse");

@@ -23,7 +23,7 @@ function enabledColor(type: ChipType): string {
 
 const ChipInner = styled.div<{
   $type: ChipType;
-  $enabled?: boolean;
+  $enabled: boolean;
 }>`
   padding: 0.25rem 0.5rem;
   text-align: center;
@@ -36,7 +36,7 @@ const ChipInner = styled.div<{
 `;
 export const Chip: React.FC<{
   type: ChipType;
-  enabled?: boolean;
+  enabled: boolean;
   children?: React.ReactNode;
 }> = (props) => {
   const { type, enabled, children } = props;
