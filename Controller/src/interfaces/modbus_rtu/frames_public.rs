@@ -314,10 +314,13 @@ impl ReadWordsGenericResponse {
             Ordering::Greater => bail!("word bytes count overflow"),
         }
 
-        let words_values = words_values_bytes
-            .array_chunks::<2>()
-            .map(|words| u16::from_be_bytes(*words))
-            .collect::<Box<[_]>>();
+        let words_values = match words_values_bytes.as_chunks::<2>() {
+            (words, []) => words,
+            _ => panic!(),
+        }
+        .iter()
+        .map(|words| u16::from_be_bytes(*words))
+        .collect::<Box<[_]>>();
 
         Ok(Some(Self { words_values }))
     }
