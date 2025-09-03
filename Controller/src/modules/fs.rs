@@ -1,50 +1,39 @@
+use anyhow::{Context, Error, bail};
+use fs4::fs_std::FileExt;
+use once_cell::sync::Lazy;
 use std::{
-    env::{self, current_dir},
-    fs::create_dir_all,
+    env,
+    fs::{self, File},
+    ops::Deref,
     path::{Path, PathBuf},
 };
 
 #[derive(Debug)]
 pub struct Fs {
-    persistent_data_directory: PathBuf,
-    persistent_storage_directory: PathBuf,
-    temporary_storage_directory: PathBuf,
+    persistent_data_directory: DirectoryLocked,
+    persistent_storage_directory: DirectoryLocked,
+    temporary_storage_directory: DirectoryLocked,
 }
 impl Fs {
-    pub fn new() -> Self {
-        // TODO: Make this instance dependant
-        let persistent_root = current_dir().unwrap().join("data");
-        create_dir_all(&persistent_root).unwrap();
+    pub fn new() -> Result<Self, Error> {
+        let persistent_data_directory = DirectoryLocked::initialize(persistent_data_directory())
+            .context("persistent_data_directory")?;
 
-        // TODO: Make this instance dependant
-        // FIXME: XDG_RUNTIME_DIR may not exist
-        let temporary_root = if cfg!(unix) {
-            if let Ok(temporary_root) = env::var("XDG_RUNTIME_DIR") {
-                PathBuf::from(temporary_root)
-            } else {
-                Path::new("/dev/shm").to_path_buf()
-            }
-        } else {
-            current_dir().unwrap().join("temporary")
-        };
-        let temporary_root = temporary_root.join("logicblocks");
-        create_dir_all(&temporary_root).unwrap();
+        let persistent_storage_directory =
+            DirectoryLocked::initialize(persistent_storage_directory())
+                .context("persistent_storage_directory")?;
 
-        let persistent_data_directory = persistent_root.join("data");
-        create_dir_all(&persistent_data_directory).unwrap();
+        let temporary_storage_directory =
+            DirectoryLocked::initialize(temporary_storage_directory())
+                .context("temporary_storage_directory")?;
 
-        let persistent_storage_directory = persistent_root.join("storage");
-        create_dir_all(&persistent_storage_directory).unwrap();
-
-        let temporary_storage_directory = temporary_root.join("storage");
-        create_dir_all(&temporary_storage_directory).unwrap();
-
-        Self {
+        Ok(Self {
             persistent_data_directory,
             persistent_storage_directory,
             temporary_storage_directory,
-        }
+        })
     }
+
     pub fn persistent_data_directory(&self) -> &Path {
         &self.persistent_data_directory
     }
@@ -53,5 +42,108 @@ impl Fs {
     }
     pub fn temporary_storage_directory(&self) -> &Path {
         &self.temporary_storage_directory
+    }
+}
+
+fn persistent_directory_resolve() -> PathBuf {
+    let persistent_directory =
+        if let Ok(persistent_directory) = env::var("LOGICBLOCKS_FS_PERSISTENT_DIRECTORY") {
+            PathBuf::from(persistent_directory)
+        } else {
+            env::current_dir().unwrap().join("data")
+        };
+
+    persistent_directory
+}
+pub fn persistent_directory() -> &'static Path {
+    static PERSISTENT_DIRECTORY: Lazy<PathBuf> = Lazy::<PathBuf>::new(persistent_directory_resolve);
+
+    &PERSISTENT_DIRECTORY
+}
+
+fn persistent_data_directory_resolve() -> PathBuf {
+    let persistent_data_directory = if let Ok(persistent_data_directory) =
+        env::var("LOGICBLOCKS_FS_PERSISTENT_DATA_DIRECTORY")
+    {
+        PathBuf::from(persistent_data_directory)
+    } else {
+        persistent_directory().join("data")
+    };
+
+    persistent_data_directory
+}
+pub fn persistent_data_directory() -> &'static Path {
+    static PERSISTENT_DATA_DIRECTORY: Lazy<PathBuf> =
+        Lazy::<PathBuf>::new(persistent_data_directory_resolve);
+
+    &PERSISTENT_DATA_DIRECTORY
+}
+
+fn persistent_storage_directory_resolve() -> PathBuf {
+    let persistent_storage_directory = if let Ok(persistent_storage_directory) =
+        env::var("LOGICBLOCKS_FS_PERSISTENT_STORAGE_DIRECTORY")
+    {
+        PathBuf::from(persistent_storage_directory)
+    } else {
+        persistent_directory().join("storage")
+    };
+
+    persistent_storage_directory
+}
+pub fn persistent_storage_directory() -> &'static Path {
+    static PERSISTENT_STORAGE_DIRECTORY: Lazy<PathBuf> =
+        Lazy::<PathBuf>::new(persistent_storage_directory_resolve);
+
+    &PERSISTENT_STORAGE_DIRECTORY
+}
+
+fn temporary_storage_directory_resolve() -> PathBuf {
+    if let Ok(temporary_storage_directory) = env::var("LOGICBLOCKS_FS_TEMPORARY_STORAGE_DIRECTORY")
+    {
+        return PathBuf::from(temporary_storage_directory);
+    };
+
+    env::temp_dir().join("logicblocks").join("storage")
+}
+pub fn temporary_storage_directory() -> &'static Path {
+    static TEMPORARY_STORAGE_DIRECTORY: Lazy<PathBuf> =
+        Lazy::<PathBuf>::new(temporary_storage_directory_resolve);
+
+    &TEMPORARY_STORAGE_DIRECTORY
+}
+
+#[derive(Debug)]
+struct DirectoryLocked {
+    path: &'static Path,
+
+    lock_file: File,
+}
+impl DirectoryLocked {
+    const LOCK_FILE_NAME: &'static str = "logicblocks.lock";
+
+    pub fn initialize(path: &'static Path) -> Result<Self, Error> {
+        // make sure directory exists
+        fs::create_dir_all(path).context("create_dir_all")?;
+
+        // create a lock file
+        let lock_file_path = path.join(Self::LOCK_FILE_NAME);
+        let lock_file = File::create(lock_file_path).context("lock_file open")?;
+
+        // try locking the file
+        if !lock_file
+            .try_lock_exclusive()
+            .context("try_lock_exclusive")?
+        {
+            bail!("directory {path:?} is locked by other process!");
+        }
+
+        Ok(Self { path, lock_file })
+    }
+}
+impl Deref for DirectoryLocked {
+    type Target = Path;
+
+    fn deref(&self) -> &Self::Target {
+        self.path
     }
 }
