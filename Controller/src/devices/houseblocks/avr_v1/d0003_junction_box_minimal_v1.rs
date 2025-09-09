@@ -372,11 +372,14 @@ pub mod hardware {
         }
 
         pub fn device_reset(&self) -> bool {
+            let mut properties_ins_changed = false;
+
             self.leds.device_reset();
 
-            false // break
-                || self.keys.device_reset()
-                || self.ds18x20.device_reset()
+            properties_ins_changed |= self.keys.device_reset();
+            properties_ins_changed |= self.ds18x20.device_reset();
+
+            properties_ins_changed
         }
 
         pub fn remote(&self) -> PropertiesRemote<'_> {

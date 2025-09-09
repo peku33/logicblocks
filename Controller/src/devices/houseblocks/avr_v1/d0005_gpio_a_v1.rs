@@ -754,13 +754,16 @@ pub mod hardware {
         }
 
         pub fn device_reset(&self) -> bool {
+            let mut properties_ins_changed = false;
+
             self.status_led.device_reset();
             self.digital_outs.device_reset();
 
-            false
-                || self.analog_ins.device_reset()
-                || self.digital_ins.device_reset()
-                || self.ds18x20s.device_reset()
+            properties_ins_changed |= self.analog_ins.device_reset();
+            properties_ins_changed |= self.digital_ins.device_reset();
+            properties_ins_changed |= self.ds18x20s.device_reset();
+
+            properties_ins_changed
         }
 
         pub fn remote(&self) -> PropertiesRemote<'_> {
