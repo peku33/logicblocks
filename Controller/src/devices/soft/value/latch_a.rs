@@ -39,7 +39,7 @@ where
 
     fn signals_targets_changed(&self) {
         match self.signal_trigger.take_pending() {
-            Some(()) => {},
+            Some(()) => {}
             None => return,
         };
 

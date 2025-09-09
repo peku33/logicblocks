@@ -51,9 +51,7 @@ async fn main() -> Result<(), Error> {
         .for_each(async |segment| {
             let target_path = forwarder_runner_persistent_storage_directory
                 .join(segment.path.file_name().unwrap());
-            log::info!(
-                "received segment: {segment:?}, moving to {target_path:?}"
-            );
+            log::info!("received segment: {segment:?}, moving to {target_path:?}");
             move_file(segment.path, target_path).await.unwrap();
         });
 

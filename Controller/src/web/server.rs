@@ -72,9 +72,7 @@ impl<'h> Server<'h> {
         let http_response = response.into_http_response(exit_flag_template);
         let log_status_code = http_response.status();
 
-        log::debug!(
-            "{self}: {remote_address:?} {log_method} {log_uri} {log_status_code}",
-        );
+        log::debug!("{self}: {remote_address:?} {log_method} {log_uri} {log_status_code}",);
 
         http_response
     }
@@ -134,9 +132,10 @@ impl<'h> Server<'h> {
                                 let mut log_ = true;
 
                                 if let Some(error) = error.downcast_ref::<hyper::Error>()
-                                    && (error.is_incomplete_message() || error.is_canceled()) {
-                                        log_ = false;
-                                    }
+                                    && (error.is_incomplete_message() || error.is_canceled())
+                                {
+                                    log_ = false;
+                                }
 
                                 if log_ {
                                     log::error!("{self_static}: connection error: {error:?}");

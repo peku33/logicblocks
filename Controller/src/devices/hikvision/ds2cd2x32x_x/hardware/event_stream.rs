@@ -152,7 +152,8 @@ impl<'a> Manager<'a> {
             .map(|result| match result.context("element_stream_runner") {
                 Ok(()) => anyhow!("data_stream completed"),
                 Err(error) => error,
-            }).fuse();
+            })
+            .fuse();
         pin_mut!(element_stream_runner);
 
         let events_disabler_runner = tokio_stream::wrappers::IntervalStream::new(
@@ -164,7 +165,8 @@ impl<'a> Manager<'a> {
             if events_changed {
                 self.events_propagate();
             }
-        }).fuse();
+        })
+        .fuse();
         pin_mut!(events_disabler_runner);
 
         select! {

@@ -528,11 +528,7 @@ impl<'a> Configurator<'a> {
         for user_id in user_ids {
             let reboot_required = self
                 .api
-                .delete_xml(
-                    format!("/ISAPI/Security/users/{user_id}")
-                        .parse()
-                        .unwrap(),
-                )
+                .delete_xml(format!("/ISAPI/Security/users/{user_id}").parse().unwrap())
                 .await
                 .context("delete_xml")?
                 .reboot_required;

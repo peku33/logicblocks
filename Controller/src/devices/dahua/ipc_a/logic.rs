@@ -288,13 +288,13 @@ impl Device {
         // event manager
         let events_stream_manager = event_stream::Manager::new(&api);
 
-        let events_stream_manager_receiver_runner = tokio_stream::wrappers::WatchStream::new(
-            events_stream_manager.receiver(),
-        )
-        .for_each(async |hardware_events| {
-            let events = Events::from_event_stream_events(&hardware_events);
-            self.events_handle(events);
-        }).fuse();
+        let events_stream_manager_receiver_runner =
+            tokio_stream::wrappers::WatchStream::new(events_stream_manager.receiver())
+                .for_each(async |hardware_events| {
+                    let events = Events::from_event_stream_events(&hardware_events);
+                    self.events_handle(events);
+                })
+                .fuse();
         pin_mut!(events_stream_manager_receiver_runner);
 
         let events_stream_manager_runner = events_stream_manager.run_once().fuse();

@@ -68,9 +68,7 @@ async fn main() -> Result<(), Error> {
             None
         };
 
-        log::info!(
-            "detection_level_set_runner: setting detection_level = {detection_level:?}"
-        );
+        log::info!("detection_level_set_runner: setting detection_level = {detection_level:?}");
 
         detection_level_set_runner_channel.detection_level_set(detection_level);
     });

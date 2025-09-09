@@ -139,9 +139,7 @@ impl<'a> Manager<'a> {
                     changed = true;
                 }
                 Some(previous) => {
-                    log::warn!(
-                        "adding already added event: {previous:?} ({events_active:?})"
-                    );
+                    log::warn!("adding already added event: {previous:?} ({events_active:?})");
                 }
             }
         } else {
@@ -219,7 +217,8 @@ impl<'a> Manager<'a> {
             .map(|result| match result.context("item_stream_runner") {
                 Ok(()) => anyhow!("item_stream completed"),
                 Err(error) => error,
-            }).fuse();
+            })
+            .fuse();
         pin_mut!(item_stream_runner);
 
         let events_fixer_runner = tokio_stream::wrappers::IntervalStream::new(
@@ -229,7 +228,8 @@ impl<'a> Manager<'a> {
             if self.events_fixer_handle(time_point.into_std()) {
                 self.events_propagate();
             }
-        }).fuse();
+        })
+        .fuse();
         pin_mut!(events_fixer_runner);
 
         select! {

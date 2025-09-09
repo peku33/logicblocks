@@ -192,7 +192,8 @@ impl Recorder {
             Err(error) => {
                 log::error!("{self}: error while reading ffmpeg stdout: {error:?}")
             }
-        }).fuse();
+        })
+        .fuse();
         pin_mut!(stdout);
 
         let stderr = tokio_stream::wrappers::LinesStream::new(
@@ -203,7 +204,8 @@ impl Recorder {
             Err(error) => {
                 log::error!("{self}: error while reading ffmpeg stderr: {error:?}")
             }
-        }).fuse();
+        })
+        .fuse();
         pin_mut!(stderr);
 
         let mut pid = Some(child.id().unwrap());
@@ -294,7 +296,8 @@ impl Recorder {
                     // recorder is not set, so just wait for the exit flag
                     Either::Right(ffmpeg_or_nop_run_exit_flag_receiver.map(|()| Exited))
                 }
-            }.fuse();
+            }
+            .fuse();
             pin_mut!(ffmpeg_or_nop_runner);
 
             select! {

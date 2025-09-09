@@ -30,7 +30,9 @@ impl Device {
     }
 
     fn signals_targets_changed(&self) {
-        let outputs = self.signal_input.take_pending()
+        let outputs = self
+            .signal_input
+            .take_pending()
             .into_iter()
             .map(|input| input.map(|input| !input))
             .collect::<Box<[_]>>();
