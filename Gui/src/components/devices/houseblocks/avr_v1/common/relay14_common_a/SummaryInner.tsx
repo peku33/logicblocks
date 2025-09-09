@@ -1,10 +1,10 @@
 import { Chip, ChipType } from "@/components/common/Chips";
 import styled from "styled-components";
 
-export const OUTPUT_COUNT = 14;
+export const OUTPUTS_COUNT = 14;
 
 export interface Data {
-  values: boolean[];
+  outputs: boolean[];
 }
 
 const Component: React.FC<{
@@ -14,8 +14,8 @@ const Component: React.FC<{
 
   return (
     <RelaysGrid>
-      {Array.from(Array(OUTPUT_COUNT).keys()).map((index) => (
-        <Chip key={index} type={ChipType.INFO} enabled={data?.values[index] || false}>
+      {Array.from(Array(OUTPUTS_COUNT).keys()).map((index) => (
+        <Chip key={index} type={ChipType.INFO} enabled={data?.outputs[index] || false}>
           {(index + 1).toString().padStart(2, "0")}
         </Chip>
       ))}

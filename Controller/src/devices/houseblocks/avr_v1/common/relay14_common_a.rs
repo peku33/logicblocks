@@ -39,7 +39,7 @@ pub mod logic {
         properties_remote: hardware::PropertiesRemote<'h>,
 
         signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
-        signal_outputs: [signal::state_target_last::Signal<bool>; hardware::OUTPUT_COUNT],
+        signal_outputs: [signal::state_target_last::Signal<bool>; hardware::OUTPUTS_COUNT],
 
         gui_summary_waker: devices::gui_summary::Waker,
 
@@ -70,14 +70,14 @@ pub mod logic {
                 .signal_outputs
                 .iter()
                 .map(|signal_output| signal_output.take_last())
-                .collect::<ArrayVec<_, { hardware::OUTPUT_COUNT }>>()
+                .collect::<ArrayVec<_, { hardware::OUTPUTS_COUNT }>>()
                 .into_inner()
                 .unwrap();
             if outputs_last.iter().any(|output_last| output_last.pending) {
                 let outputs = outputs_last
                     .iter()
                     .map(|output_last| output_last.value.unwrap_or(false))
-                    .collect::<ArrayVec<_, { hardware::OUTPUT_COUNT }>>()
+                    .collect::<ArrayVec<_, { hardware::OUTPUTS_COUNT }>>()
                     .into_inner()
                     .unwrap();
 
@@ -166,7 +166,7 @@ pub mod logic {
 
     #[derive(Debug, Serialize)]
     pub struct GuiSummary {
-        values: [bool; hardware::OUTPUT_COUNT],
+        outputs: [bool; hardware::OUTPUTS_COUNT],
     }
     impl<S: Specification> devices::gui_summary::Device for Device<'_, S> {
         fn waker(&self) -> &devices::gui_summary::Waker {
@@ -175,9 +175,9 @@ pub mod logic {
 
         type Value = GuiSummary;
         fn value(&self) -> Self::Value {
-            let values = self.properties_remote.outputs.peek_last();
+            let outputs = self.properties_remote.outputs.peek_last();
 
-            Self::Value { values }
+            Self::Value { outputs }
         }
     }
 }
@@ -198,8 +198,8 @@ pub mod hardware {
     use futures::{future::FutureExt, join, stream::StreamExt};
     use std::{fmt, iter, marker::PhantomData, time::Duration};
 
-    pub const OUTPUT_COUNT: usize = 14;
-    pub type OutputValues = [bool; OUTPUT_COUNT];
+    pub const OUTPUTS_COUNT: usize = 14;
+    pub type OutputValues = [bool; OUTPUTS_COUNT];
 
     pub trait Specification: Send + Sync + fmt::Debug {
         fn device_type_name() -> &'static str;
@@ -225,7 +225,7 @@ pub mod hardware {
                 outs_changed_waker: properties::waker::OutsChangedWaker::new(),
 
                 outputs: properties::state_out::Property::<OutputValues>::new(
-                    [false; OUTPUT_COUNT],
+                    [false; OUTPUTS_COUNT],
                 ),
             }
         }
@@ -369,7 +369,7 @@ pub mod hardware {
 
     #[derive(PartialEq, Eq, Debug)]
     struct BusRequestOutputs {
-        pub values: [bool; OUTPUT_COUNT],
+        pub values: [bool; OUTPUTS_COUNT],
     }
     impl BusRequestOutputs {
         pub fn serialize(

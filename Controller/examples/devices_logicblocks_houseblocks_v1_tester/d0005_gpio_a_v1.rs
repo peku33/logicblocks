@@ -12,7 +12,7 @@ use logicblocks_controller::{
             d0005_gpio_a_v1::hardware::{
                 Block1Function, Block1Functions, Block2Function, Block2Functions, Block3Function,
                 Block3Functions, Block4Function, Block4Functions, BlockFunctions, Configuration,
-                DIGITAL_OUT_COUNT, Device, PropertiesRemote, StatusLedValue,
+                DIGITAL_OUTS_COUNT, Device, PropertiesRemote, StatusLedValue,
             },
             hardware::runner::Runner,
         },
@@ -126,7 +126,8 @@ async fn run_inner(
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-    }.fuse();
+    }
+    .fuse();
     pin_mut!(status_led_runner);
 
     let analog_ins_changed = || {
@@ -149,7 +150,7 @@ async fn run_inner(
         let mut index = 0;
 
         loop {
-            let mut digital_out_values = [false; DIGITAL_OUT_COUNT];
+            let mut digital_out_values = [false; DIGITAL_OUTS_COUNT];
             digital_out_values[index] = true;
 
             log::info!("digital_out: {digital_out_values:?}");
@@ -158,11 +159,12 @@ async fn run_inner(
             }
 
             index += 1;
-            index %= DIGITAL_OUT_COUNT;
+            index %= DIGITAL_OUTS_COUNT;
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
-    }.fuse();
+    }
+    .fuse();
     pin_mut!(digital_out_runner);
 
     let ds18x20_changed = || {
@@ -182,7 +184,8 @@ async fn run_inner(
                 ds18x20_changed();
             })
             .await;
-    }.fuse();
+    }
+    .fuse();
     pin_mut!(ins_changed_waker_remote_runner);
 
     select! {

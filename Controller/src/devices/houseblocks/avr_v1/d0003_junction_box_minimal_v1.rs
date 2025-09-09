@@ -34,8 +34,8 @@ pub mod logic {
 
         signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
         signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-        signal_keys: [signal::state_source::Signal<bool>; hardware::KEY_COUNT],
-        signal_leds: [signal::state_target_last::Signal<bool>; hardware::LED_COUNT],
+        signal_keys: [signal::state_source::Signal<bool>; hardware::KEYS_COUNT],
+        signal_leds: [signal::state_target_last::Signal<bool>; hardware::LEDS_COUNT],
         signal_buzzer: signal::event_target_last::Signal<Duration>,
         signal_temperature: signal::state_source::Signal<Temperature>,
 
@@ -64,26 +64,29 @@ pub mod logic {
 
         fn signals_targets_changed(&self) {
             let mut properties_outs_changed = false;
+            let mut gui_summary_changed = false;
 
             // leds
             let leds_last = self
                 .signal_leds
                 .iter()
                 .map(|signal_led| signal_led.take_last())
-                .collect::<ArrayVec<_, { hardware::LED_COUNT }>>()
+                .collect::<ArrayVec<_, { hardware::LEDS_COUNT }>>()
                 .into_inner()
                 .unwrap();
             if leds_last.iter().any(|led_last| led_last.pending) {
                 let leds = leds_last
                     .iter()
                     .map(|led_last| led_last.value.unwrap_or(false))
-                    .collect::<ArrayVec<_, { hardware::LED_COUNT }>>()
+                    .collect::<ArrayVec<_, { hardware::LEDS_COUNT }>>()
                     .into_inner()
                     .unwrap();
 
                 if self.properties_remote.leds.set(leds) {
                     properties_outs_changed = true;
                 }
+
+                gui_summary_changed = true;
             }
 
             // buzzer
@@ -96,6 +99,9 @@ pub mod logic {
             if properties_outs_changed {
                 self.properties_remote.outs_changed_waker_remote.wake();
             }
+            if gui_summary_changed {
+                self.gui_summary_waker.wake();
+            }
         }
         fn properties_ins_changed(&self) {
             let mut signals_sources_changed = false;
@@ -107,7 +113,7 @@ pub mod logic {
             {
                 if let Some(key_values) = key_values {
                     // Calculate total number of key ticks
-                    let mut key_changes_count_merged = [0usize; hardware::KEY_COUNT];
+                    let mut key_changes_count_merged = [0usize; hardware::KEYS_COUNT];
                     key_changes_count_queue
                         .into_iter()
                         .flatten()
@@ -137,6 +143,8 @@ pub mod logic {
                         signals_sources_changed |= signal_key.set_one(None);
                     });
                 }
+
+                gui_summary_changed = true;
             }
 
             // temperature
@@ -267,6 +275,8 @@ pub mod logic {
 
     #[derive(Debug, Serialize)]
     pub struct GuiSummary {
+        keys: Option<hardware::KeyValues>,
+        leds: hardware::LedValues,
         temperature: Option<Temperature>,
     }
     impl devices::gui_summary::Device for Device<'_> {
@@ -276,13 +286,21 @@ pub mod logic {
 
         type Value = GuiSummary;
         fn value(&self) -> Self::Value {
+            let keys = self.properties_remote.keys.peek_last();
+
+            let leds = self.properties_remote.leds.peek_last();
+
             let temperature = self
                 .properties_remote
                 .ds18x20
                 .peek_last()
                 .and_then(|ds18x20| ds18x20.temperature);
 
-            Self::Value { temperature }
+            Self::Value {
+                keys,
+                leds,
+                temperature,
+            }
         }
     }
 }
@@ -312,12 +330,12 @@ pub mod hardware {
         time::Duration,
     };
 
-    pub const KEY_COUNT: usize = 6;
-    pub type KeyValues = [bool; KEY_COUNT];
-    pub type KeyChangesCount = [u8; KEY_COUNT];
+    pub const KEYS_COUNT: usize = 6;
+    pub type KeyValues = [bool; KEYS_COUNT];
+    pub type KeyChangesCount = [u8; KEYS_COUNT];
 
-    pub const LED_COUNT: usize = 6;
-    pub type LedValues = [bool; LED_COUNT];
+    pub const LEDS_COUNT: usize = 6;
+    pub type LedValues = [bool; LEDS_COUNT];
 
     #[derive(Debug)]
     pub struct PropertiesRemote<'p> {
@@ -347,7 +365,7 @@ pub mod hardware {
                 outs_changed_waker: properties::waker::OutsChangedWaker::new(),
 
                 keys: properties::state_event_in::Property::<KeyValues, KeyChangesCount>::new(),
-                leds: properties::state_out::Property::<LedValues>::new([false; LED_COUNT]),
+                leds: properties::state_out::Property::<LedValues>::new([false; LEDS_COUNT]),
                 buzzer: properties::event_out_last::Property::<Duration>::new(),
                 ds18x20: properties::state_in::Property::<Ds18x20State>::new(),
             }
@@ -589,7 +607,7 @@ pub mod hardware {
     // Bus
     #[derive(PartialEq, Eq, Debug)]
     struct BusRequestLeds {
-        pub values: [bool; LED_COUNT],
+        pub values: [bool; LEDS_COUNT],
     }
     impl BusRequestLeds {
         pub fn serialize(
@@ -755,13 +773,13 @@ pub mod hardware {
 
     #[derive(PartialEq, Eq, Debug)]
     struct BusResponseKeys {
-        pub keys: [BusResponseKey; KEY_COUNT],
+        pub keys: [BusResponseKey; KEYS_COUNT],
     }
     impl BusResponseKeys {
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
-            let keys = (0..KEY_COUNT)
+            let keys = (0..KEYS_COUNT)
                 .map(|_key_index| BusResponseKey::parse(parser))
-                .collect::<Result<ArrayVec<_, { KEY_COUNT }>, _>>()
+                .collect::<Result<ArrayVec<_, { KEYS_COUNT }>, _>>()
                 .context("collect")?
                 .into_inner()
                 .unwrap();
@@ -772,7 +790,7 @@ pub mod hardware {
             self.keys
                 .iter()
                 .map(|key| key.value)
-                .collect::<ArrayVec<_, { KEY_COUNT }>>()
+                .collect::<ArrayVec<_, { KEYS_COUNT }>>()
                 .into_inner()
                 .unwrap()
         }
@@ -780,7 +798,7 @@ pub mod hardware {
             self.keys
                 .iter()
                 .map(|key| key.changes_count)
-                .collect::<ArrayVec<_, { KEY_COUNT }>>()
+                .collect::<ArrayVec<_, { KEYS_COUNT }>>()
                 .into_inner()
                 .unwrap()
         }

@@ -2,7 +2,7 @@ import Colors from "@/components/common/Colors";
 import { type Resistance, formatResistanceOrUnknown } from "@/datatypes/Resistance";
 import styled from "styled-components";
 
-export const INPUT_COUNT = 40;
+export const INPUTS_COUNT = 40;
 
 // infinite values are serialized to nulls in JSON
 export type ResistanceInfinityAsNull = Resistance | null;
@@ -20,7 +20,7 @@ const Component: React.FC<{
 
   return (
     <Grid>
-      {Array.from(Array(INPUT_COUNT).keys()).map((index) => (
+      {Array.from(Array(INPUTS_COUNT).keys()).map((index) => (
         <GridItem key={index}>
           <GridItemLabel>#{index + 1}</GridItemLabel>
           <GridItemValue>{formatResistanceOrUnknown(inputsFixed?.[index], 2)}</GridItemValue>

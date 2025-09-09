@@ -1,5 +1,5 @@
 import { type Meta } from "@storybook/react-vite";
-import Component, { OUTPUT_COUNT } from "./SummaryInner";
+import Component, { OUTPUTS_COUNT } from "./SummaryInner";
 
 export default {
   title: "components/devices/houseblocks/avr_v1/common/relay14_common_a/SummaryInner",
@@ -9,7 +9,7 @@ export const Basic: React.FC = () => (
   <>
     <Component
       data={{
-        values: Array.from(Array(OUTPUT_COUNT).keys()).map((index) => index % 2 === 0),
+        outputs: Array.from(Array(OUTPUTS_COUNT).keys()).map((index) => index % 2 === 0),
       }}
     />
   </>

@@ -8,7 +8,7 @@ use logicblocks_controller::{
     devices::houseblocks::{
         avr_v1::{
             common::relay14_common_a::hardware::{
-                Device, OUTPUT_COUNT, PropertiesRemote, Specification,
+                Device, OUTPUTS_COUNT, PropertiesRemote, Specification,
             },
             hardware::runner::Runner,
         },
@@ -53,7 +53,7 @@ async fn run_inner<S: Specification>(
         let mut output_index = 0;
 
         loop {
-            let mut output_values = [false; OUTPUT_COUNT];
+            let mut output_values = [false; OUTPUTS_COUNT];
             output_values[output_index] = true;
 
             log::info!("outputs: {output_values:?}");
@@ -62,7 +62,7 @@ async fn run_inner<S: Specification>(
             }
 
             output_index += 1;
-            output_index %= OUTPUT_COUNT;
+            output_index %= OUTPUTS_COUNT;
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }

@@ -8,7 +8,7 @@ use futures::{
 use logicblocks_controller::{
     devices::houseblocks::{
         avr_v1::{
-            d0003_junction_box_minimal_v1::hardware::{Device, LED_COUNT, PropertiesRemote},
+            d0003_junction_box_minimal_v1::hardware::{Device, LEDS_COUNT, PropertiesRemote},
             hardware::runner::Runner,
         },
         houseblocks_v1::{common::AddressSerial, master::Master},
@@ -64,7 +64,7 @@ async fn run_inner(
         let mut led_index = 0;
 
         loop {
-            let mut led_values = [false; LED_COUNT];
+            let mut led_values = [false; LEDS_COUNT];
             led_values[led_index] = true;
 
             log::info!("leds: {led_values:?}");
@@ -73,7 +73,7 @@ async fn run_inner(
             }
 
             led_index += 1;
-            led_index %= LED_COUNT;
+            led_index %= LEDS_COUNT;
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
@@ -91,7 +91,8 @@ async fn run_inner(
 
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
-    }.fuse();
+    }
+    .fuse();
     pin_mut!(buzzer_runner);
 
     let ds18x20_changed = || {
@@ -114,7 +115,8 @@ async fn run_inner(
                 ds18x20_changed();
             })
             .await;
-    }.fuse();
+    }
+    .fuse();
     pin_mut!(ins_changed_waker_remote_runner);
 
     select! {

@@ -36,13 +36,13 @@ pub mod logic {
         signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
         signal_status_led: signal::state_target_last::Signal<hardware::StatusLedValue>,
         signal_analog_ins: [Option<signal::state_source::Signal<hardware::AnalogInValue>>;
-            hardware::ANALOG_IN_COUNT],
+            hardware::ANALOG_INS_COUNT],
         signal_digital_ins: [Option<signal::state_source::Signal<hardware::DigitalInValue>>;
-            hardware::DIGITAL_IN_COUNT],
+            hardware::DIGITAL_INS_COUNT],
         signal_digital_outs: [Option<signal::state_target_last::Signal<hardware::DigitalOutValue>>;
-            hardware::DIGITAL_OUT_COUNT],
-        signal_ds18x20s:
-            [Option<signal::state_source::Signal<hardware::Ds18x20Value>>; hardware::DS18X20_COUNT],
+            hardware::DIGITAL_OUTS_COUNT],
+        signal_ds18x20s: [Option<signal::state_source::Signal<hardware::Ds18x20Value>>;
+            hardware::DS18X20S_COUNT],
 
         gui_summary_waker: devices::gui_summary::Waker,
     }
@@ -68,7 +68,7 @@ pub mod logic {
                             None
                         }
                     })
-                    .collect::<ArrayVec<_, { hardware::ANALOG_IN_COUNT }>>()
+                    .collect::<ArrayVec<_, { hardware::ANALOG_INS_COUNT }>>()
                     .into_inner()
                     .unwrap(),
                 signal_digital_ins: block_functions_reversed
@@ -83,7 +83,7 @@ pub mod logic {
                             None
                         }
                     })
-                    .collect::<ArrayVec<_, { hardware::DIGITAL_IN_COUNT }>>()
+                    .collect::<ArrayVec<_, { hardware::DIGITAL_INS_COUNT }>>()
                     .into_inner()
                     .unwrap(),
                 signal_digital_outs: block_functions_reversed
@@ -99,7 +99,7 @@ pub mod logic {
                             None
                         }
                     })
-                    .collect::<ArrayVec<_, { hardware::DIGITAL_OUT_COUNT }>>()
+                    .collect::<ArrayVec<_, { hardware::DIGITAL_OUTS_COUNT }>>()
                     .into_inner()
                     .unwrap(),
                 signal_ds18x20s: block_functions_reversed
@@ -114,7 +114,7 @@ pub mod logic {
                             None
                         }
                     })
-                    .collect::<ArrayVec<_, { hardware::DS18X20_COUNT }>>()
+                    .collect::<ArrayVec<_, { hardware::DS18X20S_COUNT }>>()
                     .into_inner()
                     .unwrap(),
 
@@ -144,7 +144,7 @@ pub mod logic {
                         .as_ref()
                         .map(|signal_digital_out| signal_digital_out.take_last())
                 })
-                .collect::<ArrayVec<_, { hardware::DIGITAL_OUT_COUNT }>>()
+                .collect::<ArrayVec<_, { hardware::DIGITAL_OUTS_COUNT }>>()
                 .into_inner()
                 .unwrap();
             if digital_outs_last.iter().any(|digital_out_last| {
@@ -161,7 +161,7 @@ pub mod logic {
                             .and_then(|digital_out_last| digital_out_last.value)
                             .unwrap_or(false)
                     })
-                    .collect::<ArrayVec<_, { hardware::DIGITAL_OUT_COUNT }>>()
+                    .collect::<ArrayVec<_, { hardware::DIGITAL_OUTS_COUNT }>>()
                     .into_inner()
                     .unwrap();
 
@@ -601,33 +601,33 @@ pub mod hardware {
     pub type StatusLedValue = ColorRgbBoolean;
 
     pub type AnalogInValue = Voltage;
-    pub const ANALOG_IN_COUNT: usize = BLOCK_1_SIZE + BLOCK_3_SIZE;
-    pub type AnalogInValues = [AnalogInValue; ANALOG_IN_COUNT];
+    pub const ANALOG_INS_COUNT: usize = BLOCK_1_SIZE + BLOCK_3_SIZE;
+    pub type AnalogInValues = [AnalogInValue; ANALOG_INS_COUNT];
 
     pub type DigitalInValue = bool;
-    pub const DIGITAL_IN_COUNT: usize = BLOCK_1_SIZE + BLOCK_2_SIZE;
-    pub type DigitalInValues = [DigitalInValue; DIGITAL_IN_COUNT];
+    pub const DIGITAL_INS_COUNT: usize = BLOCK_1_SIZE + BLOCK_2_SIZE;
+    pub type DigitalInValues = [DigitalInValue; DIGITAL_INS_COUNT];
 
     pub type DigitalOutValue = bool;
-    pub const DIGITAL_OUT_COUNT: usize = BLOCK_1_SIZE + BLOCK_2_SIZE + BLOCK_4_SIZE;
-    pub type DigitalOutValues = [DigitalOutValue; DIGITAL_OUT_COUNT];
+    pub const DIGITAL_OUTS_COUNT: usize = BLOCK_1_SIZE + BLOCK_2_SIZE + BLOCK_4_SIZE;
+    pub type DigitalOutValues = [DigitalOutValue; DIGITAL_OUTS_COUNT];
 
     pub type Ds18x20Value = Ds18x20State;
-    pub const DS18X20_COUNT: usize = BLOCK_2_SIZE;
-    pub type Ds18x20Values = [Ds18x20Value; DS18X20_COUNT];
+    pub const DS18X20S_COUNT: usize = BLOCK_2_SIZE;
+    pub type Ds18x20Values = [Ds18x20Value; DS18X20S_COUNT];
 
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     pub struct BlockFunctionsReversed {
-        pub analog_in_mask: [bool; ANALOG_IN_COUNT],
+        pub analog_in_mask: [bool; ANALOG_INS_COUNT],
         pub analog_in_any: bool,
 
-        pub digital_in_mask: [bool; DIGITAL_IN_COUNT],
+        pub digital_in_mask: [bool; DIGITAL_INS_COUNT],
         pub digital_in_any: bool,
 
-        pub digital_out_mask: [bool; DIGITAL_OUT_COUNT],
+        pub digital_out_mask: [bool; DIGITAL_OUTS_COUNT],
         pub digital_out_any: bool,
 
-        pub ds18x20_mask: [bool; DS18X20_COUNT],
+        pub ds18x20_mask: [bool; DS18X20S_COUNT],
         pub ds18x20_any: bool,
     }
     impl BlockFunctionsReversed {
@@ -642,7 +642,7 @@ pub mod hardware {
                     .iter()
                     .map(|block_3_function| *block_3_function == Block3Function::AnalogIn),
             )
-            .collect::<ArrayVec<_, { ANALOG_IN_COUNT }>>()
+            .collect::<ArrayVec<_, { ANALOG_INS_COUNT }>>()
             .into_inner()
             .unwrap();
             let analog_in_any = analog_in_mask
@@ -659,7 +659,7 @@ pub mod hardware {
                     .iter()
                     .map(|block_2_function| *block_2_function == Block2Function::DigitalIn),
             )
-            .collect::<ArrayVec<_, { DIGITAL_IN_COUNT }>>()
+            .collect::<ArrayVec<_, { DIGITAL_INS_COUNT }>>()
             .into_inner()
             .unwrap();
             let digital_in_any = digital_in_mask
@@ -680,7 +680,7 @@ pub mod hardware {
                     .iter()
                     .map(|block_4_function| *block_4_function == Block4Function::DigitalOut),
             )
-            .collect::<ArrayVec<_, { DIGITAL_OUT_COUNT }>>()
+            .collect::<ArrayVec<_, { DIGITAL_OUTS_COUNT }>>()
             .into_inner()
             .unwrap();
             let digital_out_any = digital_out_mask
@@ -693,7 +693,7 @@ pub mod hardware {
                     .iter()
                     .map(|block_2_function| *block_2_function == Block2Function::Ds18x20),
             )
-            .collect::<ArrayVec<_, { DS18X20_COUNT }>>()
+            .collect::<ArrayVec<_, { DS18X20S_COUNT }>>()
             .into_inner()
             .unwrap();
             let ds18x20_any = ds18x20_mask.iter().any(|ds18x20_enabled| *ds18x20_enabled);
@@ -747,7 +747,7 @@ pub mod hardware {
                 analog_ins: properties::state_in::Property::<AnalogInValues>::new(),
                 digital_ins: properties::state_in::Property::<DigitalInValues>::new(),
                 digital_outs: properties::state_out::Property::<DigitalOutValues>::new(
-                    [false; DIGITAL_OUT_COUNT],
+                    [false; DIGITAL_OUTS_COUNT],
                 ),
                 ds18x20s: properties::state_in::Property::<Ds18x20Values>::new(),
             }
@@ -1387,13 +1387,13 @@ pub mod hardware {
         }
 
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
-            let values = (0..ANALOG_IN_COUNT)
+            let values = (0..ANALOG_INS_COUNT)
                 .map(|index| -> Result<_, Error> {
                     let value = parser.expect_u16().context("expect_u16")?;
                     let value = Self::transform_block(value, index).context("transform_block")?;
                     Ok(value)
                 })
-                .collect::<Result<ArrayVec<_, ANALOG_IN_COUNT>, Error>>()
+                .collect::<Result<ArrayVec<_, ANALOG_INS_COUNT>, Error>>()
                 .context("collect")?
                 .into_inner()
                 .unwrap();
@@ -1420,12 +1420,12 @@ pub mod hardware {
     }
     impl BusResponseDs18x20s {
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
-            let values = (0..DS18X20_COUNT)
+            let values = (0..DS18X20S_COUNT)
                 .map(|_ds18x20_index| {
                     Ds18x20SensorState::parse(parser)
                         .map(|ds18x20_sensor_state| ds18x20_sensor_state.into_inner())
                 })
-                .collect::<Result<ArrayVec<_, { DS18X20_COUNT }>, _>>()
+                .collect::<Result<ArrayVec<_, { DS18X20S_COUNT }>, _>>()
                 .context("collect")?
                 .into_inner()
                 .unwrap();

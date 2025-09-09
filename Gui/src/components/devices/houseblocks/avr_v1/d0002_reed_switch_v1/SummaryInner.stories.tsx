@@ -1,5 +1,5 @@
 import { type Meta } from "@storybook/react-vite";
-import Component, { INPUT_COUNT } from "./SummaryInner";
+import Component, { INPUTS_COUNT } from "./SummaryInner";
 
 export default {
   title: "components/devices/houseblocks/avr_v1/d0002_reed_switch_v1/SummaryInner",
@@ -9,7 +9,7 @@ export const Basic: React.FC = () => (
   <>
     <Component
       data={{
-        inputs: Array.from(Array(INPUT_COUNT).keys()).map((index) => (index / INPUT_COUNT) * 40_000),
+        inputs: Array.from(Array(INPUTS_COUNT).keys()).map((index) => (index / INPUTS_COUNT) * 40_000),
       }}
     />
   </>
