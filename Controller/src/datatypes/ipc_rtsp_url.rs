@@ -19,7 +19,7 @@ impl FromStr for IpcRtspUrl {
     type Err = Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let uri: Uri = value.parse().context("parse")?;
+        let uri = value.parse::<Uri>().context("parse")?;
         Ok(Self(uri))
     }
 }

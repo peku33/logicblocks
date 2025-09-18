@@ -65,12 +65,12 @@ pub struct Events {
 }
 impl Events {
     pub fn from_event_stream_events(hardware_events: &event_stream::Events) -> Self {
-        let mut video_blind: bool = false;
-        let mut scene_change: bool = false;
-        let mut video_motion: bool = false;
-        let mut audio_mutation: bool = false;
-        let mut smart_motion_human: bool = false;
-        let mut smart_motion_vehicle: bool = false;
+        let mut video_blind = false;
+        let mut scene_change = false;
+        let mut video_motion = false;
+        let mut audio_mutation = false;
+        let mut smart_motion_human = false;
+        let mut smart_motion_vehicle = false;
 
         hardware_events.iter().for_each(|event| match event {
             event_stream::Event::VideoBlind => {

@@ -85,12 +85,12 @@ impl Api {
             response.name
         );
 
-        let status_code: u8 = response
+        let status_code = response
             .get_child("statusCode")
             .ok_or_else(|| anyhow!("missing statusCode"))?
             .get_text()
             .ok_or_else(|| anyhow!("missing statusCode text"))?
-            .parse()
+            .parse::<u8>()
             .context("statusCode")?;
 
         let status_string = response
@@ -327,12 +327,12 @@ impl Api {
             "DeviceInfo expected at root level"
         );
 
-        let model: String = device_info_element
+        let model = device_info_element
             .get_child("model")
             .ok_or_else(|| anyhow!("missing model"))?
             .get_text()
             .ok_or_else(|| anyhow!("missing model text"))?
-            .parse()
+            .parse::<String>()
             .context("model")?;
 
         ensure!(

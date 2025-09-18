@@ -158,7 +158,7 @@ impl<'m> Device<'m> {
         &self,
         input: &Input,
     ) -> Result<(), Error> {
-        let mut control_word: u16 = 0;
+        let mut control_word = 0u16;
         if input.speed > Ratio::zero() {
             control_word |= 1 << 0;
         }
@@ -166,9 +166,9 @@ impl<'m> Device<'m> {
             control_word |= 1 << 1;
         }
 
-        let general_control_word: u16 = 0;
+        let general_control_word = 0u16;
 
-        let speed_setpoint: u16 = (input.speed.to_f64() * 10_000f64) as u16;
+        let speed_setpoint = (input.speed.to_f64() * 10_000f64) as u16;
 
         self.modbus_write(
             2001,

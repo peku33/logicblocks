@@ -55,15 +55,15 @@ impl Device {
         &self,
         mut exit_flag: async_flag::Receiver,
     ) -> Exited {
-        let signal_input_changed_stream = self.signals_targets_changed_waker.stream();
-        pin_mut!(signal_input_changed_stream);
+        let signals_targets_changed_stream = self.signals_targets_changed_waker.stream();
+        pin_mut!(signals_targets_changed_stream);
 
         let tick_next = Fuse::<tokio::time::Sleep>::terminated();
         pin_mut!(tick_next);
 
         loop {
             let elapsed = select! {
-                () = signal_input_changed_stream.select_next_some() => false,
+                () = signals_targets_changed_stream.select_next_some() => false,
                 _ = &mut tick_next => true,
                 () = exit_flag => break,
             };

@@ -61,8 +61,8 @@ impl Device {
             .unwrap_or_else(|| rng().random::<Ratio>())
             .to_f64();
 
-        let signal_input_changed_stream = self.signals_targets_changed_waker.stream();
-        pin_mut!(signal_input_changed_stream);
+        let signals_targets_changed_stream = self.signals_targets_changed_waker.stream();
+        pin_mut!(signals_targets_changed_stream);
 
         enum CycleMode {
             Constant(Option<bool>),
@@ -90,7 +90,7 @@ impl Device {
 
                     // wait for device exit or input change
                     select! {
-                        () = signal_input_changed_stream.select_next_some() => {},
+                        () = signals_targets_changed_stream.select_next_some() => {},
                         () = exit_flag => break,
                     }
                 }
@@ -132,7 +132,7 @@ impl Device {
 
                     // wait for input change / state change, exit signal
                     select! {
-                        () = signal_input_changed_stream.select_next_some() => {},
+                        () = signals_targets_changed_stream.select_next_some() => {},
                         () = tokio::time::sleep(cycle_output_remaining).fuse() => {},
                         () = exit_flag => break,
                     }

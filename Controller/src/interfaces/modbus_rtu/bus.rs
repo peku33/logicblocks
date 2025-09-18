@@ -512,7 +512,7 @@ impl Response for ResponseErasedWrapper {
 mod tests_erased_wrappers {
     use super::{
         super::frames_public::{ReadCoilsRequest, ReadCoilsResponse},
-        Bus, RequestErasedWrapper, ResponseErasedWrapper,
+        Bus, RequestErasedWrapper,
     };
 
     #[test]
@@ -526,7 +526,7 @@ mod tests_erased_wrappers {
 
         assert_eq!(serialized.as_ref(), serialized_expected);
 
-        let parsed_erased: ResponseErasedWrapper = Bus::parse(
+        let parsed_erased = Bus::parse(
             0x11,
             &request_erased,
             &[0x11, 0x01, 0x05, 0xcd, 0x6b, 0xb2, 0x0e, 0x1b, 0x45, 0xe6],

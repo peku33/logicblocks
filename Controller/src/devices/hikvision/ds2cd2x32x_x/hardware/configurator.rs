@@ -507,11 +507,11 @@ impl<'a> Configurator<'a> {
             .children
             .into_iter()
             .filter_map(|user_entry| {
-                let user_id: usize = user_entry
+                let user_id = user_entry
                     .as_element()?
                     .get_child("id")?
                     .get_text()?
-                    .parse()
+                    .parse::<usize>()
                     .ok()?;
 
                 let user_name = user_entry.as_element()?.get_child("userName")?.get_text()?;

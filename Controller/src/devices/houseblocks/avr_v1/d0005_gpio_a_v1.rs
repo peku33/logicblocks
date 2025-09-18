@@ -1451,10 +1451,10 @@ pub mod hardware {
         }
 
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
-            let mut poll: Option<BusResponsePoll> = None;
-            let mut analog_ins: Option<BusResponseAnalogIns> = None;
-            let mut digital_ins: Option<BusResponseDigitalIns> = None;
-            let mut ds18x20s: Option<BusResponseDs18x20s> = None;
+            let mut poll = Option::<BusResponsePoll>::None;
+            let mut analog_ins = Option::<BusResponseAnalogIns>::None;
+            let mut digital_ins = Option::<BusResponseDigitalIns>::None;
+            let mut ds18x20s = Option::<BusResponseDs18x20s>::None;
 
             while let Some(opcode) = parser.get_byte() {
                 match opcode {

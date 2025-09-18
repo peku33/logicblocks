@@ -100,7 +100,7 @@ impl Api {
         let rpc2_request_id_next = 0;
         let rpc2_request_id_next = AtomicU64::new(rpc2_request_id_next);
 
-        let rpc2_session_cache: Option<(String, String)> = None;
+        let rpc2_session_cache = Option::<(String, String)>::None;
         let rpc2_session_cache = Mutex::new(rpc2_session_cache);
 
         Self {
@@ -508,7 +508,7 @@ impl Api {
     > {
         const RETRY_COUNT: usize = 3;
 
-        let mut retry_id: usize = 0;
+        let mut retry_id = 0usize;
 
         let result_params = loop {
             retry_id += 1;

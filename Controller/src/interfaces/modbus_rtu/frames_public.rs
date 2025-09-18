@@ -522,13 +522,13 @@ impl Response for WriteSingleCoilResponse {
             return Ok(None);
         }
         let address_received = u16::from_be_bytes(data[0..2].try_into().unwrap());
-        let address_received: usize = (address_received as usize) + 1;
+        let address_received = (address_received as usize) + 1;
         ensure!(address_received == request.address, "address mismatch");
 
         if data.len() < 4 {
             return Ok(None);
         }
-        let value_received: u16 = u16::from_be_bytes(data[2..4].try_into().unwrap());
+        let value_received = u16::from_be_bytes(data[2..4].try_into().unwrap());
         let value_received = match value_received {
             0xFF00 => true,
             0x0000 => false,
@@ -616,13 +616,13 @@ impl Response for WriteSingleRegisterResponse {
             return Ok(None);
         }
         let address_received = u16::from_be_bytes(data[0..2].try_into().unwrap());
-        let address_received: usize = (address_received as usize) + 1;
+        let address_received = (address_received as usize) + 1;
         ensure!(address_received == request.address, "address mismatch");
 
         if data.len() < 4 {
             return Ok(None);
         }
-        let value_received: u16 = u16::from_be_bytes(data[2..4].try_into().unwrap());
+        let value_received = u16::from_be_bytes(data[2..4].try_into().unwrap());
         ensure!(value_received == request.value, "value mismatch");
 
         ensure!(data.len() == 4, "data overflow");
@@ -805,7 +805,7 @@ impl Response for WriteMultipleCoilsResponse {
             return Ok(None);
         }
         let starting_address_received = u16::from_be_bytes(data[0..2].try_into().unwrap());
-        let starting_address_received: usize = (starting_address_received as usize) + 1;
+        let starting_address_received = (starting_address_received as usize) + 1;
         ensure!(
             starting_address_received == request.starting_address,
             "starting address mismatch"
@@ -814,7 +814,7 @@ impl Response for WriteMultipleCoilsResponse {
         if data.len() < 4 {
             return Ok(None);
         }
-        let number_of_coils_received: u16 = u16::from_be_bytes(data[2..4].try_into().unwrap());
+        let number_of_coils_received = u16::from_be_bytes(data[2..4].try_into().unwrap());
         ensure!(
             number_of_coils_received == request.values.len() as u16,
             "number of coils mismatch"
@@ -920,7 +920,7 @@ impl Response for WriteMultipleRegistersResponse {
             return Ok(None);
         }
         let starting_address_received = u16::from_be_bytes(data[0..2].try_into().unwrap());
-        let starting_address_received: usize = (starting_address_received as usize) + 1;
+        let starting_address_received = (starting_address_received as usize) + 1;
         ensure!(
             starting_address_received == request.starting_address,
             "starting address mismatch"
@@ -929,7 +929,7 @@ impl Response for WriteMultipleRegistersResponse {
         if data.len() < 4 {
             return Ok(None);
         }
-        let number_of_registers_received: u16 = u16::from_be_bytes(data[2..4].try_into().unwrap());
+        let number_of_registers_received = u16::from_be_bytes(data[2..4].try_into().unwrap());
         ensure!(
             number_of_registers_received == request.values.len() as u16,
             "number of registers mismatch"

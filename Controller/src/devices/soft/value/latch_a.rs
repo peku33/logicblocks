@@ -12,6 +12,7 @@ use futures::stream::StreamExt;
 use maplit::hashmap;
 use std::{any::type_name, borrow::Cow};
 
+// when trigger is fired - freezes input value at output
 #[derive(Debug)]
 pub struct Device<V>
 where

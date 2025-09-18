@@ -1326,7 +1326,8 @@ impl uri_cursor::Handler for Device {
                     _ => async { web::Response::error_404() }.boxed(),
                 },
                 uri_cursor::UriCursor::Next(channel_id_string, uri_cursor) => {
-                    let channel_id: usize = match channel_id_string.parse().context("channel_id") {
+                    let channel_id = match channel_id_string.parse::<usize>().context("channel_id")
+                    {
                         Ok(channel_id) => channel_id,
                         Err(error) => {
                             return async { web::Response::error_400_from_error(error) }.boxed();

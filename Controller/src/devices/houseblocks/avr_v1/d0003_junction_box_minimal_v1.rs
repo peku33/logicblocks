@@ -834,9 +834,9 @@ pub mod hardware {
         }
 
         pub fn parse(parser: &mut Parser) -> Result<Self, Error> {
-            let mut poll: Option<BusResponsePoll> = None;
-            let mut keys: Option<BusResponseKeys> = None;
-            let mut ds18x20: Option<BusResponseDs18x20> = None;
+            let mut poll = Option::<BusResponsePoll>::None;
+            let mut keys = Option::<BusResponseKeys>::None;
+            let mut ds18x20 = Option::<BusResponseDs18x20>::None;
 
             while let Some(opcode) = parser.get_byte() {
                 match opcode {

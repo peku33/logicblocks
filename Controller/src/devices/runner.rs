@@ -216,7 +216,7 @@ impl uri_cursor::Handler for Runner<'_> {
                     .borrow_devices_gui_summary_sse_responder()
                     .handle(request, uri_cursor),
                 uri_cursor::UriCursor::Next(device_id_str, uri_cursor) => {
-                    let device_id: DeviceId = match device_id_str.parse().context("device_id") {
+                    let device_id = match device_id_str.parse::<DeviceId>().context("device_id") {
                         Ok(device_id) => device_id,
                         Err(error) => {
                             return async { web::Response::error_400_from_error(error) }.boxed();

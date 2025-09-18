@@ -185,7 +185,7 @@ impl uri_cursor::Handler for Dashboard {
                 match &self.content {
                     // we expect dashboard_index
                     Content::SectionContent(section_content) => {
-                        let dashboard_index: usize = match content_path_item.parse() {
+                        let dashboard_index = match content_path_item.parse::<usize>() {
                             Ok(dashboard_index) => dashboard_index,
                             Err(_) => return async { web::Response::error_404() }.boxed(),
                         };
@@ -213,11 +213,11 @@ impl uri_cursor::Handler for Dashboard {
                                 None => return async { web::Response::error_404() }.boxed(),
                             };
 
-                        let section_index: usize = match section_index.parse() {
+                        let section_index = match section_index.parse::<usize>() {
                             Ok(section_index) => section_index,
                             Err(_) => return async { web::Response::error_404() }.boxed(),
                         };
-                        let dashboard_index: usize = match dashboard_index.parse() {
+                        let dashboard_index = match dashboard_index.parse::<usize>() {
                             Ok(dashboard_index) => dashboard_index,
                             Err(_) => return async { web::Response::error_404() }.boxed(),
                         };

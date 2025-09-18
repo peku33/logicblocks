@@ -845,7 +845,7 @@ impl<'a> Configurator<'a> {
             .as_array()
             .ok_or_else(|| anyhow!("expected array"))?;
 
-        let mut user_id_max: u64 = 1;
+        let mut user_id_max = 1u64;
         let mut shared_user_exists = false;
         for user_info in user_infos {
             let user_info = user_info
