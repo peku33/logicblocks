@@ -6,6 +6,7 @@ use crate::datatypes::{
     },
     building::window::{WindowOpenStateOpenClosed, WindowOpenStateOpenTiltedClosed},
     color_rgb_boolean::ColorRgbBoolean,
+    duration::Duration,
     ipc_rtsp_url::IpcRtspUrl,
     multiplier::Multiplier,
     pressure::Pressure,
@@ -37,6 +38,7 @@ impl Value for Real {}
 impl Value for Resistance {}
 impl Value for Temperature {}
 impl Value for Voltage {}
+impl Value for Duration {}
 
 // datatypes parent
 impl<V> Value for Range<V> where V: Value {}

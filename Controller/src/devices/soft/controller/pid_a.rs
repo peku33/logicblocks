@@ -1,5 +1,5 @@
 use crate::{
-    datatypes::real::Real,
+    datatypes::{duration::Duration, real::Real},
     devices,
     signals::{self, signal},
     util::{
@@ -15,7 +15,7 @@ use futures::{
 };
 use maplit::hashmap;
 use parking_lot::RwLock;
-use std::{borrow::Cow, time::Duration};
+use std::borrow::Cow;
 
 #[derive(Debug)]
 pub struct Configuration {
@@ -101,7 +101,8 @@ impl Device {
                     }
 
                     // either timer has elapsed or it wasn't initialized
-                    tick_next.set(tokio::time::sleep(self.configuration.tick_duration).fuse());
+                    tick_next
+                        .set(tokio::time::sleep(self.configuration.tick_duration.to_std()).fuse());
                 }
                 None => {
                     // input was changed to (or is) none, remove pid, reset signals and timer

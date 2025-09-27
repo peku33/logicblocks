@@ -1,5 +1,5 @@
 use crate::{
-    datatypes::multiplier::Multiplier,
+    datatypes::{duration::Duration, multiplier::Multiplier},
     devices,
     signals::{self, signal},
     util::{
@@ -20,7 +20,7 @@ use futures::{
 use itertools::{Itertools, chain, izip, zip_eq};
 use parking_lot::RwLock;
 use serde::Serialize;
-use std::{borrow::Cow, cmp::min, collections::HashMap, iter, time::Duration};
+use std::{borrow::Cow, cmp::min, collections::HashMap, iter};
 
 #[derive(Debug)]
 pub struct ConfigurationChannel {
@@ -115,7 +115,7 @@ impl Device {
         let state_device = StateDevice::Enabled {
             channels: iter::repeat_n(
                 StateDeviceEnabledChannel::EnabledQueued {
-                    queue: Duration::ZERO,
+                    queue: Duration::zero(),
                     order_index: 0,
                 },
                 channels_count,
@@ -221,10 +221,10 @@ impl Device {
                     .map(|channel_state| match channel_state {
                         StateDeviceDisabledChannel::Disabled => StateDevicePausedChannel::Disabled,
                         StateDeviceDisabledChannel::Paused => StateDevicePausedChannel::Paused {
-                            queue: Duration::ZERO,
+                            queue: Duration::zero(),
                         },
                         StateDeviceDisabledChannel::Enabled => StateDevicePausedChannel::Enabled {
-                            queue: Duration::ZERO,
+                            queue: Duration::zero(),
                         },
                     })
                     .collect::<Box<[_]>>();
@@ -286,11 +286,11 @@ impl Device {
                     .map(|channel_state| match channel_state {
                         StateDeviceDisabledChannel::Disabled => StateDeviceEnabledChannel::Disabled,
                         StateDeviceDisabledChannel::Paused => StateDeviceEnabledChannel::Paused {
-                            queue: Duration::ZERO,
+                            queue: Duration::zero(),
                         },
                         StateDeviceDisabledChannel::Enabled => {
                             StateDeviceEnabledChannel::EnabledQueued {
-                                queue: Duration::ZERO,
+                                queue: Duration::zero(),
                                 order_index: 0,
                             }
                         }
@@ -427,7 +427,7 @@ impl Device {
                 match channel_state {
                     StateDevicePausedChannel::Disabled => {
                         *channel_state = StateDevicePausedChannel::Paused {
-                            queue: Duration::ZERO,
+                            queue: Duration::zero(),
                         };
                         gui_summary_changed = true;
                     }
@@ -443,7 +443,7 @@ impl Device {
                 match channel_state {
                     StateDeviceEnabledChannel::Disabled => {
                         *channel_state = StateDeviceEnabledChannel::Paused {
-                            queue: Duration::ZERO,
+                            queue: Duration::zero(),
                         };
                         gui_summary_changed = true;
                     }
@@ -501,7 +501,7 @@ impl Device {
                 match channel_state {
                     StateDevicePausedChannel::Disabled => {
                         *channel_state = StateDevicePausedChannel::Enabled {
-                            queue: Duration::ZERO,
+                            queue: Duration::zero(),
                         };
                         gui_summary_changed = true;
                     }
@@ -522,7 +522,7 @@ impl Device {
                         *order_index_last += 1;
 
                         *channel_state = StateDeviceEnabledChannel::EnabledQueued {
-                            queue: Duration::ZERO,
+                            queue: Duration::zero(),
                             order_index: *order_index_last as i64,
                         };
                         gui_summary_changed = true;
@@ -566,7 +566,7 @@ impl Device {
                     StateDevicePausedChannel::Disabled => {}
                     StateDevicePausedChannel::Paused { queue }
                     | StateDevicePausedChannel::Enabled { queue } => {
-                        *queue = Duration::ZERO;
+                        *queue = Duration::zero();
                         gui_summary_changed = true;
                     }
                 }
@@ -578,7 +578,7 @@ impl Device {
                     StateDeviceEnabledChannel::Paused { queue }
                     | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
                     | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
-                        *queue = Duration::ZERO;
+                        *queue = Duration::zero();
                         gui_summary_changed = true;
                     }
                 }
@@ -611,7 +611,12 @@ impl Device {
                     StateDevicePausedChannel::Disabled => {}
                     StateDevicePausedChannel::Paused { queue }
                     | StateDevicePausedChannel::Enabled { queue } => {
-                        *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
+                        *queue = Duration::from_seconds(
+                            queue.to_seconds()
+                                + channel_configuration.base_time.to_seconds()
+                                    * multiplier.to_f64(),
+                        )
+                        .unwrap();
                         gui_summary_changed = true;
                     }
                 }
@@ -624,7 +629,12 @@ impl Device {
                     StateDeviceEnabledChannel::Paused { queue }
                     | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
                     | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
-                        *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
+                        *queue = Duration::from_seconds(
+                            queue.to_seconds()
+                                + channel_configuration.base_time.to_seconds()
+                                    * multiplier.to_f64(),
+                        )
+                        .unwrap();
                         gui_summary_changed = true;
                     }
                 }
@@ -744,7 +754,7 @@ impl Device {
                         StateDevicePausedChannel::Disabled => {}
                         StateDevicePausedChannel::Paused { queue }
                         | StateDevicePausedChannel::Enabled { queue, .. } => {
-                            *queue = Duration::ZERO;
+                            *queue = Duration::zero();
                             gui_summary_changed = true;
                         }
                     });
@@ -757,7 +767,7 @@ impl Device {
                         StateDeviceEnabledChannel::Paused { queue, .. }
                         | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
                         | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
-                            *queue = Duration::ZERO;
+                            *queue = Duration::zero();
                             gui_summary_changed = true;
                         }
                     });
@@ -784,7 +794,12 @@ impl Device {
                         StateDevicePausedChannel::Disabled => {}
                         StateDevicePausedChannel::Paused { queue }
                         | StateDevicePausedChannel::Enabled { queue, .. } => {
-                            *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
+                            *queue = Duration::from_seconds(
+                                queue.to_seconds()
+                                    + channel_configuration.base_time.to_seconds()
+                                        * multiplier.to_f64(),
+                            )
+                            .unwrap();
                             gui_summary_changed = true;
                         }
                     },
@@ -797,7 +812,12 @@ impl Device {
                         StateDeviceEnabledChannel::Paused { queue, .. }
                         | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
                         | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
-                            *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
+                            *queue = Duration::from_seconds(
+                                queue.to_seconds()
+                                    + channel_configuration.base_time.to_seconds()
+                                        * multiplier.to_f64(),
+                            )
+                            .unwrap();
                             gui_summary_changed = true;
                         }
                     },
@@ -810,7 +830,7 @@ impl Device {
         }
     }
 
-    const CHANNELS_TICK_INTERVAL: Duration = Duration::from_secs(1);
+    const CHANNELS_TICK_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
     fn channels_tick(&self) {
         let mut state = self.state.write();
 
@@ -840,9 +860,12 @@ impl Device {
                 | StateDeviceEnabledChannel::Paused { .. }
                 | StateDeviceEnabledChannel::EnabledQueued { .. } => {}
                 StateDeviceEnabledChannel::EnabledActive { queue, round, .. } => {
-                    *round = round.saturating_sub(Self::CHANNELS_TICK_INTERVAL);
+                    *round = Duration::from_seconds(
+                        (round.to_seconds() - Self::CHANNELS_TICK_INTERVAL.as_secs_f64()).max(0.0),
+                    )
+                    .unwrap();
 
-                    if !round.is_zero() {
+                    if *round >= Duration::zero() {
                         // channel can still run
                         power_left -= channel_configuration.power_required;
                     } else {
@@ -900,7 +923,8 @@ impl Device {
 
                     if power_left >= channel_configuration.power_required {
                         let round = min(*queue, channel_configuration.round_max);
-                        let queue = *queue - round;
+                        let queue = Duration::from_seconds(queue.to_seconds() - round.to_seconds())
+                            .unwrap();
 
                         *channel_state = StateDeviceEnabledChannel::EnabledActive { queue, round };
 
@@ -1135,10 +1159,10 @@ impl devices::gui_summary::Device for Device {
             .iter()
             .map(|channel_configuration| GuiSummaryConfigurationChannel {
                 name: channel_configuration.name.clone(),
-                base_time_seconds: channel_configuration.base_time.as_secs_f64(),
+                base_time_seconds: channel_configuration.base_time.to_seconds(),
                 power_required: channel_configuration.power_required.to_f64(),
-                round_min_seconds: channel_configuration.round_min.as_secs_f64(),
-                round_max_seconds: channel_configuration.round_max.as_secs_f64(),
+                round_min_seconds: channel_configuration.round_min.to_seconds(),
+                round_max_seconds: channel_configuration.round_max.to_seconds(),
             })
             .collect::<Box<[_]>>();
 
@@ -1177,12 +1201,12 @@ impl devices::gui_summary::Device for Device {
                         }
                         StateDevicePausedChannel::Paused { queue } => {
                             GuiSummaryStatePausedChannelState::Paused {
-                                queue_seconds: queue.as_secs_f64(),
+                                queue_seconds: queue.to_seconds(),
                             }
                         }
                         StateDevicePausedChannel::Enabled { queue } => {
                             GuiSummaryStatePausedChannelState::Enabled {
-                                queue_seconds: queue.as_secs_f64(),
+                                queue_seconds: queue.to_seconds(),
                             }
                         }
                     })
@@ -1235,19 +1259,19 @@ impl devices::gui_summary::Device for Device {
                         }
                         StateDeviceEnabledChannel::Paused { queue, .. } => {
                             GuiSummaryStateEnabledChannelState::Paused {
-                                queue_seconds: queue.as_secs_f64(),
+                                queue_seconds: queue.to_seconds(),
                             }
                         }
                         StateDeviceEnabledChannel::EnabledQueued { queue, .. } => {
                             GuiSummaryStateEnabledChannelState::EnabledQueued {
-                                queue_seconds: queue.as_secs_f64(),
+                                queue_seconds: queue.to_seconds(),
                                 queue_position: queued_positions.get(&channel_id).copied(),
                             }
                         }
                         StateDeviceEnabledChannel::EnabledActive { queue, round, .. } => {
                             GuiSummaryStateEnabledChannelState::EnabledActive {
-                                queue_seconds: queue.as_secs_f64(),
-                                round_seconds: round.as_secs_f64(),
+                                queue_seconds: queue.to_seconds(),
+                                round_seconds: round.to_seconds(),
                             }
                         }
                     })
@@ -1279,6 +1303,7 @@ impl uri_cursor::Handler for Device {
                 Some("disable") => match *request.method() {
                     http::Method::POST => {
                         self.device_disable();
+
                         async { web::Response::ok_empty() }.boxed()
                     }
                     _ => async { web::Response::error_405() }.boxed(),
@@ -1286,6 +1311,7 @@ impl uri_cursor::Handler for Device {
                 Some("pause") => match *request.method() {
                     http::Method::POST => {
                         self.device_pause();
+
                         async { web::Response::ok_empty() }.boxed()
                     }
                     _ => async { web::Response::error_405() }.boxed(),
@@ -1293,6 +1319,7 @@ impl uri_cursor::Handler for Device {
                 Some("enable") => match *request.method() {
                     http::Method::POST => {
                         self.device_enable();
+
                         async { web::Response::ok_empty() }.boxed()
                     }
                     _ => async { web::Response::error_405() }.boxed(),
@@ -1304,6 +1331,7 @@ impl uri_cursor::Handler for Device {
                     Some("clear") => match *request.method() {
                         http::Method::POST => {
                             self.channels_clear();
+
                             async { web::Response::ok_empty() }.boxed()
                         }
                         _ => async { web::Response::error_405() }.boxed(),
@@ -1319,6 +1347,7 @@ impl uri_cursor::Handler for Device {
                             };
 
                             self.channels_add(multiplier);
+
                             async { web::Response::ok_empty() }.boxed()
                         }
                         _ => async { web::Response::error_405() }.boxed(),
@@ -1341,6 +1370,7 @@ impl uri_cursor::Handler for Device {
                         Some("disable") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_disable(channel_id);
+
                                 async { web::Response::ok_empty() }.boxed()
                             }
                             _ => async { web::Response::error_405() }.boxed(),
@@ -1348,6 +1378,7 @@ impl uri_cursor::Handler for Device {
                         Some("pause") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_pause(channel_id);
+
                                 async { web::Response::ok_empty() }.boxed()
                             }
                             _ => async { web::Response::error_405() }.boxed(),
@@ -1355,6 +1386,7 @@ impl uri_cursor::Handler for Device {
                         Some("enable") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_enable(channel_id);
+
                                 async { web::Response::ok_empty() }.boxed()
                             }
                             _ => async { web::Response::error_405() }.boxed(),
@@ -1362,6 +1394,7 @@ impl uri_cursor::Handler for Device {
                         Some("clear") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_clear(channel_id);
+
                                 async { web::Response::ok_empty() }.boxed()
                             }
                             _ => async { web::Response::error_405() }.boxed(),
@@ -1379,6 +1412,7 @@ impl uri_cursor::Handler for Device {
                                 };
 
                                 self.channel_add(channel_id, multiplier);
+
                                 async { web::Response::ok_empty() }.boxed()
                             }
                             _ => async { web::Response::error_405() }.boxed(),
@@ -1386,6 +1420,7 @@ impl uri_cursor::Handler for Device {
                         Some("async { web::Response-front") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_move_front(channel_id);
+
                                 async { web::Response::ok_empty() }.boxed()
                             }
                             _ => async { web::Response::error_405() }.boxed(),
@@ -1393,6 +1428,7 @@ impl uri_cursor::Handler for Device {
                         Some("async { web::Response-back") => match *request.method() {
                             http::Method::POST => {
                                 self.channel_move_back(channel_id);
+
                                 async { web::Response::ok_empty() }.boxed()
                             }
                             _ => async { web::Response::error_405() }.boxed(),

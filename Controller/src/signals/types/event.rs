@@ -1,6 +1,6 @@
 use super::Base;
-use crate::datatypes::multiplier::Multiplier;
-use std::{fmt, time::Duration};
+use crate::datatypes::{duration::Duration, multiplier::Multiplier};
+use std::fmt;
 
 pub trait Value: Base + fmt::Debug {}
 
