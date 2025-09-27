@@ -5,6 +5,7 @@ export const Loader: React.FC<{
   sizeRem: number;
 }> = (props) => {
   const { sizeRem } = props;
+
   return (
     <LoaderIconWrapper $sizeRem={sizeRem}>
       <FontAwesomeIcon icon={{ prefix: "fas", iconName: "spinner" }} spin />

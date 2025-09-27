@@ -19,6 +19,7 @@ export const Basic: React.FC<{
   onValueChanged: (value: boolean | null) => void;
 }> = (props) => {
   const { value, onValueChanged } = props;
+
   return (
     <>
       <Component data={value} onValueChanged={onValueChanged} />

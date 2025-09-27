@@ -20,6 +20,7 @@ export const Basic: React.FC<{
   onValueChanged: (newValue: number | null) => void;
 }> = (props) => {
   const { value, onValueChanged } = props;
+
   return (
     <>
       <Component
