@@ -1,7 +1,7 @@
-export function formatReal(real: number, decimalPoints: number): string {
-  return real.toFixed(decimalPoints);
+export function formatReal(real: number, decimalPoints: number | undefined): string {
+  return decimalPoints !== undefined ? real.toFixed(decimalPoints) : real.toString();
 }
-export function formatRealOrUnknown(real: number | null | undefined, decimalPoints: number): string {
+export function formatRealOrUnknown(real: number | null | undefined, decimalPoints: number | undefined): string {
   if (real == null) {
     return "?";
   }

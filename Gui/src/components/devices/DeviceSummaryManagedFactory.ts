@@ -21,6 +21,7 @@ import softWebInputButtonEventA from "./soft/web/input/button_event_a/SummaryMan
 import softWebInputButtonEventBooleanA from "./soft/web/input/button_event_boolean_a/SummaryManaged";
 import softWebInputButtonStateMonostableA from "./soft/web/input/button_state_monostable_a/SummaryManaged";
 import softWebInputRatioSliderA from "./soft/web/input/ratio_slider_a/SummaryManaged";
+import softWebInputRealInputA from "./soft/web/input/real_input_a/SummaryManaged";
 import UnknownDevice from "./UnknownDeviceSummaryManaged";
 
 const BY_CLASS: Record<string, DeviceSummaryManaged> = {
@@ -46,6 +47,7 @@ const BY_CLASS: Record<string, DeviceSummaryManaged> = {
   "soft/web/input/button_event_boolean_a": softWebInputButtonEventBooleanA,
   "soft/web/input/button_state_monostable_a": softWebInputButtonStateMonostableA,
   "soft/web/input/ratio_slider_a": softWebInputRatioSliderA,
+  "soft/web/input/real_input_a": softWebInputRealInputA,
 };
 
 export function getByClass(class_: string): DeviceSummaryManaged {
