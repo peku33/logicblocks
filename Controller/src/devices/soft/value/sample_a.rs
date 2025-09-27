@@ -12,8 +12,16 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::StreamExt;
-use maplit::hashmap;
-use std::{any::type_name, borrow::Cow};
+use itertools::chain;
+use std::{any::type_name, borrow::Cow, iter};
+
+#[derive(Debug)]
+pub struct Configuration<V>
+where
+    V: EventValue + StateValue + Clone,
+{
+    pub input_fixed: Option<V>,
+}
 
 /// State<V> signal is provided on input target
 /// when Event<()> hits trigger target
@@ -23,9 +31,11 @@ pub struct Device<V>
 where
     V: EventValue + StateValue + Clone,
 {
+    configuration: Configuration<V>,
+
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signal_input: signal::state_target_last::Signal<V>,
+    signal_input: Option<signal::state_target_last::Signal<V>>,
     signal_trigger: signal::event_target_last::Signal<()>,
     signal_output: signal::event_source::Signal<V>,
 }
@@ -33,26 +43,48 @@ impl<V> Device<V>
 where
     V: EventValue + StateValue + Clone,
 {
-    pub fn new() -> Self {
+    pub fn new(configuration: Configuration<V>) -> Self {
+        let input_fixed = configuration.input_fixed.is_some();
+
         Self {
+            configuration,
+
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-            signal_input: signal::state_target_last::Signal::<V>::new(),
+            signal_input: if !input_fixed {
+                Some(signal::state_target_last::Signal::<V>::new())
+            } else {
+                None
+            },
             signal_trigger: signal::event_target_last::Signal::<()>::new(),
             signal_output: signal::event_source::Signal::<V>::new(),
         }
     }
 
     fn signals_targets_changed(&self) {
+        // act only if trigger was fired
         match self.signal_trigger.take_pending() {
             Some(()) => {}
             None => return,
         }
 
-        let output = match self.signal_input.take_last().value {
-            Some(output) => output,
+        // establish value from signal or configuration
+        let input = self
+            .signal_input
+            .as_ref()
+            .and_then(|signal_input| signal_input.take_last().value);
+        let input = match &self.configuration.input_fixed {
+            Some(input_fixed) => Some(input_fixed.clone()),
+            None => input,
+        };
+
+        // if no value is set (eg. non-fixed + non-connected signal) - skip
+        let input = match input {
+            Some(input) => input,
             None => return,
         };
+
+        let output = input;
 
         if self.signal_output.push_one(output) {
             self.signals_sources_changed_waker.wake();
@@ -124,10 +156,22 @@ where
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
-        hashmap! {
-            SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
-            SignalIdentifier::Trigger => &self.signal_trigger as &dyn signal::Base,
-            SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
-        }
+        chain!(
+            self.signal_input.as_ref().map(|signal_input| {
+                (
+                    SignalIdentifier::Input, // line break
+                    signal_input as &dyn signal::Base,
+                )
+            }),
+            iter::once((
+                SignalIdentifier::Trigger,
+                &self.signal_trigger as &dyn signal::Base,
+            )),
+            iter::once((
+                SignalIdentifier::Output,
+                &self.signal_output as &dyn signal::Base,
+            )),
+        )
+        .collect::<signals::ByIdentifier<_>>()
     }
 }
