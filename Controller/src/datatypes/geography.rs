@@ -203,7 +203,7 @@ impl fmt::Display for Elevation {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{:.2} m", self.meters)
+        write!(f, "{:.2}m", self.meters)
     }
 }
 #[derive(Debug, Serialize, Deserialize)]

@@ -1,7 +1,7 @@
 use super::real::Real;
 use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 #[serde(try_from = "VoltageSerde")]
 #[serde(into = "VoltageSerde")]
@@ -25,6 +25,14 @@ impl Ord for Voltage {
         other: &Self,
     ) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+impl fmt::Display for Voltage {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(f, "{:.3}V", self.volts)
     }
 }
 

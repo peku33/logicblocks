@@ -2,7 +2,7 @@ use super::real::Real;
 use anyhow::{Error, ensure};
 use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 
 // FIXME: Sub must ensure the value does not go sub-0
 #[derive(
@@ -47,6 +47,14 @@ impl Ord for Multiplier {
         other: &Self,
     ) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+impl fmt::Display for Multiplier {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(f, "{:.2}x", self.0)
     }
 }
 

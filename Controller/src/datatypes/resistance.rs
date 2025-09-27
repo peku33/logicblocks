@@ -1,7 +1,7 @@
 use super::real::Real;
 use anyhow::{Error, ensure};
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 #[serde(try_from = "ResistanceSerde")]
@@ -38,6 +38,14 @@ impl Ord for Resistance {
         other: &Self,
     ) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+impl fmt::Display for Resistance {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(f, "{:.3}Ω", self.ohms)
     }
 }
 

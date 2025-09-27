@@ -1,7 +1,7 @@
 use anyhow::{Error, ensure};
 use derive_more::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 
 #[derive(
     Clone,
@@ -43,6 +43,14 @@ impl Ord for Real {
         other: &Self,
     ) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+impl fmt::Display for Real {
+    fn fmt(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
