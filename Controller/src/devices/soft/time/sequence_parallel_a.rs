@@ -865,7 +865,7 @@ impl Device {
                     )
                     .unwrap();
 
-                    if *round >= Duration::zero() {
+                    if *round > Duration::zero() {
                         // channel can still run
                         power_left -= channel_configuration.power_required;
                     } else {
