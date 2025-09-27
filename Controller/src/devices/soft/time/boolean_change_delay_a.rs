@@ -1,5 +1,4 @@
 use crate::{
-    datatypes::duration::Duration,
     devices,
     signals::{self, signal},
     util::{
@@ -10,7 +9,7 @@ use crate::{
 use async_trait::async_trait;
 use futures::{future::MaybeDone, pin_mut, select, stream::StreamExt};
 use maplit::hashmap;
-use std::borrow::Cow;
+use std::{borrow::Cow, time::Duration};
 
 #[derive(Debug)]
 pub struct Configuration {
@@ -55,11 +54,11 @@ impl Device {
             let delay = match output_next {
                 Some(true) => self.configuration.delay_raising,
                 Some(false) => self.configuration.delay_falling,
-                None => Duration::zero(),
+                None => Duration::ZERO,
             };
 
-            let delay_runner = if delay >= Duration::zero() {
-                let future = tokio::time::sleep(delay.to_std());
+            let delay_runner = if delay >= Duration::ZERO {
+                let future = tokio::time::sleep(delay);
                 MaybeDone::Future(future)
             } else {
                 MaybeDone::Done(())

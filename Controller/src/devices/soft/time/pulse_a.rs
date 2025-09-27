@@ -1,5 +1,4 @@
 use crate::{
-    datatypes::duration::Duration,
     devices,
     signals::{self, signal},
     util::{
@@ -10,7 +9,7 @@ use crate::{
 use async_trait::async_trait;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use itertools::chain;
-use std::{borrow::Cow, iter};
+use std::{borrow::Cow, iter, time::Duration};
 
 #[derive(Debug)]
 pub struct Configuration {
@@ -105,7 +104,7 @@ impl Device {
                 }
 
                 // set up timer
-                let timer = tokio::time::sleep(duration.to_std()).fuse();
+                let timer = tokio::time::sleep(*duration).fuse();
                 pin_mut!(timer);
 
                 // on trigger - restart on-loop with fresh duration

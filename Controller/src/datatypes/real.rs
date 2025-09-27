@@ -69,3 +69,19 @@ impl From<Real> for RealSerde {
         RealSerde(value.to_f64())
     }
 }
+
+// From/To for external types
+impl TryFrom<Real> for std::time::Duration {
+    type Error = Error;
+
+    fn try_from(value: Real) -> Result<Self, Self::Error> {
+        Self::try_from_secs_f64(value.to_f64()).map_err(|error| error.into())
+    }
+}
+impl TryFrom<std::time::Duration> for Real {
+    type Error = Error;
+
+    fn try_from(value: std::time::Duration) -> Result<Self, Self::Error> {
+        Self::from_f64(value.as_secs_f64())
+    }
+}

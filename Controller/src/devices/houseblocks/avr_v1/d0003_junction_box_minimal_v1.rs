@@ -1,7 +1,7 @@
 pub mod logic {
     use super::{super::logic::runner, hardware};
     use crate::{
-        datatypes::{duration::Duration, temperature::Temperature},
+        datatypes::temperature::Temperature,
         devices,
         signals::{self, signal},
         util::{
@@ -16,7 +16,7 @@ pub mod logic {
     use futures::{future::FutureExt, join, stream::StreamExt};
     use itertools::chain;
     use serde::Serialize;
-    use std::iter;
+    use std::{iter, time::Duration};
 
     #[derive(Debug)]
     pub struct DeviceFactory;
@@ -91,7 +91,7 @@ pub mod logic {
 
             // buzzer
             if let Some(buzzer) = self.signal_buzzer.take_pending()
-                && self.properties_remote.buzzer.push(buzzer.to_std())
+                && self.properties_remote.buzzer.push(buzzer)
             {
                 properties_outs_changed = true;
             }

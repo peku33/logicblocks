@@ -1,5 +1,4 @@
 use crate::{
-    datatypes::duration::Duration,
     devices,
     signals::{self, signal, utils::state_target_queued_stream::StateTargetQueuedStream},
     util::{
@@ -10,7 +9,7 @@ use crate::{
 use async_trait::async_trait;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use itertools::chain;
-use std::{borrow::Cow, iter};
+use std::{borrow::Cow, iter, time::Duration};
 
 #[derive(Debug)]
 pub struct Breakpoint {
@@ -90,7 +89,7 @@ impl Device {
 
             for (index, breakpoint) in self.configuration.breakpoints.iter().enumerate() {
                 // create timer to wait for breakpoint time
-                let breakpoint_timer = tokio::time::sleep(breakpoint.expires.to_std()).fuse();
+                let breakpoint_timer = tokio::time::sleep(breakpoint.expires).fuse();
                 pin_mut!(breakpoint_timer);
 
                 // tell whether client released the state or timeout expired

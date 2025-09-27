@@ -1,7 +1,6 @@
 use crate::{
     datatypes::{
         angle::{AngleNormalized, AngleNormalizedHalfZeroCentered},
-        duration::Duration,
         geography::Coordinates3d,
         real::Real,
     },
@@ -18,7 +17,7 @@ use futures::{future::FutureExt, select};
 use maplit::hashmap;
 use parking_lot::RwLock;
 use serde::Serialize;
-use std::borrow::Cow;
+use std::{borrow::Cow, time::Duration};
 
 #[derive(Debug)]
 pub struct Configuration {
@@ -85,7 +84,7 @@ impl Device {
             self.calculate();
 
             select! {
-                () = tokio::time::sleep(self.configuration.calculate_interval.to_std()).fuse() => {},
+                () = tokio::time::sleep(self.configuration.calculate_interval).fuse() => {},
                 () = exit_flag => break,
             }
         }
@@ -193,7 +192,7 @@ pub mod spa {
     use itertools::{Itertools, zip_eq};
     use std::{f64, time::Duration};
 
-    pub const DELTA_T_DEFAULT: std::time::Duration = Duration::from_millis(32_184);
+    pub const DELTA_T_DEFAULT: Duration = Duration::from_millis(32_184);
 
     #[derive(Clone, Copy, Debug)]
     pub struct SPA0;
@@ -231,7 +230,7 @@ pub mod spa {
         pub fn calculate(
             spa0: SPA0,
             datetime: DateTime<Utc>,
-            delta_t: std::time::Duration,
+            delta_t: Duration,
         ) -> Self {
             let delta_t = delta_t.as_secs_f64();
 

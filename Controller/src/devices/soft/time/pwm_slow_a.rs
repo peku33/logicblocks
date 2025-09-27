@@ -1,5 +1,5 @@
 use crate::{
-    datatypes::{duration::Duration, ratio::Ratio},
+    datatypes::ratio::Ratio,
     devices,
     signals::{self, signal},
     util::{
@@ -14,7 +14,7 @@ use rand::{Rng, rng};
 use std::{
     borrow::Cow,
     ops::Rem,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 #[derive(Debug)]
@@ -37,7 +37,7 @@ pub struct Device {
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
-        assert!(configuration.cycle_duration > Duration::zero());
+        assert!(configuration.cycle_duration > Duration::ZERO);
 
         Self {
             configuration,
@@ -52,7 +52,7 @@ impl Device {
         &self,
         mut exit_flag: async_flag::Receiver,
     ) -> Exited {
-        let cycle_duration_seconds = self.configuration.cycle_duration.to_seconds();
+        let cycle_duration_seconds = self.configuration.cycle_duration.as_secs_f64();
 
         // randomized phase shift if user didn't provide it manually
         let cycle_phase_shift_ratio = self
@@ -122,20 +122,18 @@ impl Device {
                     }
 
                     // calculate time until next change
-                    let cycle_output_remaining = Duration::from_seconds(
-                        self.configuration.cycle_duration.to_seconds()
-                            * cycle_output_remaining_ratio,
-                    )
-                    .unwrap();
+                    let cycle_output_remaining = self
+                        .configuration
+                        .cycle_duration
+                        .mul_f64(cycle_output_remaining_ratio);
 
                     // to prevent loops around time of change we add 10 msec of extra delay
-                    let cycle_output_remaining =
-                        cycle_output_remaining + Duration::from_seconds(0.01).unwrap();
+                    let cycle_output_remaining = cycle_output_remaining + Duration::from_millis(10);
 
                     // wait for input change / state change, exit signal
                     select! {
                         () = signals_targets_changed_stream.select_next_some() => {},
-                        () = tokio::time::sleep(cycle_output_remaining.to_std()).fuse() => {},
+                        () = tokio::time::sleep(cycle_output_remaining).fuse() => {},
                         () = exit_flag => break,
                     }
                 }

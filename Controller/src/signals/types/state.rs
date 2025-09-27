@@ -6,7 +6,6 @@ use crate::datatypes::{
     },
     building::window::{WindowOpenStateOpenClosed, WindowOpenStateOpenTiltedClosed},
     color_rgb_boolean::ColorRgbBoolean,
-    duration::Duration,
     ipc_rtsp_url::IpcRtspUrl,
     multiplier::Multiplier,
     pressure::Pressure,
@@ -17,12 +16,13 @@ use crate::datatypes::{
     temperature::Temperature,
     voltage::Voltage,
 };
-use std::fmt;
+use std::{fmt, time::Duration};
 
 pub trait Value: Base + Eq + fmt::Debug + 'static {}
 
-//
+// std types
 impl Value for bool {}
+impl Value for Duration {}
 
 // datatypes
 impl Value for AngleNormalized {}
@@ -38,7 +38,6 @@ impl Value for Real {}
 impl Value for Resistance {}
 impl Value for Temperature {}
 impl Value for Voltage {}
-impl Value for Duration {}
 
 // datatypes parent
 impl<V> Value for Range<V> where V: Value {}
