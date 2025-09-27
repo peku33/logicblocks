@@ -79,6 +79,7 @@ impl Runnable for Device {
         exit_flag: async_flag::Receiver,
     ) -> Exited {
         exit_flag.await;
+
         Exited
     }
 }
@@ -137,7 +138,9 @@ impl uri_cursor::Handler for Device {
                             return async { web::Response::error_400_from_error(error) }.boxed();
                         }
                     };
+
                     self.set(value);
+
                     async { web::Response::ok_empty() }.boxed()
                 }
                 _ => async { web::Response::error_405() }.boxed(),

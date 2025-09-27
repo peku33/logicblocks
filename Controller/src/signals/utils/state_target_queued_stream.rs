@@ -11,25 +11,25 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct StateTargetQueuedStream<'w, 's, T>
+pub struct StateTargetQueuedStream<'w, 's, V>
 where
-    T: Value + Clone,
+    V: Value + Clone,
 {
     waker_stream: TargetsChangedWakerStream<'w>,
-    signal: &'s Signal<T>,
+    signal: &'s Signal<V>,
 
-    buffer: VecDeque<Option<T>>,
+    buffer: VecDeque<Option<V>>,
 }
-impl<'w, 's, T> StateTargetQueuedStream<'w, 's, T>
+impl<'w, 's, V> StateTargetQueuedStream<'w, 's, V>
 where
-    T: Value + Clone,
+    V: Value + Clone,
 {
     pub fn new(
         waker: &'w TargetsChangedWaker,
-        signal: &'s Signal<T>,
+        signal: &'s Signal<V>,
     ) -> Self {
         let waker_stream = waker.stream();
-        let buffer = VecDeque::<Option<T>>::new();
+        let buffer = VecDeque::<Option<V>>::new();
 
         Self {
             waker_stream,
@@ -38,11 +38,11 @@ where
         }
     }
 }
-impl<T> Stream for StateTargetQueuedStream<'_, '_, T>
+impl<V> Stream for StateTargetQueuedStream<'_, '_, V>
 where
-    T: Value + Clone,
+    V: Value + Clone,
 {
-    type Item = Option<T>;
+    type Item = Option<V>;
 
     fn poll_next(
         self: Pin<&mut Self>,
@@ -77,9 +77,9 @@ where
         }
     }
 }
-impl<T> FusedStream for StateTargetQueuedStream<'_, '_, T>
+impl<V> FusedStream for StateTargetQueuedStream<'_, '_, V>
 where
-    T: Value + Clone,
+    V: Value + Clone,
 {
     fn is_terminated(&self) -> bool {
         // TargetsChangedWakerStream is never ending

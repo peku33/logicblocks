@@ -11,21 +11,21 @@ use std::{
 };
 
 #[derive(Debug)]
-struct Inner<T>
+struct Inner<V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    value: T,
+    value: V,
     remotes: HashSet<*const InnerRemote>,
 }
-unsafe impl<T> Send for Inner<T> where T: Clone + Eq + Send + Sync {}
-unsafe impl<T> Sync for Inner<T> where T: Clone + Eq + Send + Sync {}
+unsafe impl<V> Send for Inner<V> where V: Clone + Eq + Send + Sync {}
+unsafe impl<V> Sync for Inner<V> where V: Clone + Eq + Send + Sync {}
 
-impl<T> Inner<T>
+impl<V> Inner<V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    pub fn new(initial: T) -> Self {
+    pub fn new(initial: V) -> Self {
         #[allow(clippy::mutable_key_type)]
         let remotes = HashSet::<*const InnerRemote>::new();
 
@@ -51,25 +51,25 @@ impl InnerRemote {
 /// Main value holder object.
 /// This should be but in the place where you manage contained value
 #[derive(Debug)]
-pub struct Value<T>
+pub struct Value<V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    inner: RwLock<Inner<T>>,
+    inner: RwLock<Inner<V>>,
 }
-impl<T> Value<T>
+impl<V> Value<V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     /// Initializes object with given initial value
-    pub fn new(initial: T) -> Self {
+    pub fn new(initial: V) -> Self {
         let inner = Inner::new(initial);
         let inner = RwLock::new(inner);
         Self { inner }
     }
 
     /// Returns current value
-    pub fn get(&self) -> T {
+    pub fn get(&self) -> V {
         self.inner.read().value.clone()
     }
     /// Sets new value
@@ -77,7 +77,7 @@ where
     /// Returns true if value was updated and observers were waked
     pub fn set(
         &self,
-        value: T,
+        value: V,
     ) -> bool {
         let mut inner = self.inner.write();
         let changed = if inner.value != value {
@@ -96,11 +96,11 @@ where
     }
 
     /// Returns [`Getter`]
-    pub fn getter(&self) -> Getter<'_, T> {
+    pub fn getter(&self) -> Getter<'_, V> {
         Getter::new(self)
     }
     /// Returns [`Setter`]
-    pub fn setter(&self) -> Setter<'_, T> {
+    pub fn setter(&self) -> Setter<'_, V> {
         Setter::new(self)
     }
 
@@ -108,21 +108,21 @@ where
     pub fn observer(
         &self,
         initially_pending: bool,
-    ) -> Observer<'_, T> {
+    ) -> Observer<'_, V> {
         Observer::new(self, initially_pending)
     }
     /// Returns [`ChangedStream`]
     pub fn changed_stream(
         &self,
         initially_pending: bool,
-    ) -> ChangedStream<'_, T> {
+    ) -> ChangedStream<'_, V> {
         ChangedStream::new(self, initially_pending)
     }
     /// Returns [`ValueStream`]
     pub fn value_stream(
         &self,
         initially_pending: bool,
-    ) -> ValueStream<'_, T> {
+    ) -> ValueStream<'_, V> {
         ValueStream::new(self, initially_pending)
     }
 }
@@ -131,22 +131,22 @@ where
 /// Getter object - read only part od [`Value`]. Creating and keeping this
 /// object has no cost, it's just a proxy around read-only methods of [`Value`].
 #[derive(Debug)]
-pub struct Getter<'v, T>
+pub struct Getter<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    parent: &'v Value<T>,
+    parent: &'v Value<V>,
 }
-impl<'v, T> Getter<'v, T>
+impl<'v, V> Getter<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    fn new(parent: &'v Value<T>) -> Self {
+    fn new(parent: &'v Value<V>) -> Self {
         Self { parent }
     }
 
     /// Returns current value
-    pub fn get(&self) -> T {
+    pub fn get(&self) -> V {
         self.parent.get()
     }
 
@@ -154,21 +154,21 @@ where
     pub fn observer(
         &self,
         initially_pending: bool,
-    ) -> Observer<'v, T> {
+    ) -> Observer<'v, V> {
         self.parent.observer(initially_pending)
     }
     /// Returns [`ChangedStream`]
     pub fn changed_stream(
         &self,
         initially_pending: bool,
-    ) -> ChangedStream<'v, T> {
+    ) -> ChangedStream<'v, V> {
         self.parent.changed_stream(initially_pending)
     }
     /// Returns [`ValueStream`]
     pub fn value_stream(
         &self,
         initially_pending: bool,
-    ) -> ValueStream<'v, T> {
+    ) -> ValueStream<'v, V> {
         self.parent.value_stream(initially_pending)
     }
 }
@@ -179,22 +179,22 @@ where
 /// Creating and keeping this object has no cost, it's just a proxy around
 /// read-write methods of [`Value`].
 #[derive(Debug)]
-pub struct Setter<'v, T>
+pub struct Setter<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    parent: &'v Value<T>,
+    parent: &'v Value<V>,
 }
-impl<'v, T> Setter<'v, T>
+impl<'v, V> Setter<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    fn new(parent: &'v Value<T>) -> Self {
+    fn new(parent: &'v Value<V>) -> Self {
         Self { parent }
     }
 
     /// Returns current value
-    pub fn get(&self) -> T {
+    pub fn get(&self) -> V {
         self.parent.get()
     }
     /// Sets new value
@@ -202,7 +202,7 @@ where
     /// Returns true if value was updated and observers were waked
     pub fn set(
         &mut self,
-        value: T,
+        value: V,
     ) -> bool {
         self.parent.set(value)
     }
@@ -211,21 +211,21 @@ where
     pub fn observer(
         &self,
         initially_pending: bool,
-    ) -> Observer<'v, T> {
+    ) -> Observer<'v, V> {
         self.parent.observer(initially_pending)
     }
     /// Returns [`ChangedStream`]
     pub fn changed_stream(
         &self,
         initially_pending: bool,
-    ) -> ChangedStream<'v, T> {
+    ) -> ChangedStream<'v, V> {
         self.parent.changed_stream(initially_pending)
     }
     /// Returns [`ValueStream`]
     pub fn value_stream(
         &self,
         initially_pending: bool,
-    ) -> ValueStream<'v, T> {
+    ) -> ValueStream<'v, V> {
         self.parent.value_stream(initially_pending)
     }
 }
@@ -237,19 +237,19 @@ where
 /// Calling its method will compare this value against global (from [`Value`])
 /// value and tell whether it was changed.
 #[derive(Debug)]
-pub struct Observer<'v, T>
+pub struct Observer<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    parent: &'v Value<T>,
-    last_seen_value: Option<T>,
+    parent: &'v Value<V>,
+    last_seen_value: Option<V>,
 }
-impl<'v, T> Observer<'v, T>
+impl<'v, V> Observer<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn new(
-        parent: &'v Value<T>,
+        parent: &'v Value<V>,
         initially_pending: bool,
     ) -> Self {
         let last_seen_value = if !initially_pending {
@@ -266,7 +266,7 @@ where
 
     /// Returns latest global (from [`Value`]) value and marks it as "last
     /// seen".
-    pub fn get_update(&mut self) -> &T {
+    pub fn get_update(&mut self) -> &V {
         let parent_inner = self.parent.inner.read();
 
         if self.last_seen_value.as_ref() != Some(&parent_inner.value) {
@@ -280,7 +280,7 @@ where
 
     /// Returns latest global (from [`Value`]) value and marks it as "last seen"
     /// only if it differs from previous "last seen".
-    pub fn get_changed_update(&mut self) -> Option<&T> {
+    pub fn get_changed_update(&mut self) -> Option<&V> {
         let parent_inner = self.parent.inner.read();
 
         let changed = if self.last_seen_value.as_ref() != Some(&parent_inner.value) {
@@ -297,7 +297,7 @@ where
 
     /// Returns [`ObserverCommitter`] object if global (from [`Value`]) value
     /// differs from "last seen".
-    pub fn get_changed_committer(&mut self) -> Option<ObserverCommitter<'_, 'v, T>> {
+    pub fn get_changed_committer(&mut self) -> Option<ObserverCommitter<'_, 'v, V>> {
         let parent_inner = self.parent.inner.read();
 
         let observer_committer = if self.last_seen_value.as_ref() != Some(&parent_inner.value) {
@@ -312,7 +312,7 @@ where
     }
 
     /// Returns the [`ObserverChanged`] object.
-    pub fn changed(&mut self) -> ObserverChanged<'_, 'v, T> {
+    pub fn changed(&mut self) -> ObserverChanged<'_, 'v, V> {
         ObserverChanged::new(self)
     }
 }
@@ -323,20 +323,20 @@ where
 /// "last seen" or "last processed". This is useful if processing of the value
 /// may fail and we may want to retry later, keeping pending state.
 #[derive(Debug)]
-pub struct ObserverCommitter<'r, 'v, T>
+pub struct ObserverCommitter<'r, 'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    parent: &'r mut Observer<'v, T>,
-    pending_value: T,
+    parent: &'r mut Observer<'v, V>,
+    pending_value: V,
 }
-impl<'r, 'v, T> ObserverCommitter<'r, 'v, T>
+impl<'r, 'v, V> ObserverCommitter<'r, 'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn new(
-        parent: &'r mut Observer<'v, T>,
-        pending_value: T,
+        parent: &'r mut Observer<'v, V>,
+        pending_value: V,
     ) -> Self {
         Self {
             parent,
@@ -346,7 +346,7 @@ where
 
     /// Returns value. The value is frozen inside, meaning it won't change
     /// between calls, event if [`Value`] value was updated.
-    pub fn value(&self) -> &T {
+    pub fn value(&self) -> &V {
         &self.pending_value
     }
     /// Marks value returned by [`Self::value`] as last seen.
@@ -359,19 +359,19 @@ where
 /// Future that will complete if value stored in [`Observer`] (aka last seen)
 /// differs from value stored in [`Value`] (aka global).
 #[derive(Debug)]
-pub struct ObserverChanged<'r, 'v, T>
+pub struct ObserverChanged<'r, 'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    parent: &'r mut Observer<'v, T>,
+    parent: &'r mut Observer<'v, V>,
     inner_remote: Pin<Box<InnerRemote>>,
     competed: bool,
 }
-impl<'r, 'v, T> ObserverChanged<'r, 'v, T>
+impl<'r, 'v, V> ObserverChanged<'r, 'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    fn new(parent: &'r mut Observer<'v, T>) -> Self {
+    fn new(parent: &'r mut Observer<'v, V>) -> Self {
         let inner_remote = InnerRemote::new();
         let inner_remote = Box::pin(inner_remote);
 
@@ -392,9 +392,9 @@ where
         }
     }
 }
-impl<T> Future for ObserverChanged<'_, '_, T>
+impl<V> Future for ObserverChanged<'_, '_, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     type Output = ();
 
@@ -422,17 +422,17 @@ where
         poll
     }
 }
-impl<T> FusedFuture for ObserverChanged<'_, '_, T>
+impl<V> FusedFuture for ObserverChanged<'_, '_, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn is_terminated(&self) -> bool {
         self.competed
     }
 }
-impl<T> Drop for ObserverChanged<'_, '_, T>
+impl<V> Drop for ObserverChanged<'_, '_, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn drop(&mut self) {
         let removed = self
@@ -454,20 +454,20 @@ where
 /// you don't need value returned from stream, as this is a bit faster then
 /// [`ValueStream`].
 #[derive(Debug)]
-pub struct ChangedStream<'v, T>
+pub struct ChangedStream<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    parent: &'v Value<T>,
+    parent: &'v Value<V>,
     inner_remote: Pin<Box<InnerRemote>>,
-    last_seen_value: Option<T>,
+    last_seen_value: Option<V>,
 }
-impl<'v, T> ChangedStream<'v, T>
+impl<'v, V> ChangedStream<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn new(
-        parent: &'v Value<T>,
+        parent: &'v Value<V>,
         initially_pending: bool,
     ) -> Self {
         let inner_remote = InnerRemote::new();
@@ -495,9 +495,9 @@ where
         }
     }
 }
-impl<T> Stream for ChangedStream<'_, T>
+impl<V> Stream for ChangedStream<'_, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     type Item = ();
 
@@ -522,17 +522,17 @@ where
         poll
     }
 }
-impl<T> FusedStream for ChangedStream<'_, T>
+impl<V> FusedStream for ChangedStream<'_, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn is_terminated(&self) -> bool {
         false
     }
 }
-impl<T> Drop for ChangedStream<'_, T>
+impl<V> Drop for ChangedStream<'_, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn drop(&mut self) {
         let removed = self
@@ -553,20 +553,20 @@ where
 /// then [`ChangedStream`], because of additional clone, so use it only when you
 /// actually need value from stream, not just information it was changed.
 #[derive(Debug)]
-pub struct ValueStream<'v, T>
+pub struct ValueStream<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    parent: &'v Value<T>,
+    parent: &'v Value<V>,
     inner_remote: Pin<Box<InnerRemote>>,
-    last_seen_value: Option<T>,
+    last_seen_value: Option<V>,
 }
-impl<'v, T> ValueStream<'v, T>
+impl<'v, V> ValueStream<'v, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn new(
-        parent: &'v Value<T>,
+        parent: &'v Value<V>,
         initially_pending: bool,
     ) -> Self {
         let inner_remote = InnerRemote::new();
@@ -594,11 +594,11 @@ where
         }
     }
 }
-impl<T> Stream for ValueStream<'_, T>
+impl<V> Stream for ValueStream<'_, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
-    type Item = T;
+    type Item = V;
 
     fn poll_next(
         self: Pin<&mut Self>,
@@ -621,17 +621,17 @@ where
         poll
     }
 }
-impl<T> FusedStream for ValueStream<'_, T>
+impl<V> FusedStream for ValueStream<'_, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn is_terminated(&self) -> bool {
         false
     }
 }
-impl<T> Drop for ValueStream<'_, T>
+impl<V> Drop for ValueStream<'_, V>
 where
-    T: Clone + Eq + Send + Sync,
+    V: Clone + Eq + Send + Sync,
 {
     fn drop(&mut self) {
         let removed = self

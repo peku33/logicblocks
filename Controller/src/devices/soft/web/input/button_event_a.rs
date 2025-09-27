@@ -55,6 +55,7 @@ impl Runnable for Device {
         exit_flag: async_flag::Receiver,
     ) -> Exited {
         exit_flag.await;
+
         Exited
     }
 }
@@ -90,6 +91,7 @@ impl uri_cursor::Handler for Device {
             uri_cursor::UriCursor::Terminal => match *request.method() {
                 http::Method::POST => {
                     self.click();
+
                     async { web::Response::ok_empty() }.boxed()
                 }
                 _ => async { web::Response::error_405() }.boxed(),

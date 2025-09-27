@@ -2,18 +2,18 @@ use parking_lot::Mutex;
 use std::ops::Deref;
 
 #[derive(Debug)]
-struct State<T>
+struct State<V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    value: T,
+    value: V,
     device_pending: bool,
 }
-impl<T> State<T>
+impl<V> State<V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    pub fn new(initial: T) -> Self {
+    pub fn new(initial: V) -> Self {
         Self {
             value: initial,
             device_pending: true,
@@ -22,17 +22,17 @@ where
 }
 
 #[derive(Debug)]
-pub struct Property<T>
+pub struct Property<V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    state: Mutex<State<T>>,
+    state: Mutex<State<V>>,
 }
-impl<T> Property<T>
+impl<V> Property<V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    pub fn new(initial: T) -> Self {
+    pub fn new(initial: V) -> Self {
         let state = State::new(initial);
         let state = Mutex::new(state);
 
@@ -40,12 +40,12 @@ where
     }
 
     // User
-    pub fn user_remote(&self) -> Remote<'_, T> {
+    pub fn user_remote(&self) -> Remote<'_, V> {
         Remote::new(self)
     }
 
     // Device
-    pub fn device_pending(&self) -> Option<Pending<'_, T>> {
+    pub fn device_pending(&self) -> Option<Pending<'_, V>> {
         let state = self.state.lock();
 
         if !state.device_pending {
@@ -71,24 +71,24 @@ where
 }
 
 #[derive(Debug)]
-pub struct Remote<'p, T>
+pub struct Remote<'p, V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    property: &'p Property<T>,
+    property: &'p Property<V>,
 }
-impl<'p, T> Remote<'p, T>
+impl<'p, V> Remote<'p, V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    fn new(property: &'p Property<T>) -> Self {
+    fn new(property: &'p Property<V>) -> Self {
         Self { property }
     }
 
     #[must_use = "use this value to wake properties changed waker"]
     pub fn set(
         &self,
-        value: T,
+        value: V,
     ) -> bool {
         let mut state = self.property.state.lock();
 
@@ -104,7 +104,7 @@ where
         true
     }
 
-    pub fn peek_last(&self) -> T {
+    pub fn peek_last(&self) -> V {
         let state = self.property.state.lock();
 
         let value = state.value.clone();
@@ -116,16 +116,16 @@ where
 }
 
 #[derive(Debug)]
-pub struct Pending<'p, T>
+pub struct Pending<'p, V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    property: &'p Property<T>,
-    value: T,
+    property: &'p Property<V>,
+    value: V,
 }
-impl<T> Pending<'_, T>
+impl<V> Pending<'_, V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
     pub fn commit(self) {
         let mut lock = self.property.state.lock();
@@ -135,11 +135,11 @@ where
         }
     }
 }
-impl<T> Deref for Pending<'_, T>
+impl<V> Deref for Pending<'_, V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    type Target = T;
+    type Target = V;
     fn deref(&self) -> &Self::Target {
         &self.value
     }

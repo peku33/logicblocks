@@ -206,6 +206,7 @@ impl uri_cursor::Handler for Device {
             Some("r") => match *request.method() {
                 http::Method::POST => {
                     self.set(false);
+                    
                     async { web::Response::ok_empty() }.boxed()
                 }
                 _ => async { web::Response::error_405() }.boxed(),
@@ -213,6 +214,7 @@ impl uri_cursor::Handler for Device {
             Some("s") => match *request.method() {
                 http::Method::POST => {
                     self.set(true);
+                    
                     async { web::Response::ok_empty() }.boxed()
                 }
                 _ => async { web::Response::error_405() }.boxed(),
@@ -220,6 +222,7 @@ impl uri_cursor::Handler for Device {
             Some("t") => match *request.method() {
                 http::Method::POST => {
                     self.invert();
+                    
                     async { web::Response::ok_empty() }.boxed()
                 }
                 _ => async { web::Response::error_405() }.boxed(),

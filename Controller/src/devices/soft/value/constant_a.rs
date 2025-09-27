@@ -70,6 +70,7 @@ where
         exit_flag: async_flag::Receiver,
     ) -> Exited {
         exit_flag.await;
+
         Exited
     }
 }

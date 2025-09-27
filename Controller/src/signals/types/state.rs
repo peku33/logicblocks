@@ -39,7 +39,7 @@ impl Value for Temperature {}
 impl Value for Voltage {}
 
 // datatypes parent
-impl<T> Value for Range<T> where T: Value {}
+impl<V> Value for Range<V> where V: Value {}
 
 // datatypes::building
 impl Value for WindowOpenStateOpenClosed {}

@@ -1,23 +1,23 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
-pub struct RangeBoundary<T> {
-    pub value: T,
+pub struct RangeBoundary<V> {
+    pub value: V,
     pub inclusive: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
-pub struct Range<T> {
-    pub lower: Option<RangeBoundary<T>>,
-    pub upper: Option<RangeBoundary<T>>,
+pub struct Range<V> {
+    pub lower: Option<RangeBoundary<V>>,
+    pub upper: Option<RangeBoundary<V>>,
 }
-impl<T> Range<T>
+impl<V> Range<V>
 where
-    T: PartialOrd,
+    V: PartialOrd,
 {
     pub fn contains(
         &self,
-        value: &T,
+        value: &V,
     ) -> bool {
         if let Some(lower) = &self.lower {
             if lower.inclusive && *value == lower.value {
@@ -39,14 +39,14 @@ where
         true
     }
 }
-impl<T> Range<T>
+impl<V> Range<V>
 where
-    T: Clone + PartialOrd,
+    V: Clone + PartialOrd,
 {
     pub fn clamp_to(
         &self,
-        value: T,
-    ) -> T {
+        value: V,
+    ) -> V {
         // TODO: what if self.lower > self.upper?
         if let Some(lower) = &self.lower
             && value < lower.value

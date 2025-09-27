@@ -1,16 +1,16 @@
 use parking_lot::Mutex;
 
 #[derive(Debug)]
-struct State<T>
+struct State<V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    value: Option<T>,
+    value: Option<V>,
     user_pending: bool,
 }
-impl<T> State<T>
+impl<V> State<V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
     pub fn new() -> Self {
         Self {
@@ -21,15 +21,15 @@ where
 }
 
 #[derive(Debug)]
-pub struct Property<T>
+pub struct Property<V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    state: Mutex<State<T>>,
+    state: Mutex<State<V>>,
 }
-impl<T> Property<T>
+impl<V> Property<V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
     pub fn new() -> Self {
         let state = State::new();
@@ -39,7 +39,7 @@ where
     }
 
     // User
-    pub fn user_remote(&self) -> Remote<'_, T> {
+    pub fn user_remote(&self) -> Remote<'_, V> {
         Remote::new(self)
     }
 
@@ -56,7 +56,7 @@ where
     #[must_use = "use this value to wake properties changed waker"]
     pub fn device_set(
         &self,
-        value: T,
+        value: V,
     ) -> bool {
         let mut state = self.state.lock();
 
@@ -89,21 +89,21 @@ where
 }
 
 #[derive(Debug)]
-pub struct Remote<'p, T>
+pub struct Remote<'p, V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    property: &'p Property<T>,
+    property: &'p Property<V>,
 }
-impl<'p, T> Remote<'p, T>
+impl<'p, V> Remote<'p, V>
 where
-    T: Eq + Clone + Send + Sync + 'static,
+    V: Eq + Clone + Send + Sync + 'static,
 {
-    fn new(property: &'p Property<T>) -> Self {
+    fn new(property: &'p Property<V>) -> Self {
         Self { property }
     }
 
-    pub fn take_pending(&self) -> Option<Option<T>> {
+    pub fn take_pending(&self) -> Option<Option<V>> {
         let mut state = self.property.state.lock();
 
         if !state.user_pending {
@@ -118,7 +118,7 @@ where
         Some(value)
     }
 
-    pub fn peek_last(&self) -> Option<T> {
+    pub fn peek_last(&self) -> Option<V> {
         let state = self.property.state.lock();
 
         let value = state.value.clone();
