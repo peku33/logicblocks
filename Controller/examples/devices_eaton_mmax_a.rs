@@ -17,8 +17,8 @@ use std::str::FromStr;
 use tokio::signal::ctrl_c;
 
 #[derive(Debug, Clone)]
-struct ArgumentsParity(serial::Parity);
-impl FromStr for ArgumentsParity {
+struct ArgumentParity(serial::Parity);
+impl FromStr for ArgumentParity {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -34,8 +34,8 @@ impl FromStr for ArgumentsParity {
 }
 
 #[derive(Debug, Clone)]
-struct ArgumentsSpeedSetpoint(Ratio);
-impl FromStr for ArgumentsSpeedSetpoint {
+struct ArgumentSpeedSetpoint(Ratio);
+impl FromStr for ArgumentSpeedSetpoint {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -50,7 +50,7 @@ impl FromStr for ArgumentsSpeedSetpoint {
 struct Arguments {
     ftdi_serial: String,
     baud_rate: usize,
-    parity: ArgumentsParity,
+    parity: ArgumentParity,
     device_address: u8,
     #[clap(subcommand)]
     subcommand: Option<ArgumentsSubcommand>,
@@ -58,13 +58,13 @@ struct Arguments {
 
 #[derive(Debug, Parser)]
 enum ArgumentsSubcommand {
-    Set(ArgumentsSet),
+    Set(ArgumentsSubcommandSet),
 }
 
 #[derive(Debug, Parser)]
 #[clap(name = "set")]
-struct ArgumentsSet {
-    speed_setpoint: ArgumentsSpeedSetpoint,
+struct ArgumentsSubcommandSet {
+    speed_setpoint: ArgumentSpeedSetpoint,
 
     #[clap(action = ArgAction::Set)]
     reverse: bool,

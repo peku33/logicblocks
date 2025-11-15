@@ -18,7 +18,7 @@ use async_trait::async_trait;
 use futures::{future::FutureExt, join, stream::StreamExt};
 use ouroboros::self_referencing;
 use serde::Serialize;
-use std::{borrow::Cow, fmt, mem};
+use std::{borrow::Cow, fmt, mem::transmute};
 
 pub trait DeviceFactory: Sync + Send + fmt::Debug + 'static {
     type Device<'h>: Device;
@@ -77,7 +77,7 @@ where
             // this should be safe as we narrow down the lifetime
 
             let device_static = unsafe {
-                mem::transmute::<
+                transmute::<
                     &'_ <<DF as DeviceFactory>::Device<'m> as Device>::HardwareDevice,
                     &'_ <<DF as DeviceFactory>::Device<'_> as Device>::HardwareDevice,
                 >(hardware_runner.device())
@@ -96,7 +96,7 @@ where
     fn device(&self) -> &<DF as DeviceFactory>::Device<'_> {
         // this should be safe, as we narrow down the lifetime
         self.inner.with_device(|device| unsafe {
-            mem::transmute::<
+            transmute::<
                 &'_ <DF as DeviceFactory>::Device<'_>,
                 &'_ <DF as DeviceFactory>::Device<'_>,
             >(device)
@@ -210,7 +210,7 @@ where
     type Identifier = <<DF as DeviceFactory>::Device<'static> as signals::Device>::Identifier;
     fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
         let device_static = unsafe {
-            mem::transmute::<
+            transmute::<
                 &'_ <DF as DeviceFactory>::Device<'_>,
                 &'_ <DF as DeviceFactory>::Device<'static>,
             >(self.device())

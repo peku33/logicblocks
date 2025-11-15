@@ -20,7 +20,7 @@ impl Bus {
     const FTDI_RETRY_COUNT: usize = 3;
     const FTDI_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 
-    const CRC16_ALGORITHM: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
+    const CRC_ALGORITHM: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
 
     const RESPONSE_LENGTH_MAX: usize = 256;
 
@@ -129,7 +129,7 @@ impl Bus {
 
         let data = request.data();
 
-        let mut crc = Self::CRC16_ALGORITHM.digest();
+        let mut crc = Self::CRC_ALGORITHM.digest();
         crc.update(slice::from_ref(&address));
         crc.update(slice::from_ref(&function_code));
         crc.update(&data);
@@ -208,7 +208,7 @@ impl Bus {
         };
 
         // calculate crc of actual value
-        let mut crc = Self::CRC16_ALGORITHM.digest();
+        let mut crc = Self::CRC_ALGORITHM.digest();
         crc.update(slice::from_ref(&address));
         crc.update(slice::from_ref(&function_code_exception_mask_received));
         crc.update(data);

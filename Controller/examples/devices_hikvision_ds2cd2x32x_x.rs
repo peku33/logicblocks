@@ -30,12 +30,12 @@ struct Arguments {
 #[derive(Debug, Parser)]
 enum ArgumentsSubcommand {
     EventStream,
-    Configure(CommandConfigure),
+    Configure(ArgumentsSubcommandConfigure),
 }
 
 #[derive(Debug, Parser)]
 #[clap(name = "configure")]
-struct CommandConfigure {
+struct ArgumentsSubcommandConfigure {
     device_name: String,
     device_id: u8,
     shared_user_password: String,

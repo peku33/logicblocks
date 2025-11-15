@@ -20,7 +20,7 @@ impl<'p> UriCursor<'p> {
     pub fn new(path: &'p str) -> Self {
         match path.find('/') {
             Some(slash_position) => UriCursor::Next(
-                &path[..slash_position],
+                &path[0..slash_position],
                 Box::new(UriCursor::new(&path[slash_position + 1..])),
             ),
             None => UriCursor::Next(path, Box::new(UriCursor::Terminal)),

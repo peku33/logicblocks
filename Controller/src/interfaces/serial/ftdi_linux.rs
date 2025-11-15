@@ -136,7 +136,7 @@ impl Global {
             }
             let serial_number = match ffi::CStr::from_bytes_with_nul(
                 &serial_number
-                    [..(libusb_get_string_descriptor_ascii_serial_number_result as usize) + 1],
+                    [0..(libusb_get_string_descriptor_ascii_serial_number_result as usize) + 1],
             )
             .context("serial_number")
             {

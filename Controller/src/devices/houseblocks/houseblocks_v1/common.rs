@@ -293,21 +293,21 @@ impl Frame {
             &Self::CHAR_DIRECTION_NORMAL_OUT
         };
 
-        let mut crc16 = Self::CRC_HASHER.digest();
-        crc16.update(slice::from_ref(char_direction));
-        crc16.update(address.device_type.as_bytes());
-        crc16.update(address.serial.as_bytes());
-        crc16.update(payload.as_bytes());
-        let crc16 = crc16.finalize();
-        let crc16 = hex::encode_upper(crc16.to_be_bytes());
-        let crc16 = crc16.as_bytes();
+        let mut crc = Self::CRC_HASHER.digest();
+        crc.update(slice::from_ref(char_direction));
+        crc.update(address.device_type.as_bytes());
+        crc.update(address.serial.as_bytes());
+        crc.update(payload.as_bytes());
+        let crc = crc.finalize();
+        let crc = hex::encode_upper(crc.to_be_bytes());
+        let crc = crc.as_bytes();
 
         let frame = [
             slice::from_ref(&Self::CHAR_BEGIN),
             slice::from_ref(char_direction),
             address.device_type.as_bytes(),
             address.serial.as_bytes(),
-            crc16,
+            crc,
             payload.as_bytes(),
             slice::from_ref(&Self::CHAR_END),
         ]
@@ -338,15 +338,15 @@ impl Frame {
             "invalid service_mode character"
         );
 
-        let crc16_received = &frame[2..2 + 4];
+        let crc_received = &frame[2..2 + 4];
         ensure!(
-            crc16_received
+            crc_received
                 .iter()
                 .all(|item| item.is_ascii_uppercase() || item.is_ascii_digit()),
-            "invalid character in crc16"
+            "invalid character in crc"
         );
-        let crc16_received = hex::decode(crc16_received).context("decode")?;
-        let crc16_received = u16::from_be_bytes(crc16_received[..].try_into().unwrap());
+        let crc_received = hex::decode(crc_received).context("decode")?;
+        let crc_received = u16::from_be_bytes(crc_received[..].try_into().unwrap());
 
         let payload = Payload::new(Box::from(&frame[2 + 4..frame.len() - 1])).context("new")?;
 
@@ -355,18 +355,18 @@ impl Frame {
             "invalid end character"
         );
 
-        let mut crc16_expected = Self::CRC_HASHER.digest();
-        crc16_expected.update(slice::from_ref(&frame[1]));
-        crc16_expected.update(address.device_type.as_bytes());
-        crc16_expected.update(address.serial.as_bytes());
-        crc16_expected.update(payload.as_bytes());
-        let crc16_expected = crc16_expected.finalize();
+        let mut crc_expected = Self::CRC_HASHER.digest();
+        crc_expected.update(slice::from_ref(&frame[1]));
+        crc_expected.update(address.device_type.as_bytes());
+        crc_expected.update(address.serial.as_bytes());
+        crc_expected.update(payload.as_bytes());
+        let crc_expected = crc_expected.finalize();
 
         ensure!(
-            crc16_expected == crc16_received,
-            "invalid CRC16, expected: {:04X}, received: {:04X}",
-            crc16_expected,
-            crc16_received,
+            crc_expected == crc_received,
+            "invalid crc, expected: {:04X}, received: {:04X}",
+            crc_expected,
+            crc_received,
         );
 
         Ok(payload)

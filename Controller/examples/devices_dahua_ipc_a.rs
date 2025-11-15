@@ -30,13 +30,13 @@ struct Arguments {
 #[derive(Debug, Parser)]
 enum ArgumentsSubcommand {
     EventStream,
-    Configure(CommandConfigure),
+    Configure(ArgumentsSubcommandConfigure),
     ConfigurationDump,
 }
 
 #[derive(Debug, Parser)]
 #[clap(name = "configure")]
-struct CommandConfigure {
+struct ArgumentsSubcommandConfigure {
     #[clap(action = ArgAction::Set)]
     factory_reset: bool,
     device_name: String,

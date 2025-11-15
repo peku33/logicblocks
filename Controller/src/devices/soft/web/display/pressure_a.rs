@@ -1,10 +1,10 @@
-use super::common::state_a;
+use super::common::state_a as parent;
 use crate::datatypes::pressure::Pressure;
 use std::borrow::Cow;
 
 #[derive(Debug)]
 pub struct Specification;
-impl state_a::Specification for Specification {
+impl parent::Specification for Specification {
     type Type = Pressure;
 
     fn name() -> std::borrow::Cow<'static, str> {
@@ -12,5 +12,5 @@ impl state_a::Specification for Specification {
     }
 }
 
-pub type Device = state_a::Device<Specification>;
-pub type SignalIdentifier = state_a::SignalIdentifier;
+pub type Device = parent::Device<Specification>;
+pub type SignalIdentifier = parent::SignalIdentifier;

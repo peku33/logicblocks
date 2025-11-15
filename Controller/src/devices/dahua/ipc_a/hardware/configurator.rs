@@ -226,28 +226,24 @@ impl Grid22x18 {
         RegionSquare::new(
             Point::new(
                 Coordinate::new(
-                    (1.0 * (grid_x_min as f64) / (Self::COLUMNS as f64)
-                        * (Coordinate::VALUE_MAX as f64))
+                    ((grid_x_min as f64) / (Self::COLUMNS as f64) * (Coordinate::VALUE_MAX as f64))
                         .floor() as u16,
                 )
                 .unwrap(),
                 Coordinate::new(
-                    (1.0 * (grid_y_min as f64) / (Self::ROWS as f64)
-                        * (Coordinate::VALUE_MAX as f64))
+                    ((grid_y_min as f64) / (Self::ROWS as f64) * (Coordinate::VALUE_MAX as f64))
                         .floor() as u16,
                 )
                 .unwrap(),
             ),
             Point::new(
                 Coordinate::new(
-                    (1.0 * (grid_x_max as f64) / (Self::COLUMNS as f64)
-                        * (Coordinate::VALUE_MAX as f64))
+                    ((grid_x_max as f64) / (Self::COLUMNS as f64) * (Coordinate::VALUE_MAX as f64))
                         .floor() as u16,
                 )
                 .unwrap(),
                 Coordinate::new(
-                    (1.0 * (grid_y_max as f64) / (Self::ROWS as f64)
-                        * (Coordinate::VALUE_MAX as f64))
+                    ((grid_y_max as f64) / (Self::ROWS as f64) * (Coordinate::VALUE_MAX as f64))
                         .floor() as u16,
                 )
                 .unwrap(),
