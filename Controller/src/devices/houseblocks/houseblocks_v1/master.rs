@@ -12,8 +12,7 @@ use crate::{
 use anyhow::{Context, Error, bail, ensure};
 use crossbeam::channel;
 use futures::channel::oneshot;
-use once_cell::sync::Lazy;
-use std::{fmt::Debug, mem::ManuallyDrop, thread, time::Duration};
+use std::{fmt::Debug, mem::ManuallyDrop, sync::LazyLock, thread, time::Duration};
 
 #[derive(Debug)]
 enum Transaction {
@@ -237,8 +236,9 @@ pub struct Master {
 }
 impl Master {
     fn module_path() -> &'static ModulePath {
-        static MODULE_PATH: Lazy<ModulePath> =
-            Lazy::new(|| ModulePath::new(&["devices", "houseblocks", "houseblocks_v1", "master"]));
+        static MODULE_PATH: LazyLock<ModulePath> = LazyLock::new(|| {
+            ModulePath::new(&["devices", "houseblocks", "houseblocks_v1", "master"])
+        });
         &MODULE_PATH
     }
 

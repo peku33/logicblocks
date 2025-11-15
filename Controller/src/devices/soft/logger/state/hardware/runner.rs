@@ -21,12 +21,11 @@ use futures::{
     join,
     stream::StreamExt,
 };
-use once_cell::sync::Lazy;
 use ouroboros::self_referencing;
 use std::{
     collections::HashMap,
-    mem,
-    mem::{ManuallyDrop, transmute},
+    mem::{ManuallyDrop, replace, transmute},
+    sync::LazyLock,
 };
 
 #[derive(Debug)]
@@ -296,7 +295,7 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
             .map_err(|_| anyhow!("runner_sinks_runner lock"))?;
 
         let runner_sinks_runner =
-            mem::replace(&mut *runner_sinks_runner_lock, RunnerSinksRunner::empty());
+            replace(&mut *runner_sinks_runner_lock, RunnerSinksRunner::empty());
         runner_sinks_runner.finalize().await;
 
         self.manager_runner
@@ -319,7 +318,7 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
 
         // replace old with empty state
         let runner_sinks_runner =
-            mem::replace(&mut *runner_sinks_runner_lock, RunnerSinksRunner::empty());
+            replace(&mut *runner_sinks_runner_lock, RunnerSinksRunner::empty());
         runner_sinks_runner.finalize().await;
 
         // get new channels data
@@ -352,7 +351,7 @@ impl<'f: 'r, 'r> Runner<'f, 'r> {
         let runner_sinks_runner = RunnerSinksRunner::new(runner_sink_runners);
 
         // replace empty state with created channels
-        let runner_sinks_runner = mem::replace(&mut *runner_sinks_runner_lock, runner_sinks_runner);
+        let runner_sinks_runner = replace(&mut *runner_sinks_runner_lock, runner_sinks_runner);
         runner_sinks_runner.finalize().await;
 
         drop(runner_sinks_runner_lock);
@@ -392,8 +391,8 @@ pub struct RunnerOwned<'f> {
 }
 impl<'f> RunnerOwned<'f> {
     fn module_path() -> &'static ModulePath {
-        static MODULE_PATH: Lazy<ModulePath> =
-            Lazy::new(|| ModulePath::new(&["devices", "soft", "logger", "state"]));
+        static MODULE_PATH: LazyLock<ModulePath> =
+            LazyLock::new(|| ModulePath::new(&["devices", "soft", "logger", "state"]));
         &MODULE_PATH
     }
 

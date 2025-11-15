@@ -1,7 +1,6 @@
 use anyhow::{Context, Error, ensure};
-use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
-use std::{collections::VecDeque, str};
+use std::{collections::VecDeque, str, sync::LazyLock};
 
 #[derive(Debug)]
 pub struct Extractor {
@@ -22,7 +21,7 @@ impl Extractor {
     }
 
     pub fn try_extract(&mut self) -> Result<Option<String>, Error> {
-        static PATTERN: Lazy<Regex> = Lazy::new(|| {
+        static PATTERN: LazyLock<Regex> = LazyLock::new(|| {
             RegexBuilder::new(r"--myboundary(\r\n)?Content-Type: text/plain(\r\n)Content-Length:( )?(\d+)(\r\n){1,2}(.+?)(\r\n){1,2}")
                 .dot_matches_new_line(true)
                 .build()

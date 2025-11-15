@@ -13,14 +13,16 @@ use http::{
 use image::DynamicImage;
 use itertools::Itertools;
 use md5::{Digest, Md5};
-use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use serde_json::json;
 use std::{
     fmt,
     pin::Pin,
     str,
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        LazyLock,
+        atomic::{AtomicU64, Ordering},
+    },
     task,
     time::Duration,
 };
@@ -614,7 +616,7 @@ impl Api {
     }
 
     pub fn device_type_supported(device_type: &str) -> bool {
-        static PATTERN: Lazy<Regex> = Lazy::new(|| {
+        static PATTERN: LazyLock<Regex> = LazyLock::new(|| {
             RegexBuilder::new(r"^(DH-)?IPC-HDW(2|3|4)(6|8)(3|4)(0|1)([A-Z]+)-([A-Z]+)$")
                 .dot_matches_new_line(true)
                 .build()

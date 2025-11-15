@@ -1,11 +1,11 @@
 use anyhow::{Context, Error, bail};
 use fs4::fs_std::FileExt;
-use once_cell::sync::Lazy;
 use std::{
     env,
     fs::{self, File},
     ops::Deref,
     path::{Path, PathBuf},
+    sync::LazyLock,
 };
 
 #[derive(Debug)]
@@ -56,7 +56,8 @@ fn persistent_directory_resolve() -> PathBuf {
     persistent_directory
 }
 pub fn persistent_directory() -> &'static Path {
-    static PERSISTENT_DIRECTORY: Lazy<PathBuf> = Lazy::<PathBuf>::new(persistent_directory_resolve);
+    static PERSISTENT_DIRECTORY: LazyLock<PathBuf> =
+        LazyLock::<PathBuf>::new(persistent_directory_resolve);
 
     &PERSISTENT_DIRECTORY
 }
@@ -73,8 +74,8 @@ fn persistent_data_directory_resolve() -> PathBuf {
     persistent_data_directory
 }
 pub fn persistent_data_directory() -> &'static Path {
-    static PERSISTENT_DATA_DIRECTORY: Lazy<PathBuf> =
-        Lazy::<PathBuf>::new(persistent_data_directory_resolve);
+    static PERSISTENT_DATA_DIRECTORY: LazyLock<PathBuf> =
+        LazyLock::<PathBuf>::new(persistent_data_directory_resolve);
 
     &PERSISTENT_DATA_DIRECTORY
 }
@@ -91,8 +92,8 @@ fn persistent_storage_directory_resolve() -> PathBuf {
     persistent_storage_directory
 }
 pub fn persistent_storage_directory() -> &'static Path {
-    static PERSISTENT_STORAGE_DIRECTORY: Lazy<PathBuf> =
-        Lazy::<PathBuf>::new(persistent_storage_directory_resolve);
+    static PERSISTENT_STORAGE_DIRECTORY: LazyLock<PathBuf> =
+        LazyLock::<PathBuf>::new(persistent_storage_directory_resolve);
 
     &PERSISTENT_STORAGE_DIRECTORY
 }
@@ -106,8 +107,8 @@ fn temporary_storage_directory_resolve() -> PathBuf {
     env::temp_dir().join("logicblocks").join("storage")
 }
 pub fn temporary_storage_directory() -> &'static Path {
-    static TEMPORARY_STORAGE_DIRECTORY: Lazy<PathBuf> =
-        Lazy::<PathBuf>::new(temporary_storage_directory_resolve);
+    static TEMPORARY_STORAGE_DIRECTORY: LazyLock<PathBuf> =
+        LazyLock::<PathBuf>::new(temporary_storage_directory_resolve);
 
     &TEMPORARY_STORAGE_DIRECTORY
 }

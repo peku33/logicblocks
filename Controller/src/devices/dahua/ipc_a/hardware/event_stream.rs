@@ -10,10 +10,10 @@ use futures::{
     pin_mut, select,
     stream::{StreamExt, TryStreamExt},
 };
-use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use std::{
     collections::{HashMap, HashSet},
+    sync::LazyLock,
     time::{Duration, Instant},
 };
 use tokio::sync::watch;
@@ -88,7 +88,7 @@ impl<'a> Manager<'a> {
         }
     }
     fn event_state_update_parse(item: &str) -> Result<Option<EventStateUpdate>, Error> {
-        static PATTERN: Lazy<Regex> = Lazy::new(|| {
+        static PATTERN: LazyLock<Regex> = LazyLock::new(|| {
             RegexBuilder::new(r"^Code=(\w+);action=(\w+);index=0(;data=(.+))?$")
                 .dot_matches_new_line(true)
                 .build()

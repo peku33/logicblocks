@@ -111,11 +111,11 @@ impl fmt::Display for ModulePathName {
 #[cfg(test)]
 mod tests_module_path_name {
     use super::{ModulePath, ModulePathName};
-    use once_cell::sync::Lazy;
+    use std::sync::LazyLock;
 
     fn module_path() -> &'static ModulePath {
-        static MODULE_PATH: Lazy<ModulePath> =
-            Lazy::new(|| ModulePath::new(&["this", "is", "module"]));
+        static MODULE_PATH: LazyLock<ModulePath> =
+            LazyLock::new(|| ModulePath::new(&["this", "is", "module"]));
         &MODULE_PATH
     }
 

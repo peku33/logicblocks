@@ -16,9 +16,8 @@ use crate::{
 };
 use anyhow::{Context, Error};
 use futures::future::{BoxFuture, FutureExt, JoinAll};
-use once_cell::sync::Lazy;
 use ouroboros::self_referencing;
-use std::{collections::HashMap, mem::ManuallyDrop};
+use std::{collections::HashMap, mem::ManuallyDrop, sync::LazyLock};
 
 #[self_referencing]
 #[derive(Debug)]
@@ -62,8 +61,8 @@ pub struct Runner<'d> {
 }
 impl<'d> Runner<'d> {
     fn module_path() -> &'static ModulePath {
-        static MODULE_PATH: Lazy<ModulePath> =
-            Lazy::new(|| ModulePath::new(&["devices", "runner"]));
+        static MODULE_PATH: LazyLock<ModulePath> =
+            LazyLock::new(|| ModulePath::new(&["devices", "runner"]));
         &MODULE_PATH
     }
 

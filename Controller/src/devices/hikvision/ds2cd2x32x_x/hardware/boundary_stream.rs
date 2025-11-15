@@ -1,7 +1,6 @@
 use anyhow::{Context, Error};
-use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
-use std::{collections::VecDeque, str};
+use std::{collections::VecDeque, str, sync::LazyLock};
 use xmltree::Element;
 
 #[derive(Debug)]
@@ -22,7 +21,7 @@ impl Extractor {
     }
 
     pub fn try_extract(&mut self) -> Result<Option<Element>, Error> {
-        static PATTERN: Lazy<Regex> = Lazy::new(|| {
+        static PATTERN: LazyLock<Regex> = LazyLock::new(|| {
             RegexBuilder::new("--boundary\r\nContent-Type: application/xml; charset=\"UTF-8\"\r\nContent-Length: (\\d+)\r\n\r\n")
                 .dot_matches_new_line(true)
                 .build()

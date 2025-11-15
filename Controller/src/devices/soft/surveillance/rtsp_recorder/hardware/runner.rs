@@ -21,11 +21,11 @@ use futures::{
     join,
     stream::StreamExt,
 };
-use once_cell::sync::Lazy;
 use ouroboros::self_referencing;
 use std::{
     collections::HashMap,
     mem::{ManuallyDrop, transmute},
+    sync::LazyLock,
     time::Duration,
 };
 
@@ -395,8 +395,9 @@ pub struct RunnerOwned<'f> {
 }
 impl<'f> RunnerOwned<'f> {
     fn module_path() -> &'static ModulePath {
-        static MODULE_PATH: Lazy<ModulePath> =
-            Lazy::new(|| ModulePath::new(&["devices", "soft", "surveillance", "rtsp_recorder"]));
+        static MODULE_PATH: LazyLock<ModulePath> = LazyLock::new(|| {
+            ModulePath::new(&["devices", "soft", "surveillance", "rtsp_recorder"])
+        });
         &MODULE_PATH
     }
 

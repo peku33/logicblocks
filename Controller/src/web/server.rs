@@ -22,13 +22,13 @@ use hyper_util::{
     rt::{TokioExecutor, TokioIo},
     server::{conn::auto::Builder, graceful::GracefulShutdown},
 };
-use once_cell::sync::Lazy;
 use ouroboros::self_referencing;
 use std::{
     convert::Infallible,
     fmt,
     mem::{ManuallyDrop, transmute},
     net::SocketAddr,
+    sync::LazyLock,
     time::Duration,
 };
 use tokio::net::TcpListener;
@@ -271,7 +271,8 @@ pub struct RunnerOwned<'h> {
 }
 impl<'h> RunnerOwned<'h> {
     fn module_path() -> &'static ModulePath {
-        static MODULE_PATH: Lazy<ModulePath> = Lazy::new(|| ModulePath::new(&["web", "server"]));
+        static MODULE_PATH: LazyLock<ModulePath> =
+            LazyLock::new(|| ModulePath::new(&["web", "server"]));
         &MODULE_PATH
     }
 
