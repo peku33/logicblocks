@@ -23,7 +23,7 @@ const Component: React.FC<{
       {Array.from(Array(INPUTS_COUNT).keys()).map((index) => (
         <GridItem key={index}>
           <GridItemLabel>#{index + 1}</GridItemLabel>
-          <GridItemValue>{formatResistanceOrUnknown(inputsFixed?.[index], 2)}</GridItemValue>
+          <GridItemValue>{formatResistanceOrUnknown(inputsFixed?.[index], 3)}</GridItemValue>
         </GridItem>
       ))}
       <GridItemCenter />

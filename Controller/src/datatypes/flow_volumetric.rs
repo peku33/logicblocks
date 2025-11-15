@@ -22,10 +22,10 @@ impl FlowVolumetric {
     }
 
     pub fn from_liters_per_minute(liters_per_minute: f64) -> Result<Self, Error> {
-        Self::from_cubic_meters_per_second(liters_per_minute / 60.0 * 1000.0)
+        Self::from_cubic_meters_per_second(liters_per_minute / 1000.0 / 60.0)
     }
     pub fn to_liters_per_minute(&self) -> f64 {
-        self.to_cubic_meters_per_second() * 60.0 / 1000.0
+        self.to_cubic_meters_per_second() * 1000.0 * 60.0
     }
 }
 impl fmt::Display for FlowVolumetric {
@@ -33,7 +33,7 @@ impl fmt::Display for FlowVolumetric {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{:.4}l/min", self.to_liters_per_minute())
+        write!(f, "{:.3}l/min", self.to_liters_per_minute())
     }
 }
 

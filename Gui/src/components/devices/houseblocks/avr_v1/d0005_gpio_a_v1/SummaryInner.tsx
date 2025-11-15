@@ -332,7 +332,7 @@ const LayoutItemAnalogIn: React.FC<{
     <LayoutItemInner $backgroundColor="#FDCEB9">
       <LayoutItemInnerBlockPinLabel block={block} pin={pin} />
       <LayoutItemInnerLabel>Analog Input</LayoutItemInnerLabel>
-      <LayoutItemInnerValue>{formatVoltageOrUnknown(voltage, 4)}</LayoutItemInnerValue>
+      <LayoutItemInnerValue>{formatVoltageOrUnknown(voltage, 3)}</LayoutItemInnerValue>
     </LayoutItemInner>
   );
 };
@@ -403,7 +403,7 @@ const LayoutItemCounterIn: React.FC<{
     <LayoutItemInner $backgroundColor="#E7C84A">
       <LayoutItemInnerBlockPinLabel block={block} pin={pin} />
       <LayoutItemInnerLabel>Counter Input</LayoutItemInnerLabel>
-      <LayoutItemInnerValue>{formatFrequencyHertzOrUnknown(frequency, 2)}</LayoutItemInnerValue>
+      <LayoutItemInnerValue>{formatFrequencyHertzOrUnknown(frequency, 3)}</LayoutItemInnerValue>
     </LayoutItemInner>
   );
 };

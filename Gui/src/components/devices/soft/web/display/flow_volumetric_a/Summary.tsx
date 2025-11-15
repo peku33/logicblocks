@@ -4,7 +4,7 @@ import { type FlowVolumetric, formatFlowVolumetricLitersPerMinuteOrUnknown } fro
 export type Data = FlowVolumetric;
 
 const TextDisplay = buildTextDisplay((value: Data | undefined) =>
-  formatFlowVolumetricLitersPerMinuteOrUnknown(value, 2),
+  formatFlowVolumetricLitersPerMinuteOrUnknown(value, 3),
 );
 
 const Component: React.FC<{

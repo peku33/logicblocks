@@ -20,7 +20,7 @@ export function formatFlowVolumetricCubicMetersPerSecondOrUnknown(
 }
 
 export function formatFlowVolumetricLitersPerMinute(flow_volumetric: FlowVolumetric, decimalPoints: number): string {
-  return formatSI((flow_volumetric / 60.0) * 1000.0, decimalPoints, "l/min");
+  return formatSI(flow_volumetric * 60.0 * 1000.0, decimalPoints, "l/min");
 }
 export function formatFlowVolumetricLitersPerMinuteOrUnknown(
   flow_volumetric: FlowVolumetric | null | undefined,

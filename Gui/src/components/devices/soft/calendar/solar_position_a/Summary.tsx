@@ -27,7 +27,7 @@ const Component: React.FC<{
         </TableHeader>
         <TableBody>
           <TableRow>
-            <TableCell>{formatRealOrUnknown(data?.julian_day, 2)}</TableCell>
+            <TableCell>{formatRealOrUnknown(data?.julian_day, 3)}</TableCell>
             <TableCell>{formatDegreesOrUnknown(data?.elevation, 2)}</TableCell>
             <TableCell>{formatDegreesOrUnknown(data?.asimuth, 2)}</TableCell>
           </TableRow>

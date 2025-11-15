@@ -116,7 +116,7 @@ const Component: React.FC<{ data: Data | undefined }> = (props) => {
                 value={data.motor_voltage}
                 valueMin={0.0}
                 valueMax={data.motor_voltage_max}
-                valueSerializer={(voltage) => formatVoltage(voltage, 2)}
+                valueSerializer={(voltage) => formatVoltage(voltage, 3)}
               >
                 Voltage
               </GaugeLinear>
@@ -124,7 +124,7 @@ const Component: React.FC<{ data: Data | undefined }> = (props) => {
                 value={data.motor_current}
                 valueMin={0.0}
                 valueMax={data.motor_current_rated}
-                valueSerializer={(current) => formatCurrent(current, 2)}
+                valueSerializer={(current) => formatCurrent(current, 3)}
               >
                 Current
               </GaugeLinear>
@@ -132,7 +132,7 @@ const Component: React.FC<{ data: Data | undefined }> = (props) => {
                 value={data.motor_frequency}
                 valueMin={data.motor_frequency_min}
                 valueMax={data.motor_frequency_max}
-                valueSerializer={(frequency) => formatFrequencyHertz(frequency, 2)}
+                valueSerializer={(frequency) => formatFrequencyHertz(frequency, 3)}
               >
                 Frequency
               </GaugeLinear>
@@ -155,7 +155,7 @@ const Component: React.FC<{ data: Data | undefined }> = (props) => {
                 value={data.dc_link_voltage}
                 valueMin={0}
                 valueMax={DC_LINK_VOLTAGE_MAX}
-                valueSerializer={(voltage) => formatVoltage(voltage, 2)}
+                valueSerializer={(voltage) => formatVoltage(voltage, 3)}
               >
                 DC Link Voltage
               </GaugeLinear>

@@ -3,7 +3,7 @@ import { type Pressure, formatPressureOrUnknown } from "@/datatypes/Pressure";
 
 export type Data = Pressure;
 
-const TextDisplay = buildTextDisplay((value: Data | undefined) => formatPressureOrUnknown(value, 2));
+const TextDisplay = buildTextDisplay((value: Data | undefined) => formatPressureOrUnknown(value, 3));
 
 const Component: React.FC<{
   data: Data | undefined;

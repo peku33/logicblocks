@@ -31,7 +31,7 @@ impl fmt::Display for Frequency {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{:.2}Hz", self.to_hertz())
+        write!(f, "{:.3}Hz", self.to_hertz())
     }
 }
 
