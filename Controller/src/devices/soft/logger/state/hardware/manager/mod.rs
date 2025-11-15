@@ -38,7 +38,7 @@ pub struct SinkDataDetails {
 pub struct SinkData {
     pub name: String,
     pub class: Class,           // invariant
-    pub timestamp_divisor: f64, // invariant
+    pub timestamp_divisor: f64, // invariant // TODO: move to typed float
     pub enabled: bool,
 }
 
@@ -71,6 +71,10 @@ impl DbClass {
     pub fn from_class(class: Class) -> Self {
         match class {
             Class::Boolean => Self::Boolean,
+            Class::Current => Self::Real,
+            Class::FlowVolumetric => Self::Real,
+            Class::Frequency => Self::Real,
+            Class::Multiplier => Self::Real,
             Class::Pressure => Self::Real,
             Class::Ratio => Self::Real,
             Class::Real => Self::Real,
@@ -90,6 +94,16 @@ impl DbValue {
     pub fn from_value(value: Value) -> Self {
         match value {
             Value::Boolean(value) => Self::Boolean(value),
+            Value::Current(current) => Self::Real(current.map(|current| current.to_amperes())),
+            Value::FlowVolumetric(flow_volumetric) => Self::Real(
+                flow_volumetric.map(|flow_volumetric| flow_volumetric.to_cubic_meters_per_second()),
+            ),
+            Value::Frequency(frequency) => {
+                Self::Real(frequency.map(|frequency| frequency.to_hertz()))
+            }
+            Value::Multiplier(multiplier) => {
+                Self::Real(multiplier.map(|multiplier| multiplier.to_f64()))
+            }
             Value::Pressure(pressure) => Self::Real(pressure.map(|pressure| pressure.to_pascals())),
             Value::Ratio(value) => Self::Real(value.map(|value| value.to_f64())),
             Value::Real(value) => Self::Real(value.map(|value| value.to_f64())),

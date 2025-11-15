@@ -1,6 +1,7 @@
 use crate::datatypes::{
-    pressure::Pressure, ratio::Ratio, real::Real, resistance::Resistance, temperature::Temperature,
-    voltage::Voltage,
+    current::Current, flow_volumetric::FlowVolumetric, frequency::Frequency,
+    multiplier::Multiplier, pressure::Pressure, ratio::Ratio, real::Real, resistance::Resistance,
+    temperature::Temperature, voltage::Voltage,
 };
 use chrono::{DateTime, Utc};
 use std::fmt;
@@ -10,6 +11,10 @@ use std::fmt;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Class {
     Boolean,
+    Current,
+    FlowVolumetric,
+    Frequency,
+    Multiplier,
     Pressure,
     Ratio,
     Real,
@@ -21,6 +26,10 @@ impl Class {
     pub fn from_string(input: &str) -> Option<Self> {
         match input {
             "Boolean" => Some(Class::Boolean),
+            "Current" => Some(Class::Current),
+            "FlowVolumetric" => Some(Class::FlowVolumetric),
+            "Frequency" => Some(Class::Frequency),
+            "Multiplier" => Some(Class::Multiplier),
             "Pressure" => Some(Class::Pressure),
             "Ratio" => Some(Class::Ratio),
             "Real" => Some(Class::Real),
@@ -33,6 +42,10 @@ impl Class {
     pub fn to_string(&self) -> &'static str {
         match self {
             Class::Boolean => "Boolean",
+            Class::Current => "Current",
+            Class::FlowVolumetric => "FlowVolumetric",
+            Class::Frequency => "Frequency",
+            Class::Multiplier => "Multiplier",
             Class::Pressure => "Pressure",
             Class::Ratio => "Ratio",
             Class::Real => "Real",
@@ -46,6 +59,10 @@ impl Class {
 #[derive(Debug)]
 pub enum Value {
     Boolean(Option<bool>),
+    Current(Option<Current>),
+    FlowVolumetric(Option<FlowVolumetric>),
+    Frequency(Option<Frequency>),
+    Multiplier(Option<Multiplier>),
     Pressure(Option<Pressure>),
     Ratio(Option<Ratio>),
     Real(Option<Real>),
@@ -65,6 +82,46 @@ impl Type for bool {
     }
     fn into_value(value: Option<Self>) -> Value {
         Value::Boolean(value)
+    }
+}
+
+impl Type for Current {
+    fn class() -> Class {
+        Class::Current
+    }
+
+    fn into_value(value: Option<Self>) -> Value {
+        Value::Current(value)
+    }
+}
+
+impl Type for FlowVolumetric {
+    fn class() -> Class {
+        Class::FlowVolumetric
+    }
+
+    fn into_value(value: Option<Self>) -> Value {
+        Value::FlowVolumetric(value)
+    }
+}
+
+impl Type for Frequency {
+    fn class() -> Class {
+        Class::Frequency
+    }
+
+    fn into_value(value: Option<Self>) -> Value {
+        Value::Frequency(value)
+    }
+}
+
+impl Type for Multiplier {
+    fn class() -> Class {
+        Class::Multiplier
+    }
+
+    fn into_value(value: Option<Self>) -> Value {
+        Value::Multiplier(value)
     }
 }
 
