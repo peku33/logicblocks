@@ -9,7 +9,7 @@ use itertools::Itertools;
 use logicblocks_controller::{
     devices::houseblocks::{
         avr_v1::{
-            d0005_gpio_a_v1::hardware::{
+            devices::d0005_gpio_a_v1::hardware::{
                 Block1Function, Block1Functions, Block2Function, Block2Functions, Block3Function,
                 Block3Functions, Block4Function, Block4Functions, BlockFunctions, Configuration,
                 DIGITAL_OUTS_COUNT, Device, PropertiesRemote, StatusLedValue,
@@ -97,6 +97,7 @@ async fn run_inner(
         digital_ins,
         digital_outs,
         ds18x20s,
+        counter_ins,
     } = runner.device().properties_remote();
 
     let exit_flag_sender = Sender::new();
@@ -167,12 +168,20 @@ async fn run_inner(
     .fuse();
     pin_mut!(digital_out_runner);
 
-    let ds18x20_changed = || {
-        let ds18x20 = match ds18x20s.take_pending() {
-            Some(ds18x20) => ds18x20,
+    let ds18x20s_changed = || {
+        let ds18x20s = match ds18x20s.take_pending() {
+            Some(ds18x20s) => ds18x20s,
             None => return,
         };
-        log::info!("ds18x20: {ds18x20:?}");
+        log::info!("ds18x20s: {ds18x20s:?}");
+    };
+
+    let counter_ins_changed = || {
+        let counter_ins = match counter_ins.take_pending() {
+            Some(counter_ins) => counter_ins,
+            None => return,
+        };
+        log::info!("counter_ins: {counter_ins:?}");
     };
 
     let ins_changed_waker_remote_runner = async {
@@ -181,7 +190,8 @@ async fn run_inner(
             .for_each(async |()| {
                 analog_ins_changed();
                 digital_ins_changed();
-                ds18x20_changed();
+                ds18x20s_changed();
+                counter_ins_changed();
             })
             .await;
     }
@@ -293,6 +303,7 @@ fn menu_block_1_function(pin_index: usize) -> Result<Block1Function, Error> {
         Block1Function::AnalogIn,
         Block1Function::DigitalIn,
         Block1Function::DigitalOut,
+        Block1Function::CounterIn,
     ];
 
     let option_index = dialoguer::Select::new()
@@ -317,6 +328,7 @@ fn block_1_function_to_string(block_1_function: &Block1Function) -> &'static str
         Block1Function::AnalogIn => "Analog In",
         Block1Function::DigitalIn => "Digital In",
         Block1Function::DigitalOut => "Digital Out",
+        Block1Function::CounterIn => "Counter In",
     }
 }
 
@@ -351,6 +363,7 @@ fn menu_block_2_function(pin_index: usize) -> Result<Block2Function, Error> {
         Block2Function::DigitalIn,
         Block2Function::DigitalOut,
         Block2Function::Ds18x20,
+        Block2Function::CounterIn,
     ];
 
     let option_index = dialoguer::Select::new()
@@ -375,6 +388,7 @@ fn block_2_function_to_string(block_2_function: &Block2Function) -> &'static str
         Block2Function::DigitalIn => "Digital In",
         Block2Function::DigitalOut => "Digital Out",
         Block2Function::Ds18x20 => "Ds18x20",
+        Block2Function::CounterIn => "Counter In",
     }
 }
 

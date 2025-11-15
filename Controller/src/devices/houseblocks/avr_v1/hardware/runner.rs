@@ -3,7 +3,7 @@ use super::{
         common::{Address, AddressDeviceType, AddressSerial},
         master::Master,
     },
-    driver::{ApplicationDriver, Driver},
+    driver::{ApplicationDriver, Driver, Firmware},
 };
 use crate::{
     devices,
@@ -49,6 +49,8 @@ pub trait BusDevice {
 pub trait Device: BusDevice + Sync + Send + Sized + fmt::Debug {
     fn device_type_name() -> &'static str;
     fn address_device_type() -> AddressDeviceType;
+    fn firmware() -> Option<&'static Firmware<'static>>;
+    fn application_version_supported() -> Option<u16>;
 
     fn poll_waker(&self) -> Option<&async_waker::mpsc::Signal>;
 
@@ -80,13 +82,13 @@ impl<'m, D: Device> Runner<'m, D> {
         address_serial: AddressSerial,
         device: D,
     ) -> Self {
-        let driver = Driver::new(
-            master,
-            Address {
-                device_type: D::address_device_type(),
-                serial: address_serial,
-            },
-        );
+        let address = Address {
+            device_type: D::address_device_type(),
+            serial: address_serial,
+        };
+
+        let driver = Driver::new(master, address);
+
         let device_state = RwLock::new(DeviceState::Initializing);
 
         Self {
@@ -113,7 +115,10 @@ impl<'m, D: Device> Runner<'m, D> {
         self.device.reset();
 
         // Hardware initializing & avr_v1
-        self.driver.prepare().await.context("initial prepare")?;
+        self.driver
+            .prepare(D::firmware(), D::application_version_supported())
+            .await
+            .context("initial prepare")?;
 
         // Device is prepared in application mode, we can start application driver
         let application_driver = ApplicationDriver::new(&self.driver);

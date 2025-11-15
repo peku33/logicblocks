@@ -1,5 +1,5 @@
 pub mod logic {
-    use super::{super::super::logic::runner, hardware};
+    use super::{super::super::super::logic::runner, hardware};
     use crate::{
         devices,
         signals::{self, signal},
@@ -182,9 +182,14 @@ pub mod logic {
     }
 }
 pub mod hardware {
-    use super::super::super::{
+    use super::super::super::super::{
         super::houseblocks_v1::common::{AddressDeviceType, Payload},
-        hardware::{driver::ApplicationDriver, parser::Parser, runner, serializer::Serializer},
+        hardware::{
+            driver::{ApplicationDriver, Firmware},
+            parser::Parser,
+            runner,
+            serializer::Serializer,
+        },
         properties,
     };
     use crate::util::{
@@ -204,6 +209,7 @@ pub mod hardware {
     pub trait Specification: Send + Sync + fmt::Debug {
         fn device_type_name() -> &'static str;
         fn address_device_type() -> AddressDeviceType;
+        fn firmware() -> Option<&'static Firmware<'static>>;
     }
 
     #[derive(Debug)]
@@ -293,6 +299,12 @@ pub mod hardware {
         }
         fn address_device_type() -> AddressDeviceType {
             S::address_device_type()
+        }
+        fn firmware() -> Option<&'static Firmware<'static>> {
+            S::firmware()
+        }
+        fn application_version_supported() -> Option<u16> {
+            Some(2)
         }
 
         fn poll_waker(&self) -> Option<&async_waker::mpsc::Signal> {
@@ -394,10 +406,6 @@ pub mod hardware {
         pub outputs: Option<BusRequestOutputs>,
     }
     impl BusRequest {
-        pub fn is_nop(&self) -> bool {
-            self.outputs.is_none()
-        }
-
         pub fn to_payload(&self) -> Payload {
             let mut serializer = Serializer::new();
             self.serialize(&mut serializer);

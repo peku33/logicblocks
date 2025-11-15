@@ -18,7 +18,8 @@ pub mod logic {
 pub mod hardware {
     pub use super::super::common::relay14_common_a::hardware::{OUTPUTS_COUNT, PropertiesRemote};
     use super::super::{
-        super::houseblocks_v1::common::AddressDeviceType, common::relay14_common_a::hardware,
+        super::{super::houseblocks_v1::common::AddressDeviceType, hardware::driver::Firmware},
+        common::relay14_common_a::hardware,
     };
 
     #[derive(Debug)]
@@ -29,6 +30,25 @@ pub mod hardware {
         }
         fn address_device_type() -> AddressDeviceType {
             AddressDeviceType::new_from_ordinal(6).unwrap()
+        }
+        fn firmware() -> Option<&'static Firmware<'static>> {
+            #[cfg(feature = "ci-devices-houseblocks-avr_v1-firmware")]
+            {
+                static FIRMWARE: std::sync::LazyLock<Firmware> = std::sync::LazyLock::new(|| {
+                    let content = include_bytes!(concat!(
+                        env!("CI_DEVICES_HOUSEBLOCKS_AVR_V1_FIRMWARE_DIR"),
+                        "/Relay14_Opto_A_Application.bin"
+                    ));
+
+                    Firmware::new(content)
+                });
+                Some(&FIRMWARE)
+            }
+
+            #[cfg(not(feature = "ci-devices-houseblocks-avr_v1-firmware"))]
+            {
+                None
+            }
         }
     }
 

@@ -4,8 +4,10 @@ use super::{
         master::Master,
     },
     parser::Parser,
+    serializer::Serializer,
 };
 use anyhow::{Context, Error, ensure};
+use crc::{CRC_16_MODBUS, Crc};
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -16,10 +18,50 @@ pub struct PowerFlags {
     pon: bool,
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Version {
     avr_v1: u16,
     application: u16,
+}
+
+#[derive(Debug)]
+pub struct Firmware<'c> {
+    content: &'c [u8],
+    checksum: u16,
+}
+impl<'c> Firmware<'c> {
+    pub const SIZE_BYTES: usize = 6144;
+
+    const CHECKSUM_HASHER: Crc<u16> = Crc::<u16>::new(&CRC_16_MODBUS);
+    fn checksum(content: &[u8]) -> u16 {
+        let mut checksum = Self::CHECKSUM_HASHER.digest();
+
+        // actual payload
+        checksum.update(content);
+
+        // padding
+        for _ in content.len()..Self::SIZE_BYTES {
+            checksum.update(&[0u8]);
+        }
+
+        let checksum = checksum.finalize();
+
+        checksum
+    }
+
+    pub fn new(content: &'c [u8]) -> Self {
+        assert!(content.len() <= Self::SIZE_BYTES);
+
+        let checksum = Self::checksum(content);
+
+        Self { content, checksum }
+    }
+}
+
+#[derive(Debug)]
+pub struct PrepareResult {
+    application_checksum: u16,
+    version: Version,
 }
 
 #[derive(Debug)]
@@ -29,6 +71,11 @@ pub struct Driver<'m> {
 }
 impl<'m> Driver<'m> {
     const TIMEOUT_DEFAULT: Duration = Duration::from_millis(250);
+    const AVR_V1_VERSION_SUPPORTED: u16 = 4;
+    const SERVICE_MODE_VERSION_SUPPORTED: Version = Version {
+        avr_v1: Self::AVR_V1_VERSION_SUPPORTED,
+        application: 2,
+    };
 
     pub fn new(
         master: &'m Master,
@@ -59,7 +106,7 @@ impl<'m> Driver<'m> {
         &self,
         service_mode: bool,
         payload: Payload,
-        timeout: Option<Duration>,
+        timeout_custom: Option<Duration>,
     ) -> Result<Payload, Error> {
         let result = self
             .master
@@ -67,7 +114,7 @@ impl<'m> Driver<'m> {
                 service_mode,
                 self.address,
                 payload,
-                timeout.unwrap_or(Self::TIMEOUT_DEFAULT),
+                timeout_custom.unwrap_or(Self::TIMEOUT_DEFAULT),
             )
             .await
             .context("transaction_out_in")?;
@@ -129,7 +176,7 @@ impl<'m> Driver<'m> {
         })
     }
 
-    async fn read_application_version(
+    async fn read_version(
         &self,
         service_mode: bool,
     ) -> Result<Version, Error> {
@@ -162,6 +209,41 @@ impl<'m> Driver<'m> {
 
         Ok(checksum)
     }
+    async fn service_mode_write_application(
+        &self,
+        content: &[u8],
+    ) -> Result<(), Error> {
+        assert!(content.len() <= Firmware::SIZE_BYTES);
+
+        const PAGE_SIZE_BYTES: usize = 64;
+
+        for page_id in 0..(Firmware::SIZE_BYTES / PAGE_SIZE_BYTES) {
+            let mut page = [0u8; PAGE_SIZE_BYTES];
+
+            // generate subrange of original content, rest will be filled by 0 (in page
+            // constructor)
+            let content_start = (page_id * PAGE_SIZE_BYTES).min(content.len());
+            let content_end = ((page_id + 1) * PAGE_SIZE_BYTES).min(content.len());
+            if content_start != content_end {
+                page[0..(content_end - content_start)]
+                    .copy_from_slice(&content[content_start..content_end]);
+            }
+
+            let mut serializer = Serializer::new();
+            serializer.push_byte(b'W');
+            serializer.push_u8(page_id as u8);
+            for page_byte in page {
+                serializer.push_u8(page_byte);
+            }
+            let payload = serializer.into_payload();
+
+            self.transaction_out_in(true, payload, None)
+                .await
+                .context("transaction_out_in")?;
+        }
+
+        Ok(())
+    }
     async fn service_mode_jump_to_application_mode(&self) -> Result<(), Error> {
         self.transaction_out(true, Payload::new(Box::from(*b"R")).unwrap())
             .await
@@ -172,7 +254,11 @@ impl<'m> Driver<'m> {
     }
 
     // Procedures
-    pub async fn prepare(&self) -> Result<(), Error> {
+    pub async fn prepare(
+        &self,
+        firmware: Option<&Firmware<'_>>,
+        application_version_supported: Option<u16>,
+    ) -> Result<PrepareResult, Error> {
         // Driver may be already initialized, check it.
         let healthcheck_result = self.healthcheck(false).await;
         if healthcheck_result.is_ok() {
@@ -180,31 +266,83 @@ impl<'m> Driver<'m> {
             self.reboot(false).await.context("deinitialize reboot")?;
         }
 
-        // We should be in service mode
-        self.healthcheck(true)
+        // Check if we can talk to the bootloader
+        let service_mode_version = self
+            .read_version(true)
             .await
-            .context("service mode healthcheck")?;
+            .context("service mode read version")?;
+        ensure!(
+            service_mode_version == Self::SERVICE_MODE_VERSION_SUPPORTED,
+            "service mode version not supported, got {:?}, expecting {:?}",
+            service_mode_version,
+            Self::SERVICE_MODE_VERSION_SUPPORTED
+        );
 
-        // Check application up to date
-        let application_checksum = self
+        // Perform application update if needed
+        let mut application_checksum = self
             .service_mode_read_application_checksum()
             .await
             .context("service mode read application checksum")?;
-        log::trace!("application_checksum: {application_checksum}");
+        if let Some(firmware) = firmware.as_ref()
+            && application_checksum != firmware.checksum
+        {
+            log::info!(
+                "performing firmware upgrade on {} ({:04X} -> {:04X})",
+                self.address,
+                application_checksum,
+                firmware.checksum
+            );
 
-        // TODO: Push new firmware
+            // Write the firmware
+            self.service_mode_write_application(firmware.content)
+                .await
+                .context("service mode write application")?;
+
+            // Verify it
+            application_checksum = self
+                .service_mode_read_application_checksum()
+                .await
+                .context("service mode read application checksum")?;
+
+            ensure!(
+                application_checksum == firmware.checksum,
+                "application checksum mismatch after update"
+            );
+
+            log::info!(
+                "firmware upgrade completed successfully on {}",
+                self.address,
+            );
+        }
 
         // Reboot to application section
         self.service_mode_jump_to_application_mode()
             .await
             .context("jump to application mode")?;
 
-        // Check life in application section
-        self.healthcheck(false)
-            .await
-            .context("application mode healthcheck")?;
+        // Verify application version (this also verifies liveness)
+        let version = self.read_version(false).await.context("read version")?;
 
-        Ok(())
+        if let Some(application_version_supported) = application_version_supported {
+            let version_expected = Version {
+                avr_v1: Self::AVR_V1_VERSION_SUPPORTED,
+                application: application_version_supported,
+            };
+
+            ensure!(
+                version == version_expected,
+                "version not supported, got {:?}, expecting {:?}",
+                version,
+                version_expected
+            );
+        }
+
+        let prepare_result = PrepareResult {
+            application_checksum,
+            version,
+        };
+
+        Ok(prepare_result)
     }
 }
 
@@ -226,10 +364,10 @@ impl<'d> ApplicationDriver<'d> {
     pub async fn transaction_out_in(
         &self,
         payload: Payload,
-        timeout: Option<Duration>,
+        timeout_custom: Option<Duration>,
     ) -> Result<Payload, Error> {
         self.driver
-            .transaction_out_in(false, payload, timeout)
+            .transaction_out_in(false, payload, timeout_custom)
             .await
     }
 }

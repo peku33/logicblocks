@@ -8,7 +8,9 @@ use futures::{
 use logicblocks_controller::{
     devices::houseblocks::{
         avr_v1::{
-            d0003_junction_box_minimal_v1::hardware::{Device, LEDS_COUNT, PropertiesRemote},
+            devices::d0003_junction_box_minimal_v1::hardware::{
+                Device, LEDS_COUNT, PropertiesRemote,
+            },
             hardware::runner::Runner,
         },
         houseblocks_v1::{common::AddressSerial, master::Master},

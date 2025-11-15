@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -euxo pipefail
 
 if [ -z "$1" ]
 then
@@ -66,7 +66,7 @@ function controller_build {
     
     cd $ROOT_DIR/Controller
     export CI_WEB_STATIC_PACK_GUI=$WORKSPACE_DIR/web_static_pack_gui.bin
-    cargo build --release --locked --features ci --example test_$EXAMPLE_NAME
+    cargo build --release --locked --features ci-packed-gui --example test_$EXAMPLE_NAME
     
     echo "controller_build: completed"
 }

@@ -7,7 +7,7 @@ use futures::{
 use logicblocks_controller::{
     devices::houseblocks::{
         avr_v1::{
-            common::relay14_common_a::hardware::{
+            devices::common::relay14_common_a::hardware::{
                 Device, OUTPUTS_COUNT, PropertiesRemote, Specification,
             },
             hardware::runner::Runner,

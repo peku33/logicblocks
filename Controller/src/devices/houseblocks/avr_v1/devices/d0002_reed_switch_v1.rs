@@ -1,5 +1,5 @@
 pub mod logic {
-    use super::{super::logic::runner, hardware};
+    use super::{super::super::logic::runner, hardware};
     use crate::{
         datatypes::resistance::Resistance,
         devices,
@@ -179,9 +179,14 @@ pub mod logic {
 }
 
 pub mod hardware {
-    use super::super::{
+    use super::super::super::{
         super::houseblocks_v1::common::{AddressDeviceType, Payload},
-        hardware::{driver::ApplicationDriver, parser::Parser, runner, serializer::Serializer},
+        hardware::{
+            driver::{ApplicationDriver, Firmware},
+            parser::Parser,
+            runner,
+            serializer::Serializer,
+        },
         properties,
     };
     use crate::{
@@ -258,6 +263,28 @@ pub mod hardware {
         }
         fn address_device_type() -> AddressDeviceType {
             AddressDeviceType::new_from_ordinal(2).unwrap()
+        }
+        fn firmware() -> Option<&'static Firmware<'static>> {
+            #[cfg(feature = "ci-devices-houseblocks-avr_v1-firmware")]
+            {
+                static FIRMWARE: std::sync::LazyLock<Firmware> = std::sync::LazyLock::new(|| {
+                    let content = include_bytes!(concat!(
+                        env!("CI_DEVICES_HOUSEBLOCKS_AVR_V1_FIRMWARE_DIR"),
+                        "/ReedSwitch_v1_Application.bin"
+                    ));
+
+                    Firmware::new(content)
+                });
+                Some(&FIRMWARE)
+            }
+
+            #[cfg(not(feature = "ci-devices-houseblocks-avr_v1-firmware"))]
+            {
+                None
+            }
+        }
+        fn application_version_supported() -> Option<u16> {
+            Some(3)
         }
 
         fn poll_waker(&self) -> Option<&async_waker::mpsc::Signal> {
@@ -463,7 +490,7 @@ pub mod hardware {
     #[cfg(test)]
     mod tests_bus_response {
         use super::{
-            super::super::super::houseblocks_v1::common::Payload, BusRequest, BusResponse,
+            super::super::super::super::houseblocks_v1::common::Payload, BusRequest, BusResponse,
             BusResponsePoll, InputValue,
         };
         use approx::assert_relative_eq;
