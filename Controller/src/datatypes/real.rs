@@ -1,48 +1,83 @@
-use anyhow::{Error, ensure};
-use derive_more::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
+use anyhow::Error;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt};
+use std::{
+    fmt,
+    ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
+};
+use typed_floats::NonNaNFinite;
 
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    PartialOrd,
-    Add,
-    AddAssign,
-    Sub,
-    SubAssign,
-    Mul,
-    MulAssign,
-    Debug,
-    Serialize,
-    Deserialize,
-)]
-#[mul(forward)]
-#[serde(try_from = "RealSerde")]
-#[serde(into = "RealSerde")]
-pub struct Real(f64);
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Real(NonNaNFinite<f64>);
 impl Real {
     pub const fn zero() -> Self {
-        Self(0.0)
+        // SAFE: 0.0 is always finite
+        let inner = unsafe { NonNaNFinite::<f64>::new_unchecked(0f64) };
+
+        Self(inner)
     }
 
     pub fn from_f64(value: f64) -> Result<Self, Error> {
-        ensure!(value.is_finite(), "value must be finite");
+        let value = NonNaNFinite::<f64>::new(value)?;
+
         Ok(Self(value))
     }
     pub fn to_f64(&self) -> f64 {
-        self.0
+        self.0.get()
     }
 }
-impl Eq for Real {}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl Ord for Real {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
+impl Add for Real {
+    type Output = Self;
+
+    fn add(
+        self,
+        rhs: Self,
+    ) -> Self::Output {
+        Self::from_f64(self.to_f64() + rhs.to_f64()).unwrap()
+    }
+}
+impl AddAssign for Real {
+    fn add_assign(
+        &mut self,
+        rhs: Self,
+    ) {
+        *self = Self::from_f64(self.to_f64() + rhs.to_f64()).unwrap()
+    }
+}
+impl Sub for Real {
+    type Output = Self;
+
+    fn sub(
+        self,
+        rhs: Self,
+    ) -> Self::Output {
+        Self::from_f64(self.to_f64() - rhs.to_f64()).unwrap()
+    }
+}
+impl SubAssign for Real {
+    fn sub_assign(
+        &mut self,
+        rhs: Self,
+    ) {
+        *self = Self::from_f64(self.to_f64() - rhs.to_f64()).unwrap()
+    }
+}
+impl Mul for Real {
+    type Output = Self;
+
+    fn mul(
+        self,
+        rhs: Self,
+    ) -> Self::Output {
+        Self::from_f64(self.to_f64() * rhs.to_f64()).unwrap()
+    }
+}
+impl MulAssign for Real {
+    fn mul_assign(
+        &mut self,
+        rhs: Self,
+    ) {
+        *self = Self::from_f64(self.to_f64() * rhs.to_f64()).unwrap()
     }
 }
 impl fmt::Display for Real {
@@ -50,23 +85,7 @@ impl fmt::Display for Real {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct RealSerde(f64);
-impl TryFrom<RealSerde> for Real {
-    type Error = Error;
-
-    fn try_from(value: RealSerde) -> Result<Self, Self::Error> {
-        Self::from_f64(value.0)
-    }
-}
-impl From<Real> for RealSerde {
-    fn from(value: Real) -> Self {
-        RealSerde(value.to_f64())
+        write!(f, "{}", self.to_f64())
     }
 }
 

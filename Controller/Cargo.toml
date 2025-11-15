@@ -60,6 +60,7 @@ tokio-stream = { version = "0.1.15", features = [
     "sync",
 ] }
 tokio-util = "0.7.11"
+typed_floats = { version = "1.0.7", features = ["serde"] }
 web-static-pack = "0.5.0"
 xmltree = "0.11.0"
 

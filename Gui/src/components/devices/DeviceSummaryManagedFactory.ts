@@ -15,6 +15,7 @@ import softTimeSequenceParallelA from "./soft/time/sequence_parallel_a/SummaryMa
 import softWebDisplayBooleanA from "./soft/web/display/boolean_a/SummaryManaged";
 import softWebDisplayBuildingWindowOpenStateOpenClosedA from "./soft/web/display/building/window_open_state_open_closed_a/SummaryManaged";
 import softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA from "./soft/web/display/building/window_open_state_open_tilted_closed_a/SummaryManaged";
+import softWebDisplayFlowVolumetricA from "./soft/web/display/flow_volumetric_a/SummaryManaged";
 import softWebDisplayPressureA from "./soft/web/display/pressure_a/SummaryManaged";
 import softWebInputBuildingButtonBlindsUpDownA from "./soft/web/input/building/button_blinds_up_down_a/SummaryManaged";
 import softWebInputButtonEventA from "./soft/web/input/button_event_a/SummaryManaged";
@@ -41,6 +42,7 @@ const BY_CLASS: Record<string, DeviceSummaryManaged> = {
   "soft/web/display/building/window_open_state_open_closed_a": softWebDisplayBuildingWindowOpenStateOpenClosedA,
   "soft/web/display/building/window_open_state_open_tilted_closed_a":
     softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA,
+  "soft/web/display/flow_volumetric_a": softWebDisplayFlowVolumetricA,
   "soft/web/display/pressure_a": softWebDisplayPressureA,
   "soft/web/input/building/button_blinds_up_down_a": softWebInputBuildingButtonBlindsUpDownA,
   "soft/web/input/button_event_a": softWebInputButtonEventA,

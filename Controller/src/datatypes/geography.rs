@@ -1,25 +1,27 @@
-use anyhow::{Error, Ok, ensure};
+use anyhow::{Context, Error, Ok, ensure};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt};
+use std::fmt;
+use typed_floats::{NonNaNFinite, PositiveFinite};
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
 #[serde(try_from = "LatitudeSerde")]
 #[serde(into = "LatitudeSerde")]
 pub struct Latitude {
     // positive north, negative south
-    radians: f64,
+    radians: NonNaNFinite<f64>,
 }
 impl Latitude {
     pub fn from_radians(radians: f64) -> Result<Self, Error> {
-        ensure!(radians.is_finite(), "value must be finite");
+        let radians = NonNaNFinite::<f64>::new(radians)?;
         ensure!(
             (-(std::f64::consts::PI / 2.0)..=(std::f64::consts::PI / 2.0)).contains(&radians),
             "value must be in range [-pi/2, pi/2]"
         );
+
         Ok(Self { radians })
     }
     pub fn to_radians(&self) -> f64 {
-        self.radians
+        self.radians.get()
     }
 
     pub fn from_degrees(degrees: f64) -> Result<Self, Error> {
@@ -28,15 +30,25 @@ impl Latitude {
             "value must be from -90.0 to 90.0"
         );
         let radians = degrees.to_radians();
-        Ok(Self { radians })
+
+        let self_ = Self::from_radians(radians).context("from_radians")?;
+
+        Ok(self_)
     }
+    pub fn to_degrees(&self) -> f64 {
+        self.to_radians().to_degrees()
+    }
+
     pub fn from_degrees_n(degrees: f64) -> Result<Self, Error> {
         ensure!(
             (0.0..=90.0).contains(&degrees),
             "value must be from 0.0 to 90.0"
         );
         let radians = degrees.to_radians();
-        Ok(Self { radians })
+
+        let self_ = Self::from_radians(radians).context("from_radians")?;
+
+        Ok(self_)
     }
     pub fn from_degrees_s(degrees: f64) -> Result<Self, Error> {
         ensure!(
@@ -44,17 +56,10 @@ impl Latitude {
             "value must be from 0.0 to 90.0"
         );
         let radians = -degrees.to_radians();
-        Ok(Self { radians })
-    }
-}
-impl Eq for Latitude {}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl Ord for Latitude {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
+
+        let self_ = Self::from_radians(radians).context("from_radians")?;
+
+        Ok(self_)
     }
 }
 impl fmt::Display for Latitude {
@@ -65,8 +70,8 @@ impl fmt::Display for Latitude {
         write!(
             f,
             "{:.5}° {}",
-            self.radians.to_degrees().abs(),
-            if self.radians >= 0.0 { 'N' } else { 'S' }
+            self.to_degrees().abs(),
+            if self.to_radians() >= 0.0 { 'N' } else { 'S' }
         )
     }
 }
@@ -86,25 +91,26 @@ impl From<Latitude> for LatitudeSerde {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
 #[serde(try_from = "LongitudeSerde")]
 #[serde(into = "LongitudeSerde")]
 pub struct Longitude {
     // positive east
     // negative west
-    radians: f64,
+    radians: NonNaNFinite<f64>,
 }
 impl Longitude {
     pub fn from_radians(radians: f64) -> Result<Self, Error> {
-        ensure!(radians.is_finite(), "value must be finite");
+        let radians = NonNaNFinite::<f64>::new(radians)?;
         ensure!(
             (-(std::f64::consts::PI)..=(std::f64::consts::PI)).contains(&radians),
             "value must be in range [-pi, pi]"
         );
+
         Ok(Self { radians })
     }
     pub fn to_radians(&self) -> f64 {
-        self.radians
+        self.radians.get()
     }
 
     pub fn from_degrees(degrees: f64) -> Result<Self, Error> {
@@ -113,15 +119,25 @@ impl Longitude {
             "value must be from -180.0 to 180.0"
         );
         let radians = degrees.to_radians();
-        Ok(Self { radians })
+
+        let self_ = Self::from_radians(radians).context("from_radians")?;
+
+        Ok(self_)
     }
+    pub fn to_degrees(&self) -> f64 {
+        self.to_radians().to_degrees()
+    }
+
     pub fn from_degrees_e(degrees: f64) -> Result<Self, Error> {
         ensure!(
             (0.0..=180.0).contains(&degrees),
             "value must be from 0.0 to 180.0"
         );
         let radians = degrees.to_radians();
-        Ok(Self { radians })
+
+        let self_ = Self::from_radians(radians).context("from_radians")?;
+
+        Ok(self_)
     }
     pub fn from_degrees_w(degrees: f64) -> Result<Self, Error> {
         ensure!(
@@ -129,20 +145,12 @@ impl Longitude {
             "value must be from 0.0 to 180.0"
         );
         let radians = -degrees.to_radians();
-        Ok(Self { radians })
-    }
-}
-impl Eq for Longitude {}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl Ord for Longitude {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
-    }
-}
 
+        let self_ = Self::from_radians(radians).context("from_radians")?;
+
+        Ok(self_)
+    }
+}
 impl fmt::Display for Longitude {
     fn fmt(
         &self,
@@ -151,8 +159,8 @@ impl fmt::Display for Longitude {
         write!(
             f,
             "{:.5}° {}",
-            self.radians.to_degrees().abs(),
-            if self.radians >= 0.0 { 'E' } else { 'W' }
+            self.to_degrees().abs(),
+            if self.to_radians() >= 0.0 { 'E' } else { 'W' }
         )
     }
 }
@@ -172,30 +180,19 @@ impl From<Longitude> for LongitudeSerde {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
-#[serde(try_from = "ElevationSerde")]
-#[serde(into = "ElevationSerde")]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Elevation {
-    meters: f64,
+    meters: PositiveFinite<f64>,
 }
 impl Elevation {
     pub fn from_meters(meters: f64) -> Result<Self, Error> {
-        ensure!(meters.is_finite(), "value must be finite");
-        ensure!(meters >= 0.0, "value must be positive");
+        let meters = PositiveFinite::<f64>::new(meters)?;
+
         Ok(Self { meters })
     }
     pub fn to_meters(&self) -> f64 {
-        self.meters
-    }
-}
-impl Eq for Elevation {}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl Ord for Elevation {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        self.meters.get()
     }
 }
 impl fmt::Display for Elevation {
@@ -203,22 +200,7 @@ impl fmt::Display for Elevation {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{:.2}m", self.meters)
-    }
-}
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct ElevationSerde(f64);
-impl TryFrom<ElevationSerde> for Elevation {
-    type Error = Error;
-
-    fn try_from(value: ElevationSerde) -> Result<Self, Self::Error> {
-        Self::from_meters(value.0)
-    }
-}
-impl From<Elevation> for ElevationSerde {
-    fn from(value: Elevation) -> Self {
-        ElevationSerde(value.to_meters())
+        write!(f, "{:.2}m", self.to_meters())
     }
 }
 

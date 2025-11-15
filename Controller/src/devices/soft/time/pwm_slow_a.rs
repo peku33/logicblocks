@@ -68,17 +68,21 @@ impl Device {
             Constant(Option<bool>),
             Variable(f64),
         }
-        const RATIO_ZERO: Ratio = Ratio::zero();
-        const RATIO_FULL: Ratio = Ratio::full();
 
         loop {
             // for None, zero and full we don't need any timer, instead we can propagate the
             // value to the output and wait until its changed
             let cycle_mode = match self.signal_input.take_last().value {
                 None => CycleMode::Constant(None),
-                Some(RATIO_ZERO) => CycleMode::Constant(Some(false)),
-                Some(RATIO_FULL) => CycleMode::Constant(Some(true)),
-                Some(ratio) => CycleMode::Variable(ratio.to_f64()),
+                Some(ratio) => {
+                    if ratio == Ratio::zero() {
+                        CycleMode::Constant(Some(false))
+                    } else if ratio == Ratio::full() {
+                        CycleMode::Constant(Some(true))
+                    } else {
+                        CycleMode::Variable(ratio.to_f64())
+                    }
+                }
             };
 
             match cycle_mode {

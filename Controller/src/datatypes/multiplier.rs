@@ -1,52 +1,80 @@
 use super::real::Real;
-use anyhow::{Error, ensure};
-use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
+use anyhow::Error;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt};
+use std::{
+    fmt,
+    iter::Sum,
+    ops::{Add, AddAssign, Sub, SubAssign},
+};
+use typed_floats::PositiveFinite;
 
-// FIXME: Sub must ensure the value does not go sub-0
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    PartialOrd,
-    Add,
-    Sub,
-    AddAssign,
-    SubAssign,
-    Sum,
-    Debug,
-    Serialize,
-    Deserialize,
-)]
-#[serde(try_from = "MultiplierSerde")]
-#[serde(into = "MultiplierSerde")]
-pub struct Multiplier(f64);
+// NOTE: will panic for Add/AddAssign going infinity and Sub/SubAssign going
+// below zero
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Multiplier(PositiveFinite<f64>);
 impl Multiplier {
     pub const fn zero() -> Self {
-        Self(0.0)
+        // SAFE: 0.0 is positive and finite
+        let inner = unsafe { PositiveFinite::<f64>::new_unchecked(0f64) };
+
+        Self(inner)
     }
     pub const fn one() -> Self {
-        Self(1.0)
+        // SAFE: 1.0 is positive and finite
+        let inner = unsafe { PositiveFinite::<f64>::new_unchecked(1f64) };
+
+        Self(inner)
     }
 
     pub fn from_f64(value: f64) -> Result<Self, Error> {
-        ensure!(value.is_finite(), "value must be finite");
-        ensure!(value >= 0.0, "value must be greater then 0.0");
+        let value = PositiveFinite::<f64>::new(value)?;
+
         Ok(Self(value))
     }
     pub fn to_f64(&self) -> f64 {
-        self.0
+        self.0.get()
     }
 }
-impl Eq for Multiplier {}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl Ord for Multiplier {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
+impl Add for Multiplier {
+    type Output = Self;
+
+    fn add(
+        self,
+        rhs: Self,
+    ) -> Self::Output {
+        Self::from_f64(self.to_f64() + rhs.to_f64()).unwrap()
+    }
+}
+impl AddAssign for Multiplier {
+    fn add_assign(
+        &mut self,
+        rhs: Self,
+    ) {
+        *self = Self::from_f64(self.to_f64() + rhs.to_f64()).unwrap()
+    }
+}
+impl Sub for Multiplier {
+    type Output = Self;
+
+    fn sub(
+        self,
+        rhs: Self,
+    ) -> Self::Output {
+        Self::from_f64(self.to_f64() - rhs.to_f64()).unwrap()
+    }
+}
+impl SubAssign for Multiplier {
+    fn sub_assign(
+        &mut self,
+        rhs: Self,
+    ) {
+        *self = Self::from_f64(self.to_f64() - rhs.to_f64()).unwrap()
+    }
+}
+impl Sum for Multiplier {
+    fn sum<I: Iterator<Item = Self>>(iterator: I) -> Self {
+        Self::from_f64(iterator.map(|item| item.to_f64()).sum()).unwrap()
     }
 }
 impl fmt::Display for Multiplier {
@@ -54,7 +82,7 @@ impl fmt::Display for Multiplier {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{:.2}x", self.0)
+        write!(f, "{:.2}x", self.to_f64())
     }
 }
 
@@ -68,21 +96,5 @@ impl TryFrom<Real> for Multiplier {
 impl From<Multiplier> for Real {
     fn from(value: Multiplier) -> Self {
         Self::from_f64(value.to_f64()).unwrap()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct MultiplierSerde(f64);
-impl TryFrom<MultiplierSerde> for Multiplier {
-    type Error = Error;
-
-    fn try_from(value: MultiplierSerde) -> Result<Self, Self::Error> {
-        Self::from_f64(value.0)
-    }
-}
-impl From<Multiplier> for MultiplierSerde {
-    fn from(value: Multiplier) -> Self {
-        MultiplierSerde(value.to_f64())
     }
 }

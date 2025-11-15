@@ -6,6 +6,9 @@ use crate::datatypes::{
     },
     building::window::{WindowOpenStateOpenClosed, WindowOpenStateOpenTiltedClosed},
     color_rgb_boolean::ColorRgbBoolean,
+    current::Current,
+    flow_volumetric::FlowVolumetric,
+    frequency::Frequency,
     ipc_rtsp_url::IpcRtspUrl,
     multiplier::Multiplier,
     pressure::Pressure,
@@ -30,6 +33,9 @@ impl Value for AngleNormalizedHalf {}
 impl Value for AngleNormalizedHalfZeroCentered {}
 impl Value for AngleNormalizedZeroCentered {}
 impl Value for ColorRgbBoolean {}
+impl Value for Current {}
+impl Value for FlowVolumetric {}
+impl Value for Frequency {}
 impl Value for IpcRtspUrl {}
 impl Value for Multiplier {}
 impl Value for Pressure {}

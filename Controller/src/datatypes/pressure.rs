@@ -1,54 +1,36 @@
 use super::real::Real;
-use anyhow::{Error, ensure};
+use anyhow::Error;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt};
+use std::fmt;
+use typed_floats::PositiveFinite;
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
-#[serde(try_from = "PressureSerde")]
-#[serde(into = "PressureSerde")]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Pressure {
-    pascals: f64,
+    pascals: PositiveFinite<f64>,
 }
 impl Pressure {
     pub fn from_pascals(pascals: f64) -> Result<Self, Error> {
-        ensure!(pascals.is_finite(), "value must be finite");
-        ensure!(pascals >= 0.0, "value must at least zero");
+        let pascals = PositiveFinite::<f64>::new(pascals)?;
+
         Ok(Self { pascals })
     }
     pub fn to_pascals(&self) -> f64 {
-        self.pascals
+        self.pascals.get()
     }
 
     pub fn from_bar(bar: f64) -> Result<Self, Error> {
-        ensure!(bar.is_finite(), "value must be finite");
-        ensure!(bar >= 0.0, "value must at least zero");
-        let pascals = bar * 1e5;
-        Ok(Self { pascals })
+        Self::from_pascals(bar * 1e5)
     }
     pub fn to_bar(&self) -> f64 {
-        let bar = self.pascals * 1e-5;
-        bar
+        self.to_pascals() * 1e-5
     }
 
     pub fn from_millibars_hectopascals(millibars_hectopascals: f64) -> Result<Self, Error> {
-        ensure!(millibars_hectopascals.is_finite(), "value must be finite");
-        ensure!(millibars_hectopascals >= 0.0, "value must at least zero");
-        let pascals = millibars_hectopascals * 1e2;
-        Ok(Self { pascals })
+        Self::from_pascals(millibars_hectopascals * 1e2)
     }
     pub fn to_millibars_hectopascals(&self) -> f64 {
-        let millibars_hectopascals = self.pascals * 1e-2;
-        millibars_hectopascals
-    }
-}
-impl Eq for Pressure {}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl Ord for Pressure {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        self.to_pascals() * 1e-2
     }
 }
 impl fmt::Display for Pressure {
@@ -56,7 +38,7 @@ impl fmt::Display for Pressure {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{:.3}Pa", self.pascals)
+        write!(f, "{:.3}Pa", self.to_pascals())
     }
 }
 
@@ -70,21 +52,5 @@ impl TryFrom<Real> for Pressure {
 impl From<Pressure> for Real {
     fn from(value: Pressure) -> Self {
         Self::from_f64(value.to_pascals()).unwrap()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct PressureSerde(f64);
-impl TryFrom<PressureSerde> for Pressure {
-    type Error = Error;
-
-    fn try_from(value: PressureSerde) -> Result<Self, Self::Error> {
-        Self::from_pascals(value.0)
-    }
-}
-impl From<Pressure> for PressureSerde {
-    fn from(value: Pressure) -> Self {
-        PressureSerde(value.to_pascals())
     }
 }

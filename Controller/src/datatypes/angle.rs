@@ -1,6 +1,7 @@
-use anyhow::{Error, ensure};
+use anyhow::{Context, Error, ensure};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt};
+use std::fmt;
+use typed_floats::NonNaNFinite;
 
 pub type AngleNormalized = AngleNormalizedBase<0, 4>; // 0 - 360
 
@@ -10,11 +11,11 @@ pub type AngleNormalizedHalf = AngleNormalizedBase<0, 2>; // 0 - 180
 
 pub type AngleNormalizedHalfZeroCentered = AngleNormalizedBase<-1, 1>; // -90 - 90
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
 #[serde(try_from = "AngleNormalizedBaseSerde")]
 #[serde(into = "AngleNormalizedBaseSerde")]
 pub struct AngleNormalizedBase<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> {
-    radians: f64,
+    radians: NonNaNFinite<f64>,
 }
 impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> AngleNormalizedBase<MIN_PI_DIV2, MAX_PI_DIV2> {
     pub const fn min() -> f64 {
@@ -25,17 +26,18 @@ impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> AngleNormalizedBase<MIN_PI_DI
     }
 
     pub fn from_radians(radians: f64) -> Result<Self, Error> {
-        ensure!(radians.is_finite(), "value must be finite");
+        let radians = NonNaNFinite::<f64>::new(radians)?;
         ensure!(
             (Self::min()..=Self::max()).contains(&radians),
             "value must be in range [{:.2} * pi, {:.2} * pi]",
             (MIN_PI_DIV2 as f64 / 2.0),
             (MAX_PI_DIV2 as f64 / 2.0),
         );
+
         Ok(Self { radians })
     }
     pub fn to_radians(&self) -> f64 {
-        self.radians
+        self.radians.get()
     }
 
     pub fn from_degrees(degrees: f64) -> Result<Self, Error> {
@@ -49,22 +51,13 @@ impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> AngleNormalizedBase<MIN_PI_DI
             max_degrees,
         );
         let radians = degrees.to_radians();
-        Ok(Self { radians })
+
+        let self_ = Self::from_radians(radians).context("from_radians")?;
+
+        Ok(self_)
     }
-}
-impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> Eq
-    for AngleNormalizedBase<MIN_PI_DIV2, MAX_PI_DIV2>
-{
-}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> Ord
-    for AngleNormalizedBase<MIN_PI_DIV2, MAX_PI_DIV2>
-{
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
+    pub fn to_degrees(&self) -> f64 {
+        self.to_radians().to_degrees()
     }
 }
 impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> fmt::Display
@@ -74,7 +67,7 @@ impl<const MIN_PI_DIV2: i8, const MAX_PI_DIV2: i8> fmt::Display
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{:.5}°", self.radians.to_degrees())
+        write!(f, "{:.5}°", self.to_degrees())
     }
 }
 #[derive(Debug, Serialize, Deserialize)]

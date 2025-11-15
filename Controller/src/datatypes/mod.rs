@@ -1,6 +1,9 @@
 pub mod angle;
 pub mod building;
 pub mod color_rgb_boolean;
+pub mod current;
+pub mod flow_volumetric;
+pub mod frequency;
 pub mod geography;
 pub mod ipc_rtsp_url;
 pub mod multiplier;

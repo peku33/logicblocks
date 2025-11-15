@@ -1,8 +1,9 @@
 import { Chip, ChipsGroup, ChipType } from "@/components/common/Chips";
 import GaugeLinear from "@/components/common/GaugeLinear";
 import GaugeLinearRatio from "@/components/datatypes/ratio/GaugeLinear";
-import { formatVoltage } from "@/datatypes/Voltage";
-import { formatSI } from "@/util/Number";
+import { formatCurrent, type Current } from "@/datatypes/Current";
+import { formatFrequencyHertz, formatFrequencyRpm, type Frequency } from "@/datatypes/Frequency";
+import { formatVoltage, type Voltage } from "@/datatypes/Voltage";
 import styled from "styled-components";
 
 const DC_LINK_VOLTAGE_MAX = 400;
@@ -27,22 +28,22 @@ export interface DataRunning {
   speed_actual: number;
   reverse: boolean;
 
-  motor_voltage_max_v: number;
-  motor_current_rated_a: number;
-  motor_current_max_a: number;
-  motor_frequency_min_hz: number;
-  motor_frequency_max_hz: number;
-  motor_frequency_rated_hz: number;
-  motor_speed_rated_rpm: number;
+  motor_voltage_max: Voltage;
+  motor_current_rated: Current;
+  motor_current_max: Current;
+  motor_frequency_min: Frequency;
+  motor_frequency_max: Frequency;
+  motor_frequency_rated: Frequency;
+  motor_speed_rated: Frequency;
 
-  motor_voltage_v: number;
-  motor_current_a: number;
-  motor_frequency_hz: number;
-  motor_speed_rpm: number;
+  motor_voltage: Voltage;
+  motor_current: Current;
+  motor_frequency: Frequency;
+  motor_speed: Frequency;
   motor_torque: number;
   motor_power: number;
 
-  dc_link_voltage_v: number;
+  dc_link_voltage: Voltage;
   remote_input: boolean;
 }
 export function dataIsRunning(data: Data): data is DataRunning {
@@ -112,34 +113,34 @@ const Component: React.FC<{ data: Data | undefined }> = (props) => {
             <SectionTitle>Motor status</SectionTitle>
             <SectionContent>
               <GaugeLinear
-                value={data.motor_voltage_v}
+                value={data.motor_voltage}
                 valueMin={0.0}
-                valueMax={data.motor_voltage_max_v}
-                valueSerializer={voltageSerializer}
+                valueMax={data.motor_voltage_max}
+                valueSerializer={(voltage) => formatVoltage(voltage, 2)}
               >
                 Voltage
               </GaugeLinear>
               <GaugeLinear
-                value={data.motor_current_a}
+                value={data.motor_current}
                 valueMin={0.0}
-                valueMax={data.motor_current_rated_a}
-                valueSerializer={currentSerializer}
+                valueMax={data.motor_current_rated}
+                valueSerializer={(current) => formatCurrent(current, 2)}
               >
                 Current
               </GaugeLinear>
               <GaugeLinear
-                value={data.motor_frequency_hz}
-                valueMin={data.motor_frequency_min_hz}
-                valueMax={data.motor_frequency_max_hz}
-                valueSerializer={frequencySerializer}
+                value={data.motor_frequency}
+                valueMin={data.motor_frequency_min}
+                valueMax={data.motor_frequency_max}
+                valueSerializer={(frequency) => formatFrequencyHertz(frequency, 2)}
               >
                 Frequency
               </GaugeLinear>
               <GaugeLinear
-                value={data.motor_speed_rpm}
+                value={data.motor_speed}
                 valueMin={0}
-                valueMax={data.motor_speed_rated_rpm}
-                valueSerializer={rpmSerializer}
+                valueMax={data.motor_speed_rated}
+                valueSerializer={(frequency) => formatFrequencyRpm(frequency, 0)}
               >
                 RPM
               </GaugeLinear>
@@ -151,10 +152,10 @@ const Component: React.FC<{ data: Data | undefined }> = (props) => {
             <SectionTitle>Other</SectionTitle>
             <SectionContent>
               <GaugeLinear
-                value={data.dc_link_voltage_v}
+                value={data.dc_link_voltage}
                 valueMin={0}
                 valueMax={DC_LINK_VOLTAGE_MAX}
-                valueSerializer={voltageSerializer}
+                valueSerializer={(voltage) => formatVoltage(voltage, 2)}
               >
                 DC Link Voltage
               </GaugeLinear>
@@ -181,16 +182,3 @@ const SectionContent = styled.div`
     margin-bottom: 0.25rem;
   }
 `;
-
-function voltageSerializer(voltage: number): string {
-  return formatVoltage(voltage, 2);
-}
-function currentSerializer(current: number): string {
-  return formatSI(current, 2, "A");
-}
-function frequencySerializer(frequency: number): string {
-  return formatSI(frequency, 1, "Hz");
-}
-function rpmSerializer(rpm: number): string {
-  return formatSI(rpm, 0, "rpm");
-}

@@ -1,7 +1,8 @@
 import { type ColorRgbBoolean } from "@/datatypes/ColorRgbBoolean";
 import { type Ds18x20State } from "@/datatypes/Ds18x20";
+import { formatFrequencyHertzOrUnknown, type Frequency } from "@/datatypes/Frequency";
 import { formatTemperatureCelsiusOrUnknown, formatTemperatureFahrenheitOrUnknown } from "@/datatypes/Temperature";
-import { type Voltage, formatVoltageOrUnknown } from "@/datatypes/Voltage";
+import { formatVoltageOrUnknown, type Voltage } from "@/datatypes/Voltage";
 import type * as CSS from "csstype";
 import { rgb } from "polished";
 import styled from "styled-components";
@@ -19,7 +20,8 @@ export type DataBlock1Value =
   | DataBlock1ValueUnused
   | DataBlock1ValueAnalogIn
   | DataBlock1ValueDigitalIn
-  | DataBlock1ValueDigitalOut;
+  | DataBlock1ValueDigitalOut
+  | DataBlock1ValueCounterIn;
 
 export interface DataBlock1ValueUnused {
   function: "Unused";
@@ -54,13 +56,23 @@ export function dataBlock1ValueIsDigitalOut(
 ): dataBlock1Value is DataBlock1ValueDigitalOut {
   return dataBlock1Value.function === "DigitalOut";
 }
+export interface DataBlock1ValueCounterIn {
+  function: "CounterIn";
+  value: Frequency | null;
+}
+export function dataBlock1ValueIsCounterIn(
+  dataBlock1Value: DataBlock1Value,
+): dataBlock1Value is DataBlock1ValueCounterIn {
+  return dataBlock1Value.function === "CounterIn";
+}
 
 export const Block2Size = 4;
 export type DataBlock2Value =
   | DataBlock2ValueUnused
   | DataBlock2ValueDigitalIn
   | DataBlock2ValueDigitalOut
-  | DataBlock2ValueDs18x20;
+  | DataBlock2ValueDs18x20
+  | DataBlock2ValueCounterIn;
 export interface DataBlock2ValueUnused {
   function: "Unused";
 }
@@ -91,6 +103,15 @@ export interface DataBlock2ValueDs18x20 {
 }
 export function dataBlock2ValueIsDs18x20(dataBlock2Value: DataBlock2Value): dataBlock2Value is DataBlock2ValueDs18x20 {
   return dataBlock2Value.function === "Ds18x20";
+}
+export interface DataBlock2ValueCounterIn {
+  function: "CounterIn";
+  value: Frequency | null;
+}
+export function dataBlock2ValueIsCounterIn(
+  dataBlock2Value: DataBlock2Value,
+): dataBlock2Value is DataBlock2ValueCounterIn {
+  return dataBlock2Value.function === "CounterIn";
 }
 
 export const Block3Size = 2;
@@ -232,6 +253,8 @@ const LayoutItemBlock1: React.FC<{
     return <LayoutItemDigitalIn block={1} pin={pin} value={value.value} />;
   } else if (dataBlock1ValueIsDigitalOut(value)) {
     return <LayoutItemDigitalOut block={1} pin={pin} value={value.value} />;
+  } else if (dataBlock1ValueIsCounterIn(value)) {
+    return <LayoutItemCounterIn block={1} pin={pin} frequency={value.value} />;
   } else {
     throw new Error("unknown value type");
   }
@@ -250,6 +273,8 @@ const LayoutItemBlock2: React.FC<{
     return <LayoutItemDigitalOut block={2} pin={pin} value={value.value} />;
   } else if (dataBlock2ValueIsDs18x20(value)) {
     return <LayoutItemDs18x20 block={2} pin={pin} state={value.value} />;
+  } else if (dataBlock2ValueIsCounterIn(value)) {
+    return <LayoutItemCounterIn block={2} pin={pin} frequency={value.value} />;
   } else {
     throw new Error("unknown value type");
   }
@@ -364,6 +389,21 @@ const LayoutItemDs18x20: React.FC<{
       ) : (
         <LayoutItemInnerValue>Unknown</LayoutItemInnerValue>
       )}
+    </LayoutItemInner>
+  );
+};
+const LayoutItemCounterIn: React.FC<{
+  block: number; // 1-based
+  pin: number; // 1-base
+  frequency: Frequency | null;
+}> = (props) => {
+  const { block, pin, frequency: frequency } = props;
+
+  return (
+    <LayoutItemInner $backgroundColor="#E7C84A">
+      <LayoutItemInnerBlockPinLabel block={block} pin={pin} />
+      <LayoutItemInnerLabel>Counter Input</LayoutItemInnerLabel>
+      <LayoutItemInnerValue>{formatFrequencyHertzOrUnknown(frequency, 2)}</LayoutItemInnerValue>
     </LayoutItemInner>
   );
 };

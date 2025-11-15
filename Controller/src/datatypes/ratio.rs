@@ -5,43 +5,44 @@ use rand::{
     distr::{Distribution, StandardUniform},
 };
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt};
+use std::fmt;
+use typed_floats::NonNaNFinite;
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
 #[serde(try_from = "RatioSerde")]
 #[serde(into = "RatioSerde")]
-pub struct Ratio(f64);
+pub struct Ratio(NonNaNFinite<f64>);
 impl Ratio {
     pub const fn zero() -> Self {
-        Self(0.0)
+        // SAFE: 0.0 is always finite
+        let inner = unsafe { NonNaNFinite::<f64>::new_unchecked(0f64) };
+
+        Self(inner)
     }
     pub const fn epsilon() -> Self {
-        Self(f64::EPSILON)
+        // SAFE: EPSILON is always finite
+        let inner = unsafe { NonNaNFinite::<f64>::new_unchecked(f64::EPSILON) };
+
+        Self(inner)
     }
     pub const fn full() -> Self {
-        Self(1.0)
+        // SAFE: 1.0 is always finite
+        let inner = unsafe { NonNaNFinite::<f64>::new_unchecked(1f64) };
+
+        Self(inner)
     }
 
     pub fn from_f64(value: f64) -> Result<Self, Error> {
-        ensure!(value.is_finite(), "value must be finite");
+        let value = NonNaNFinite::<f64>::new(value)?;
         ensure!(
             (0.0..=1.0).contains(&value),
             "value must be between 0.0 and 1.0"
         );
+
         Ok(Self(value))
     }
     pub fn to_f64(&self) -> f64 {
-        self.0
-    }
-}
-impl Eq for Ratio {}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl Ord for Ratio {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        self.0.get()
     }
 }
 impl fmt::Display for Ratio {
@@ -49,7 +50,7 @@ impl fmt::Display for Ratio {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{:.3}", self.0)
+        write!(f, "{:.3}", self.to_f64())
     }
 }
 

@@ -1,30 +1,29 @@
 use super::real::Real;
-use anyhow::{Error, ensure};
+use anyhow::Error;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt};
-#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
-#[serde(try_from = "VoltageSerde")]
-#[serde(into = "VoltageSerde")]
+use std::fmt;
+use typed_floats::NonNaNFinite;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Voltage {
-    volts: f64,
+    volts: NonNaNFinite<f64>,
 }
 impl Voltage {
+    pub const fn zero() -> Self {
+        // SAFE: 0.0 is positive
+        let volts = unsafe { NonNaNFinite::<f64>::new_unchecked(0f64) };
+
+        Self { volts }
+    }
+
     pub fn from_volts(volts: f64) -> Result<Self, Error> {
-        ensure!(volts.is_finite(), "volts must be finite");
+        let volts = NonNaNFinite::<f64>::new(volts)?;
+
         Ok(Self { volts })
     }
     pub fn to_volts(&self) -> f64 {
-        self.volts
-    }
-}
-impl Eq for Voltage {}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl Ord for Voltage {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        self.volts.get()
     }
 }
 impl fmt::Display for Voltage {
@@ -32,7 +31,7 @@ impl fmt::Display for Voltage {
         &self,
         f: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        write!(f, "{:.3}V", self.volts)
+        write!(f, "{:.3}V", self.to_volts())
     }
 }
 
@@ -46,21 +45,5 @@ impl TryFrom<Real> for Voltage {
 impl From<Voltage> for Real {
     fn from(value: Voltage) -> Self {
         Self::from_f64(value.to_volts()).unwrap()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct VoltageSerde(f64);
-impl TryFrom<VoltageSerde> for Voltage {
-    type Error = Error;
-
-    fn try_from(value: VoltageSerde) -> Result<Self, Self::Error> {
-        Voltage::from_volts(value.0)
-    }
-}
-impl From<Voltage> for VoltageSerde {
-    fn from(value: Voltage) -> Self {
-        Self(value.to_volts())
     }
 }

@@ -1,7 +1,9 @@
 use super::real::Real;
-use anyhow::{Error, ensure};
+use anyhow::{Context, Error};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt};
+use std::fmt;
+use typed_floats::NonNaNFinite;
+
 #[derive(Debug)]
 pub enum Unit {
     Kelvin,
@@ -9,52 +11,48 @@ pub enum Unit {
     Fahrenheit,
 }
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
-#[serde(try_from = "TemperatureSerde")]
-#[serde(into = "TemperatureSerde")]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Temperature {
-    kelvins: f64,
+    kelvins: NonNaNFinite<f64>,
 }
 impl Temperature {
     pub fn from_kelvins(kelvins: f64) -> Result<Self, Error> {
-        ensure!(kelvins.is_finite(), "value must be finite");
+        let kelvins = NonNaNFinite::<f64>::new(kelvins)?;
+
         Ok(Self { kelvins })
     }
     pub fn to_kelvins(&self) -> f64 {
-        self.kelvins
+        self.kelvins.get()
     }
 
     pub fn from_unit(
         unit: Unit,
         value: f64,
     ) -> Result<Self, Error> {
-        ensure!(value.is_finite(), "value must be finite");
-        let kelvin = match unit {
+        let kelvins = match unit {
             Unit::Kelvin => value,
             Unit::Fahrenheit => (value + 459.67) * 5.0 / 9.0,
             Unit::Celsius => value + 273.15,
         };
-        Ok(Self { kelvins: kelvin })
+
+        let self_ = Self::from_kelvins(kelvins).context("from_kelvins")?;
+
+        Ok(self_)
     }
     pub fn to_unit(
         self,
         unit: Unit,
     ) -> f64 {
-        match unit {
-            Unit::Kelvin => self.kelvins,
-            Unit::Celsius => self.kelvins - 273.15,
-            Unit::Fahrenheit => self.kelvins * 9.0 / 5.0 - 459.67,
-        }
-    }
-}
-impl Eq for Temperature {}
-#[allow(clippy::derive_ord_xor_partial_ord)]
-impl Ord for Temperature {
-    fn cmp(
-        &self,
-        other: &Self,
-    ) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        let kelvins = self.to_kelvins();
+
+        let value = match unit {
+            Unit::Kelvin => kelvins,
+            Unit::Celsius => kelvins - 273.15,
+            Unit::Fahrenheit => kelvins * 9.0 / 5.0 - 459.67,
+        };
+
+        value
     }
 }
 impl fmt::Display for Temperature {
@@ -82,21 +80,5 @@ impl TryFrom<Real> for Temperature {
 impl From<Temperature> for Real {
     fn from(value: Temperature) -> Self {
         Self::from_f64(value.to_kelvins()).unwrap()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(transparent)]
-struct TemperatureSerde(f64);
-impl TryFrom<TemperatureSerde> for Temperature {
-    type Error = Error;
-
-    fn try_from(value: TemperatureSerde) -> Result<Self, Self::Error> {
-        Self::from_kelvins(value.0)
-    }
-}
-impl From<Temperature> for TemperatureSerde {
-    fn from(value: Temperature) -> Self {
-        TemperatureSerde(value.to_kelvins())
     }
 }
