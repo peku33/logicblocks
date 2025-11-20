@@ -64,7 +64,7 @@ impl Device {
                         result.unwrap();
                         break *value_beat_receiver.borrow_and_update();
                     }
-                    _ = &mut tick_next => {
+                    () = &mut tick_next => {
                         // this will be picked by value_beat_receiver branch
                         self.value_beat_sender.send(None).unwrap();
                     }

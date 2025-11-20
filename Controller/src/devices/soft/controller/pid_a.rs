@@ -42,7 +42,9 @@ impl Device {
 
         Self {
             configuration,
+
             pid,
+
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_setpoint: signal::state_target_last::Signal::<Real>::new(),
@@ -64,7 +66,7 @@ impl Device {
         loop {
             let elapsed = select! {
                 () = signals_targets_changed_stream.select_next_some() => false,
-                _ = &mut tick_next => true,
+                () = &mut tick_next => true,
                 () = exit_flag => break,
             };
 

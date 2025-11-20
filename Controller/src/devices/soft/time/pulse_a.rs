@@ -43,7 +43,7 @@ impl Device {
             },
             signal_trigger: signal::event_target_last::Signal::<()>::new(),
             signal_cancel: signal::event_target_last::Signal::<()>::new(),
-            signal_output: signal::state_source::Signal::<bool>::new(None),
+            signal_output: signal::state_source::Signal::<bool>::new(Some(false)),
         }
     }
 
