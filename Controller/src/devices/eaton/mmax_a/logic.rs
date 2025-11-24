@@ -25,6 +25,7 @@ pub struct Device<'m> {
     signal_input_speed: signal::state_target_last::Signal<Ratio>,
     signal_input_reverse: signal::state_target_last::Signal<bool>,
     signal_output_ok: signal::state_source::Signal<bool>,
+    signal_output_running: signal::state_source::Signal<bool>,
 
     gui_summary_waker: devices::gui_summary::Waker,
 }
@@ -42,7 +43,8 @@ impl<'m> Device<'m> {
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input_speed: signal::state_target_last::Signal::<Ratio>::new(),
             signal_input_reverse: signal::state_target_last::Signal::<bool>::new(),
-            signal_output_ok: signal::state_source::Signal::<bool>::new(None),
+            signal_output_ok: signal::state_source::Signal::<bool>::new(Some(false)),
+            signal_output_running: signal::state_source::Signal::<bool>::new(None),
 
             gui_summary_waker: devices::gui_summary::Waker::new(),
         }
@@ -64,6 +66,8 @@ impl<'m> Device<'m> {
         }
     }
     fn device_to_signals(&self) {
+        let mut signals_sources_changed = false;
+
         let output = self.hardware_device.output_getter().get();
 
         let output_ok = match output {
@@ -72,8 +76,19 @@ impl<'m> Device<'m> {
             }
             hardware::Output::Initializing | hardware::Output::Error => false,
         };
-
         if self.signal_output_ok.set_one(Some(output_ok)) {
+            signals_sources_changed = true;
+        }
+
+        let output_running = match output {
+            hardware::Output::Running(output_running) => Some(output_running.running),
+            hardware::Output::Initializing | hardware::Output::Error => None,
+        };
+        if self.signal_output_running.set_one(output_running) {
+            signals_sources_changed = true;
+        }
+
+        if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
         }
     }
@@ -142,6 +157,7 @@ pub enum SignalIdentifier {
     InputSpeed,
     InputReverse,
     OutputOk,
+    OutputRunning,
 }
 impl signals::Identifier for SignalIdentifier {}
 impl signals::Device for Device<'_> {
@@ -158,6 +174,7 @@ impl signals::Device for Device<'_> {
             SignalIdentifier::InputSpeed => &self.signal_input_speed as &dyn signal::Base,
             SignalIdentifier::InputReverse => &self.signal_input_reverse as &dyn signal::Base,
             SignalIdentifier::OutputOk => &self.signal_output_ok as &dyn signal::Base,
+            SignalIdentifier::OutputRunning => &self.signal_output_running as &dyn signal::Base,
         }
     }
 }
