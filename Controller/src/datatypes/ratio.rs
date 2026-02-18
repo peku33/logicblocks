@@ -1,7 +1,7 @@
 use super::real::Real;
 use anyhow::{Error, ensure};
 use rand::{
-    Rng,
+    Rng, RngExt,
     distr::{Distribution, StandardUniform},
 };
 use serde::{Deserialize, Serialize};

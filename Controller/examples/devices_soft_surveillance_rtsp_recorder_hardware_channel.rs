@@ -12,7 +12,7 @@ use logicblocks_controller::{
         runnable::{Exited, Runnable},
     },
 };
-use rand::Rng;
+use rand::RngExt;
 use std::{path::PathBuf, time::Duration};
 use tokio::{fs, signal::ctrl_c};
 

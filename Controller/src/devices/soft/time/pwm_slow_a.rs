@@ -10,7 +10,7 @@ use crate::{
 use async_trait::async_trait;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use maplit::hashmap;
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 use std::{
     borrow::Cow,
     ops::Rem,

@@ -32,7 +32,7 @@ http-body-util = "0.1.2"
 hyper = { version = "1.4.0", features = ["full"] }
 hyper-util = { version = "0.1.6", features = ["full"] }
 image = { version = "0.25.1", default-features = false, features = ["jpeg"] }
-include_bytes_aligned = "0.1.3"
+include_bytes_aligned = "0.2.0"
 indoc = "2.0.5"
 itertools = "0.14.0"
 log = { version = "0.4.22", features = ["release_max_level_info"] }
@@ -42,10 +42,10 @@ ouroboros = "0.18.4"
 parking_lot = { version = "0.12.3", features = ["send_guard"] }
 percent-encoding = "2.3.1"
 phf = { version = "0.13.1", features = ["macros"] }
-rand = "0.9.1"
+rand = "0.10.0"
 regex = "1.10.5"
-reqwest = { version = "0.12.5", features = ["json", "stream"] }
-rusqlite = { version = "0.37.0", features = ["bundled", "array"] }
+reqwest = { version = "0.13.2", features = ["json", "stream"] }
+rusqlite = { version = "0.38.0", features = ["bundled", "array"] }
 scopeguard = "1.2.0"
 semver = "1.0.23"
 serde = { version = "1.0.203", features = ["derive"] }
@@ -62,7 +62,7 @@ tokio-stream = { version = "0.1.15", features = [
 tokio-util = "0.7.11"
 typed_floats = { version = "1.0.7", features = ["serde"] }
 web-static-pack = "0.5.0"
-xmltree = "0.11.0"
+xmltree = "0.12.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.11.0"

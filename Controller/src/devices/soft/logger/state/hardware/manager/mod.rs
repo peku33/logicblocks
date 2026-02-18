@@ -490,7 +490,7 @@ impl<'f> Manager<'f> {
 
                 for (sink_id, time, value) in items_boolean {
                     let params = rusqlite::params![
-                        sink_id,
+                        sink_id as i64,
                         time.timestamp(),
                         value,
                     ];
@@ -519,7 +519,7 @@ impl<'f> Manager<'f> {
 
                 for (sink_id, time, value) in items_real {
                     let params = rusqlite::params![
-                        sink_id,
+                        sink_id as i64,
                         time.timestamp(),
                         value,
                     ];
@@ -723,7 +723,7 @@ impl<'f> Manager<'f> {
 
         for (sink_id, sink_data) in &sinks_data {
             let params = rusqlite::named_params! {
-                ":sink_id": *sink_id,
+                ":sink_id": *sink_id as i64,
                 ":name": sink_data.name,
                 ":class": sink_data.class.to_string(),
                 ":timestamp_divisor": sink_data.timestamp_divisor,
@@ -760,7 +760,7 @@ impl<'f> Manager<'f> {
 
             for sink_id in sink_ids_boolean {
                 let params = rusqlite::named_params! {
-                    ":sink_id": *sink_id,
+                    ":sink_id": *sink_id as i64,
                 };
                 query.execute(params).context("execute")?;
             }
@@ -793,7 +793,7 @@ impl<'f> Manager<'f> {
 
             for sink_id in sink_ids_real {
                 let params = rusqlite::named_params! {
-                    ":sink_id": *sink_id,
+                    ":sink_id": *sink_id as i64,
                 };
                 query.execute(params).context("execute")?;
             }
