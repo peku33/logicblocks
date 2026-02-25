@@ -1272,9 +1272,7 @@ pub mod hardware {
                             .into_inner()
                             .unwrap();
 
-                        if self.properties.counter_ins.device_set(values) {
-                            properties_ins_changed = true;
-                        }
+                        properties_ins_changed |= self.properties.counter_ins.device_set(values);
 
                         self.counter_ins_read_last.borrow_mut().replace(now);
                     }
@@ -1295,9 +1293,7 @@ pub mod hardware {
                             .into_inner()
                             .unwrap();
 
-                        if self.properties.counter_ins.device_set(values) {
-                            properties_ins_changed = true;
-                        }
+                        properties_ins_changed |= self.properties.counter_ins.device_set(values);
 
                         self.counter_ins_read_last.borrow_mut().replace(now);
                     }

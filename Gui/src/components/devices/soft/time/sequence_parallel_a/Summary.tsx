@@ -16,7 +16,7 @@ export interface DataConfiguration {
 export interface DataChannelConfiguration {
   name: string;
 
-  base_time_seconds: number;
+  base_duration_seconds: number;
   power_required: number;
 
   round_min_seconds: number;
@@ -462,7 +462,7 @@ const Component: React.FC<{
                 {/* Base time */}
                 <>
                   <Chip type={ChipType.INFO} enabled={false}>
-                    Base time: {channelConfiguration.base_time_seconds}
+                    Base time: {channelConfiguration.base_duration_seconds}
                   </Chip>
                 </>
                 {/* Power required */}

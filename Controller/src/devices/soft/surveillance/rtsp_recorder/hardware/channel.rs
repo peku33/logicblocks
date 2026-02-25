@@ -45,7 +45,7 @@ impl DetectionLevelTracker {
     ) {
         self.current = current;
 
-        match (self.current.as_mut(), self.segment_max.as_mut()) {
+        match (&mut self.current, &mut self.segment_max) {
             (Some(current), Some(segment_max)) => {
                 if current > segment_max {
                     *segment_max = *current;

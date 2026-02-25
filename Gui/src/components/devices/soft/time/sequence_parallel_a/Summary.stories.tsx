@@ -15,7 +15,7 @@ export const Basic: React.FC = () => {
               {
                 name: "Channel 1",
 
-                base_time_seconds: 60.0,
+                base_duration_seconds: 60.0,
                 power_required: 0.5,
 
                 round_min_seconds: 30.0,
@@ -24,7 +24,7 @@ export const Basic: React.FC = () => {
               {
                 name: "Channel 2",
 
-                base_time_seconds: 60.0,
+                base_duration_seconds: 60.0,
                 power_required: 0.75,
 
                 round_min_seconds: 45.0,

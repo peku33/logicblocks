@@ -17,7 +17,7 @@ pub struct Configuration {
     pub direction_pre_delay: Duration,
 
     // time required for enable signal to perform operation
-    pub enable_time: Duration,
+    pub enable_duration: Duration,
 
     // delay between disabling the enable signal and disabling the direction signal
     pub direction_post_delay: Duration,
@@ -86,7 +86,7 @@ impl Device {
 
             // wait for the drive enable time
             select! {
-                () = tokio::time::sleep(self.configuration.enable_time).fuse() => {},
+                () = tokio::time::sleep(self.configuration.enable_duration).fuse() => {},
                 () = exit_flag => break,
             }
 

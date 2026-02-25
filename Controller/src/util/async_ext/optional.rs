@@ -32,7 +32,7 @@ impl<S: Stream> Stream for StreamOrPending<S> {
     ) -> Poll<Option<Self::Item>> {
         let self_ = unsafe { self.get_unchecked_mut() };
 
-        match self_.inner.as_mut() {
+        match &mut self_.inner {
             Some(inner) => unsafe { Pin::new_unchecked(inner).poll_next(cx) },
             None => Poll::Pending,
         }

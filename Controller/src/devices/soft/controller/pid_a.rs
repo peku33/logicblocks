@@ -19,7 +19,7 @@ use std::{borrow::Cow, time::Duration};
 
 #[derive(Debug)]
 pub struct Configuration {
-    pub tick_duration: Duration,
+    pub tick_interval: Duration,
 
     pub pid: controller::Configuration,
 }
@@ -103,7 +103,7 @@ impl Device {
                     }
 
                     // either timer has elapsed or it wasn't initialized
-                    tick_next.set(tokio::time::sleep(self.configuration.tick_duration).fuse());
+                    tick_next.set(tokio::time::sleep(self.configuration.tick_interval).fuse());
                 }
                 None => {
                     // input was changed to (or is) none, remove pid, reset signals and timer

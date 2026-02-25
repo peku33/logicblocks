@@ -82,9 +82,7 @@ pub mod logic {
                     .into_inner()
                     .unwrap();
 
-                if self.properties_remote.leds.set(leds) {
-                    properties_outs_changed = true;
-                }
+                properties_outs_changed |= self.properties_remote.leds.set(leds);
 
                 gui_summary_changed = true;
             }

@@ -150,9 +150,7 @@ impl Device {
             value: input_value,
             pending: input_pending,
         } = self.signal_input.take_last();
-        if input_pending {
-            gui_summary_changed = true;
-        }
+        gui_summary_changed |= input_pending;
 
         let mode = match operation {
             RecalculateOperation::None => None,

@@ -26,7 +26,7 @@ use std::{borrow::Cow, cmp::min, collections::HashMap, iter, time::Duration};
 pub struct ConfigurationChannel {
     pub name: String,
 
-    pub base_time: Duration,
+    pub base_duration: Duration,
     pub power_required: Multiplier,
 
     pub round_min: Duration,
@@ -106,7 +106,7 @@ impl Device {
     pub fn new(configuration: Configuration) -> Self {
         // TODO: precondition check
         // every channel must have power_required <= device power_max
-        // base_time > 0
+        // base_duration > 0
         // round_min > 0
         // round_max > 0
 
@@ -611,7 +611,9 @@ impl Device {
                     StateDevicePausedChannel::Disabled => {}
                     StateDevicePausedChannel::Paused { queue }
                     | StateDevicePausedChannel::Enabled { queue } => {
-                        *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
+                        *queue += channel_configuration
+                            .base_duration
+                            .mul_f64(multiplier.to_f64());
                         gui_summary_changed = true;
                     }
                 }
@@ -624,7 +626,9 @@ impl Device {
                     StateDeviceEnabledChannel::Paused { queue }
                     | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
                     | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
-                        *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
+                        *queue += channel_configuration
+                            .base_duration
+                            .mul_f64(multiplier.to_f64());
                         gui_summary_changed = true;
                     }
                 }
@@ -784,7 +788,9 @@ impl Device {
                         StateDevicePausedChannel::Disabled => {}
                         StateDevicePausedChannel::Paused { queue }
                         | StateDevicePausedChannel::Enabled { queue, .. } => {
-                            *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
+                            *queue += channel_configuration
+                                .base_duration
+                                .mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
                     },
@@ -797,7 +803,9 @@ impl Device {
                         StateDeviceEnabledChannel::Paused { queue, .. }
                         | StateDeviceEnabledChannel::EnabledQueued { queue, .. }
                         | StateDeviceEnabledChannel::EnabledActive { queue, .. } => {
-                            *queue += channel_configuration.base_time.mul_f64(multiplier.to_f64());
+                            *queue += channel_configuration
+                                .base_duration
+                                .mul_f64(multiplier.to_f64());
                             gui_summary_changed = true;
                         }
                     },
@@ -1058,7 +1066,7 @@ impl signals::Device for Device {
 struct GuiSummaryConfigurationChannel {
     name: String,
 
-    base_time_seconds: f64,
+    base_duration_seconds: f64,
     power_required: f64,
 
     round_min_seconds: f64,
@@ -1135,7 +1143,7 @@ impl devices::gui_summary::Device for Device {
             .iter()
             .map(|channel_configuration| GuiSummaryConfigurationChannel {
                 name: channel_configuration.name.clone(),
-                base_time_seconds: channel_configuration.base_time.as_secs_f64(),
+                base_duration_seconds: channel_configuration.base_duration.as_secs_f64(),
                 power_required: channel_configuration.power_required.to_f64(),
                 round_min_seconds: channel_configuration.round_min.as_secs_f64(),
                 round_max_seconds: channel_configuration.round_max.as_secs_f64(),

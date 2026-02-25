@@ -76,17 +76,13 @@ impl<'m> Device<'m> {
             }
             hardware::Output::Initializing | hardware::Output::Error => false,
         };
-        if self.signal_output_ok.set_one(Some(output_ok)) {
-            signals_sources_changed = true;
-        }
+        signals_sources_changed |= self.signal_output_ok.set_one(Some(output_ok));
 
         let output_running = match output {
             hardware::Output::Running(output_running) => Some(output_running.running),
             hardware::Output::Initializing | hardware::Output::Error => None,
         };
-        if self.signal_output_running.set_one(output_running) {
-            signals_sources_changed = true;
-        }
+        signals_sources_changed |= self.signal_output_running.set_one(output_running);
 
         if signals_sources_changed {
             self.signals_sources_changed_waker.wake();
