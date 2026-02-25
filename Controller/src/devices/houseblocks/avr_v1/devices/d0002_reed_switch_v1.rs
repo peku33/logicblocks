@@ -15,7 +15,7 @@ pub mod logic {
     use futures::stream::StreamExt;
     use itertools::Itertools;
     use serde::Serialize;
-    use serde_big_array::BigArray;
+    use serde_with::serde_as;
 
     #[derive(Debug)]
     pub struct DeviceFactory;
@@ -150,10 +150,11 @@ pub mod logic {
         }
     }
 
+    #[serde_as]
     #[derive(Debug, Serialize)]
     #[serde(transparent)]
     pub struct GuiSummaryInputs {
-        #[serde(with = "BigArray")]
+        #[serde_as(as = "[_; _]")]
         inner: [Resistance; hardware::INPUTS_COUNT],
     }
     #[derive(Debug, Serialize)]

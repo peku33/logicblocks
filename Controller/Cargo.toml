@@ -52,8 +52,8 @@ rusqlite = { version = "0.38.0", features = [
 scopeguard = "1.2.0"
 semver = "1.0.23"
 serde = { version = "1.0.203", features = ["derive"] }
-serde-big-array = "0.5.1"
 serde_json = "1.0.120"
+serde_with = { version = "3.17.0", features = ["chrono"] }
 stable_deref_trait = "1.2.0"
 tokio = { version = "1.38.0", features = ["full"] }
 tokio-stream = { version = "0.1.15", features = [

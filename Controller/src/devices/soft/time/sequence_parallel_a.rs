@@ -1061,7 +1061,7 @@ impl signals::Device for Device {
     }
 }
 
-// TODO: use newtype inestead of f64
+// TODO: user DurationSecondsWithFrac instead of _seconds: f64
 #[derive(Debug, Serialize)]
 struct GuiSummaryConfigurationChannel {
     name: String,
