@@ -77,7 +77,7 @@ const Component: React.FC<{ data: Data | undefined }> = (props) => {
           </ChipsGroup>
         </SectionContent>
       </Section>
-      {data && dataIsRunning(data) ? (
+      {data !== undefined && dataIsRunning(data) ? (
         <>
           <Section>
             <SectionTitle>Drive status</SectionTitle>
