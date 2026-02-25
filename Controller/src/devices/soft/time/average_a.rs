@@ -7,6 +7,7 @@ use crate::{
         runnable::{Exited, Runnable},
     },
 };
+use anyhow::{Error, ensure};
 use async_trait::async_trait;
 use futures::{
     FutureExt,
@@ -28,6 +29,13 @@ pub struct Configuration {
     pub tick_duration_min: Duration,
     pub tick_duration_max: Duration,
 }
+impl Configuration {
+    pub fn validate(&self) -> Result<(), Error> {
+        ensure!(self.tick_duration_min < self.tick_duration_max);
+
+        Ok(())
+    }
+}
 
 #[derive(Debug)]
 pub struct Device {
@@ -40,7 +48,7 @@ pub struct Device {
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
-        assert!(configuration.tick_duration_min <= configuration.tick_duration_max);
+        configuration.validate().unwrap();
 
         Self {
             configuration,

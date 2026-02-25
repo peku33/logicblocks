@@ -7,6 +7,7 @@ use crate::{
         runnable::{Exited, Runnable},
     },
 };
+use anyhow::ensure;
 use async_trait::async_trait;
 use futures::{future::FutureExt, pin_mut, select, stream::StreamExt};
 use maplit::hashmap;
@@ -25,6 +26,13 @@ pub struct Configuration {
     /// running in sync leave None to have it randomized
     pub cycle_phase_shift: Option<Ratio>,
 }
+impl Configuration {
+    pub fn validate(&self) -> Result<(), anyhow::Error> {
+        ensure!(self.cycle_duration > Duration::ZERO);
+
+        Ok(())
+    }
+}
 
 #[derive(Debug)]
 pub struct Device {
@@ -37,7 +45,7 @@ pub struct Device {
 }
 impl Device {
     pub fn new(configuration: Configuration) -> Self {
-        assert!(configuration.cycle_duration > Duration::ZERO);
+        configuration.validate().unwrap();
 
         Self {
             configuration,
