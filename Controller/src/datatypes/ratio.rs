@@ -75,6 +75,7 @@ impl Distribution<Ratio> for StandardUniform {
         Ratio::from_f64(rng.random_range(0.0..=1.0)).unwrap()
     }
 }
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
 struct RatioSerde(f64);
@@ -88,5 +89,44 @@ impl TryFrom<RatioSerde> for Ratio {
 impl From<Ratio> for RatioSerde {
     fn from(value: Ratio) -> Self {
         RatioSerde(value.to_f64())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Ratio;
+    use approx::{AbsDiffEq, RelativeEq, abs_diff_eq, relative_eq};
+    impl AbsDiffEq for Ratio {
+        type Epsilon = Ratio;
+
+        fn default_epsilon() -> Self::Epsilon {
+            Ratio::epsilon()
+        }
+
+        fn abs_diff_eq(
+            &self,
+            other: &Self,
+            epsilon: Self::Epsilon,
+        ) -> bool {
+            abs_diff_eq!(self.to_f64(), other.to_f64(), epsilon = epsilon.to_f64())
+        }
+    }
+    impl RelativeEq for Ratio {
+        fn default_max_relative() -> Self::Epsilon {
+            Ratio::epsilon()
+        }
+        fn relative_eq(
+            &self,
+            other: &Self,
+            epsilon: Self::Epsilon,
+            max_relative: Self::Epsilon,
+        ) -> bool {
+            relative_eq!(
+                self.to_f64(),
+                other.to_f64(),
+                epsilon = epsilon.to_f64(),
+                max_relative = max_relative.to_f64(),
+            )
+        }
     }
 }
