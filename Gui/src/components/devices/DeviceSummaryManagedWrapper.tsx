@@ -22,6 +22,7 @@ const DeviceSummaryManagedWrapper: React.FC<{
       </Details>
       <Line />
       <ComponentWrapper>
+        {/* eslint-disable-next-line react-hooks/static-components */}
         <Component deviceId={deviceId} />
       </ComponentWrapper>
     </Wrapper>

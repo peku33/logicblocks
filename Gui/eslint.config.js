@@ -1,14 +1,12 @@
 import eslint from "@eslint/js";
 import prettier from "eslint-plugin-prettier/recommended";
 import react from "eslint-plugin-react";
-// import reactHooks from "eslint-plugin-react-hooks";
+import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig } from "eslint/config";
 // import reactRefresh from "eslint-plugin-react-refresh";
 import storybook from "eslint-plugin-storybook";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-
-// TODO: reenable rect when it becomes compatible with eslint v10
 
 export default defineConfig(
   {
@@ -21,10 +19,10 @@ export default defineConfig(
       eslint.configs.recommended,
       tseslint.configs.strictTypeChecked,
       tseslint.configs.stylisticTypeChecked,
-      // react.configs.flat.recommended,
-      // react.configs.flat["jsx-runtime"],
-      // reactHooks.configs["recommended-latest"],
-      // reactRefresh.configs.vite,
+      react.configs.flat.recommended,
+      react.configs.flat["jsx-runtime"],
+      reactHooks.configs.flat["recommended-latest"],
+      // reactRefresh.configs.vite, // will need significant refactor to work
       prettier,
     ],
     languageOptions: {
@@ -46,7 +44,7 @@ export default defineConfig(
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-unused-vars": "off", // handled by typescript
       "react/prop-types": "off", // we are using typescript
-      // "react-refresh/only-export-components": ["warn", { allowConstantExport: true }], // false positives
+      // "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
       "prettier/prettier": "warn",
     },

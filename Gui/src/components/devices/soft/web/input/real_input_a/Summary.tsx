@@ -1,7 +1,7 @@
 import { ButtonActionAsync } from "@/components/common/Button";
 import Colors from "@/components/common/Colors";
 import { formatRealOrUnknown } from "@/datatypes/Real";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import styled from "styled-components";
 
 export type Data = number | null;
@@ -12,22 +12,21 @@ const Summary: React.FC<{
 }> = (props) => {
   const { data, onValueChanged } = props;
 
+  // value from input field, as is
   const [inputValue, setInputValue] = useState<string | undefined>();
 
-  const [value, setValue] = useState<number | null | undefined>();
-  useEffect(() => {
+  // parsed value from input field, or null if empty, or undefined if invalid
+  const value = useMemo(() => {
     if (inputValue == null || inputValue === "") {
-      setValue(null);
-      return;
+      return null;
     }
 
     const value = parseFloat(inputValue);
     if (!Number.isFinite(value)) {
-      setValue(undefined);
-      return;
+      return undefined;
     }
 
-    setValue(value);
+    return value;
   }, [inputValue]);
 
   const onClick = useCallback(async () => {

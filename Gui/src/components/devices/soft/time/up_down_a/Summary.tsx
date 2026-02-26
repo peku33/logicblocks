@@ -127,6 +127,7 @@ const Component: React.FC<{
   // timestamp when data was loaded
   const dataLoadTimestamp = useMemo(() => {
     return Date.now();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   // counter that causes animation memo to update
@@ -139,6 +140,7 @@ const Component: React.FC<{
     const animation = animationBuild(data, elapsedSeconds);
 
     return animation;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, dataLoadTimestamp, animationCounter.count]);
 
   // interval to bump the counter which will cause recalculating of animation

@@ -320,6 +320,7 @@ const SectionContentDashboard: React.FC<{
   const DashboardLinkComponent = dashboardLinkComponentResolver(childContentPathItem);
 
   return (
+    /* eslint-disable-next-line react-hooks/static-components */
     <DashboardLinkComponent>
       <SectionContentDashboardWrapper>
         <SectionContentDashboardIconWrapper>
