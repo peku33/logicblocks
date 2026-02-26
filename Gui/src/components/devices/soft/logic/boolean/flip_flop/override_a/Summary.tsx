@@ -7,12 +7,14 @@ export interface Data {
 }
 
 export type DataMode = DataModePassThrough | DataModeOverride;
+
 export interface DataModePassThrough {
   mode: "PassThrough";
 }
 export function dataModeIsPassThrough(dataMode: DataMode): dataMode is DataModePassThrough {
   return dataMode.mode === "PassThrough";
 }
+
 export interface DataModeOverride {
   mode: "Override";
   value: boolean;

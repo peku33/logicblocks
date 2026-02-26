@@ -24,6 +24,7 @@ export interface DataChannelConfiguration {
 }
 
 export type DataState = DataStateDisabled | DataStatePaused | DataStateEnabled;
+
 export interface DataStateDisabled {
   state: "Disabled";
   channels: DataDeviceStateDisabledChannelState[];
@@ -31,6 +32,7 @@ export interface DataStateDisabled {
 export function dataStateIsDisabled(dataState: DataState): dataState is DataStateDisabled {
   return dataState.state === "Disabled";
 }
+
 export interface DataStatePaused {
   state: "Paused";
   channels: DataDeviceStatePausedChannelState[];
@@ -38,6 +40,7 @@ export interface DataStatePaused {
 export function dataStateIsPaused(dataState: DataState): dataState is DataStatePaused {
   return dataState.state === "Paused";
 }
+
 export interface DataStateEnabled {
   state: "Enabled";
   channels: DataDeviceStateEnabledChannelState[];
@@ -52,6 +55,7 @@ export type DataDeviceStateDisabledChannelState =
   | DataDeviceStateDisabledChannelStateDisabled
   | DataDeviceStateDisabledChannelStatePaused
   | DataDeviceStateDisabledChannelStateEnabled;
+
 export interface DataDeviceStateDisabledChannelStateDisabled {
   state: "Disabled";
 }
@@ -60,6 +64,7 @@ export function dataDeviceStateDisabledChannelStateIsDisabled(
 ): dataDeviceStateDisabledChannelState is DataDeviceStateDisabledChannelStateDisabled {
   return dataDeviceStateDisabledChannelState.state === "Disabled";
 }
+
 export interface DataDeviceStateDisabledChannelStatePaused {
   state: "Paused";
 }
@@ -68,6 +73,7 @@ export function dataDeviceStateDisabledChannelStateIsPaused(
 ): dataDeviceStateDisabledChannelState is DataDeviceStateDisabledChannelStatePaused {
   return dataDeviceStateDisabledChannelState.state === "Paused";
 }
+
 export interface DataDeviceStateDisabledChannelStateEnabled {
   state: "Enabled";
 }
@@ -82,6 +88,7 @@ export type DataDeviceStatePausedChannelState =
   | DataDeviceStatePausedChannelStateDisabled
   | DataDeviceStatePausedChannelStatePaused
   | DataDeviceStatePausedChannelStateEnabled;
+
 export interface DataDeviceStatePausedChannelStateDisabled {
   state: "Disabled";
 }
@@ -90,6 +97,7 @@ export function dataDeviceStatePausedChannelStateIsDisabled(
 ): dataDeviceStatePausedChannelState is DataDeviceStatePausedChannelStateDisabled {
   return dataDeviceStatePausedChannelState.state === "Disabled";
 }
+
 export interface DataDeviceStatePausedChannelStatePaused {
   state: "Paused";
   queue_seconds: number;
@@ -99,6 +107,7 @@ export function dataDeviceStatePausedChannelStateIsPaused(
 ): dataDeviceStatePausedChannelState is DataDeviceStatePausedChannelStatePaused {
   return dataDeviceStatePausedChannelState.state === "Paused";
 }
+
 export interface DataDeviceStatePausedChannelStateEnabled {
   state: "Enabled";
   queue_seconds: number;
@@ -115,6 +124,7 @@ export type DataDeviceStateEnabledChannelState =
   | DataDeviceStateEnabledChannelStatePaused
   | DataDeviceStateEnabledChannelStateEnabledQueued
   | DataDeviceStateEnabledChannelStateEnabledActive;
+
 export interface DataDeviceStateEnabledChannelStateDisabled {
   state: "Disabled";
 }
@@ -123,6 +133,7 @@ export function dataDeviceStateEnabledChannelStateIsDisabled(
 ): dataDeviceStateEnabledChannelState is DataDeviceStateEnabledChannelStateDisabled {
   return dataDeviceStateEnabledChannelState.state === "Disabled";
 }
+
 export interface DataDeviceStateEnabledChannelStatePaused {
   state: "Paused";
   queue_seconds: number;
@@ -132,6 +143,7 @@ export function dataDeviceStateEnabledChannelStateIsPaused(
 ): dataDeviceStateEnabledChannelState is DataDeviceStateEnabledChannelStatePaused {
   return dataDeviceStateEnabledChannelState.state === "Paused";
 }
+
 export interface DataDeviceStateEnabledChannelStateEnabledQueued {
   state: "EnabledQueued";
   queue_seconds: number;
@@ -142,6 +154,7 @@ export function dataDeviceStateEnabledChannelStateIsEnabledQueued(
 ): dataDeviceStateEnabledChannelState is DataDeviceStateEnabledChannelStateEnabledQueued {
   return dataDeviceStateEnabledChannelState.state === "EnabledQueued";
 }
+
 export interface DataDeviceStateEnabledChannelStateEnabledActive {
   state: "EnabledActive";
   queue_seconds: number;

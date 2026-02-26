@@ -17,9 +17,9 @@ pub struct Device {
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
     signal_input: signal::state_target_queued::Signal<bool>,
-    signal_raising: signal::event_source::Signal<()>,
     signal_falling: signal::event_source::Signal<()>,
-    signal_raising_or_falling: signal::event_source::Signal<()>,
+    signal_raising: signal::event_source::Signal<()>,
+    signal_falling_or_raising: signal::event_source::Signal<()>,
 }
 impl Device {
     pub fn new() -> Self {
@@ -27,15 +27,15 @@ impl Device {
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_input: signal::state_target_queued::Signal::<bool>::new(),
-            signal_raising: signal::event_source::Signal::<()>::new(),
             signal_falling: signal::event_source::Signal::<()>::new(),
-            signal_raising_or_falling: signal::event_source::Signal::<()>::new(),
+            signal_raising: signal::event_source::Signal::<()>::new(),
+            signal_falling_or_raising: signal::event_source::Signal::<()>::new(),
         }
     }
 
     fn signals_targets_changed(&self) {
-        let mut raising = 0;
         let mut falling = 0;
+        let mut raising = 0;
 
         self.signal_input
             .take_pending()
@@ -51,14 +51,14 @@ impl Device {
 
         let mut signals_sources_changed = false;
 
-        (0..raising).for_each(|_| {
-            signals_sources_changed |= self.signal_raising.push_one(());
-        });
         (0..falling).for_each(|_| {
             signals_sources_changed |= self.signal_falling.push_one(());
         });
+        (0..raising).for_each(|_| {
+            signals_sources_changed |= self.signal_raising.push_one(());
+        });
         (0..(raising + falling)).for_each(|_| {
-            signals_sources_changed |= self.signal_raising_or_falling.push_one(());
+            signals_sources_changed |= self.signal_falling_or_raising.push_one(());
         });
 
         if signals_sources_changed {
@@ -108,9 +108,9 @@ impl Runnable for Device {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum SignalIdentifier {
     Input,
-    Raising,
     Falling,
-    OutputOrFalling,
+    Raising,
+    FallingOrRaising,
 }
 impl signals::Identifier for SignalIdentifier {}
 impl signals::Device for Device {
@@ -125,9 +125,9 @@ impl signals::Device for Device {
     fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
         hashmap! {
             SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
-            SignalIdentifier::Raising => &self.signal_raising as &dyn signal::Base,
             SignalIdentifier::Falling => &self.signal_falling as &dyn signal::Base,
-            SignalIdentifier::OutputOrFalling => &self.signal_raising_or_falling as &dyn signal::Base,
+            SignalIdentifier::Raising => &self.signal_raising as &dyn signal::Base,
+            SignalIdentifier::FallingOrRaising => &self.signal_falling_or_raising as &dyn signal::Base,
         }
     }
 }
