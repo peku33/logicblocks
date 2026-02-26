@@ -12,6 +12,7 @@ import softCalendarSolarPositionA from "./soft/calendar/solar_position_a/Summary
 import softLogicBooleanFlipFlopOverrideA from "./soft/logic/boolean/flip_flop/override_a/SummaryManaged";
 import softLogicBooleanFlipFlopRSTA from "./soft/logic/boolean/flip_flop/rst_a/SummaryManaged";
 import softTimeSequenceParallelA from "./soft/time/sequence_parallel_a/SummaryManaged";
+import softTimeUpDownA from "./soft/time/up_down_a/SummaryManaged";
 import softWebDisplayBooleanA from "./soft/web/display/boolean_a/SummaryManaged";
 import softWebDisplayBuildingWindowOpenStateOpenClosedA from "./soft/web/display/building/window_open_state_open_closed_a/SummaryManaged";
 import softWebDisplayBuildingWindowOpenStateOpenTiltedClosedA from "./soft/web/display/building/window_open_state_open_tilted_closed_a/SummaryManaged";
@@ -34,6 +35,7 @@ const BY_CLASS: Record<string, DeviceSummaryManaged> = {
   "houseblocks/avr_v1/reed_switch_v1": houseblocksAvrV1D0002ReedSwitchV1,
   "houseblocks/avr_v1/relay14_opto_a_v1": houseblocksAvrV1D0006Relay14OptoAV1,
   "houseblocks/avr_v1/relay14_ssr_a_v2": houseblocksAvrV1D0007Relay14SSRAV2,
+  "soft/time/up_down_a": softTimeUpDownA,
   "soft/calendar/solar_position_a": softCalendarSolarPositionA,
   "soft/logic/boolean/flip_flop/override_a": softLogicBooleanFlipFlopOverrideA,
   "soft/logic/boolean/flip_flop/rst_a": softLogicBooleanFlipFlopRSTA,
