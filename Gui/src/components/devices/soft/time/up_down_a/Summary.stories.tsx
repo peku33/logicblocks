@@ -48,8 +48,8 @@ export const Moving: React.FC = () => (
       state: {
         state: "Moving",
         started_ago_seconds: 1.5,
-        position_started: 0.25,
-        position_target: 0.75,
+        started_position: 0.25,
+        setpoint: 0.75,
         duration_seconds: 5.0,
         direction: "Up",
       },
