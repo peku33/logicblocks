@@ -81,7 +81,7 @@ impl ModulePathName {
     }
 
     pub fn thread_name(&self) -> String {
-        format!("{}:{}", &self.name, self.module_path.thread_name())
+        format!("{}:{}", self.name, self.module_path.thread_name())
     }
     pub fn file_name(
         &self,
@@ -93,7 +93,7 @@ impl ModulePathName {
 
         chain!(
             self.module_path.items.iter().copied(),
-            iter::once(&*self.name),
+            iter::once(self.name.as_str()),
             extension
         )
         .join(".")

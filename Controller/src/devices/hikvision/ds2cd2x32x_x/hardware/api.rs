@@ -354,7 +354,7 @@ impl Api {
         ensure!(
             Self::firmware_version_supported(&firmware_version),
             "this firmware version ({}) is not supported",
-            &firmware_version
+            firmware_version
         );
 
         Ok(BasicDeviceInfo {
@@ -392,7 +392,7 @@ impl Api {
             "rtsp://{}:{}@{}/Streaming/channels/{}",
             percent_encoding::utf8_percent_encode(username, percent_encoding::NON_ALPHANUMERIC),
             percent_encoding::utf8_percent_encode(password, percent_encoding::NON_ALPHANUMERIC),
-            &self.host,
+            self.host,
             match stream {
                 VideoStream::Main => 101,
                 VideoStream::Sub => 102,

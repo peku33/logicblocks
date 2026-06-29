@@ -34,10 +34,7 @@ impl Topic {
     }
     pub fn from_body_filter(value: serde_json::Value) -> Option<Self> {
         let value = match value {
-            serde_json::Value::Number(value) => match value.as_u64() {
-                Some(value) => Self::Number(value as usize),
-                None => return None,
-            },
+            serde_json::Value::Number(value) => Self::Number(value.as_u64()? as usize),
             serde_json::Value::String(value) => Self::String(value),
             _ => return None,
         };

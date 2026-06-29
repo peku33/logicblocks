@@ -96,7 +96,7 @@ impl PartialEq for IdentifierBaseWrapper {
         &self,
         other: &Self,
     ) -> bool {
-        self.inner.eq(&*other.inner)
+        self.inner.eq(other.inner.as_ref())
     }
 }
 impl Eq for IdentifierBaseWrapper {}

@@ -102,7 +102,7 @@ mod tests_read_bits_generic {
 
         let request_data_expected = [0x00, 0x13, 0x00, 0x13];
 
-        assert_eq!(&*request_data, &request_data_expected);
+        assert_eq!(request_data.as_ref(), &request_data_expected);
 
         let response = ReadBitsGenericResponse::from_data(&request, &[0x03, 0xcd, 0x6b, 0x05])
             .unwrap()
@@ -338,7 +338,7 @@ mod tests_read_words_generic {
 
         let request_data_expected = [0x00, 0x6b, 0x00, 0x03];
 
-        assert_eq!(&*request_data, &request_data_expected);
+        assert_eq!(request_data.as_ref(), &request_data_expected);
 
         let response = ReadWordsGenericResponse::from_data(
             &request,
@@ -553,7 +553,7 @@ mod tests_write_single_coil {
 
         let request_data_expected = [0x00, 0xac, 0xff, 0x00];
 
-        assert_eq!(&*request_data, &request_data_expected);
+        assert_eq!(request_data.as_ref(), &request_data_expected);
 
         let response = WriteSingleCoilResponse::from_data(&request, &[0x00, 0xac, 0xff, 0x00])
             .unwrap()
@@ -642,7 +642,7 @@ mod tests_write_single_register {
 
         let request_data_expected = [0x00, 0x01, 0x00, 0x03];
 
-        assert_eq!(&*request_data, &request_data_expected);
+        assert_eq!(request_data.as_ref(), &request_data_expected);
 
         let response = WriteSingleRegisterResponse::from_data(&request, &[0x00, 0x01, 0x00, 0x03])
             .unwrap()
@@ -844,7 +844,7 @@ mod tests_write_multiple_coils {
 
         let request_data_expected = [0x00, 0x13, 0x00, 0x0a, 0x02, 0xcd, 0x01];
 
-        assert_eq!(&*request_data, &request_data_expected);
+        assert_eq!(request_data.as_ref(), &request_data_expected);
 
         let response = WriteMultipleCoilsResponse::from_data(&request, &[0x00, 0x13, 0x00, 0x0a])
             .unwrap()
@@ -953,7 +953,7 @@ mod tests_write_multiple_registers {
 
         let request_data_expected = [0x00, 0x01, 0x00, 0x02, 0x04, 0x00, 0x0a, 0x01, 0x02];
 
-        assert_eq!(&*request_data, &request_data_expected);
+        assert_eq!(request_data.as_ref(), &request_data_expected);
 
         let response =
             WriteMultipleRegistersResponse::from_data(&request, &[0x00, 0x01, 0x00, 0x02])

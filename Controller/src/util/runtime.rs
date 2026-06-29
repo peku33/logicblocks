@@ -122,7 +122,9 @@ impl<'r, 'o, O> RuntimeScope<'r, 'o, O> {
 
         // SAFE: self.context will outlive the future itself
         let context = unsafe {
-            transmute::<&'_ RuntimeScopeContext, &'static RuntimeScopeContext>(&*self.context)
+            transmute::<&'_ RuntimeScopeContext, &'static RuntimeScopeContext>(
+                self.context.as_ref(),
+            )
         };
 
         let task_id = context.task_id_next.fetch_add(1, Ordering::Relaxed);

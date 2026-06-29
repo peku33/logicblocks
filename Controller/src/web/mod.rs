@@ -210,7 +210,7 @@ impl ResponseFull {
     pub fn into_http_response(self) -> HttpResponse<Full<Bytes>> {
         let http_response = HttpResponse::builder()
             .status(self.status_code)
-            .header(header::CONTENT_TYPE, &*self.content_type)
+            .header(header::CONTENT_TYPE, self.content_type.as_ref())
             .body(Full::new(self.body))
             .unwrap();
 
@@ -263,7 +263,7 @@ impl ResponseRedirect {
     pub fn into_http_response(self) -> HttpResponse<Empty<Bytes>> {
         let http_response = HttpResponse::builder()
             .status(StatusCode::TEMPORARY_REDIRECT)
-            .header(header::LOCATION, &*self.target)
+            .header(header::LOCATION, self.target.as_ref())
             .body(Empty::new())
             .unwrap();
 

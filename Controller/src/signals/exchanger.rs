@@ -493,8 +493,8 @@ fn new_inner_child<'p, 'd>(
             .ok_or_else(|| {
                 anyhow!(
                     "signal {:?} not found on source device #{} ({})",
-                    &source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
-                    &source_device_id_signal_identifier_base.device_id,
+                    source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+                    source_device_id_signal_identifier_base.device_id,
                     source_device.type_name(),
                 )
             })?;
@@ -511,7 +511,7 @@ fn new_inner_child<'p, 'd>(
             .ok_or_else(|| {
                 anyhow!(
                     "target device {} not found",
-                    &target_device_id_signal_identifier_base.device_id
+                    target_device_id_signal_identifier_base.device_id
                 )
             })?;
 
@@ -520,8 +520,8 @@ fn new_inner_child<'p, 'd>(
             .ok_or_else(|| {
                 anyhow!(
                     "signal {:?} not found on target device #{} ({})",
-                    &target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
-                    &target_device_id_signal_identifier_base.device_id,
+                    target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+                    target_device_id_signal_identifier_base.device_id,
                     target_device.type_name()
                 )
             })?;
@@ -530,12 +530,12 @@ fn new_inner_child<'p, 'd>(
         ensure!(
             source_signal_remote_base.type_id() == target_remote_base_remote_base.type_id(),
             "source #{} ({}) :: {:?} -> target #{} ({}) :: {:?} type mismatch: {} -> {}",
-            &source_device_id_signal_identifier_base.device_id,
+            source_device_id_signal_identifier_base.device_id,
             source_device.type_name(),
-            &source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
-            &target_device_id_signal_identifier_base.device_id,
+            source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+            target_device_id_signal_identifier_base.device_id,
             target_device.type_name(),
-            &target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+            target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
             source_signal_remote_base.type_name(),
             target_remote_base_remote_base.type_name(),
         );
@@ -558,9 +558,9 @@ fn new_inner_child<'p, 'd>(
                 ensure!(
                     state_targets_connected.insert(ByAddress(state_target_remote_base)),
                     "multiple sources for target #{} ({}) :: {:?}",
-                    &target_device_id_signal_identifier_base.device_id,
+                    target_device_id_signal_identifier_base.device_id,
                     target_device.type_name(),
-                    &target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+                    target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
                 );
 
                 // remove this signal from disconnected list, as its connected nows
@@ -596,12 +596,12 @@ fn new_inner_child<'p, 'd>(
                         ByAddress(event_target_remote_base),
                     )),
                     "duplicated connection #{} ({}) :: {:?} -> #{} ({}) :: {:?}",
-                    &source_device_id_signal_identifier_base.device_id,
+                    source_device_id_signal_identifier_base.device_id,
                     source_device.type_name(),
-                    &source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
-                    &target_device_id_signal_identifier_base.device_id,
+                    source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+                    target_device_id_signal_identifier_base.device_id,
                     target_device.type_name(),
-                    &target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+                    target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
                 );
 
                 // add connection
@@ -621,24 +621,24 @@ fn new_inner_child<'p, 'd>(
             | (_, RemoteBaseVariant::StateSource(_) | RemoteBaseVariant::EventSource(_)) => {
                 bail!(
                     "signal direction mismatch #{} ({}) :: {:?} -> #{} ({}) :: {:?}",
-                    &source_device_id_signal_identifier_base.device_id,
+                    source_device_id_signal_identifier_base.device_id,
                     source_device.type_name(),
-                    &source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
-                    &target_device_id_signal_identifier_base.device_id,
+                    source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+                    target_device_id_signal_identifier_base.device_id,
                     target_device.type_name(),
-                    &target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+                    target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
                 );
             }
             (RemoteBaseVariant::StateSource(_), RemoteBaseVariant::EventTarget(_))
             | (RemoteBaseVariant::EventSource(_), RemoteBaseVariant::StateTarget(_)) => {
                 bail!(
                     "signal class mismatch #{} ({}) :: {:?} -> #{} ({}) :: {:?}",
-                    &source_device_id_signal_identifier_base.device_id,
+                    source_device_id_signal_identifier_base.device_id,
                     source_device.type_name(),
-                    &source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
-                    &target_device_id_signal_identifier_base.device_id,
+                    source_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+                    target_device_id_signal_identifier_base.device_id,
                     target_device.type_name(),
-                    &target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
+                    target_device_id_signal_identifier_base.signal_identifier_base_wrapper,
                 );
             }
         }

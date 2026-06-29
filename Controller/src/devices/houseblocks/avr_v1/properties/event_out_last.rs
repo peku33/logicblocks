@@ -54,10 +54,7 @@ where
             return None;
         }
 
-        let value = match &state.value_last {
-            Some(value) => value.clone(),
-            None => return None,
-        };
+        let value = state.value_last.as_ref()?.clone();
 
         let pending = Pending {
             property: self,

@@ -79,7 +79,7 @@ impl<'a> Manager<'a> {
             .get_text()
             .ok_or_else(|| anyhow!("missing eventState text"))?;
 
-        let event = match &*event_type {
+        let event = match event_type.as_ref() {
             "videoloss" => Event::VideoLoss,
             "shelteralarm" => Event::TamperingDetection,
             "VMD" => Event::MotionDetection,
@@ -87,7 +87,7 @@ impl<'a> Manager<'a> {
             "fielddetection" => Event::FieldDetection,
             _ => bail!("unknown event type: {}", event_type),
         };
-        let active = match &*event_state {
+        let active = match event_state.as_ref() {
             "inactive" => false,
             "active" => true,
             _ => bail!("unknown event state: {}", event_state),

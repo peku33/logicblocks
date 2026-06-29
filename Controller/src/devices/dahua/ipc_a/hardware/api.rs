@@ -658,7 +658,7 @@ impl Api {
         ensure!(
             Self::device_type_supported(&device_type),
             "this device type ({}) is not supported",
-            &device_type,
+            device_type,
         );
 
         let software_version = self
@@ -688,7 +688,7 @@ impl Api {
         ensure!(
             Self::web_version_supported(&web_version),
             "this web version ({}) is not supported",
-            &web_version,
+            web_version,
         );
 
         let serial_number = self
@@ -777,7 +777,7 @@ impl Api {
             "rtsp://{}:{}@{}/cam/realmonitor?channel=1&subtype={}",
             percent_encoding::utf8_percent_encode(username, percent_encoding::NON_ALPHANUMERIC),
             percent_encoding::utf8_percent_encode(password, percent_encoding::NON_ALPHANUMERIC),
-            &self.host,
+            self.host,
             match stream {
                 VideoStream::Main => 0,
                 VideoStream::Sub1 => 1,

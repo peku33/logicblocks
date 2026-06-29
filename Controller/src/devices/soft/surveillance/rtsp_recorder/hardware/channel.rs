@@ -46,7 +46,9 @@ impl DetectionLevelTracker {
         self.current = current;
 
         match (&mut self.current, &mut self.segment_max) {
-            (Some(current), Some(segment_max)) => {
+            (Some(current), Some(segment_max)) =>
+            {
+                #[allow(clippy::collapsible_match)]
                 if current > segment_max {
                     *segment_max = *current;
                 }
