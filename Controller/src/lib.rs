@@ -1,4 +1,3 @@
-#![feature(array_windows)]
 #![feature(exact_size_is_empty)]
 #![feature(iter_map_windows)]
 #![feature(never_type)]

@@ -1,8 +1,7 @@
 use anyhow::{Context, Error, bail};
-use fs4::fs_std::FileExt;
 use std::{
     env,
-    fs::{self, File},
+    fs::{self, File, TryLockError},
     ops::Deref,
     path::{Path, PathBuf},
     sync::LazyLock,
@@ -131,11 +130,12 @@ impl DirectoryLocked {
         let lock_file = File::create(lock_file_path).context("lock_file open")?;
 
         // try locking the file
-        if !lock_file
-            .try_lock_exclusive()
-            .context("try_lock_exclusive")?
-        {
-            bail!("directory {path:?} is locked by other process!");
+        match lock_file.try_lock() {
+            Ok(()) => {}
+            Err(TryLockError::WouldBlock) => {
+                bail!("directory {path:?} is locked by other process!")
+            }
+            Err(TryLockError::Error(error)) => return Err(error.into()),
         }
 
         Ok(Self { path, lock_file })
