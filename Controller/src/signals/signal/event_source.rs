@@ -46,6 +46,10 @@ impl<V: Value + Clone> Signal<V> {
         &self,
         values: Box<[V]>,
     ) -> bool {
+        if values.is_empty() {
+            return false;
+        }
+
         let mut values = values.into_vec();
 
         let mut lock = self.inner.write();
