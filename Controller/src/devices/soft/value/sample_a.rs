@@ -12,81 +12,69 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::StreamExt;
-use itertools::chain;
+use itertools::{chain, zip_eq};
 use std::{any::type_name, borrow::Cow, iter};
 
 #[derive(Debug)]
-pub struct Configuration<V>
-where
-    V: EventValue + StateValue + Clone,
-{
-    pub input_fixed: Option<V>,
+pub struct Configuration {
+    /// number of input + trigger pairs
+    pub inputs_count: usize,
 }
 
-/// State<V> signal is provided on input target
-/// when Event<()> hits trigger target
+/// State<V> signals are provided on input targets
+/// when Event<()> hits matching trigger target
 /// current input value is emitted as Event<V> from output source
 #[derive(Debug)]
 pub struct Device<V>
 where
     V: EventValue + StateValue + Clone,
 {
-    configuration: Configuration<V>,
+    configuration: Configuration,
 
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signal_input: Option<signal::state_target_last::Signal<V>>,
-    signal_trigger: signal::event_target_last::Signal<()>,
+    signal_inputs: Box<[signal::state_target_last::Signal<V>]>,
+    signal_triggers: Box<[signal::event_target_last::Signal<()>]>,
     signal_output: signal::event_source::Signal<V>,
 }
 impl<V> Device<V>
 where
     V: EventValue + StateValue + Clone,
 {
-    pub fn new(configuration: Configuration<V>) -> Self {
-        let input_fixed = configuration.input_fixed.is_some();
+    pub fn new(configuration: Configuration) -> Self {
+        let inputs_count = configuration.inputs_count;
 
         Self {
             configuration,
 
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-            signal_input: if !input_fixed {
-                Some(signal::state_target_last::Signal::<V>::new())
-            } else {
-                None
-            },
-            signal_trigger: signal::event_target_last::Signal::<()>::new(),
+            signal_inputs: (0..inputs_count)
+                .map(|_input_index| signal::state_target_last::Signal::<V>::new())
+                .collect::<Box<[_]>>(),
+            signal_triggers: (0..inputs_count)
+                .map(|_input_index| signal::event_target_last::Signal::<()>::new())
+                .collect::<Box<[_]>>(),
             signal_output: signal::event_source::Signal::<V>::new(),
         }
     }
 
     fn signals_targets_changed(&self) {
-        // act only if trigger was fired
-        match self.signal_trigger.take_pending() {
-            Some(()) => {}
-            None => return,
-        }
+        // iterated to the end, so all triggers are drained
+        let outputs = zip_eq(self.signal_inputs.iter(), self.signal_triggers.iter())
+            .filter_map(|(signal_input, signal_trigger)| {
+                match (
+                    signal_input.take_last().value,
+                    signal_trigger.take_pending(),
+                ) {
+                    (_, None) => None,                      // trigger not triggered
+                    (None, _) => None,                      // triggered, but input not set
+                    (Some(input), Some(())) => Some(input), // triggered and input set
+                }
+            })
+            .collect::<Box<[_]>>();
 
-        // establish value from signal or configuration
-        let input = self
-            .signal_input
-            .as_ref()
-            .and_then(|signal_input| signal_input.take_last().value);
-        let input = match &self.configuration.input_fixed {
-            Some(input_fixed) => Some(input_fixed.clone()),
-            None => input,
-        };
-
-        // if no value is set (eg. non-fixed + non-connected signal) - skip
-        let input = match input {
-            Some(input) => input,
-            None => return,
-        };
-
-        let output = input;
-
-        if self.signal_output.push_one(output) {
+        if self.signal_output.push_many(outputs) {
             self.signals_sources_changed_waker.wake();
         }
     }
@@ -138,8 +126,8 @@ where
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum SignalIdentifier {
-    Input,
-    Trigger,
+    Input(usize),
+    Trigger(usize),
     Output,
 }
 impl signals::Identifier for SignalIdentifier {}
@@ -157,16 +145,24 @@ where
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
         chain!(
-            self.signal_input.as_ref().map(|signal_input| {
-                (
-                    SignalIdentifier::Input, // line break
-                    signal_input as &dyn signal::Base,
-                )
-            }),
-            iter::once((
-                SignalIdentifier::Trigger,
-                &self.signal_trigger as &dyn signal::Base,
-            )),
+            self.signal_inputs
+                .iter()
+                .enumerate()
+                .map(|(input_index, signal_input)| {
+                    (
+                        SignalIdentifier::Input(input_index),
+                        signal_input as &dyn signal::Base,
+                    )
+                }),
+            self.signal_triggers
+                .iter()
+                .enumerate()
+                .map(|(input_index, signal_trigger)| {
+                    (
+                        SignalIdentifier::Trigger(input_index),
+                        signal_trigger as &dyn signal::Base,
+                    )
+                }),
             iter::once((
                 SignalIdentifier::Output,
                 &self.signal_output as &dyn signal::Base,

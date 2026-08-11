@@ -9,44 +9,68 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::StreamExt;
-use maplit::hashmap;
-use std::{any::type_name, borrow::Cow};
+use itertools::{chain, zip_eq};
+use std::{any::type_name, borrow::Cow, iter};
 
-// when trigger is fired - freezes input value at output
+#[derive(Debug)]
+pub struct Configuration {
+    /// number of input + trigger pairs
+    pub inputs_count: usize,
+}
+
+// when trigger is fired - freezes matching input value at output
+// not set input value is forwarded as-is, clearing the output
+// if multiple triggers are fired at once - the last one (highest index) wins
 #[derive(Debug)]
 pub struct Device<V>
 where
     V: Value + Clone,
 {
+    configuration: Configuration,
+
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signal_input: signal::state_target_last::Signal<V>,
-    signal_trigger: signal::event_target_last::Signal<()>,
+    signal_inputs: Box<[signal::state_target_last::Signal<V>]>,
+    signal_triggers: Box<[signal::event_target_last::Signal<()>]>,
     signal_output: signal::state_source::Signal<V>,
 }
 impl<V> Device<V>
 where
     V: Value + Clone,
 {
-    pub fn new() -> Self {
+    pub fn new(configuration: Configuration) -> Self {
+        let inputs_count = configuration.inputs_count;
+
         Self {
+            configuration,
+
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-            signal_input: signal::state_target_last::Signal::<V>::new(),
-            signal_trigger: signal::event_target_last::Signal::<()>::new(),
+            signal_inputs: (0..inputs_count)
+                .map(|_input_index| signal::state_target_last::Signal::<V>::new())
+                .collect::<Box<[_]>>(),
+            signal_triggers: (0..inputs_count)
+                .map(|_input_index| signal::event_target_last::Signal::<()>::new())
+                .collect::<Box<[_]>>(),
             signal_output: signal::state_source::Signal::<V>::new(None),
         }
     }
 
     fn signals_targets_changed(&self) {
-        match self.signal_trigger.take_pending() {
-            Some(()) => {}
-            None => return,
-        };
+        // iterated to the end, so all triggers are drained
+        let outputs = zip_eq(self.signal_inputs.iter(), self.signal_triggers.iter())
+            .filter_map(|(signal_input, signal_trigger)| {
+                match (
+                    signal_input.take_last().value,
+                    signal_trigger.take_pending(),
+                ) {
+                    (_, None) => None,                // trigger not triggered
+                    (input, Some(())) => Some(input), // triggered, not set forwarded too
+                }
+            })
+            .collect::<Box<[_]>>();
 
-        let output = self.signal_input.take_last().value;
-
-        if self.signal_output.set_one(output) {
+        if self.signal_output.set_many(outputs) {
             self.signals_sources_changed_waker.wake();
         }
     }
@@ -98,8 +122,8 @@ where
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum SignalIdentifier {
-    Input,
-    Trigger,
+    Input(usize),
+    Trigger(usize),
     Output,
 }
 impl signals::Identifier for SignalIdentifier {}
@@ -116,10 +140,30 @@ where
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
-        hashmap! {
-            SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
-            SignalIdentifier::Trigger => &self.signal_trigger as &dyn signal::Base,
-            SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
-        }
+        chain!(
+            self.signal_inputs
+                .iter()
+                .enumerate()
+                .map(|(input_index, signal_input)| {
+                    (
+                        SignalIdentifier::Input(input_index),
+                        signal_input as &dyn signal::Base,
+                    )
+                }),
+            self.signal_triggers
+                .iter()
+                .enumerate()
+                .map(|(input_index, signal_trigger)| {
+                    (
+                        SignalIdentifier::Trigger(input_index),
+                        signal_trigger as &dyn signal::Base,
+                    )
+                }),
+            iter::once((
+                SignalIdentifier::Output,
+                &self.signal_output as &dyn signal::Base,
+            )),
+        )
+        .collect::<signals::ByIdentifier<_>>()
     }
 }

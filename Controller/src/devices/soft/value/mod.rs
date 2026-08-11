@@ -4,5 +4,6 @@ pub mod coalesce_a;
 pub mod constant_a;
 pub mod emit_a;
 pub mod gate_state_a;
+pub mod last_a;
 pub mod latch_a;
 pub mod sample_a;

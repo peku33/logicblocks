@@ -1,6 +1,9 @@
 use crate::{
     devices,
-    signals::{self, signal, types::state::Value},
+    signals::{
+        self, signal,
+        types::{event::Value as EventValue, state::Value as StateValue},
+    },
     util::{
         async_ext::stream_take_until_exhausted::StreamTakeUntilExhaustedExt,
         async_flag,
@@ -9,54 +12,57 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::StreamExt;
-use itertools::chain;
-use std::{any::type_name, borrow::Cow, iter};
+use maplit::hashmap;
+use std::{any::type_name, borrow::Cow};
 
 #[derive(Debug)]
-pub struct Configuration {
-    pub inputs_count: usize,
+pub struct Configuration<V>
+where
+    V: EventValue + StateValue + Clone,
+{
+    /// Value emitted on output before any event is received. `None` leaves the
+    /// output unset until the first event.
+    pub initial: Option<V>,
 }
 
+/// Event<V> is provided on input target
+/// last received value is kept as State<V> on output source
 #[derive(Debug)]
 pub struct Device<V>
 where
-    V: Value + Clone,
+    V: EventValue + StateValue + Clone,
 {
-    configuration: Configuration,
+    configuration: Configuration<V>,
 
     signals_targets_changed_waker: signals::waker::TargetsChangedWaker,
     signals_sources_changed_waker: signals::waker::SourcesChangedWaker,
-    signal_inputs: Box<[signal::state_target_last::Signal<V>]>,
+    signal_input: signal::event_target_last::Signal<V>,
     signal_output: signal::state_source::Signal<V>,
 }
 impl<V> Device<V>
 where
-    V: Value + Clone,
+    V: EventValue + StateValue + Clone,
 {
-    pub fn new(configuration: Configuration) -> Self {
-        let inputs_count = configuration.inputs_count;
+    pub fn new(configuration: Configuration<V>) -> Self {
+        let initial = configuration.initial.clone();
 
         Self {
             configuration,
-
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
-            signal_inputs: (0..inputs_count)
-                .map(|_input_index| signal::state_target_last::Signal::<V>::new())
-                .collect::<Box<[_]>>(),
-            signal_output: signal::state_source::Signal::<V>::new(None),
+            signal_input: signal::event_target_last::Signal::<V>::new(),
+            signal_output: signal::state_source::Signal::<V>::new(initial),
         }
     }
 
     fn signals_targets_changed(&self) {
-        let inputs = self
-            .signal_inputs
-            .iter()
-            .map(|signal_input| signal_input.take_last())
-            .collect::<Box<[_]>>();
+        // act only if an event was received
+        let input = match self.signal_input.take_pending() {
+            Some(input) => input,
+            None => return,
+        };
 
-        // get first non-None value
-        let output = inputs.into_iter().find_map(|input| input.value);
+        let output = Some(input);
 
         if self.signal_output.set_one(output) {
             self.signals_sources_changed_waker.wake();
@@ -81,10 +87,10 @@ where
 
 impl<V> devices::Device for Device<V>
 where
-    V: Value + Clone,
+    V: EventValue + StateValue + Clone,
 {
     fn class(&self) -> Cow<'static, str> {
-        Cow::from(format!("soft/value/coalesce_a<{}>", type_name::<V>()))
+        Cow::from(format!("soft/value/last_a<{}>", type_name::<V>()))
     }
 
     fn as_runnable(&self) -> &dyn Runnable {
@@ -98,7 +104,7 @@ where
 #[async_trait]
 impl<V> Runnable for Device<V>
 where
-    V: Value + Clone,
+    V: EventValue + StateValue + Clone,
 {
     async fn run(
         &self,
@@ -110,13 +116,13 @@ where
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum SignalIdentifier {
-    Input(usize),
+    Input,
     Output,
 }
 impl signals::Identifier for SignalIdentifier {}
 impl<V> signals::Device for Device<V>
 where
-    V: Value + Clone,
+    V: EventValue + StateValue + Clone,
 {
     fn targets_changed_waker(&self) -> Option<&signals::waker::TargetsChangedWaker> {
         Some(&self.signals_targets_changed_waker)
@@ -127,21 +133,9 @@ where
 
     type Identifier = SignalIdentifier;
     fn by_identifier(&self) -> signals::ByIdentifier<'_, Self::Identifier> {
-        chain!(
-            self.signal_inputs
-                .iter()
-                .enumerate()
-                .map(|(input_index, signal_input)| {
-                    (
-                        SignalIdentifier::Input(input_index),
-                        signal_input as &dyn signal::Base,
-                    )
-                }),
-            iter::once((
-                SignalIdentifier::Output,
-                &self.signal_output as &dyn signal::Base,
-            )),
-        )
-        .collect::<signals::ByIdentifier<_>>()
+        hashmap! {
+            SignalIdentifier::Input => &self.signal_input as &dyn signal::Base,
+            SignalIdentifier::Output => &self.signal_output as &dyn signal::Base,
+        }
     }
 }

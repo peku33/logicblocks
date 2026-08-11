@@ -37,7 +37,7 @@ impl Device {
             signals_targets_changed_waker: signals::waker::TargetsChangedWaker::new(),
             signals_sources_changed_waker: signals::waker::SourcesChangedWaker::new(),
             signal_inputs: (0..inputs_count)
-                .map(|_input_id| signal::state_target_last::Signal::<bool>::new())
+                .map(|_input_index| signal::state_target_last::Signal::<bool>::new())
                 .collect::<Box<[_]>>(),
             signal_output: signal::state_source::Signal::<Ratio>::new(None),
         }
